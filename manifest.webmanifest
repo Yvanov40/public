@@ -1,0 +1,16 @@
+{
+  "name": "Suivi des dossiers",
+  "short_name": "Suivi",
+  "description": "Vos dossiers, leurs étapes et vos honoraires, synchronisés avec GitHub.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c2d39",
+  "theme_color": "#0c2d39",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

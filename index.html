@@ -1,0 +1,1457 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c2d39">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Suivi des dossiers</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #f7f4ee; --carte: #fffdf9; --bordure: #e2dacb; --texte: #1c2a30; --discret: #7c7466;
+  --bleu: #0c2d39; --bleu-doux: #e3eaed; --or: #a77d2f; --or-doux: #f4ead6; --rouge: #a3402e;
+  --barre: #0c2d39; --barre-texte: #ffffff; --barre-discret: #d4b170; --section: #e9e1d1; --colonne: #efe9dd;
+  --estompe: #b5ab9c;
+  --titre: "EB Garamond", Garamond, Georgia, "Times New Roman", serif;
+  --ui: "IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color-scheme: light; box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fond: #0f1b20; --carte: #16262d; --bordure: #27404a; --texte: #e8e3d9; --discret: #9aa7a9;
+    --bleu: #8ec0d3; --bleu-doux: #1c3640; --or: #d4ab5c; --or-doux: #2e2818; --rouge: #e08a76;
+    --barre: #0a161b; --barre-texte: #f1ece2; --barre-discret: #d4ab5c; --section: #1d323a; --colonne: #132228;
+    --estompe: #56676d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fond: #0f1b20; --carte: #16262d; --bordure: #27404a; --texte: #e8e3d9; --discret: #9aa7a9;
+  --bleu: #8ec0d3; --bleu-doux: #1c3640; --or: #d4ab5c; --or-doux: #2e2818; --rouge: #e08a76;
+  --barre: #0a161b; --barre-texte: #f1ece2; --barre-discret: #d4ab5c; --section: #1d323a; --colonne: #132228;
+  --estompe: #56676d; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+[hidden] { display: none !important; }
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100%; background: var(--fond); color: var(--texte); font: 14.5px/1.45 var(--ui); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--barre); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+/* ---------- en-tête ---------- */
+.entete { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 8; background: var(--barre); color: var(--barre-texte); }
+.entete-int { max-width: 1680px; margin: 0 auto; padding: 12px 18px; display: flex; align-items: center; gap: 12px; }
+.entete h1 { margin: 0; font: 600 23px/1.1 var(--titre); }
+.etat-sync { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--barre-discret); margin-top: 3px; }
+.etat-sync i { width: 8px; height: 8px; border-radius: 4px; background: #7fb08a; }
+.etat-sync.envoi i { background: var(--barre-discret); }
+.etat-sync.erreur i { background: #e08a76; }
+.etat-sync.local i { background: #9aa7a9; }
+.vues { display: flex; gap: 4px; margin-left: auto; }
+.vues a { color: var(--barre-texte); text-decoration: none; padding: 8px 14px; border-radius: 8px; opacity: .75; }
+.vues a[aria-current="page"] { background: rgba(255,255,255,.12); opacity: 1; font-weight: 600; }
+.icone { width: 40px; height: 40px; border-radius: 20px; border: 0; background: rgba(255,255,255,.08); color: var(--barre-texte); font-size: 19px; flex: none; }
+
+main { max-width: 1680px; margin: 0 auto; padding: 14px 18px 30px; }
+
+/* ---------- indicateurs ---------- */
+.indicateurs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.indic { background: var(--carte); border: 1px solid var(--bordure); border-left: 4px solid var(--c); border-radius: 10px; padding: 10px 14px; min-width: 0; }
+.indic span { display: block; font-size: 12.5px; color: var(--discret); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.indic b { display: block; font-size: 19px; font-weight: 500; color: var(--v, var(--texte)); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- rendez-vous ---------- */
+.rdv { margin-top: 10px; display: flex; align-items: center; gap: 8px; background: var(--bleu-doux); border-left: 4px solid var(--bleu); border-radius: 10px; padding: 7px 10px; overflow-x: auto; scrollbar-width: none; }
+.rdv::-webkit-scrollbar { display: none; }
+.rdv > strong { font-size: 12.5px; color: var(--bleu); white-space: nowrap; margin-right: 4px; }
+.rdv em { font-style: italic; color: var(--discret); font-size: 13px; white-space: nowrap; }
+.pastille-rdv { flex: none; border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 5px 10px; font-size: 13px; white-space: nowrap; text-align: left; }
+.pastille-rdv b { margin-right: 6px; color: var(--bleu); }
+.pastille-rdv.jour { background: var(--or); border-color: var(--or); color: #fff; }
+.pastille-rdv.demain { background: var(--bleu); border-color: var(--bleu); color: var(--carte); }
+.pastille-rdv.jour b, .pastille-rdv.demain b { color: inherit; }
+
+/* ---------- filtres ---------- */
+.filtres { margin-top: 10px; background: var(--carte); border: 1px solid var(--bordure); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: minmax(180px, 1.4fr) repeat(5, minmax(0, 1fr)) auto auto; gap: 10px; align-items: end; }
+.filtre label, .filtre .lib { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
+.filtre input[type="search"] { width: 100%; border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 8px 10px; }
+.segment { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; }
+.segment span { overflow: hidden; text-overflow: ellipsis; }
+.segment::after { content: "▾"; color: var(--bleu); flex: none; }
+.segment.actif { background: var(--or-doux); border-color: var(--or); color: var(--bleu); font-weight: 600; }
+.option-archives { display: flex; align-items: center; gap: 6px; font-size: 13.5px; white-space: nowrap; padding-bottom: 8px; }
+.option-archives input { width: 17px; height: 17px; accent-color: var(--bleu); }
+.bouton-discret { border: 0; background: var(--section); color: var(--bleu); border-radius: 8px; padding: 8px 12px; white-space: nowrap; }
+
+/* fenêtre de segment (Excel) */
+.fen-segment { position: fixed; z-index: 30; background: var(--carte); border: 1px solid var(--bordure); border-top: 3px solid var(--or); border-radius: 10px; box-shadow: 0 10px 28px rgba(12,45,57,.18); padding: 8px 6px 8px 10px; min-width: 240px; max-width: 380px; display: flex; flex-direction: column; }
+.fen-segment header { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 6px 0; }
+.fen-segment header b { font-size: 12.5px; color: var(--discret); }
+.fen-segment header button { border: 0; background: none; color: var(--rouge); font-size: 13px; }
+.fen-segment header .ok-tel { display: none; background: var(--bleu); color: var(--carte); border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 14px; }
+@media (max-width: 900px) { .fen-segment header .ok-tel { display: inline-block; } .fen-segment header { gap: 10px; } .fen-segment header b { margin-right: auto; } }
+.fen-segment .liste { overflow-y: auto; max-height: min(420px, 60vh); padding-right: 6px; }
+.fen-segment label { display: flex; align-items: center; gap: 9px; padding: 6px 2px; cursor: pointer; font-size: 14px; }
+.fen-segment label input { width: 17px; height: 17px; accent-color: var(--bleu); flex: none; }
+.fen-segment label span { flex: 1; }
+.fen-segment label i { font-style: normal; color: var(--discret); font-size: 12.5px; }
+.fen-segment label.zero { color: var(--estompe); }
+.voile { position: fixed; inset: 0; z-index: 29; background: rgba(8, 20, 25, .4); display: none; }
+
+/* ---------- barre d'outils de vue ---------- */
+.outils { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; flex-wrap: wrap; }
+.outils .aide { color: var(--discret); font-size: 12.5px; margin-right: auto; }
+.etapes-raccourcis { display: none; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+
+/* ---------- Kanban ---------- */
+.kanban { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.colonne { background: var(--colonne); border: 1px solid var(--bordure); border-top: 3px solid var(--c); border-radius: 10px; display: flex; flex-direction: column; max-height: calc(100vh - 290px); min-height: 220px; }
+.colonne > header { padding: 10px 12px 8px; }
+.colonne > header h2 { margin: 0; font: 600 18px/1.2 var(--titre); color: var(--bleu); font-variant-numeric: lining-nums; }
+.colonne > header p { margin: 2px 0 0; font-size: 12.5px; color: var(--discret); }
+.colonne > header p b { color: var(--bleu); font-weight: 600; }
+.colonne > header p b.or { color: var(--or); }
+.colonne .defile { overflow-y: auto; padding: 0 8px 8px; flex: 1; }
+.section { margin-bottom: 6px; border-radius: 8px; }
+.section-titre { width: 100%; display: grid; grid-template-columns: 14px 1fr auto; gap: 2px 8px; align-items: center; border: 0; background: var(--section); border-radius: 8px; padding: 7px 10px; text-align: left; }
+.section-titre .fl { color: var(--bleu); transition: transform .15s; font-size: 12px; }
+.section.ouverte .section-titre .fl { transform: rotate(90deg); }
+.section-titre b { font-size: 13.5px; color: var(--bleu); font-weight: 600; }
+.section-titre .nb { font-size: 12.5px; color: var(--discret); }
+.section-titre .montants { grid-column: 2 / 4; font-size: 12px; color: var(--discret); }
+.section-titre .montants b { font-size: 12px; }
+.section-titre .montants b.or { color: var(--or); }
+.recherche-active .section.trouvee .section-titre { background: var(--bleu-doux); box-shadow: inset 3px 0 0 var(--bleu); }
+.recherche-active .section.trouvee .nb { background: var(--bleu); color: var(--carte); border-radius: 10px; padding: 0 7px; font-weight: 600; }
+.recherche-active .section:not(.trouvee) .section-titre { background: transparent; }
+.recherche-active .section:not(.trouvee) .section-titre * { color: var(--estompe); }
+.section.cible > .section-titre { outline: 2px dashed var(--or); outline-offset: 1px; }
+.cartes { display: none; gap: 6px; padding: 6px 0 2px; }
+.section.ouverte .cartes { display: grid; }
+.vide-section { border: 1px dashed var(--bordure); border-radius: 8px; padding: 8px; text-align: center; font-size: 12.5px; color: var(--discret); }
+.carte-dossier { width: 100%; text-align: left; background: var(--carte); border: 1px solid var(--bordure); border-left: 4px solid var(--c, var(--bleu)); border-radius: 8px; padding: 8px 10px; display: grid; gap: 1px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.carte-dossier.choisie { outline: 2px solid var(--or); }
+.carte-dossier .haut { display: flex; justify-content: space-between; gap: 8px; }
+.carte-dossier b { color: var(--bleu); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.carte-dossier .prevu { color: var(--bleu); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.carte-dossier .ligne { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.carte-dossier .comm { color: var(--discret); }
+.carte-dossier .bas { font-size: 12px; color: var(--discret); display: flex; justify-content: space-between; gap: 8px; }
+.carte-dossier .bas .or { color: var(--or); font-weight: 600; white-space: nowrap; }
+.carte-dossier.archive { opacity: .55; }
+.carte-dossier.souleve { opacity: .35; }
+.fantome { position: fixed; z-index: 50; pointer-events: none; width: 260px; transform: rotate(-2deg); box-shadow: 0 12px 28px rgba(12,45,57,.3); }
+
+/* ---------- vue clients ---------- */
+.table-clients { width: 100%; border-collapse: collapse; background: var(--carte); border: 1px solid var(--bordure); border-radius: 10px; overflow: hidden; }
+.table-clients th { text-align: left; font-size: 12px; color: var(--discret); font-weight: 600; padding: 9px 12px; background: var(--colonne); }
+.table-clients td { padding: 9px 12px; border-top: 1px solid var(--bordure); font-size: 14px; vertical-align: top; }
+.table-clients tr.ligne { cursor: pointer; }
+.table-clients tr.ligne:hover td { background: var(--bleu-doux); }
+.table-clients td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-clients td.n.or { color: var(--or); }
+.table-clients td b { color: var(--bleu); font-weight: 600; }
+.table-clients td small { display: block; color: var(--discret); font-size: 12.5px; }
+.plus-de { text-align: center; color: var(--discret); font-size: 13px; margin: 10px 0; }
+
+/* ---------- écran vide ---------- */
+.accueil-vide { max-width: 560px; padding: 30px 6px; }
+.accueil-vide h2 { font: 600 28px/1.2 var(--titre); color: var(--bleu); margin: 0 0 10px; }
+.accueil-vide p { color: var(--discret); }
+.bouton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 10px; padding: 12px 18px; font-weight: 600; background: var(--bleu); color: var(--carte); }
+.bouton.or { background: var(--or); color: #fff; }
+.bouton.leger { background: var(--section); color: var(--bleu); }
+.bouton.rouge { background: transparent; color: var(--rouge); border: 1px solid var(--rouge); }
+.bouton.large { width: 100%; }
+
+/* ---------- bouton flottant, navigation téléphone ---------- */
+.flottant { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 7; width: 54px; height: 54px; border-radius: 27px; border: 0; background: var(--or); color: #fff; font-size: 28px; line-height: 1; box-shadow: 0 6px 16px rgba(12,45,57,.25); }
+nav.bas { display: none; }
+
+/* ---------- fiches ---------- */
+.feuille { position: fixed; inset: 0; z-index: 40; display: none; background: rgba(8, 20, 25, .45); }
+.feuille.ouverte { display: flex; justify-content: center; align-items: flex-start; padding: 4vh 16px; }
+.feuille-boite { background: var(--fond); width: min(760px, 100%); max-height: 92vh; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.feuille-entete { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--barre); color: var(--barre-texte); }
+.feuille-entete h3 { flex: 1; margin: 0; font: 600 20px/1.15 var(--titre); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feuille-entete button { border: 0; background: none; color: var(--barre-texte); padding: 8px 10px; font-weight: 600; }
+.feuille-entete button.valider { background: var(--or); border-radius: 8px; color: #fff; }
+.feuille-corps { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
+.champ { display: grid; gap: 4px; margin-bottom: 11px; }
+.champ label { font-size: 12.5px; color: var(--discret); }
+.champ label .commun { color: var(--bleu); font-weight: 600; }
+.champ input, .champ select, .champ textarea { width: 100%; border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 9px 11px; }
+.champ textarea { min-height: 110px; resize: vertical; line-height: 1.45; }
+.deux { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.trois { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+.encart-client { background: var(--bleu-doux); border-radius: 10px; padding: 12px 12px 2px; margin: 6px 0 14px; border-left: 4px solid var(--bleu); }
+.encart-client p { margin: 0 0 10px; font-size: 13px; color: var(--bleu); font-weight: 600; }
+.case { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+.case input { width: 19px; height: 19px; accent-color: var(--bleu); }
+.etapes-rapides { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 12px; }
+.etapes-rapides button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 16px; padding: 5px 11px; font-size: 13px; }
+.releve { display: grid; gap: 6px; background: var(--carte); border: 1px solid var(--bordure); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+.releve div { display: flex; justify-content: space-between; }
+.releve span { color: var(--discret); }
+.releve b { font-weight: 600; color: var(--bleu); font-variant-numeric: tabular-nums; }
+.releve b.or { color: var(--or); }
+.aide { font-size: 13px; color: var(--discret); margin: -4px 0 12px; }
+.gh-erreur { background: var(--or-doux); border: 1px solid var(--rouge); border-radius: 10px; padding: 10px 12px; margin: 0 0 14px; font-size: 14px; line-height: 1.5; }
+.gh-erreur b { color: var(--rouge); }
+.gh-erreur button { margin: 8px 8px 0 0; border: 1px solid var(--bordure); background: var(--carte); border-radius: 16px; padding: 5px 11px; font-size: 13px; }
+.liste-dossiers { display: grid; gap: 6px; }
+.feuille h4 { font: 600 18px var(--titre); color: var(--bleu); margin: 16px 0 8px; }
+
+/* menu et messages */
+.menu { position: fixed; inset: 0; z-index: 45; display: none; background: rgba(8, 20, 25, .45); }
+.menu.ouvert { display: flex; justify-content: flex-end; align-items: flex-start; padding: 60px 18px; }
+.menu-panneau { background: var(--carte); border-radius: 14px; padding: 16px; width: min(380px, 100%); display: grid; gap: 9px; box-shadow: 0 16px 40px rgba(0,0,0,.25); }
+.menu-panneau h3 { margin: 0; font: 600 20px var(--titre); color: var(--bleu); }
+.menu-panneau p { margin: 0 0 4px; color: var(--discret); font-size: 13.5px; }
+.message { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 60; background: var(--bleu); color: var(--carte); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); display: none; align-items: center; gap: 12px; }
+.message.visible { display: flex; }
+.message button { border: 0; background: var(--or); color: #fff; border-radius: 7px; padding: 5px 10px; font-weight: 600; }
+.alerte-modif { background: var(--or-doux); border: 1px solid var(--or); border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
+.alerte-modif button { margin-left: auto; border: 0; background: var(--or); color: #fff; border-radius: 8px; padding: 6px 11px; font-weight: 600; }
+
+/* ---------- téléphone et petites fenêtres ---------- */
+@media (max-width: 1100px) {
+  .filtres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .filtre.recherche { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+  body { font-size: 15px; }
+  .vues { display: none; }
+  .icone { margin-left: auto; }
+  .segment { font-size: 13px; }
+  .bouton-discret { font-size: 13px; padding: 6px 11px; }
+  .entete-int { padding: 10px 14px; }
+  main { padding: 10px 12px calc(80px + env(safe-area-inset-bottom, 0px)); }
+  .indicateurs { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; }
+  .indicateurs::-webkit-scrollbar { display: none; }
+  .indic { flex: 0 0 auto; min-width: 46%; scroll-snap-align: start; }
+  .filtres { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; }
+  .filtre.recherche { flex: 1 0 100%; }
+  .filtre.recherche label { display: none; }
+  .filtre:not(.recherche) .lib { display: none; }
+  .filtre:not(.recherche) { flex: 0 0 auto; }
+  .segment { border-radius: 18px; padding: 6px 12px; max-width: 46vw; }
+  .segment span::before { content: attr(data-titre) " : "; color: var(--discret); font-weight: 400; }
+  .option-archives { padding: 6px 4px; }
+  .outils .aide { display: none; }
+  .etapes-raccourcis { display: flex; width: 100%; }
+  .etapes-raccourcis button { flex: none; border: 1px solid var(--bordure); background: var(--carte); border-radius: 16px; padding: 5px 12px; font-size: 13px; }
+  .kanban { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; margin: 0 -12px; padding: 0 12px 6px; scrollbar-width: none; }
+  .kanban::-webkit-scrollbar { display: none; }
+  .colonne { flex: 0 0 88%; scroll-snap-align: center; max-height: none; }
+  .colonne .defile { overflow: visible; }
+  .flottant { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  nav.bas { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; display: grid; grid-template-columns: 1fr 1fr; background: var(--carte); border-top: 1px solid var(--bordure); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  nav.bas a { text-decoration: none; color: var(--discret); text-align: center; padding: 9px 0 10px; font-size: 12.5px; display: grid; justify-items: center; gap: 2px; }
+  nav.bas a span { font-size: 19px; line-height: 1.1; }
+  nav.bas a[aria-current="page"] { color: var(--bleu); font-weight: 600; }
+  nav.bas a[aria-current="page"] span { color: var(--or); }
+  .fen-segment { left: 0 !important; right: 0; bottom: 0; top: auto !important; max-width: none; border-radius: 16px 16px 0 0; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .fen-segment .liste { max-height: 55vh; }
+  .feuille.ouverte { padding: 0; }
+  .feuille-boite { width: 100%; max-height: none; height: 100%; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .trois { grid-template-columns: 1fr 1fr; }
+  .menu.ouvert { align-items: flex-end; padding: 0; }
+  .menu-panneau { width: 100%; border-radius: 16px 16px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .table-clients thead { display: none; }
+  .table-clients, .table-clients tbody, .table-clients tr, .table-clients td { display: block; width: 100%; }
+  .table-clients tr.ligne { border-top: 1px solid var(--bordure); padding: 8px 12px; display: grid; grid-template-columns: 1fr auto; }
+  .table-clients td { border: 0; padding: 1px 0; }
+  .table-clients td.types { grid-column: 1 / -1; }
+  .table-clients td.cache-tel { display: none; }
+  .message { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { .section-titre .fl { transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="entete">
+  <div class="entete-int">
+    <div>
+      <h1>Suivi des dossiers</h1>
+      <span class="etat-sync local" id="etatSync"><i></i><span id="etatSyncTexte">Pas encore connecté à GitHub</span></span>
+    </div>
+    <nav class="vues" aria-label="Vue">
+      <a href="#kanban" data-vue="kanban">Kanban</a>
+      <a href="#clients" data-vue="clients">Clients</a>
+    </nav>
+    <button class="icone" id="btnMenu" aria-label="GitHub, import et export">⋯</button>
+  </div>
+</header>
+
+<main>
+  <div id="accueilVide" class="accueil-vide" hidden>
+    <h2>Ouvrez votre suivi</h2>
+    <p>Connectez l’appli à votre dépôt GitHub privé : elle lira <b>suivi_gp.json</b> et y enregistrera chaque modification, comme la boîte à outils.</p>
+    <button class="bouton large" id="btnGithubVide">Se connecter à GitHub</button>
+    <p style="margin-top:18px">Ou, sans GitHub, ouvrez une copie du fichier.</p>
+    <button class="bouton leger large" id="btnImporterVide">Choisir un fichier suivi_gp.json</button>
+  </div>
+
+  <div id="contenu">
+    <div id="alerteModif" class="alerte-modif" hidden>
+      <span>Des modifications ne sont pas encore dans votre fichier.</span>
+      <button id="btnExporterAlerte">Exporter</button>
+    </div>
+
+    <section class="indicateurs" id="indicateurs" aria-label="Totaux des dossiers affichés"></section>
+    <section class="rdv" id="rdv" aria-label="Prochains rendez-vous"></section>
+
+    <section class="filtres" aria-label="Filtres">
+      <div class="filtre recherche">
+        <label for="recherche">Rechercher</label>
+        <input id="recherche" type="search" placeholder="Client, tâche, commentaire…" autocomplete="off" enterkeyhint="search">
+      </div>
+      <div class="filtre"><span class="lib">Type</span><button class="segment" data-cle="type"><span data-titre="Type">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Partenaire</span><button class="segment" data-cle="partenaire"><span data-titre="Partenaire">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Ancienneté</span><button class="segment" data-cle="anciennete"><span data-titre="Ancienneté">Tous</span></button></div>
+      <label class="option-archives"><input type="checkbox" id="masquerArchives"> Masquer les archives</label>
+      <button class="bouton-discret" id="reinitialiser">Réinitialiser</button>
+    </section>
+
+    <section class="vue" id="vue-kanban">
+      <div class="outils">
+        <span class="aide">Glissez une carte sur un autre type pour la déplacer · clic sur un titre de section : replier / déplier</span>
+        <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
+        <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
+        <button class="bouton-discret" id="toutReplier">Tout replier</button>
+      </div>
+      <div class="kanban" id="kanban"></div>
+    </section>
+
+    <section class="vue" id="vue-clients">
+      <div class="outils"><span class="aide" id="aideClients"></span></div>
+      <table class="table-clients">
+        <thead><tr><th>Client</th><th>Dossiers</th><th>Notaire</th><th class="n">Prévu</th><th class="n">Encaissé</th><th class="n">Reste</th></tr></thead>
+        <tbody id="clientsListe"></tbody>
+      </table>
+      <p class="plus-de" id="plusDe" hidden></p>
+    </section>
+  </div>
+</main>
+
+<button class="flottant" id="btnNouveau" aria-label="Nouveau dossier" title="Nouveau dossier">+</button>
+<nav class="bas">
+  <a href="#kanban" data-vue="kanban"><span>▦</span>Kanban</a>
+  <a href="#clients" data-vue="clients"><span>☰</span>Clients</a>
+</nav>
+
+<div class="voile" id="voile"></div>
+<div class="fen-segment" id="fenSegment" hidden role="dialog" aria-label="Filtre"></div>
+
+<!-- fiche dossier -->
+<div class="feuille" id="feuilleDossier" role="dialog" aria-modal="true" aria-labelledby="titreDossier">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreDossier">Dossier</h3>
+      <button class="valider" id="enregistrerDossier">Enregistrer</button>
+    </div>
+    <div class="feuille-corps" id="corpsDossier"></div>
+  </div>
+</div>
+
+<!-- fiche client -->
+<div class="feuille" id="feuilleClient" role="dialog" aria-modal="true" aria-labelledby="titreClient">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreClient">Client</h3>
+      <button class="valider" id="enregistrerClient">Enregistrer</button>
+    </div>
+    <div class="feuille-corps" id="corpsClient"></div>
+  </div>
+</div>
+
+<!-- réglages GitHub -->
+<div class="feuille" id="feuilleGithub" role="dialog" aria-modal="true" aria-labelledby="titreGithub">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreGithub">Connexion GitHub</h3>
+      <button class="valider" id="connecterGithub">Se connecter</button>
+    </div>
+    <div class="feuille-corps">
+      <p class="aide">Ces réglages restent sur cet appareil. La clé d’accès n’est envoyée qu’à GitHub.</p>
+      <div class="champ"><label for="ghProprietaire">Votre nom d’utilisateur GitHub</label><input id="ghProprietaire" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <div class="champ"><label for="ghDepot">Nom du dépôt privé</label><input id="ghDepot" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="par exemple suivi"></div>
+      <div class="deux">
+        <div class="champ"><label for="ghChemin">Fichier dans le dépôt</label><input id="ghChemin" autocomplete="off" autocapitalize="off" spellcheck="false" value="suivi_gp.json"></div>
+        <div class="champ"><label for="ghBranche">Branche</label><input id="ghBranche" autocomplete="off" autocapitalize="off" spellcheck="false" value="main"></div>
+      </div>
+      <div class="champ"><label for="ghCle">Clé d’accès (jeton GitHub)</label><input id="ghCle" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></div>
+      <p class="aide">Créez la clé sur GitHub : Settings, Developer settings, Fine-grained tokens. Limitez-la à ce seul dépôt, avec l’autorisation « Contents : Read and write ».</p>
+      <div class="gh-erreur" id="ghErreur" hidden></div>
+      <button class="bouton rouge large" id="deconnecterGithub" type="button">Déconnecter cet appareil</button>
+    </div>
+  </div>
+</div>
+
+<!-- menu -->
+<div class="menu" id="menu">
+  <div class="menu-panneau">
+    <h3>Votre fichier</h3>
+    <p id="infoFichier"></p>
+    <button class="bouton large" id="btnActualiser">Recharger depuis GitHub</button>
+    <button class="bouton leger large" id="btnGithub">Réglages GitHub</button>
+    <button class="bouton leger large" id="btnExporter">Exporter une copie</button>
+    <button class="bouton leger large" id="btnImporter">Ouvrir un autre fichier</button>
+    <button class="bouton leger large" id="btnFermerMenu">Fermer</button>
+  </div>
+</div>
+
+<input type="file" id="fichier" accept=".json,application/json" hidden>
+<div class="message" id="message" role="status"><span id="messageTexte"></span><button id="messageAction" hidden></button></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------- constantes
+  const CLE_STOCKAGE = "suivi-gp-donnees";
+  const CLE_AFFICHAGE = "suivi-gp-affichage";
+  const ETAPES = [["1", "En attente"], ["2", "À faire"], ["3", "Terminé"], ["4", "Sans suite / reporté"]];
+  const COULEURS = { "1": "#a77d2f", "2": "#0c2d39", "3": "#5b7b5a", "4": "#9a9187" };
+  const TYPES = [
+    "1. Analyse en attente notaire", "1. Analyse en attente pièces", "1. Suivi juridique en attente",
+    "2. Acte à faire", "2. Acte en attente", "2. Analyse à faire", "2. Fiche / Aides notaire",
+    "2. Formalités à faire", "2. Formalités en attente de validation", "2. Suivi juridique à faire",
+    "3. Acte terminé", "3. Analyse terminée", "3. Formalité terminée", "3. Suivi juridique réalisée",
+    "4. Acte rejeté / reporté", "4. Analyse sans suite", "4. Analyse reportée"
+  ];
+  const ANCIENNETES = ["-30j", "+30j", "+60j", "+90j", "Arch", "(sans date)"];
+  const SEGMENTS = { type: "Type", notaire: "Notaire", exercice: "Exercice", partenaire: "Partenaire", anciennete: "Ancienneté" };
+  const COMMUNS = ["notaire", "partenaire", "millionnaire", "a_vie"];
+  const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+
+  // ---------------------------------------------------------------- état
+  let donnees = null;
+  let enCours = null;
+  let clientEnCours = null;
+  const selections = { type: new Set(), notaire: new Set(), exercice: new Set(), partenaire: new Set(), anciennete: new Set() };
+  let repliees = new Set();       // sections du Kanban repliées
+  let dejaVues = new Set();
+  let bascules = new Set();       // ouvertures faites pendant une recherche
+  let derniereRecherche = "";
+  let choisi = null;              // carte sélectionnée
+  let dernierDeplacement = null;  // pour « Annuler »
+
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs, ...enfants) => {
+    const n = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v;
+      else if (k === "style") n.style.cssText = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const e of enfants.flat()) if (e != null && e !== false) n.append(e.nodeType ? e : String(e));
+    return n;
+  };
+
+  // ---------------------------------------------------------------- utilitaires
+  const cleClient = (nom) => String(nom || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("fr");
+  const nombre = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+  const nombreCts = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const euros = (v) => nombre.format(Math.round(v || 0)) + "\u202f€";
+  const eurosCts = (v) => nombreCts.format(v || 0) + "\u202f€";
+  const prevu = (d) => (Number(d.honos_regl) || 0) + (Number(d.honos_art4) || 0);
+  const etapeDe = (d) => { const c = String(d.type || "").charAt(0); return c && "1234".includes(c) ? c : "1"; };
+  const sansNumero = (t) => /^\d\./.test(t || "") ? t.split(".").slice(1).join(".").trim() : (t || "Sans type");
+  const aujourdhui = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+  const versDate = (iso) => { if (!iso) return null; const [a, m, j] = iso.split("-").map(Number); return new Date(a, m - 1, j); };
+  const fmtDate = (iso) => { const d = versDate(iso); return d ? d.toLocaleDateString("fr-FR") : ""; };
+  const enIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  function anciennete(d) {
+    if (d.archives) return "Arch";
+    const debut = versDate(d.debut);
+    if (!debut) return "";
+    const j = Math.round((aujourdhui() - debut) / 86400000);
+    return j > 90 ? "+90j" : j > 60 ? "+60j" : j > 30 ? "+30j" : "-30j";
+  }
+  function fiche(nom) {
+    const cle = cleClient(nom);
+    return (donnees && donnees.clients[cle]) || { nom: nom || "", commentaire: "", notes: "", notaire: "", partenaire: "", millionnaire: "", a_vie: "" };
+  }
+  const dossiersDe = (nom) => { const cle = cleClient(nom); return donnees.dossiers.filter((d) => cle && cleClient(d.client) === cle); };
+  function commentaire(d) {
+    return [(d.commentaire || "").trim(), (fiche(d.client).commentaire || "").trim()].filter(Boolean).join(" · ");
+  }
+
+  // ---------------------------------------------------------------- filtres
+  const texteRecherche = () => $("recherche").value.trim().toLocaleLowerCase("fr");
+  function correspondRecherche(d) {
+    const t = texteRecherche();
+    if (!t) return true;
+    const f = fiche(d.client);
+    const meule = [d.client, d.tache, d.commentaire, d.notes, d.notaire, d.partenaire, f.commentaire, f.notes].join(" ").toLocaleLowerCase("fr");
+    return t.split(/\s+/).every((m) => meule.includes(m));
+  }
+  function valeurFiltre(d, cle) {
+    if (cle === "anciennete") return anciennete(d) || "(sans date)";
+    return String(d[cle] ?? "").trim() || "(vide)";
+  }
+  function correspond(d, saufSegment) {
+    if (!correspondRecherche(d)) return false;
+    if ($("masquerArchives").checked && d.archives) return false;
+    for (const [cle, choix] of Object.entries(selections)) {
+      if (cle === saufSegment || !choix.size) continue;
+      if (!choix.has(valeurFiltre(d, cle))) return false;
+    }
+    return true;
+  }
+  const visibles = () => donnees ? donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => correspond(d)) : [];
+
+  function valeursSegment(cle) {
+    const comptes = new Map();
+    for (const d of donnees.dossiers) if (correspond(d, cle)) {
+      const v = valeurFiltre(d, cle);
+      comptes.set(v, (comptes.get(v) || 0) + 1);
+    }
+    let valeurs;
+    if (cle === "anciennete") valeurs = [...ANCIENNETES];
+    else {
+      const toutes = new Set(donnees.dossiers.map((d) => String(d[cle] ?? "").trim()).filter(Boolean));
+      if (cle === "type") valeurs = [...TYPES.filter((t) => toutes.has(t)), ...[...toutes].filter((t) => !TYPES.includes(t)).sort()];
+      else if (cle === "exercice") valeurs = [...toutes].sort().reverse();
+      else valeurs = [...toutes].sort((a, b) => a.localeCompare(b, "fr"));
+      if (comptes.has("(vide)")) valeurs.push("(vide)");
+    }
+    for (const v of selections[cle]) if (!valeurs.includes(v)) valeurs.push(v);
+    return { valeurs, comptes };
+  }
+
+  function majSegments() {
+    document.querySelectorAll(".segment").forEach((b) => {
+      const choix = selections[b.dataset.cle];
+      const s = b.querySelector("span");
+      s.textContent = !choix.size ? "Tous" : choix.size === 1 ? [...choix][0] : `${choix.size} sélectionnés`;
+      b.classList.toggle("actif", choix.size > 0);
+    });
+  }
+
+  // --- fenêtre façon segment Excel ---
+  let segmentOuvert = null, minuteurSurvol = null, veille = null;
+  const survolPossible = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  function ouvrirSegment(bouton) {
+    if (!donnees) return;
+    const cle = bouton.dataset.cle;
+    segmentOuvert = bouton;
+    const fen = $("fenSegment");
+    const { valeurs, comptes } = valeursSegment(cle);
+    fen.replaceChildren(
+      el("header", null, el("b", null, SEGMENTS[cle]),
+        el("button", { type: "button", onclick: () => { selections[cle].clear(); filtreChange(); ouvrirSegment(bouton); } }, "✕ Effacer le filtre"),
+        el("button", { type: "button", class: "ok-tel", onclick: fermerSegment }, "OK")),
+      el("div", { class: "liste" }, valeurs.map((v) => {
+        const n = comptes.get(v) || 0;
+        const c = el("input", { type: "checkbox", checked: selections[cle].has(v) });
+        c.addEventListener("change", () => { c.checked ? selections[cle].add(v) : selections[cle].delete(v); filtreChange(); majComptesSegment(); });
+        return el("label", { class: n ? "" : "zero", "data-v": v }, c, el("span", null, cle === "type" ? v : v), el("i", null, n));
+      })));
+    fen.hidden = false;
+    if (window.innerWidth > 900) {
+      const r = bouton.getBoundingClientRect();
+      fen.style.top = r.bottom + 2 + "px";
+      fen.style.left = Math.min(r.left, window.innerWidth - fen.offsetWidth - 10) + "px";
+      fen.style.minWidth = Math.max(240, r.width) + "px";
+      $("voile").style.display = survolPossible ? "none" : "block";
+    } else {
+      $("voile").style.display = "block";
+    }
+    if (survolPossible) { clearInterval(veille); veille = setInterval(surveiller, 150); }
+  }
+  function majComptesSegment() {
+    if (!segmentOuvert) return;
+    const { comptes } = valeursSegment(segmentOuvert.dataset.cle);
+    $("fenSegment").querySelectorAll("label").forEach((l) => {
+      const n = comptes.get(l.dataset.v) || 0;
+      l.querySelector("i").textContent = n;
+      l.classList.toggle("zero", !n);
+    });
+  }
+  function fermerSegment() {
+    segmentOuvert = null;
+    $("fenSegment").hidden = true;
+    $("voile").style.display = "none";
+    clearInterval(veille);
+  }
+  let pointeur = { x: 0, y: 0 };
+  document.addEventListener("pointermove", (e) => { pointeur = { x: e.clientX, y: e.clientY }; }, { passive: true });
+  function dedans(elem, marge) {
+    const r = elem.getBoundingClientRect();
+    return pointeur.x >= r.left - marge && pointeur.x <= r.right + marge && pointeur.y >= r.top - marge && pointeur.y <= r.bottom + marge;
+  }
+  function surveiller() {
+    if (!segmentOuvert) return clearInterval(veille);
+    if (!dedans($("fenSegment"), 8) && !dedans(segmentOuvert, 4)) fermerSegment();
+  }
+  document.querySelectorAll(".segment").forEach((b) => {
+    b.addEventListener("click", () => (segmentOuvert === b ? fermerSegment() : ouvrirSegment(b)));
+    if (survolPossible) {
+      b.addEventListener("mouseenter", () => { clearTimeout(minuteurSurvol); minuteurSurvol = setTimeout(() => { if (segmentOuvert !== b) ouvrirSegment(b); }, 180); });
+      b.addEventListener("mouseleave", () => clearTimeout(minuteurSurvol));
+    }
+  });
+  $("voile").addEventListener("click", fermerSegment);
+
+  let minuteurFiltre = null;
+  function filtreChange() {
+    majSegments();
+    clearTimeout(minuteurFiltre);
+    minuteurFiltre = setTimeout(afficherTout, 80);
+  }
+
+  // ---------------------------------------------------------------- GitHub
+  const CLE_GITHUB = "suivi-gp-github";
+  let github = null;            // {proprietaire, depot, chemin, branche, cle}
+  let shaDistant = null;        // version du fichier sur GitHub
+  let minuteurEnvoi = null;
+  let envoiEnCours = false;
+
+  function lireReglages() {
+    try { github = JSON.parse(localStorage.getItem(CLE_GITHUB) || "null"); } catch (e) { github = null; }
+  }
+  function etatSync(classe, texte) {
+    $("etatSync").className = "etat-sync " + classe;
+    $("etatSyncTexte").textContent = texte;
+  }
+  const heure = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  function adresseFichier() {
+    const chemin = github.chemin.split("/").map(encodeURIComponent).join("/");
+    return `https://api.github.com/repos/${encodeURIComponent(github.proprietaire)}/${encodeURIComponent(github.depot)}/contents/${chemin}`;
+  }
+  function entetes(accept) {
+    return { "Authorization": "Bearer " + github.cle, "Accept": accept || "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  }
+  function versBase64(texte) {
+    const octets = new TextEncoder().encode(texte);
+    let binaire = "";
+    for (let i = 0; i < octets.length; i += 0x8000) binaire += String.fromCharCode.apply(null, octets.subarray(i, i + 0x8000));
+    return btoa(binaire);
+  }
+  function depuisBase64(b64) {
+    const binaire = atob(b64.replace(/\s/g, ""));
+    const octets = new Uint8Array(binaire.length);
+    for (let i = 0; i < binaire.length; i++) octets[i] = binaire.charCodeAt(i);
+    return new TextDecoder("utf-8").decode(octets);
+  }
+  function messageErreur(statut) {
+    if (statut === 401) return "Clé d’accès refusée par GitHub : vérifiez-la ou créez-en une nouvelle.";
+    if (statut === 403) return "Cette clé n’a pas le droit de modifier le dépôt (autorisation « Contents : Read and write »).";
+    if (statut === 404) return "Dépôt ou fichier introuvable : vérifiez le nom d’utilisateur, le dépôt, le fichier et la branche.";
+    return "GitHub ne répond pas (code " + statut + ").";
+  }
+
+  async function lireGithub() {
+    const url = adresseFichier() + "?ref=" + encodeURIComponent(github.branche);
+    const r = await fetch(url, { headers: entetes(), cache: "no-store" });
+    if (!r.ok) throw { statut: r.status };
+    const info = await r.json();
+    let texte;
+    if (info.content && info.encoding === "base64") {
+      texte = depuisBase64(info.content);
+    } else {  // fichier de plus de 1 Mo : on demande le contenu brut
+      const brut = await fetch(url, { headers: entetes("application/vnd.github.raw+json"), cache: "no-store" });
+      if (!brut.ok) throw { statut: brut.status };
+      texte = await brut.text();
+    }
+    return { texte, sha: info.sha };
+  }
+
+  async function chargerDepuisGithub(silencieux) {
+    if (!github) return;
+    etatSync("envoi", "Lecture sur GitHub…");
+    try {
+      const { texte, sha } = await lireGithub();
+      const contenu = JSON.parse(texte);
+      const dossiers = Array.isArray(contenu) ? contenu : contenu.dossiers;
+      if (!Array.isArray(dossiers)) throw { message: "Le fichier GitHub ne contient pas de dossiers." };
+      const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
+      donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: github.chemin, source: "github" };
+      shaDistant = sha;
+      localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
+      localStorage.setItem(CLE_STOCKAGE + "-sha", sha);
+      etatSync("", "À jour avec GitHub · " + heure());
+      if (!silencieux) informer(`${dossiers.length} dossiers chargés depuis GitHub.`);
+      afficherTout();
+      montrerVue();
+    } catch (e) {
+      const texte = e && e.statut ? messageErreur(e.statut) : (e && e.message) || "Connexion à GitHub impossible (réseau ?).";
+      etatSync("erreur", donnees ? "Hors ligne : version du téléphone" : "Connexion impossible");
+      informer(texte);
+      throw e;
+    }
+  }
+
+  function planifierEnvoi() {
+    if (!github) return;
+    etatSync("envoi", "Modification à envoyer…");
+    clearTimeout(minuteurEnvoi);
+    minuteurEnvoi = setTimeout(envoyerGithub, 1500);
+  }
+
+  async function envoyerGithub(forcer) {
+    if (!github || !donnees) return;
+    if (envoiEnCours) { planifierEnvoi(); return; }
+    envoiEnCours = true;
+    etatSync("envoi", "Enregistrement sur GitHub…");
+    try {
+      let sha = shaDistant;
+      if (forcer) sha = (await lireGithub()).sha;  // écraser : on prend la version actuelle comme base
+      const contenu = JSON.stringify({ version: 2, dossiers: donnees.dossiers, clients: donnees.clients }, null, 1);
+      const r = await fetch(adresseFichier(), {
+        method: "PUT", headers: { ...entetes(), "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Mise à jour depuis le téléphone", content: versBase64(contenu), sha, branch: github.branche })
+      });
+      if (r.status === 409 || r.status === 422) { envoiEnCours = false; conflit(); return; }
+      if (!r.ok) throw { statut: r.status };
+      const resultat = await r.json();
+      shaDistant = resultat.content.sha;
+      localStorage.setItem(CLE_STOCKAGE + "-sha", shaDistant);
+      donnees.modifie = null;
+      localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
+      etatSync("", "Enregistré sur GitHub · " + heure());
+      majAlerte();
+    } catch (e) {
+      etatSync("erreur", "Pas envoyé : nouvel essai à la prochaine connexion");
+      if (e && e.statut) informer(messageErreur(e.statut));
+    } finally {
+      envoiEnCours = false;
+    }
+  }
+
+  function conflit() {
+    etatSync("erreur", "Le fichier a changé sur GitHub");
+    const choix = confirm("Le fichier a été modifié ailleurs (sur l’ordinateur ?) depuis votre dernière lecture.\n\n"
+      + "OK : reprendre la version de GitHub (votre dernière modification ici sera perdue).\n"
+      + "Annuler : garder la version du téléphone et l’enregistrer sur GitHub.");
+    if (choix) chargerDepuisGithub().catch(() => {});
+    else envoyerGithub(true);
+  }
+
+  function ouvrirReglages() {
+    fermerMenu();
+    const g = github || { proprietaire: "", depot: "", chemin: "suivi_gp.json", branche: "main", cle: "" };
+    $("ghProprietaire").value = g.proprietaire; $("ghDepot").value = g.depot;
+    $("ghChemin").value = g.chemin; $("ghBranche").value = g.branche; $("ghCle").value = g.cle;
+    $("deconnecterGithub").hidden = !github;
+    ouvrirFeuille("feuilleGithub");
+  }
+  async function connecter() {
+    const g = {
+      proprietaire: $("ghProprietaire").value.trim(), depot: $("ghDepot").value.trim(),
+      chemin: $("ghChemin").value.trim() || "suivi_gp.json", branche: $("ghBranche").value.trim() || "main",
+      cle: $("ghCle").value.trim()
+    };
+    if (!g.proprietaire || !g.depot || !g.cle) { informer("Indiquez le nom d’utilisateur, le dépôt et la clé d’accès."); return; }
+    if (donnees && donnees.modifie && !confirm("Des modifications du téléphone n’ont pas été enregistrées ailleurs. Charger la version de GitHub les remplacera. Continuer ?")) return;
+    const ancien = github;
+    github = g;
+    $("ghErreur").hidden = true;
+    $("connecterGithub").textContent = "Connexion…";
+    try {
+      await chargerDepuisGithub();
+      localStorage.setItem(CLE_GITHUB, JSON.stringify(g));
+      fermerFeuilles();
+    } catch (e) {
+      await diagnostiquer(g, e).catch(() => afficherErreurGithub("Connexion à GitHub impossible (réseau ?)."));
+      github = ancien;
+    } finally {
+      $("connecterGithub").textContent = "Se connecter";
+    }
+  }
+
+  // Cherche précisément ce qui bloque : la clé, le dépôt, la branche ou le fichier
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  async function diagnostiquer(g, erreur) {
+    const api = (chemin) => fetch("https://api.github.com/" + chemin, {
+      headers: { "Authorization": "Bearer " + g.cle, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" }, cache: "no-store" });
+    const nomDepot = `${encodeURIComponent(g.proprietaire)}/${encodeURIComponent(g.depot)}`;
+    if (/\s/.test($("ghCle").value.trim()) || !/^(github_pat_|ghp_)/.test(g.cle)) {
+      return afficherErreurGithub("<b>La clé semble incomplète.</b> Elle doit commencer par « github_pat_ » et ne contenir aucun espace. Recopiez-la avec le bouton de copie de GitHub (l’icône à droite de la clé).");
+    }
+    const moi = await api("user");
+    if (moi.status === 401) return afficherErreurGithub("<b>GitHub refuse la clé.</b> Elle a peut-être été régénérée ou a expiré : copiez la clé actuelle, ou créez-en une nouvelle.");
+    const compte = moi.ok ? (await moi.json()).login : null;
+    const depot = await api("repos/" + nomDepot);
+    if (depot.status === 404) {
+      return afficherErreurGithub(`<b>Le dépôt « ${esc(g.proprietaire)}/${esc(g.depot)} » est introuvable avec cette clé.</b> `
+        + "Vérifiez son nom exact, puis, dans les réglages de la clé sur GitHub, que ce dépôt est bien coché sous « Repository access ». "
+        + (compte && compte.toLowerCase() !== g.proprietaire.toLowerCase() ? `La clé appartient au compte « ${esc(compte)} ».` : ""));
+    }
+    if (!depot.ok) return afficherErreurGithub("GitHub ne répond pas comme prévu (code " + depot.status + ").");
+    const infoDepot = await depot.json();
+    const branche = await api(`repos/${nomDepot}/branches/${encodeURIComponent(g.branche)}`);
+    if (branche.status === 404) {
+      return afficherErreurGithub(`<b>La branche « ${esc(g.branche)} » n’existe pas dans ce dépôt.</b> Sa branche principale s’appelle « ${esc(infoDepot.default_branch)} ».`,
+        [[`Utiliser « ${infoDepot.default_branch} »`, () => { $("ghBranche").value = infoDepot.default_branch; connecter(); }]]);
+    }
+    const racine = await api(`repos/${nomDepot}/contents/?ref=${encodeURIComponent(g.branche)}`);
+    if (racine.ok) {
+      const fichiers = (await racine.json()).filter((f) => f.type === "file").map((f) => f.path);
+      const json = fichiers.filter((f) => /\.json$/i.test(f));
+      if (!fichiers.includes(g.chemin)) {
+        if (!fichiers.length) return afficherErreurGithub("<b>Le dépôt est vide.</b> Ajoutez-y votre fichier suivi_gp.json (Add file, puis Upload files).");
+        return afficherErreurGithub(`<b>Le fichier « ${esc(g.chemin)} » n’est pas à la racine du dépôt.</b> `
+          + (json.length ? "Fichiers JSON trouvés :" : "Aucun fichier JSON à la racine. Fichiers présents : " + esc(fichiers.slice(0, 8).join(", "))),
+          json.map((f) => [f, () => { $("ghChemin").value = f; connecter(); }]));
+      }
+    }
+    if (erreur && erreur.statut === 403) return afficherErreurGithub("<b>La clé n’a pas le droit de lire le fichier.</b> Dans ses réglages, mettez « Contents » sur « Read and write ».");
+    afficherErreurGithub(erreur && erreur.statut ? messageErreur(erreur.statut) : "Connexion à GitHub impossible (réseau ?).");
+  }
+  function afficherErreurGithub(html, choix) {
+    const zone = $("ghErreur");
+    zone.innerHTML = html;
+    for (const [texte, faire] of choix || []) zone.append(el("button", { type: "button", onclick: faire }, texte));
+    zone.hidden = false;
+    zone.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // ---------------------------------------------------------------- stockage
+  function sauver(marquer = true) {
+    if (marquer) donnees.modifie = new Date().toISOString();
+    try { localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees)); }
+    catch (e) { informer("Le téléphone n’a pas pu garder les données."); }
+    majAlerte();
+    if (marquer) planifierEnvoi();
+  }
+  function charger() {
+    try {
+      const brut = localStorage.getItem(CLE_STOCKAGE);
+      if (brut) donnees = JSON.parse(brut);
+    } catch (e) { donnees = null; }
+  }
+
+  // regroupement des commentaires (fichiers d'avant les fiches clients)
+  function regrouper(dossiers) {
+    const clients = {};
+    const groupes = {};
+    for (const d of dossiers) (groupes[cleClient(d.client)] ||= []).push(d);
+    for (const [cle, membres] of Object.entries(groupes)) {
+      if (!cle) continue;
+      const f = clients[cle] = { nom: membres[0].client || "", commentaire: "", notes: "", notaire: "", partenaire: "", millionnaire: "", a_vie: "" };
+      for (const champ of ["commentaire", "notes"]) {
+        const textes = [];
+        for (const d of [...membres].sort((a, b) => (a.debut || "").localeCompare(b.debut || ""))) {
+          const t = (d[champ] || "").trim();
+          if (t && !textes.some((x) => x[1] === t)) textes.push([d, t]);
+        }
+        f[champ] = textes.length === 1 ? textes[0][1]
+          : textes.map(([d, t]) => `• ${[d.tache, sansNumero(d.type)].filter(Boolean).join(" – ")} : ${t}`).join("\n");
+        membres.forEach((d) => { d[champ] = ""; });
+      }
+      for (const champ of COMMUNS) {
+        const valeurs = membres.map((d) => String(d[champ] || "").trim()).filter(Boolean);
+        if (valeurs.length) f[champ] = valeurs.sort((a, b) => valeurs.filter((v) => v === b).length - valeurs.filter((v) => v === a).length)[0];
+      }
+    }
+    return clients;
+  }
+
+  function importer(texte, nomFichier) {
+    let contenu;
+    try { contenu = JSON.parse(texte); }
+    catch (e) { informer("Ce fichier n’est pas un fichier JSON lisible."); return; }
+    const dossiers = Array.isArray(contenu) ? contenu : contenu.dossiers;
+    if (!Array.isArray(dossiers)) { informer("Ce fichier ne contient pas de dossiers : choisissez suivi_gp.json."); return; }
+    const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
+    donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: nomFichier || "suivi_gp.json" };
+    sauver(false);
+    informer(`${dossiers.length} dossiers chargés.`);
+    afficherTout();
+    location.hash = "#kanban";
+  }
+
+  // Le service d'enregistrement de Claude est préparé dès l'ouverture : au moment du clic,
+  // l'export part tout de suite (Android refuse un partage qui n'arrive pas directement après le toucher).
+  let telechargements = null;
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("downloads").then((t) => { telechargements = t; }).catch(() => {});
+  }
+  const exportReussi = (texte) => { donnees.modifie = null; sauver(false); informer(texte); };
+
+  function exporter() {
+    const contenu = JSON.stringify({ version: 2, dossiers: donnees.dossiers, clients: donnees.clients }, null, 1);
+    // 1. dans Claude (appli ou page claude.ai) : enregistrement par Claude
+    if (telechargements) {
+      telechargements.save({ filename: "suivi_gp.json", data: contenu })
+        .then(() => exportReussi("Fichier enregistré. Remettez-le dans OneDrive à la place de l’ancien."))
+        .catch((e) => {
+          if (e && e.code === "declined") return;
+          exporterAutrement(contenu, e && e.code);
+        });
+      return;
+    }
+    exporterAutrement(contenu, "pas de service Claude");
+  }
+
+  function exporterAutrement(contenu, raison) {
+    // 2. partage Android : « Enregistrer dans OneDrive », « Fichiers », e-mail…
+    try {
+      const fichier = new File([contenu], "suivi_gp.json", { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [fichier] })) {
+        navigator.share({ files: [fichier], title: "suivi_gp.json" })
+          .then(() => exportReussi("Fichier envoyé. Remplacez l’ancien suivi_gp.json dans OneDrive."))
+          .catch((e) => { if (!e || e.name !== "AbortError") afficherCopie(contenu, raison + " / " + (e && e.name)); });
+        return;
+      }
+    } catch (e) { /* on passe à la suite */ }
+    // 3. téléchargement classique du navigateur
+    try {
+      const lien = document.createElement("a");
+      lien.href = URL.createObjectURL(new Blob([contenu], { type: "application/json" }));
+      lien.download = "suivi_gp.json";
+      document.body.append(lien);
+      lien.click();
+      lien.remove();
+      setTimeout(() => URL.revokeObjectURL(lien.href), 4000);
+    } catch (e) { /* on passe à la suite */ }
+    // 4. dans tous les cas, solution de secours : copier le contenu
+    afficherCopie(contenu, raison);
+  }
+
+  function afficherCopie(contenu, raison) {
+    $("titreClient").textContent = "Exporter le fichier";
+    clientEnCours = null;
+    const zone = el("textarea", { readonly: true, style: "min-height:160px;font-size:12px" }, contenu.slice(0, 4000) + (contenu.length > 4000 ? "\n…" : ""));
+    const copier = el("button", { class: "bouton or large", type: "button", onclick: async () => {
+      try { await navigator.clipboard.writeText(contenu); exportReussi("Contenu copié. Collez-le dans un fichier suivi_gp.json."); }
+      catch (e) { informer("La copie n’est pas autorisée ici."); }
+    } }, "Copier tout le contenu");
+    $("corpsClient").replaceChildren(
+      el("p", null, "Si un téléchargement vient de se lancer, le fichier suivi_gp.json est dans « Téléchargements » : remplacez avec lui l’ancien fichier dans OneDrive."),
+      el("p", { style: "color:var(--discret)" }, "Sinon, copiez le contenu ci-dessous et collez-le dans un fichier suivi_gp.json (par exemple avec l’éditeur de texte de OneDrive)."),
+      copier,
+      el("div", { class: "champ", style: "margin-top:14px" }, zone),
+      el("p", { style: "color:var(--discret);font-size:12px" }, "Détail technique : " + (raison || "inconnu"))
+    );
+    $("enregistrerClient").hidden = true;
+    ouvrirFeuille("feuilleClient");
+  }
+
+  // ---------------------------------------------------------------- affichage
+  function informer(texte, action) {
+    const m = $("message");
+    $("messageTexte").textContent = texte;
+    const b = $("messageAction");
+    if (action) { b.textContent = action.texte; b.onclick = () => { m.classList.remove("visible"); action.faire(); }; b.hidden = false; }
+    else b.hidden = true;
+    m.classList.add("visible");
+    clearTimeout(informer.minuteur);
+    informer.minuteur = setTimeout(() => m.classList.remove("visible"), action ? 7000 : 3200);
+  }
+  function majAlerte() {
+    $("alerteModif").hidden = !(donnees && donnees.modifie) || !!github;
+    if (donnees) {
+      const d = new Date(donnees.importe);
+      $("infoFichier").textContent = `${donnees.dossiers.length} dossiers, ${Object.keys(donnees.clients).length} clients. Chargé le ${d.toLocaleDateString("fr-FR")}.`
+        + (github ? ` Relié à GitHub : ${github.proprietaire}/${github.depot}/${github.chemin}.`
+          : (donnees.modifie ? " Des modifications n’ont pas encore été exportées." : ""));
+    } else {
+      $("infoFichier").textContent = github ? "Relié à GitHub, rien de chargé pour l’instant." : "Aucun fichier ouvert.";
+    }
+  }
+
+  function afficherIndicateurs(liste) {
+    const regl = liste.reduce((s, [d]) => s + (Number(d.honos_regl) || 0), 0);
+    const art4 = liste.reduce((s, [d]) => s + (Number(d.honos_art4) || 0), 0);
+    const ca = liste.reduce((s, [d]) => s + (Number(d.ca) || 0), 0);
+    const indic = (titre, valeur, c, v) => el("div", { class: "indic", style: `--c:${c};${v ? "--v:" + v : ""}` }, el("span", null, titre), el("b", null, valeur));
+    $("indicateurs").replaceChildren(
+      indic("Dossiers affichés", `${liste.length} / ${donnees.dossiers.length}`, "var(--discret)"),
+      indic("Prévisionnel réglementés", eurosCts(regl), "var(--bleu)", "var(--bleu)"),
+      indic("Prévisionnel article IV", eurosCts(art4), "var(--bleu)", "var(--bleu)"),
+      indic("CA encaissé", eurosCts(ca), "var(--or)", "var(--or)"),
+      indic("Reste à encaisser", eurosCts(regl + art4 - ca), "var(--bleu)", "var(--bleu)"));
+  }
+
+  function afficherRdv() {
+    const auj = aujourdhui();
+    const rdv = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => !d.archives && d.rdv)
+      .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
+      .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0]);
+    $("rdv").replaceChildren(el("strong", null, "Prochains rendez-vous"),
+      ...(rdv.length ? rdv.slice(0, 12).map(([e, d, i]) => {
+        const jour = versDate(d.rdv);
+        const quand = e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`;
+        return el("button", { class: "pastille-rdv" + (e === 0 ? " jour" : e === 1 ? " demain" : ""), onclick: () => ouvrirDossier(i) },
+          el("b", null, quand), d.client + (d.tache ? " · " + d.tache : ""));
+      }) : [el("em", null, "Aucun rendez-vous prévu dans les 30 prochains jours.")]));
+  }
+
+  function carteDossier(i) {
+    const d = donnees.dossiers[i];
+    const p = prevu(d);
+    const bas = [fmtDate(d.debut), anciennete(d), d.exercice].filter(Boolean).join("   ");
+    const comm = commentaire(d);
+    const carte = el("button", {
+      class: "carte-dossier" + (d.archives ? " archive" : "") + (choisi === i ? " choisie" : ""),
+      style: `--c:${COULEURS[etapeDe(d)]}`, "data-i": i, type: "button"
+    },
+      el("div", { class: "haut" }, el("b", null, d.client || "Sans nom"), p ? el("span", { class: "prevu" }, euros(p)) : null),
+      el("div", { class: "ligne" }, [d.tache, d.notaire].filter(Boolean).join(" · ") || sansNumero(d.type)),
+      comm ? el("div", { class: "ligne comm" }, comm) : null,
+      (bas || d.ca) ? el("div", { class: "bas" }, el("span", null, bas), d.ca ? el("span", { class: "or" }, euros(d.ca)) : null) : null);
+    activerGlisser(carte, i);
+    return carte;
+  }
+
+  function afficherKanban(liste) {
+    const recherche = texteRecherche();
+    if (recherche !== derniereRecherche) { derniereRecherche = recherche; bascules = new Set(); }
+    $("vue-kanban").classList.toggle("recherche-active", !!recherche);
+    const parType = {};
+    for (const [d, i] of liste) (parType[d.type || ""] ||= []).push(i);
+    $("raccourcisEtapes").replaceChildren(...ETAPES.map(([n, nom]) => el("button", { type: "button", onclick: () => {
+      $("col-" + n).scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    } }, nom)));
+    $("kanban").replaceChildren(...ETAPES.map(([n, nom]) => {
+      const types = TYPES.filter((t) => t.startsWith(n + "."));
+      for (const t of Object.keys(parType)) if (t.startsWith(n + ".") && !types.includes(t)) types.push(t);
+      if (n === "1") for (const t of Object.keys(parType)) if (!"1234".includes(t.charAt(0)) || !t) types.unshift(t);
+      const dans = types.flatMap((t) => parType[t] || []);
+      const p = dans.reduce((s, i) => s + prevu(donnees.dossiers[i]), 0);
+      const ca = dans.reduce((s, i) => s + (Number(donnees.dossiers[i].ca) || 0), 0);
+      return el("div", { class: "colonne", id: "col-" + n, style: `--c:${COULEURS[n]}`, "data-etape": n },
+        el("header", null, el("h2", null, `${n} · ${nom}`),
+          el("p", null, `${dans.length} dossier(s) · prévu `, el("b", null, euros(p)), " · encaissé ", el("b", { class: "or" }, euros(ca)), " · reste ", el("b", null, euros(p - ca)))),
+        el("div", { class: "defile" }, types.map((t) => {
+          const ids = parType[t] || [];
+          if (!dejaVues.has(t)) { dejaVues.add(t); if ("34".includes(t.charAt(0))) repliees.add(t); }
+          const ouverte = recherche ? (ids.length > 0) !== bascules.has(t) : !repliees.has(t);
+          const pt = ids.reduce((s, i) => s + prevu(donnees.dossiers[i]), 0);
+          const ct = ids.reduce((s, i) => s + (Number(donnees.dossiers[i].ca) || 0), 0);
+          const section = el("div", { class: "section" + (ouverte ? " ouverte" : "") + (ids.length ? " trouvee" : ""), "data-type": t },
+            el("button", { class: "section-titre", type: "button", "aria-expanded": String(ouverte), onclick: () => {
+              if (recherche) { bascules.has(t) ? bascules.delete(t) : bascules.add(t); }
+              else { repliees.has(t) ? repliees.delete(t) : repliees.add(t); memoriserAffichage(); }
+              section.classList.toggle("ouverte");
+            } },
+              el("span", { class: "fl" }, "▶"), el("b", null, t ? sansNumero(t) : "Sans type"), el("span", { class: "nb" }, ids.length),
+              (pt || ct) ? el("span", { class: "montants" }, "prévu ", el("b", null, euros(pt)), "  encaissé ", el("b", { class: "or" }, euros(ct)), "  reste ", el("b", null, euros(pt - ct))) : null),
+            el("div", { class: "cartes" }, ids.length ? ids.map(carteDossier) : el("div", { class: "vide-section" }, "Déposer ici")));
+          return section;
+        })));
+    }));
+  }
+
+  function toutDeplier(ouvrir) {
+    bascules = new Set();
+    for (const t of TYPES.concat(Object.keys(donnees ? groupesTypes() : {}))) { dejaVues.add(t); ouvrir ? repliees.delete(t) : repliees.add(t); }
+    if (texteRecherche()) $("recherche").value = $("recherche").value; // l'ouverture automatique de la recherche reste prioritaire
+    memoriserAffichage();
+    afficherTout();
+  }
+  function groupesTypes() { const g = {}; donnees.dossiers.forEach((d) => { g[d.type || ""] = 1; }); return g; }
+  function memoriserAffichage() {
+    try { localStorage.setItem(CLE_AFFICHAGE, JSON.stringify({ repliees: [...repliees], dejaVues: [...dejaVues] })); } catch (e) {}
+  }
+
+  function afficherClients(liste) {
+    const groupes = new Map();
+    for (const [d] of liste) {
+      const cle = cleClient(d.client);
+      if (!groupes.has(cle)) groupes.set(cle, { nom: d.client, liste: [] });
+      groupes.get(cle).liste.push(d);
+    }
+    const tries = [...groupes.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    const max = 300;
+    $("aideClients").textContent = `${tries.length} client(s) pour ${liste.length} dossier(s) affiché(s). Touchez un client pour ouvrir sa fiche.`;
+    $("clientsListe").replaceChildren(...tries.slice(0, max).map(({ nom, liste: ds }) => {
+      const p = ds.reduce((s, d) => s + prevu(d), 0);
+      const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
+      const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
+      const notaires = [...new Set(ds.map((d) => d.notaire).filter(Boolean))];
+      return el("tr", { class: "ligne", onclick: () => ouvrirClient(nom) },
+        el("td", null, el("b", null, nom), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
+        el("td", { class: "types" }, `${ds.length} dossier${ds.length > 1 ? "s" : ""}`, el("small", null, etapes)),
+        el("td", { class: "cache-tel" }, notaires.length === 1 ? notaires[0] : notaires.length ? `${notaires.length} notaires` : ""),
+        el("td", { class: "n cache-tel" }, p ? euros(p) : ""),
+        el("td", { class: "n or" }, ca ? euros(ca) : ""),
+        el("td", { class: "n" }, p ? euros(p - ca) : ""));
+    }));
+    $("plusDe").hidden = tries.length <= max;
+    $("plusDe").textContent = `${tries.length - max} autres clients : affinez avec la recherche ou les filtres.`;
+  }
+
+  function afficherTout() {
+    const vide = !donnees || !donnees.dossiers.length;
+    $("accueilVide").hidden = !vide;
+    $("contenu").hidden = vide;
+    $("btnNouveau").hidden = vide;
+    majAlerte();
+    if (vide) return;
+    const liste = visibles();
+    majSegments();
+    afficherIndicateurs(liste);
+    afficherRdv();
+    afficherKanban(liste);
+    afficherClients(liste);
+    majComptesSegment();
+  }
+
+  // ---------------------------------------------------------------- glisser-déposer
+  let glisse = null;
+  function activerGlisser(carte, i) {
+    carte.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      glisse = { i, carte, x: e.clientX, y: e.clientY, parti: false, tactile: e.pointerType !== "mouse", fantome: null, cible: null };
+      if (glisse.tactile) glisse.minuteur = setTimeout(() => demarrer(), 380);  // appui long sur téléphone
+    });
+    carte.addEventListener("click", (e) => {
+      if (carte.dataset.bloque) { delete carte.dataset.bloque; e.preventDefault(); return; }
+      choisi = i;
+      ouvrirDossier(i);
+    });
+  }
+  function demarrer() {
+    if (!glisse || glisse.parti) return;
+    glisse.parti = true;
+    const f = glisse.carte.cloneNode(true);
+    f.classList.add("fantome");
+    document.body.append(f);
+    glisse.fantome = f;
+    glisse.carte.classList.add("souleve");
+    if (navigator.vibrate) try { navigator.vibrate(15); } catch (e) {}
+    bouger(glisse.x, glisse.y);
+  }
+  function bouger(x, y) {
+    glisse.fantome.style.left = x - 30 + "px";
+    glisse.fantome.style.top = y - 20 + "px";
+    const sous = document.elementFromPoint(x, y);
+    let section = sous && sous.closest(".section");
+    if (!section && sous) { const col = sous.closest(".colonne"); if (col) section = col.querySelector(".section"); }
+    if (glisse.cible && glisse.cible !== section) glisse.cible.classList.remove("cible");
+    if (section) section.classList.add("cible");
+    glisse.cible = section;
+    // défilement automatique près des bords (Kanban horizontal du téléphone)
+    const k = $("kanban");
+    if (x < 30) k.scrollLeft -= 14; else if (x > window.innerWidth - 30) k.scrollLeft += 14;
+  }
+  document.addEventListener("pointermove", (e) => {
+    if (!glisse) return;
+    const dist = Math.abs(e.clientX - glisse.x) + Math.abs(e.clientY - glisse.y);
+    if (!glisse.parti) {
+      if (glisse.tactile) { if (dist > 10) { clearTimeout(glisse.minuteur); glisse = null; } return; }  // c'est un défilement
+      if (dist > 6) demarrer(); else return;
+    }
+    bouger(e.clientX, e.clientY);
+  });
+  document.addEventListener("touchmove", (e) => { if (glisse && glisse.parti) e.preventDefault(); }, { passive: false });
+  function finGlisser(annule) {
+    if (!glisse) return;
+    clearTimeout(glisse.minuteur);
+    const g = glisse;
+    glisse = null;
+    if (!g.parti) return;
+    g.carte.dataset.bloque = "1";
+    setTimeout(() => delete g.carte.dataset.bloque, 400);
+    g.fantome.remove();
+    g.carte.classList.remove("souleve");
+    if (g.cible) g.cible.classList.remove("cible");
+    if (!annule && g.cible) changerType(g.i, g.cible.dataset.type);
+  }
+  document.addEventListener("pointerup", () => finGlisser(false));
+  document.addEventListener("pointercancel", () => finGlisser(true));
+
+  function changerType(i, nouveau) {
+    const d = donnees.dossiers[i];
+    const ancien = d.type || "";
+    if (nouveau === ancien || nouveau == null) return;
+    d.type = nouveau;
+    dernierDeplacement = { i, ancien };
+    repliees.delete(nouveau);
+    choisi = i;
+    sauver();
+    afficherTout();
+    informer(`${d.client} : ${sansNumero(nouveau)}`, { texte: "Annuler", faire: () => {
+      if (!dernierDeplacement) return;
+      donnees.dossiers[dernierDeplacement.i].type = dernierDeplacement.ancien;
+      dernierDeplacement = null;
+      sauver(); afficherTout(); informer("Déplacement annulé.");
+    } });
+  }
+
+  // ---------------------------------------------------------------- navigation
+  function vueCourante() { const v = location.hash.replace("#", ""); return ["kanban", "clients"].includes(v) ? v : "kanban"; }
+  function montrerVue() {
+    const v = vueCourante();
+    document.querySelectorAll(".vue").forEach((s) => { s.hidden = s.id !== "vue-" + v; });
+    document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  }
+
+  // ---------------------------------------------------------------- fiche dossier
+  function champ(libelle, controle, commun) {
+    return el("div", { class: "champ" }, el("label", null, commun ? el("span", { class: "commun" }, "◆ ") : null, libelle), controle);
+  }
+  function saisie(nom, valeur, type = "text", attrs = {}) { return el("input", { name: nom, type, value: valeur ?? "", ...attrs }); }
+  function listeValeurs(cle) {
+    const vals = new Set();
+    donnees.dossiers.forEach((d) => { if (d[cle]) vals.add(String(d[cle])); });
+    Object.values(donnees.clients).forEach((c) => { if (c[cle]) vals.add(String(c[cle])); });
+    return [...vals].sort((a, b) => a.localeCompare(b, "fr"));
+  }
+  function avecListe(nom, valeur, cle) {
+    const id = "liste-" + cle + "-" + nom;
+    return [saisie(nom, valeur, "text", { list: id }), el("datalist", { id }, listeValeurs(cle).map((v) => el("option", { value: v })))];
+  }
+  function encartTitre(nom, i) {
+    const n = dossiersDe(nom).length;
+    return n > (i >= 0 ? 1 : 0) ? `Fiche client, commune à ses ${n} dossiers` : "Fiche client, partagée avec ses futurs dossiers";
+  }
+
+  function ouvrirDossier(i) {
+    enCours = i;
+    const d = i >= 0 ? donnees.dossiers[i] : { client: "", type: "2. Analyse à faire", debut: enIso(aujourdhui()), exercice: String(new Date().getFullYear()) };
+    const f = fiche(d.client);
+    $("titreDossier").textContent = i >= 0 ? (d.client || "Dossier") : "Nouveau dossier";
+    const selectType = el("select", { name: "type" },
+      ETAPES.map(([n, nom]) => el("optgroup", { label: `${n} · ${nom}` },
+        TYPES.filter((t) => t.startsWith(n + ".")).map((t) => el("option", { value: t, selected: t === d.type }, sansNumero(t))))),
+      d.type && !TYPES.includes(d.type) ? el("option", { value: d.type, selected: true }, d.type) : null);
+    const rapides = el("div", { class: "etapes-rapides" }, ETAPES.map(([n, nom]) => el("button", { type: "button", onclick: () => {
+      const mot = sansNumero(selectType.value).split(" ")[0].replace(/s$/, "");
+      selectType.value = TYPES.find((t) => t.startsWith(n + ".") && sansNumero(t).startsWith(mot)) || TYPES.find((t) => t.startsWith(n + "."));
+    } }, `→ ${nom}`)));
+    const zoneComm = el("textarea", { name: "commentaire_client" }, f.commentaire || "");
+    const zoneNotes = el("textarea", { name: "notes_client", style: "min-height:70px" }, f.notes || "");
+    const titreEncart = el("p", null, encartTitre(d.client, i));
+    const entreeClient = saisie("client", d.client, "text", { autocomplete: "off", list: "liste-client" });
+    const listeClients = el("datalist", { id: "liste-client" }, [...new Set(donnees.dossiers.map((x) => x.client))].sort().map((v) => el("option", { value: v })));
+    let prefixe = (f.commentaire || "").trim(), prefixeNotes = (f.notes || "").trim(), cleAffichee = cleClient(d.client);
+    entreeClient.addEventListener("input", () => {
+      const cle = cleClient(entreeClient.value);
+      if (cle === cleAffichee) return;
+      const ecrit = zoneComm.value.startsWith(prefixe) ? zoneComm.value.slice(prefixe.length).trim() : null;
+      const ecritNotes = zoneNotes.value.startsWith(prefixeNotes) ? zoneNotes.value.slice(prefixeNotes.length).trim() : null;
+      if (ecrit === null || ecritNotes === null) return;
+      const nf = fiche(entreeClient.value);
+      prefixe = (nf.commentaire || "").trim(); prefixeNotes = (nf.notes || "").trim();
+      zoneComm.value = [prefixe, ecrit].filter(Boolean).join("\n");
+      zoneNotes.value = [prefixeNotes, ecritNotes].filter(Boolean).join("\n");
+      cleAffichee = cle;
+      titreEncart.textContent = encartTitre(entreeClient.value, -1);
+      for (const c of COMMUNS) { const ch = $("corpsDossier").querySelector(`[name="${c}"]`); if (ch && !ch.value && nf[c]) ch.value = nf[c]; }
+    });
+    $("corpsDossier").replaceChildren(
+      el("div", { class: "deux" }, champ("Client", [entreeClient, listeClients]), champ("Tâche", saisie("tache", d.tache))),
+      champ("Type", selectType), rapides,
+      el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", d.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", d.partenaire, "partenaire"), true)),
+      el("div", { class: "trois" },
+        champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
+        champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
+        champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
+      el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV", saisie("rdv", d.rdv, "date"))),
+      el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date")), champ("A-vie", saisie("a_vie", d.a_vie), true), champ("Millionnaire", avecListe("millionnaire", d.millionnaire, "millionnaire"), true)),
+      el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
+      el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", zoneComm), champ("Notes client", zoneNotes)),
+      champ("Commentaire propre à ce dossier", el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "")),
+      i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerDossier }, "Supprimer ce dossier") : "");
+    ouvrirFeuille("feuilleDossier");
+  }
+
+  function lireFormulaire(conteneur) {
+    const v = {};
+    conteneur.querySelectorAll("[name]").forEach((c) => { v[c.name] = c.type === "checkbox" ? c.checked : c.value.trim(); });
+    return v;
+  }
+  const montant = (t) => t === "" || t == null ? null : (Number(String(t).replace(",", ".")) || 0);
+
+  function enregistrerDossier() {
+    const v = lireFormulaire($("corpsDossier"));
+    if (!v.client) { informer("Indiquez le nom du client."); return; }
+    const avant = enCours >= 0 ? { ...donnees.dossiers[enCours] } : null;
+    const d = avant ? { ...avant } : { coche: false, repere: "", heures: 0, reglementaire: "", societe: "", suivi_j: "", notes: "" };
+    Object.assign(d, {
+      client: v.client, tache: v.tache, type: v.type, notaire: v.notaire, partenaire: v.partenaire,
+      honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
+      exercice: v.exercice, debut: v.debut, rdv: v.rdv, fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
+      archives: v.archives, commentaire: v.commentaire
+    });
+    if (enCours >= 0) donnees.dossiers[enCours] = d; else donnees.dossiers.push(d);
+    const cle = cleClient(d.client);
+    const f = { ...fiche(d.client), nom: fiche(d.client).nom || d.client };
+    for (const c of COMMUNS) {
+      const vieux = avant && cleClient(avant.client) === cle ? (avant[c] || "") : (f[c] || "");
+      if ((d[c] || "") !== vieux) for (const autre of dossiersDe(d.client)) if (autre !== d && (!autre[c] || autre[c] === vieux)) autre[c] = d[c];
+      f[c] = d[c] || f[c] || "";
+    }
+    f.commentaire = v.commentaire_client;
+    f.notes = v.notes_client;
+    donnees.clients[cle] = f;
+    sauver();
+    fermerFeuilles();
+    afficherTout();
+    informer(enCours >= 0 ? "Dossier enregistré." : "Dossier ajouté.");
+  }
+  function supprimerDossier() {
+    const d = donnees.dossiers[enCours];
+    if (!confirm(`Supprimer le dossier « ${d.tache || sansNumero(d.type)} » de ${d.client} ?`)) return;
+    donnees.dossiers.splice(enCours, 1);
+    choisi = null;
+    sauver(); fermerFeuilles(); afficherTout(); informer("Dossier supprimé.");
+  }
+
+  // ---------------------------------------------------------------- fiche client
+  function ouvrirClient(nom) {
+    clientEnCours = nom;
+    $("enregistrerClient").hidden = false;
+    const f = fiche(nom);
+    const liste = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => cleClient(d.client) === cleClient(nom))
+      .sort((a, b) => (b[0].debut || "").localeCompare(a[0].debut || ""));
+    const p = liste.reduce((s, [d]) => s + prevu(d), 0);
+    const ca = liste.reduce((s, [d]) => s + (Number(d.ca) || 0), 0);
+    $("titreClient").textContent = nom;
+    $("corpsClient").replaceChildren(
+      el("div", { class: "releve" },
+        el("div", null, el("span", null, "Prévu"), el("b", null, euros(p))),
+        el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
+        el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
+      el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", f.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true)),
+      el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true), champ("A-vie", saisie("a_vie", f.a_vie), true)),
+      champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || "")),
+      champ("Notes client", el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || "")),
+      el("h4", null, `Ses dossiers (${liste.length})`),
+      el("div", { class: "liste-dossiers" }, liste.map(([, i]) => {
+        const c = carteDossier(i);
+        c.addEventListener("click", () => fermerFeuilles(), { capture: true });
+        return c;
+      })));
+    ouvrirFeuille("feuilleClient");
+  }
+  function enregistrerClient() {
+    const v = lireFormulaire($("corpsClient"));
+    const cle = cleClient(clientEnCours);
+    const f = { ...fiche(clientEnCours) };
+    for (const c of COMMUNS) {
+      const vieux = f[c] || "";
+      if ((v[c] || "") !== vieux) for (const d of dossiersDe(clientEnCours)) if (!d[c] || d[c] === vieux) d[c] = v[c];
+      f[c] = v[c];
+    }
+    f.commentaire = v.commentaire; f.notes = v.notes; f.nom = f.nom || clientEnCours;
+    donnees.clients[cle] = f;
+    sauver(); fermerFeuilles(); afficherTout(); informer("Fiche client enregistrée.");
+  }
+
+  // ---------------------------------------------------------------- feuilles et menu
+  function ouvrirFeuille(id) {
+    fermerSegment();
+    document.querySelectorAll(".feuille.ouverte").forEach((f) => f.classList.remove("ouverte"));
+    const f = $(id);
+    f.classList.add("ouverte");
+    f.querySelector(".feuille-corps").scrollTop = 0;
+    document.body.style.overflow = "hidden";
+  }
+  function fermerFeuilles() {
+    document.querySelectorAll(".feuille.ouverte").forEach((f) => f.classList.remove("ouverte"));
+    document.body.style.overflow = "";
+  }
+  document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerFeuilles));
+  document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && window.innerWidth > 900) fermerFeuilles(); }));
+  $("enregistrerDossier").addEventListener("click", enregistrerDossier);
+  $("enregistrerClient").addEventListener("click", enregistrerClient);
+
+  function ouvrirMenu() { majAlerte(); $("btnActualiser").hidden = !github; $("menu").classList.add("ouvert"); }
+  function fermerMenu() { $("menu").classList.remove("ouvert"); }
+  $("btnMenu").addEventListener("click", ouvrirMenu);
+  $("btnFermerMenu").addEventListener("click", fermerMenu);
+  $("menu").addEventListener("click", (e) => { if (e.target === $("menu")) fermerMenu(); });
+  $("btnExporter").addEventListener("click", () => { fermerMenu(); exporter(); });
+  $("btnExporterAlerte").addEventListener("click", exporter);
+  const choisirFichier = () => {
+    if (donnees && donnees.modifie && !github && !confirm("Des modifications n’ont pas été exportées. Ouvrir un autre fichier les remplacera. Continuer ?")) return;
+    fermerMenu();
+    $("fichier").value = "";
+    $("fichier").click();
+  };
+  $("btnImporter").addEventListener("click", choisirFichier);
+  $("btnImporterVide").addEventListener("click", choisirFichier);
+  $("fichier").addEventListener("change", () => {
+    const f = $("fichier").files[0];
+    if (!f) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => importer(lecteur.result, f.name);
+    lecteur.onerror = () => informer("Le fichier n’a pas pu être lu.");
+    lecteur.readAsText(f, "utf-8");
+  });
+  $("btnNouveau").addEventListener("click", () => ouvrirDossier(-1));
+  $("btnGithub").addEventListener("click", ouvrirReglages);
+  $("btnGithubVide").addEventListener("click", ouvrirReglages);
+  $("connecterGithub").addEventListener("click", connecter);
+  $("btnActualiser").addEventListener("click", () => {
+    if (!github) { ouvrirReglages(); return; }
+    if (donnees && donnees.modifie && !confirm("Une modification n’est pas encore enregistrée sur GitHub. Recharger quand même ?")) return;
+    fermerMenu();
+    chargerDepuisGithub().catch(() => {});
+  });
+  $("deconnecterGithub").addEventListener("click", () => {
+    if (!confirm("Déconnecter cet appareil de GitHub ? Les données restent affichées, mais ne seront plus enregistrées sur GitHub.")) return;
+    localStorage.removeItem(CLE_GITHUB);
+    github = null;
+    etatSync("local", "Pas connecté à GitHub");
+    fermerFeuilles(); majAlerte();
+  });
+  window.addEventListener("online", () => { if (github && donnees && donnees.modifie) envoyerGithub(); });
+
+  let attente = null;
+  $("recherche").addEventListener("input", () => { clearTimeout(attente); attente = setTimeout(afficherTout, 180); });
+  $("masquerArchives").addEventListener("change", afficherTout);
+  $("reinitialiser").addEventListener("click", () => {
+    $("recherche").value = ""; $("masquerArchives").checked = false;
+    Object.values(selections).forEach((s) => s.clear());
+    fermerSegment(); afficherTout();
+  });
+  $("toutDeplier").addEventListener("click", () => toutDeplier(true));
+  $("toutReplier").addEventListener("click", () => toutDeplier(false));
+  window.addEventListener("hashchange", montrerVue);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { fermerSegment(); fermerFeuilles(); fermerMenu(); } });
+  window.addEventListener("resize", () => { if (segmentOuvert) fermerSegment(); });
+
+  // ---------------------------------------------------------------- installation comme une appli
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  // ---------------------------------------------------------------- démarrage
+  try {
+    const a = JSON.parse(localStorage.getItem(CLE_AFFICHAGE) || "null");
+    if (a) { repliees = new Set(a.repliees || []); dejaVues = new Set(a.dejaVues || []); }
+    else { TYPES.forEach((t) => { repliees.add(t); dejaVues.add(t); }); }  // première ouverture : tout replié
+  } catch (e) {}
+  charger();
+  lireReglages();
+  if (donnees && !donnees.clients) donnees.clients = regrouper(donnees.dossiers);
+  shaDistant = localStorage.getItem(CLE_STOCKAGE + "-sha");
+  montrerVue();
+  afficherTout();
+  if (github) {
+    if (donnees && donnees.modifie) envoyerGithub();
+    else chargerDepuisGithub(true).catch(() => {});
+  } else if (donnees) {
+    etatSync("local", "Copie sur cet appareil, sans GitHub");
+  }
+})();
+</script>
+</body>
+</html>
