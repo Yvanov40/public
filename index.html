@@ -302,6 +302,70 @@ nav.bas { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .section-titre .fl { transition: none; } }
 
+/* ---------- fiches : rubriques, actions, historique ---------- */
+.rubrique { font: 600 16px/1.2 var(--titre); color: var(--bleu); margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--bordure); font-variant-numeric: lining-nums; }
+.rubrique:first-child { margin-top: 0; }
+.actions-fiche { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.actions-fiche button, .actions-fiche a { border: 1px solid var(--bordure); background: var(--carte); color: var(--bleu); border-radius: 18px; padding: 7px 13px; font-size: 13.5px; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
+.historique { font-size: 13px; color: var(--discret); border-left: 2px solid var(--bordure); padding-left: 10px; margin: 6px 0 14px; display: grid; gap: 6px; }
+.historique b { color: var(--texte); font-weight: 600; }
+details.repli summary { cursor: pointer; color: var(--bleu); font-weight: 600; margin: 10px 0 6px; }
+.anc { border-radius: 8px; padding: 0 6px; font-weight: 600; }
+.anc.a90 { background: #f7d4d4; color: #7a1f1f; }
+.anc.a60 { background: var(--or-doux); color: #6e5220; }
+.lien-dutreil { display: grid; gap: 6px; }
+
+/* ---------- impression d'une fiche client ---------- */
+#impression { display: none; }
+@media print {
+  body > *:not(#impression) { display: none !important; }
+  #impression { display: block; font: 11pt/1.45 var(--ui); color: #000; }
+  #impression h1 { font: 600 22pt var(--titre); margin: 0 0 4pt; }
+  #impression .sous { color: #555; margin-bottom: 12pt; }
+  #impression table { width: 100%; border-collapse: collapse; margin: 8pt 0 14pt; }
+  #impression th, #impression td { border-bottom: 1px solid #ccc; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+  #impression .n { text-align: right; white-space: nowrap; }
+  #impression pre { white-space: pre-wrap; font: inherit; }
+}
+
+/* ---------- Activité ---------- */
+.a-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.a-bloc { background: var(--carte); border: 1px solid var(--bordure); border-radius: 12px; padding: 14px; min-width: 0; }
+.a-bloc.large { grid-column: 1 / -1; }
+.a-bloc h3 { margin: 0 0 4px; font: 600 18px/1.2 var(--titre); color: var(--bleu); }
+.a-bloc .soustitre { margin: 0 0 12px; font-size: 12.5px; color: var(--discret); }
+.a-ligne { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto; gap: 4px 10px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+.a-ligne .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-ligne .val { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--discret); }
+.a-ligne .val b { color: var(--bleu); font-weight: 600; }
+.a-ligne .val b.or { color: var(--or); }
+.barres { display: grid; gap: 3px; }
+.barre { height: 9px; border-radius: 5px; background: var(--bleu); min-width: 2px; }
+.barre.or { background: var(--or); }
+.barre.vide { background: var(--bleu-doux); }
+.a-chiffres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.a-chiffres div { background: var(--fond); border-radius: 10px; padding: 10px 12px; }
+.a-chiffres span { display: block; font-size: 12.5px; color: var(--discret); }
+.a-chiffres b { font: 600 22px/1.2 var(--titre); color: var(--bleu); font-variant-numeric: lining-nums tabular-nums; }
+.a-chiffres b.or { color: var(--or); }
+.a-legende { display: flex; gap: 14px; font-size: 12px; color: var(--discret); margin-bottom: 10px; }
+.a-legende i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.a-dort { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--bordure); font-size: 13.5px; }
+.a-dort:first-of-type { border-top: 0; }
+.a-dort b { color: var(--bleu); font-weight: 600; }
+.a-dort small { display: block; color: var(--discret); font-size: 12px; }
+.a-dort button { border: 1px solid var(--bordure); background: var(--fond); border-radius: 16px; padding: 5px 10px; font-size: 12.5px; color: var(--bleu); white-space: nowrap; }
+.a-jauge { height: 14px; border-radius: 7px; background: var(--bleu-doux); overflow: hidden; margin: 8px 0 6px; }
+.a-jauge i { display: block; height: 100%; background: var(--or); }
+body.vue-activite #rdv { display: none !important; }
+@media (max-width: 900px) {
+  .a-grille { grid-template-columns: 1fr; }
+  .a-chiffres { grid-template-columns: 1fr; }
+  .a-ligne { grid-template-columns: minmax(80px, 110px) 1fr auto; }
+  nav.bas { grid-template-columns: repeat(5, 1fr) !important; }
+  nav.bas a { font-size: 11.5px; }
+}
+
 /* ---------- Dutreil ---------- */
 body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres, body.vue-dutreil .voile-filtres { display: none !important; }
 .d-alerte { background: #f7e2dc; border: 1px solid #e9c3b8; color: #7a2a1c; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-top: 10px; display: grid; gap: 3px; }
@@ -344,7 +408,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   body.vue-dutreil #btnFiltres { display: none; }
   .d-indic { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; }
   .d-indic .indic { flex: 0 0 auto; min-width: 46%; }
-  nav.bas { grid-template-columns: repeat(4, 1fr) !important; }
+  nav.bas { grid-template-columns: repeat(5, 1fr) !important; }
 }
 
 /* ---------- disposition téléphone (première version) ---------- */
@@ -455,6 +519,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   </div>
 
   <div id="contenu">
+    <div id="alerteCle" class="alerte-modif" hidden></div>
     <div id="alerteModif" class="alerte-modif" hidden>
       <span>Des modifications ne sont pas encore dans votre fichier.</span>
       <button id="btnExporterAlerte">Exporter</button>
@@ -487,6 +552,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       <div class="m-bloc" id="mRdv"></div>
       <h2 class="m-h2">Étapes</h2>
       <div class="m-etapes" id="mEtapes"></div>
+      <h2 class="m-h2">À relancer</h2>
+      <div class="m-bloc" id="mDorment"></div>
       <h2 class="m-h2">Échéances Dutreil</h2>
       <div class="m-bloc" id="mDutreil"></div>
     </section>
@@ -498,7 +565,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         <div class="m-sections" id="mSections"></div>
       </div>
       <div class="outils ordi">
-        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a></nav>
+        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
         <span class="aide">Glissez une carte sur un autre type pour la déplacer · clic sur un titre de section : replier / déplier</span>
         <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
         <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
@@ -507,11 +574,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       <div class="kanban ordi" id="kanban"></div>
     </section>
 
+    <section class="vue" id="vue-activite">
+      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Calculé sur les dossiers retenus par les filtres ci-dessus.</span></div>
+      <div class="a-grille" id="activite"></div>
+    </section>
+
     <section class="vue" id="vue-dutreil">
       <div class="d-indic" id="dIndicateurs"></div>
       <section class="rdv" id="dAlerte" aria-label="Prochaines échéances Dutreil"></section>
       <div class="d-outils ordi">
-        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a></nav>
+        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
         <input type="search" id="rechercheDutreil" placeholder="Rechercher une société…" aria-label="Rechercher un pacte">
         <select id="etatDutreil" aria-label="État"><option value="">Tous les états</option><option>en cours</option><option>pas utilisé</option><option>terminé</option></select>
         <label><input type="checkbox" id="prochesDutreil"> Échéance dans moins d’un an</label>
@@ -522,7 +594,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
 
     <section class="vue" id="vue-clients">
       <div class="tel" id="mClients"></div>
-      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a></nav><span class="aide" id="aideClients"></span></div>
+      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide" id="aideClients"></span></div>
       <table class="table-clients ordi">
         <thead><tr><th>Client</th><th>Dossiers</th><th>Notaire</th><th class="n">Prévu</th><th class="n">Encaissé</th><th class="n">Reste</th></tr></thead>
         <tbody id="clientsListe"></tbody>
@@ -538,6 +610,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   <a href="#kanban" data-vue="kanban"><span>▦</span>Étapes</a>
   <a href="#clients" data-vue="clients"><span>☰</span>Clients</a>
   <a href="#dutreil" data-vue="dutreil"><span>⚖</span>Dutreil</a>
+  <a href="#activite" data-vue="activite"><span>📊</span>Activité</a>
 </nav>
 
 <div class="voile" id="voile"></div>
@@ -596,6 +669,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         <div class="champ"><label for="ghBranche">Branche</label><input id="ghBranche" autocomplete="off" autocapitalize="off" spellcheck="false" value="main"></div>
       </div>
       <div class="champ"><label for="ghCle">Clé d’accès (jeton GitHub)</label><input id="ghCle" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></div>
+      <div class="champ"><label for="ghExpiration">Date d’expiration de la clé (remplie seule si GitHub la donne)</label><input id="ghExpiration" type="date"></div>
       <p class="aide">Créez la clé sur GitHub : Settings, Developer settings, Fine-grained tokens. Limitez-la à ce seul dépôt, avec l’autorisation « Contents : Read and write ».</p>
       <div class="gh-erreur" id="ghErreur" hidden></div>
       <button class="bouton rouge large" id="deconnecterGithub" type="button">Déconnecter cet appareil</button>
@@ -871,6 +945,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const url = adresseFichier() + "?ref=" + encodeURIComponent(github.branche);
     const r = await fetch(url, { headers: entetes(), cache: "no-store" });
     if (!r.ok) throw { statut: r.status };
+    noterExpiration(r);
     const info = await r.json();
     let texte;
     if (info.content && info.encoding === "base64") {
@@ -894,8 +969,11 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
       donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: github.chemin, source: "github" };
       shaDistant = sha;
+      const nouveaux = assurerIds(donnees.dossiers);
+      localStorage.setItem(CLE_STOCKAGE + "-base", JSON.stringify({ dossiers: donnees.dossiers, clients: donnees.clients }));
       localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
       localStorage.setItem(CLE_STOCKAGE + "-sha", sha);
+      if (nouveaux) { donnees.modifie = new Date().toISOString(); setTimeout(envoyerGithub, 500); }  // identifiants ajoutés : on les partage
       etatSync("", "À jour avec GitHub · " + heure());
       if (!silencieux) informer(`${dossiers.length} dossiers chargés depuis GitHub.`);
       const position = window.scrollY;
@@ -1058,7 +1136,64 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     minuteurEnvoi = setTimeout(envoyerGithub, 1500);
   }
 
-  async function envoyerGithub(forcer) {
+  // ---- identifiants uniques : chaque dossier garde le sien, pour pouvoir fusionner les modifications ----
+  const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  function assurerIds(liste) {
+    let n = 0;
+    const vus = new Set();
+    for (const d of liste || []) {
+      if (!d.id || vus.has(d.id)) { d.id = nouvelId(); n++; }
+      vus.add(d.id);
+    }
+    return n;
+  }
+  const pareil = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  function fusionnerObjets(b, l, r) {
+    // champ par champ : ce qui a changé ici l'emporte, sinon on prend la version de GitHub
+    const resultat = { ...r };
+    for (const cle of new Set([...Object.keys(l || {}), ...Object.keys(r || {}), ...Object.keys(b || {})])) {
+      resultat[cle] = pareil((l || {})[cle], (b || {})[cle]) ? (r || {})[cle] : (l || {})[cle];
+      if (resultat[cle] === undefined) delete resultat[cle];
+    }
+    return resultat;
+  }
+  function fusionner(base, local, distant) {
+    const carte = (l) => new Map((l || []).map((d) => [d.id, d]));
+    const B = carte(base.dossiers), L = carte(local.dossiers), R = carte(distant.dossiers);
+    const ordre = [...R.keys(), ...[...L.keys()].filter((k) => !R.has(k))];
+    const dossiers = [];
+    for (const id of ordre) {
+      const b = B.get(id), l = L.get(id), r = R.get(id);
+      if (!b) { dossiers.push(l && r ? fusionnerObjets({}, l, r) : (l || r)); continue; }  // ajouté d'un côté
+      if (!l && !r) continue;
+      if (!l) { if (!pareil(r, b)) dossiers.push(r); continue; }   // supprimé ici : sauf s'il a changé ailleurs
+      if (!r) { if (!pareil(l, b)) dossiers.push(l); continue; }   // supprimé ailleurs : sauf s'il a changé ici
+      dossiers.push(fusionnerObjets(b, l, r));
+    }
+    const clients = {};
+    const cb = base.clients || {}, cl = local.clients || {}, cr = distant.clients || {};
+    for (const cle of new Set([...Object.keys(cr), ...Object.keys(cl)])) {
+      clients[cle] = cb[cle] ? fusionnerObjets(cb[cle], cl[cle] || cb[cle], cr[cle] || cb[cle]) : { ...(cr[cle] || {}), ...(cl[cle] || {}) };
+    }
+    return { dossiers, clients };
+  }
+  async function fusionnerAvecGithub() {
+    const base = JSON.parse(localStorage.getItem(CLE_STOCKAGE + "-base") || "null");
+    if (!base) return false;
+    const { texte, sha } = await lireGithub();
+    const contenu = JSON.parse(texte);
+    const distant = { dossiers: Array.isArray(contenu) ? contenu : contenu.dossiers, clients: contenu.clients || {} };
+    assurerIds(distant.dossiers);
+    const resultat = fusionner(base, donnees, distant);
+    donnees.dossiers = resultat.dossiers;
+    donnees.clients = resultat.clients;
+    shaDistant = sha;
+    localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
+    afficherTout();
+    return true;
+  }
+
+  async function envoyerGithub(forcer, essai = 0) {
     if (!github || !donnees) return;
     if (envoiEnCours) { planifierEnvoi(); return; }
     envoiEnCours = true;
@@ -1071,11 +1206,21 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         method: "PUT", headers: { ...entetes(), "Content-Type": "application/json" },
         body: JSON.stringify({ message: "Mise à jour depuis le téléphone", content: versBase64(contenu), sha, branch: github.branche })
       });
-      if (r.status === 409 || r.status === 422) { envoiEnCours = false; conflit(); return; }
+      if (r.status === 409 || r.status === 422) {
+        // modifié ailleurs entre-temps : on fusionne dossier par dossier, puis on renvoie
+        envoiEnCours = false;
+        if (essai < 2 && await fusionnerAvecGithub().catch(() => false)) {
+          informer("Modifications faites ailleurs fusionnées avec les vôtres.");
+          return envoyerGithub(false, essai + 1);
+        }
+        conflit();
+        return;
+      }
       if (!r.ok) throw { statut: r.status };
       const resultat = await r.json();
       shaDistant = resultat.content.sha;
       localStorage.setItem(CLE_STOCKAGE + "-sha", shaDistant);
+      localStorage.setItem(CLE_STOCKAGE + "-base", JSON.stringify({ dossiers: donnees.dossiers, clients: donnees.clients }));
       donnees.modifie = null;
       localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
       etatSync("", "Enregistré sur GitHub · " + heure());
@@ -1086,6 +1231,30 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     } finally {
       envoiEnCours = false;
     }
+  }
+
+  // ---- expiration de la clé GitHub : GitHub l'indique à chaque réponse ----
+  function noterExpiration(reponse) {
+    const brut = reponse.headers.get("github-authentication-token-expiration");
+    if (!brut || !github) return;
+    const jour = brut.slice(0, 10);
+    if (github.expiration !== jour) {
+      github.expiration = jour;
+      localStorage.setItem(CLE_GITHUB, JSON.stringify(github));
+      majAlerteCle();
+    }
+  }
+  function majAlerteCle() {
+    const zone = $("alerteCle");
+    if (!zone) return;
+    const jour = github && github.expiration;
+    if (!jour) { zone.hidden = true; return; }
+    const reste = Math.round((versDate(jour) - aujourdhui()) / 86400000);
+    if (reste > 30) { zone.hidden = true; return; }
+    zone.hidden = false;
+    zone.replaceChildren(el("span", null, reste < 0 ? `Votre clé GitHub a expiré le ${fmtDate(jour)} : la synchronisation est arrêtée.`
+      : `Votre clé GitHub expire le ${fmtDate(jour)} (${reste === 0 ? "aujourd’hui" : "dans " + reste + " j"}).`),
+      el("button", { type: "button", onclick: () => alert("Pour prolonger la clé :\n\n1. Sur github.com : photo de profil, Settings, Developer settings, Personal access tokens, Fine-grained tokens.\n2. Cliquez sur la clé « suivi », puis « Regenerate token » et choisissez une nouvelle durée.\n3. Copiez la nouvelle clé, puis ici : menu ⋯, Réglages GitHub, collez-la et touchez « Se connecter ».\n4. Dans la boîte à outils : bouton GitHub…, collez-la aussi.") }, "Comment la prolonger"));
   }
 
   function conflit() {
@@ -1102,6 +1271,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const g = github || { proprietaire: "", depot: "", chemin: "suivi_gp.json", branche: "main", cle: "" };
     $("ghProprietaire").value = g.proprietaire; $("ghDepot").value = g.depot;
     $("ghChemin").value = g.chemin; $("ghBranche").value = g.branche; $("ghCle").value = g.cle;
+    $("ghExpiration").value = g.expiration || "";
     $("deconnecterGithub").hidden = !github;
     ouvrirFeuille("feuilleGithub");
   }
@@ -1109,7 +1279,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const g = {
       proprietaire: $("ghProprietaire").value.trim(), depot: $("ghDepot").value.trim(),
       chemin: $("ghChemin").value.trim() || "suivi_gp.json", branche: $("ghBranche").value.trim() || "main",
-      cle: $("ghCle").value.trim()
+      cle: $("ghCle").value.trim(), expiration: $("ghExpiration").value || ""
     };
     if (!g.proprietaire || !g.depot || !g.cle) { informer("Indiquez le nom d’utilisateur, le dépôt et la clé d’accès."); return; }
     if (donnees && donnees.modifie && !confirm("Des modifications du téléphone n’ont pas été enregistrées ailleurs. Charger la version de GitHub les remplacera. Continuer ?")) return;
@@ -1225,6 +1395,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const dossiers = Array.isArray(contenu) ? contenu : contenu.dossiers;
     if (!Array.isArray(dossiers)) { informer("Ce fichier ne contient pas de dossiers : choisissez suivi_gp.json."); return; }
     const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
+    assurerIds(dossiers);
     donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: nomFichier || "suivi_gp.json" };
     sauver(false);
     informer(`${dossiers.length} dossiers chargés.`);
@@ -1352,7 +1523,10 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   function carteDossier(i) {
     const d = donnees.dossiers[i];
     const p = prevu(d);
-    const bas = [fmtDate(d.debut), anciennete(d), d.exercice].filter(Boolean).join("   ");
+    const anc = anciennete(d);
+    const actif = "12".includes(etapeDe(d)) && !d.archives;
+    const marqueAnc = anc && actif && (anc === "+90j" || anc === "+60j") ? el("span", { class: "anc " + (anc === "+90j" ? "a90" : "a60") }, anc) : anc;
+    const bas = [fmtDate(d.debut), d.exercice].filter(Boolean).join("   ");
     const comm = commentaire(d);
     const carte = el("button", {
       class: "carte-dossier" + (d.archives ? " archive" : "") + (choisi === i ? " choisie" : ""),
@@ -1361,7 +1535,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       el("div", { class: "haut" }, el("b", null, d.client || "Sans nom"), p ? el("span", { class: "prevu" }, euros(p)) : null),
       el("div", { class: "ligne" }, [d.tache, d.notaire].filter(Boolean).join(" · ") || sansNumero(d.type)),
       comm ? el("div", { class: "ligne comm" }, comm) : null,
-      (bas || d.ca) ? el("div", { class: "bas" }, el("span", null, bas), d.ca ? el("span", { class: "or" }, euros(d.ca)) : null) : null);
+      (bas || anc || d.ca) ? el("div", { class: "bas" }, el("span", null, bas, bas && anc ? "   " : "", marqueAnc || ""), d.ca ? el("span", { class: "or" }, euros(d.ca)) : null) : null);
     activerGlisser(carte, i);
     return carte;
   }
@@ -1546,6 +1720,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     ["denonciation", "Dénonciation engagement collectif ?", "texte"], ["debut_individuel", "Début engagement individuel", "date"],
     ["courrier", "Courrier obligations remplies", "date"],
     ["echeance", "Prochaine échéance (saisie par vous)", "date"], ["echeance_objet", "Objet de cette échéance", "texte"],
+    ["client_lie", "Client lié (suivi des dossiers)", "client"],
     ["notes", "Notes", "long"]
   ];
   const CALCULS = { fin_collectif: ["debut_collectif", 2], debut_individuel: ["fin_collectif", 0], courrier: ["debut_individuel", 4] };
@@ -1679,6 +1854,17 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     }
   }
 
+  // pactes rattachés à un client : client lié, ou nom du client présent dans le nom de la société
+  function pactesDuClient(nom) {
+    const cle = cleClient(nom);
+    const mots = cle.split(/[\s/()-]+/).filter((m) => m.length >= 4);
+    return dutreil.pactes.map((p, j) => [p, j]).filter(([p]) => {
+      if (p.client_lie) return cleClient(p.client_lie) === cle;
+      const soc = cleClient(p.societe);
+      return mots.length > 0 && mots.every((m) => soc.includes(m));
+    });
+  }
+
   let pacteEnCours = null;
   function ouvrirPacte(i) {
     pacteEnCours = i;
@@ -1691,11 +1877,14 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         p.etat && !ETATS_DUTREIL.includes(p.etat) ? el("option", { value: p.etat, selected: true }, p.etat) : null);
       else if (nature === "long") ctrl = el("textarea", { name: cle }, p[cle] || "");
       else if (nature === "montant") ctrl = el("input", { name: cle, type: "number", inputmode: "decimal", step: "any", value: p[cle] ?? "" });
+      else if (nature === "client") ctrl = [el("input", { name: cle, type: "text", value: p[cle] || "", list: "liste-clients-dutreil", placeholder: "Nom du client, pour retrouver ce pacte dans sa fiche" }),
+        el("datalist", { id: "liste-clients-dutreil" }, donnees ? [...new Set(donnees.dossiers.map((x) => x.client))].sort().map((v) => el("option", { value: v })) : [])];
       else ctrl = el("input", { name: cle, type: "text", value: nature === "date" ? fmtDouT(p[cle]) : (p[cle] || ""), placeholder: nature === "date" ? "jj/mm/aaaa" : "" });
       const bloc = [ctrl];
       if (CALCULS[cle] || cle === "echeance") { indices[cle] = el("span", { class: "calcule" }); bloc.push(indices[cle]); }
-      return el("div", { class: "champ" }, el("label", null, lib), ...bloc);
+      return el("div", { class: "champ" }, el("label", null, lib), ...bloc.flat());
     });
+    const ech = i >= 0 ? prochaineEcheance(p) : null;
     const majIndices = () => {
       const brouillon = {};
       $("corpsPacte").querySelectorAll("input[name]").forEach((c) => {
@@ -1715,6 +1904,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       }
     };
     $("corpsPacte").replaceChildren(...corps,
+      ech ? el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => menuAgenda(`Dutreil ${p.societe} : ${ech[1]}`, ech[0], "Suivi des pactes Dutreil") }, "📅 Ajouter l’échéance à l’agenda"),
+        p.client_lie ? el("button", { type: "button", onclick: () => { fermerFeuilles(); ouvrirClient(p.client_lie); } }, "👤 Fiche client") : null) : "",
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerPacte }, "Supprimer ce pacte") : "");
     $("corpsPacte").oninput = majIndices;
     $("corpsPacte").onchange = majIndices;
@@ -1737,6 +1928,114 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     if (!confirm(`Supprimer le pacte « ${p.societe} » ?`)) return;
     dutreil.pactes.splice(pacteEnCours, 1);
     sauverDutreil(); fermerFeuilles(); afficherDutreil(); informer("Pacte supprimé.");
+  }
+
+  // ================================================================ Activité : le pilotage
+  const joursDepuis = (iso) => iso ? Math.round((aujourdhui() - versDate(iso.slice(0, 10))) / 86400000) : null;
+  function derniereActivite(d) {
+    const h = (d.historique || []).map((x) => x.le.slice(0, 10)).sort().pop();
+    return [h, d.debut].filter(Boolean).sort().pop() || "";
+  }
+  function dorment(liste) {
+    return liste.filter(([d]) => "12".includes(etapeDe(d)) && !d.archives)
+      .map(([d, i]) => [d, i, joursDepuis(derniereActivite(d))])
+      .filter(([, , j]) => j !== null && j > 90).sort((a, b) => b[2] - a[2]);
+  }
+  function barresHtml(valeurs, max) {
+    return el("div", { class: "barres" }, valeurs.map(([v, classe]) => el("div", { class: "barre " + (classe || ""), style: `width:${max ? Math.max(1, Math.round(v / max * 100)) : 0}%` })));
+  }
+  function regrouperPar(liste, cle) {
+    const g = new Map();
+    for (const [d] of liste) {
+      const k = String(d[cle] || "").trim();
+      if (!k) continue;
+      const e = g.get(k) || { nom: k, n: 0, p: 0, ca: 0 };
+      e.n++; e.p += prevu(d); e.ca += Number(d.ca) || 0;
+      g.set(k, e);
+    }
+    return [...g.values()].sort((a, b) => b.p - a.p || b.n - a.n);
+  }
+
+  function afficherActivite(liste) {
+    if (!donnees) return;
+    const blocs = [];
+    // 1. à encaisser
+    const reste = (filtre) => liste.filter(([d]) => filtre(d) && !d.archives).reduce((s, [d]) => s + prevu(d) - (Number(d.ca) || 0), 0);
+    const resteTermines = reste((d) => etapeDe(d) === "3");
+    const resteEnCours = reste((d) => "12".includes(etapeDe(d)));
+    blocs.push(el("div", { class: "a-bloc large" }, el("h3", null, "Encaissements à venir"),
+      el("p", { class: "soustitre" }, "Ce qui reste à encaisser, hors archives et dossiers sans suite."),
+      el("div", { class: "a-chiffres" },
+        el("div", null, el("span", null, "Sur les dossiers terminés"), el("b", { class: "or" }, euros(resteTermines))),
+        el("div", null, el("span", null, "Sur les dossiers en attente ou à faire"), el("b", null, euros(resteEnCours))),
+        el("div", null, el("span", null, "Total"), el("b", null, euros(resteTermines + resteEnCours))))));
+    // 2. par exercice
+    const exercices = regrouperPar(liste, "exercice").sort((a, b) => b.nom.localeCompare(a.nom)).slice(0, 8);
+    const maxEx = Math.max(1, ...exercices.map((e) => e.p));
+    blocs.push(el("div", { class: "a-bloc" }, el("h3", null, "Honoraires par exercice"),
+      el("div", { class: "a-legende" }, el("span", null, el("i", { style: "background:var(--bleu)" }), "prévu"), el("span", null, el("i", { style: "background:var(--or)" }), "encaissé")),
+      exercices.length ? exercices.map((e) => el("div", { class: "a-ligne" }, el("span", { class: "nom" }, e.nom),
+        barresHtml([[e.p], [e.ca, "or"]], maxEx), el("span", { class: "val" }, el("b", null, euros(e.p)), " / ", el("b", { class: "or" }, euros(e.ca)))))
+        : el("p", { class: "m-vide" }, "Aucun exercice renseigné.")));
+    // 3. transformation analyses -> actes
+    const parClient = new Map();
+    for (const [d] of liste) {
+      const c = cleClient(d.client);
+      const e = parClient.get(c) || { analyse: false, acte: false };
+      const t = sansNumero(d.type).toLowerCase();
+      if (t.startsWith("analyse")) e.analyse = true;
+      if (t.startsWith("acte") && etapeDe(d) !== "4") e.acte = true;
+      parClient.set(c, e);
+    }
+    const avecAnalyse = [...parClient.values()].filter((e) => e.analyse);
+    const transformes = avecAnalyse.filter((e) => e.acte).length;
+    const taux = avecAnalyse.length ? Math.round(transformes / avecAnalyse.length * 100) : 0;
+    const sansSuite = liste.filter(([d]) => /sans suite/i.test(d.type || "")).length;
+    blocs.push(el("div", { class: "a-bloc" }, el("h3", null, "Des analyses aux actes"),
+      el("p", { class: "soustitre" }, "Clients ayant eu une analyse, et parmi eux ceux qui ont un acte."),
+      el("div", { class: "a-chiffres", style: "grid-template-columns:1fr 1fr" },
+        el("div", null, el("span", null, "Taux de transformation"), el("b", { class: "or" }, taux + " %")),
+        el("div", null, el("span", null, "Clients avec analyse"), el("b", null, `${transformes} / ${avecAnalyse.length}`))),
+      el("div", { class: "a-jauge" }, el("i", { style: `width:${taux}%` })),
+      el("p", { class: "soustitre" }, `${sansSuite} analyse(s) classée(s) sans suite.`)));
+    // 4. apporteurs
+    for (const [cle, titre] of [["notaire", "Par notaire"], ["partenaire", "Par partenaire"]]) {
+      const g = regrouperPar(liste, cle).slice(0, 8);
+      const max = Math.max(1, ...g.map((e) => e.p));
+      blocs.push(el("div", { class: "a-bloc" }, el("h3", null, titre),
+        el("p", { class: "soustitre" }, "Honoraires prévus et encaissés, nombre de dossiers."),
+        g.length ? g.map((e) => el("div", { class: "a-ligne" }, el("span", { class: "nom", title: e.nom }, e.nom),
+          barresHtml([[e.p], [e.ca, "or"]], max), el("span", { class: "val" }, el("b", null, euros(e.p)), ` · ${e.n} doss.`)))
+          : el("p", { class: "m-vide" }, "Aucune donnée.")));
+    }
+    // 5. temps passé par étape (d'après l'historique)
+    const durees = { "1": [], "2": [] };
+    for (const d of donnees.dossiers) {
+      const changements = (d.historique || []).filter((h) => h.changements.some(([lib]) => lib === "Type" || lib === "Création"))
+        .map((h) => ({ le: h.le, vers: (h.changements.find(([lib]) => lib === "Type" || lib === "Création") || [])[2] }));
+      for (let k = 0; k < changements.length - 1; k++) {
+        const etape = String(changements[k].vers || "").charAt(0);
+        if (durees[etape]) durees[etape].push((new Date(changements[k + 1].le) - new Date(changements[k].le)) / 86400000);
+      }
+    }
+    const moyenne = (l) => l.length ? Math.round(l.reduce((s, x) => s + x, 0) / l.length) : null;
+    blocs.push(el("div", { class: "a-bloc" }, el("h3", null, "Temps passé par étape"),
+      el("p", { class: "soustitre" }, "Calculé à partir de l’historique des dossiers : il se remplit au fil des changements d’étape."),
+      el("div", { class: "a-chiffres", style: "grid-template-columns:1fr 1fr" },
+        ...[["1", "En attente"], ["2", "À faire"]].map(([n, nom]) => el("div", null, el("span", null, nom),
+          el("b", null, moyenne(durees[n]) === null ? "—" : `${moyenne(durees[n])} j`),
+          el("span", null, durees[n].length ? `sur ${durees[n].length} passage(s)` : "pas encore de données"))))));
+    // 6. dossiers qui dorment
+    const dort = dorment(liste);
+    blocs.push(el("div", { class: "a-bloc large" }, el("h3", null, `Dossiers qui dorment (${dort.length})`),
+      el("p", { class: "soustitre" }, "En attente ou à faire, sans changement depuis plus de 90 jours."),
+      dort.length ? dort.slice(0, 40).map(([d, i, j]) => el("div", { class: "a-dort" },
+        el("div", null, el("b", null, d.client), el("small", null, `${d.tache || sansNumero(d.type)} · ${sansNumero(d.type)} · depuis ${j} j`)),
+        el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Relancer"),
+        el("button", { type: "button", onclick: () => ouvrirDossier(i) }, "Ouvrir")))
+        : el("p", { class: "m-vide" }, "Aucun dossier ne dort : bravo !"),
+      dort.length > 40 ? el("p", { class: "soustitre", style: "margin-top:8px" }, `… et ${dort.length - 40} autres.`) : ""));
+    $("activite").replaceChildren(...blocs);
   }
 
   function afficherTout() {
@@ -1762,6 +2061,15 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       afficherClients(liste);
     }
     afficherDutreil();
+    if (vueCourante() === "activite") afficherActivite(liste);
+    if ($("mDorment")) {
+      const dort = dorment(liste);
+      $("mDorment").replaceChildren(...(dort.length ? [
+        ...dort.slice(0, 3).map(([d, i, j]) => el("button", { class: "m-rdv", type: "button", onclick: () => ouvrirDossier(i) },
+          el("div", { class: "m-rdv-date" }, `${j} j`), el("div", null, el("b", null, d.client), el("span", null, `${d.tache || ""} · ${sansNumero(d.type)}`)))),
+        el("button", { class: "bouton-discret", type: "button", style: "margin-top:8px", onclick: () => { location.hash = "#activite"; } }, `Voir les ${dort.length} dossiers qui dorment`)]
+        : [el("p", { class: "m-vide" }, "Aucun dossier ne dort depuis plus de 90 jours.")]));
+    }
     majComptesSegment();
   }
 
@@ -1829,11 +2137,28 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   document.addEventListener("pointerup", () => finGlisser(false));
   document.addEventListener("pointercancel", () => finGlisser(true));
 
+  // ---- historique : chaque modification importante est notée dans le dossier ----
+  const SUIVIS = { type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
+    honos_art4: "Prévu article IV", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
+  const appareil = () => (estTel() ? "téléphone" : "appli");
+  function noterHistorique(d, avant) {
+    const changements = [];
+    for (const [cle, lib] of Object.entries(SUIVIS)) {
+      const a = avant ? avant[cle] ?? "" : "", b = d[cle] ?? "";
+      if (String(a) !== String(b) && !(a === "" && (b === null || b === false)) && !((a === null || a === false) && b === "")) changements.push([lib, a, b]);
+    }
+    if (!changements.length) return;
+    d.historique = [...(d.historique || []), { le: new Date().toISOString(), par: appareil(), changements: avant ? changements : [["Création", "", d.type || ""]] }].slice(-60);
+  }
+  const valeurLisible = (v) => v === true ? "oui" : v === false ? "non" : v === null || v === "" ? "vide" : estIso(String(v)) ? fmtDate(v) : (typeof v === "number" ? euros(v) : (String(v).length > 60 ? String(v).slice(0, 60) + "…" : String(v)));
+
   function changerType(i, nouveau) {
     const d = donnees.dossiers[i];
     const ancien = d.type || "";
     if (nouveau === ancien || nouveau == null) return;
+    const avantChangement = { ...d };
     d.type = nouveau;
+    noterHistorique(d, avantChangement);
     dernierDeplacement = { i, ancien };
     repliees.delete(nouveau);
     choisi = i;
@@ -1850,11 +2175,11 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   // ---------------------------------------------------------------- navigation
   function vueCourante() {
     const v = location.hash.replace("#", "");
-    if (estTel()) return ["accueil", "kanban", "clients", "dutreil"].includes(v) ? v : "accueil";
-    return ["kanban", "clients", "dutreil"].includes(v) ? v : "kanban";
+    if (estTel()) return ["accueil", "kanban", "clients", "dutreil", "activite"].includes(v) ? v : "accueil";
+    return ["kanban", "clients", "dutreil", "activite"].includes(v) ? v : "kanban";
   }
   // ---- téléphone : glisser le doigt vers la gauche ou la droite pour changer de vue ----
-  const ORDRE_VUES = ["accueil", "kanban", "clients", "dutreil"];
+  const ORDRE_VUES = ["accueil", "kanban", "clients", "dutreil", "activite"];
   let sensVue = null;
   let doigt = null;
   document.querySelector("main").addEventListener("touchstart", (e) => {
@@ -1894,7 +2219,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     document.querySelectorAll(".vue").forEach((s) => { s.hidden = s.id !== "vue-" + v; });
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    ["accueil", "kanban", "clients", "dutreil"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    ["accueil", "kanban", "clients", "dutreil", "activite"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    if (v === "activite") afficherActivite(visibles());
     if (v === "dutreil") afficherDutreil();
   }
 
@@ -1951,21 +2277,87 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       titreEncart.textContent = encartTitre(entreeClient.value, -1);
       for (const c of COMMUNS) { const ch = $("corpsDossier").querySelector(`[name="${c}"]`); if (ch && !ch.value && nf[c]) ch.value = nf[c]; }
     });
+    const historique = (d.historique || []).slice().reverse();
     $("corpsDossier").replaceChildren(
+      el("h4", { class: "rubrique" }, "Le dossier"),
       el("div", { class: "deux" }, champ("Client", [entreeClient, listeClients]), champ("Tâche", saisie("tache", d.tache))),
       champ("Type", selectType), rapides,
       el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", d.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", d.partenaire, "partenaire"), true)),
+      el("h4", { class: "rubrique" }, "Honoraires"),
       el("div", { class: "trois" },
         champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
         champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
         champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
+      el("h4", { class: "rubrique" }, "Dates"),
       el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV", saisie("rdv", d.rdv, "date"))),
       el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date")), champ("A-vie", saisie("a_vie", d.a_vie), true), champ("Millionnaire", avecListe("millionnaire", d.millionnaire, "millionnaire"), true)),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
+      el("h4", { class: "rubrique" }, "Client"),
       el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", zoneComm), champ("Notes client", zoneNotes)),
       champ("Commentaire propre à ce dossier", el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "")),
+      i >= 0 ? el("div", { class: "actions-fiche" },
+        d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · ")) }, "📅 Ajouter le RDV à l’agenda") : null,
+        el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
+        el("button", { type: "button", onclick: () => { fermerFeuilles(); ouvrirClient(d.client); } }, "👤 Fiche client")) : "",
+      historique.length ? el("details", { class: "repli" }, el("summary", null, `Historique (${historique.length})`),
+        el("div", { class: "historique" }, historique.map((h) => el("div", null,
+          el("b", null, `${new Date(h.le).toLocaleDateString("fr-FR")} ${new Date(h.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`),
+          ` · ${h.par || ""} · `, h.changements.map(([lib, a, b]) => lib === "Création" ? `création (${sansNumero(b)})` : `${lib} : ${valeurLisible(a)} → ${valeurLisible(b)}`).join(" ; "))))) : "",
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerDossier }, "Supprimer ce dossier") : "");
     ouvrirFeuille("feuilleDossier");
+  }
+
+  // ---- agenda : Google Agenda ou fichier .ics (Outlook, Apple, Samsung…) ----
+  function menuAgenda(titre, iso, description) {
+    const debut = iso.replace(/-/g, "");
+    const fin = enIso(new Date(versDate(iso).getTime() + 86400000)).replace(/-/g, "");
+    const google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titre)}&dates=${debut}/${fin}&details=${encodeURIComponent(description || "")}`;
+    const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Suivi des dossiers//FR", "BEGIN:VEVENT",
+      `UID:${nouvelId()}@suivi`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`,
+      `DTSTART;VALUE=DATE:${debut}`, `DTEND;VALUE=DATE:${fin}`, `SUMMARY:${titre.replace(/[,;]/g, " ")}`,
+      `DESCRIPTION:${(description || "").replace(/[,;]/g, " ")}`,
+      "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", `DESCRIPTION:${titre.replace(/[,;]/g, " ")}`, "END:VALARM",
+      "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    const lien = el("a", { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar" })), download: "rendez-vous.ics" });
+    if (confirm(`Ajouter « ${titre} » le ${fmtDate(iso)} à votre agenda ?\n\nOK : Google Agenda\nAnnuler : fichier pour Outlook, Apple ou un autre agenda (avec un rappel la veille)`)) {
+      window.open(google, "_blank", "noopener");
+    } else {
+      document.body.append(lien); lien.click(); lien.remove();
+    }
+  }
+
+  // ---- relance par e-mail, préremplie selon l'étape ----
+  function preparerRelance(d) {
+    const type = sansNumero(d.type).toLowerCase();
+    const notaire = /notaire/.test(type);
+    const objet = `${d.client}${d.tache ? " – " + d.tache : ""}`;
+    const corps = notaire
+      ? `Bonjour Maître,\n\nJe me permets de revenir vers vous concernant le dossier ${objet}.\nPourriez-vous m’indiquer où en est ce dossier et si vous avez besoin d’éléments de ma part ?\n\nJe vous remercie par avance.\n\nBien cordialement,`
+      : /pièces/.test(type)
+        ? `Bonjour,\n\nPour avancer sur votre dossier (${d.tache || "analyse"}), il me manque encore quelques pièces.\nPourriez-vous me les transmettre dès que possible ?\n\nJe reste à votre disposition pour toute question.\n\nBien cordialement,`
+        : `Bonjour,\n\nJe reviens vers vous au sujet de votre dossier (${d.tache || sansNumero(d.type)}).\nPouvons-nous faire un point prochainement ?\n\nBien cordialement,`;
+    location.href = `mailto:?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`;
+  }
+
+  // ---- fiche client imprimable (ou enregistrable en PDF) ----
+  function imprimerClient(nom) {
+    const f = fiche(nom);
+    const ds = dossiersDe(nom).slice().sort((a, b) => (b.debut || "").localeCompare(a.debut || ""));
+    const p = ds.reduce((s, d) => s + prevu(d), 0), ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
+    let zone = $("impression");
+    if (!zone) { zone = el("div", { id: "impression" }); document.body.append(zone); }
+    zone.replaceChildren(
+      el("h1", null, nom),
+      el("div", { class: "sous" }, `Fiche client du ${new Date().toLocaleDateString("fr-FR")} · ${ds.length} dossier(s) · prévu ${euros(p)} · encaissé ${euros(ca)} · reste ${euros(p - ca)}`),
+      el("table", null, el("tr", null, ...["Notaire", "Partenaire", "Millionnaire", "A-vie"].map((t) => el("th", null, t))),
+        el("tr", null, el("td", null, f.notaire || "—"), el("td", null, f.partenaire || "—"), el("td", null, f.millionnaire || "—"), el("td", null, f.a_vie || "—"))),
+      el("h2", null, "Dossiers"),
+      el("table", null, el("tr", null, ...["Tâche", "Étape", "Début", "Prévu", "Encaissé"].map((t) => el("th", null, t))),
+        ...ds.map((d) => el("tr", null, el("td", null, d.tache || ""), el("td", null, sansNumero(d.type)), el("td", null, fmtDate(d.debut)),
+          el("td", { class: "n" }, prevu(d) ? euros(prevu(d)) : ""), el("td", { class: "n" }, d.ca ? euros(d.ca) : "")))),
+      f.commentaire ? el("div", null, el("h2", null, "Commentaire"), el("pre", null, f.commentaire)) : "",
+      f.notes ? el("div", null, el("h2", null, "Notes"), el("pre", null, f.notes)) : "");
+    window.print();
   }
 
   function lireFormulaire(conteneur) {
@@ -1986,6 +2378,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       exercice: v.exercice, debut: v.debut, rdv: v.rdv, fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
       archives: v.archives, commentaire: v.commentaire
     });
+    if (!d.id) d.id = nouvelId();
+    noterHistorique(d, avant);
     if (enCours >= 0) donnees.dossiers[enCours] = d; else donnees.dossiers.push(d);
     const cle = cleClient(d.client);
     const f = { ...fiche(d.client), nom: fiche(d.client).nom || d.client };
@@ -2029,6 +2423,13 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true), champ("A-vie", saisie("a_vie", f.a_vie), true)),
       champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || "")),
       champ("Notes client", el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || "")),
+      el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF")),
+      pactesDuClient(nom).length ? el("div", null, el("h4", null, "Ses pactes Dutreil"), el("div", { class: "lien-dutreil" }, pactesDuClient(nom).map(([pacte, j]) => {
+        const e = prochaineEcheance(pacte);
+        return el("button", { type: "button", class: "d-carte " + urgence(pacte), onclick: () => { fermerFeuilles(); ouvrirPacte(j); } },
+          el("div", { class: "haut" }, el("b", null, pacte.societe), el("span", { class: "etat" }, pacte.etat || "—")),
+          e ? el("div", { class: "ech" }, el("strong", null, fmtDate(e[0])), ` · ${e[1]} · ${fmtDelai(e[2])}`) : null);
+      }))) : "",
       el("h4", null, `Ses dossiers (${liste.length})`),
       el("div", { class: "liste-dossiers" }, liste.map(([, i]) => {
         const c = carteDossier(i);
@@ -2156,7 +2557,9 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   charger();
   lireReglages();
   if (donnees && !donnees.clients) donnees.clients = regrouper(donnees.dossiers);
+  if (donnees && !github && assurerIds(donnees.dossiers)) localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
   shaDistant = localStorage.getItem(CLE_STOCKAGE + "-sha");
+  majAlerteCle();
   montrerVue();
   afficherTout();
   if (github) {
