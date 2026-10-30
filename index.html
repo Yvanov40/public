@@ -1585,6 +1585,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const p = dans.reduce((s, i) => s + prevu(donnees.dossiers[i]), 0);
     const ca = dans.reduce((s, i) => s + (Number(donnees.dossiers[i].ca) || 0), 0);
     $("mResume").replaceChildren(`${dans.length} dossier(s) · prévu `, el("b", null, euros(p)), " · encaissé ", el("b", { class: "or" }, euros(ca)), " · reste ", el("b", null, euros(p - ca)));
+    const ongletActif = $("mOnglets").querySelector('[aria-pressed="true"]');
+    if (ongletActif) requestAnimationFrame(() => ongletActif.scrollIntoView({ inline: "center", block: "nearest" }));
     $("mSections").replaceChildren(
       el("div", { class: "m-outils" },
         el("button", { class: "bouton-discret", type: "button", onclick: () => toutDeplier(true) }, "Tout déplier"),
@@ -1620,7 +1622,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     $("mEtapes").replaceChildren(...ETAPES.map(([n, nom]) => {
       const ds = liste.filter(([d]) => etapeDe(d) === n);
       const pe = ds.reduce((s, [d]) => s + prevu(d), 0);
-      return el("button", { class: "m-etape", type: "button", style: `--c:${COULEURS[n]}`, onclick: () => { etapeActive = n; location.hash = "#kanban"; } },
+      return el("button", { class: "m-etape", type: "button", style: `--c:${COULEURS[n]}`, onclick: () => { etapeActive = n; afficherKanbanTel(visibles()); location.hash = "#kanban"; } },
         el("div", null, el("b", null, nom), el("span", null, pe ? `${euros(pe)} prévus` : "Aucun montant prévu")), el("em", null, ds.length));
     }));
   }
@@ -1792,6 +1794,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   const urgence = (p) => { const e = prochaineEcheance(p); return e && e[2] <= 90 ? "urgent" : e && e[2] <= 365 ? "bientot" : (p.etat || "") !== "en cours" ? "inactif" : ""; };
 
   function afficherDutreil() {
+    memoriserFiltres();
     const pactes = dutreil.pactes;
     const echeances = pactes.map((p, i) => [prochaineEcheance(p), p, i]).filter(([e]) => e);
     const indic = (titre, valeur, c, v) => el("div", { class: "indic", style: `--c:${c};${v ? "--v:" + v : ""}` }, el("span", null, titre), el("b", null, valeur));
@@ -2038,7 +2041,36 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     $("activite").replaceChildren(...blocs);
   }
 
+  // ---- mémoire des derniers filtres (sur cet appareil) ----
+  const CLE_FILTRES = CLE_STOCKAGE + "-filtres";
+  let filtresRestaures = false;
+  function memoriserFiltres() {
+    if (!filtresRestaures) return;  // pas avant d'avoir relu les précédents
+    try {
+      localStorage.setItem(CLE_FILTRES, JSON.stringify({
+        selections: Object.fromEntries(Object.entries(selections).map(([k, v]) => [k, [...v]])),
+        archives: $("masquerArchives").checked, etapeActive,
+        etatDutreil: $("etatDutreil").value, prochesDutreil: $("prochesDutreil").checked, etatDutreilTel
+      }));
+    } catch (e) {}
+  }
+  function restaurerFiltres() {
+    try {
+      const f = JSON.parse(localStorage.getItem(CLE_FILTRES) || "null");
+      if (f) {
+        for (const [k, v] of Object.entries(f.selections || {})) if (selections[k]) selections[k] = new Set(v);
+        $("masquerArchives").checked = !!f.archives;
+        if (f.etapeActive) etapeActive = f.etapeActive;
+        $("etatDutreil").value = f.etatDutreil || "";
+        $("prochesDutreil").checked = !!f.prochesDutreil;
+        etatDutreilTel = f.etatDutreilTel || "";
+      }
+    } catch (e) {}
+    filtresRestaures = true;
+  }
+
   function afficherTout() {
+    memoriserFiltres();
     const vide = !donnees || !donnees.dossiers.length;
     $("accueilVide").hidden = !vide;
     $("contenu").hidden = vide;
@@ -2221,6 +2253,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
     ["accueil", "kanban", "clients", "dutreil", "activite"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
     if (v === "activite") afficherActivite(visibles());
+    if (v === "kanban" && estTel() && donnees) afficherKanbanTel(visibles());  // l'étape choisie à l'accueil s'affiche
     if (v === "dutreil") afficherDutreil();
   }
 
@@ -2559,6 +2592,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   if (donnees && !donnees.clients) donnees.clients = regrouper(donnees.dossiers);
   if (donnees && !github && assurerIds(donnees.dossiers)) localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
   shaDistant = localStorage.getItem(CLE_STOCKAGE + "-sha");
+  restaurerFiltres();
   majAlerteCle();
   montrerVue();
   afficherTout();
