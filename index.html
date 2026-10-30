@@ -509,7 +509,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
 
     <section class="vue" id="vue-dutreil">
       <div class="d-indic" id="dIndicateurs"></div>
-      <div class="d-alerte" id="dAlerte" hidden></div>
+      <section class="rdv" id="dAlerte" aria-label="Prochaines échéances Dutreil"></section>
       <div class="d-outils ordi">
         <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a></nav>
         <input type="search" id="rechercheDutreil" placeholder="Rechercher une société…" aria-label="Rechercher un pacte">
@@ -1626,10 +1626,15 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       indic("Échéances < 3 mois", echeances.filter(([e]) => e[2] <= 90).length, "var(--rouge)", "var(--rouge)"),
       indic("Échéances < 12 mois", echeances.filter(([e]) => e[2] <= 365).length, "var(--or)", "var(--or)"),
       indic("Honoraires", euros(pactes.reduce((s, p) => s + (Number(p.honoraires) || 0), 0)), "var(--discret)"));
-    const proches = echeances.filter(([e]) => e[2] <= 90).sort((a, b) => a[0][0].localeCompare(b[0][0]));
-    $("dAlerte").hidden = !proches.length;
-    $("dAlerte").replaceChildren(...proches.map(([e, p, i]) => el("button", { type: "button", onclick: () => ouvrirPacte(i) },
-      `⚠  ${p.societe} : ${e[1].toLowerCase()} le ${fmtDate(e[0])} (${fmtDelai(e[2])})`)));
+    // bandeau bleu des prochaines échéances (même présentation que les rendez-vous)
+    const proches = echeances.filter(([e]) => e[2] <= 365).sort((a, b) => a[0][0].localeCompare(b[0][0]));
+    $("dAlerte").replaceChildren(el("strong", null, "Prochaines échéances"),
+      ...(proches.length ? proches.map(([e, p, i]) => {
+        const classe = e[2] < 0 || e[2] <= 30 ? " jour" : e[2] <= 90 ? " demain" : "";
+        const quand = e[2] < 0 ? "En retard" : e[2] === 0 ? "Aujourd’hui" : fmtDate(e[0]);
+        return el("button", { class: "pastille-rdv" + classe, type: "button", onclick: () => ouvrirPacte(i) },
+          el("b", null, quand), `${p.societe} · ${e[1]}`);
+      }) : [el("em", null, "Aucune échéance dans les 12 prochains mois.")]));
     const liste = pactesVisibles();
     let contenu;
     if (!pactes.length) {
