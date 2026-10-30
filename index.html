@@ -1544,7 +1544,9 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     ["debut_collectif", "Début engagement collectif (enregistrement)", "date"], ["mail_info", "Mail information", "date"],
     ["fin_collectif", "Fin engagement collectif", "date"], ["donation", "Donation réalisée ?", "texte"],
     ["denonciation", "Dénonciation engagement collectif ?", "texte"], ["debut_individuel", "Début engagement individuel", "date"],
-    ["courrier", "Courrier obligations remplies", "date"], ["notes", "Notes", "long"]
+    ["courrier", "Courrier obligations remplies", "date"],
+    ["echeance", "Prochaine échéance (saisie par vous)", "date"], ["echeance_objet", "Objet de cette échéance", "texte"],
+    ["notes", "Notes", "long"]
   ];
   const CALCULS = { fin_collectif: ["debut_collectif", 2], debut_individuel: ["fin_collectif", 0], courrier: ["debut_individuel", 4] };
   const estIso = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ""));
@@ -1572,7 +1574,14 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     if (estIso(t)) return t;
     return t;  // texte libre : « réputé acquis », « - »…
   }
+  // échéance saisie à la main : elle passe avant le calcul
+  function echeanceSaisie(p) {
+    if (!estIso(p.echeance)) return null;
+    return [p.echeance, (p.echeance_objet || "").trim() || "Échéance", Math.round((versDate(p.echeance) - aujourdhui()) / 86400000)];
+  }
   function prochaineEcheance(p) {
+    const saisie = echeanceSaisie(p);
+    if (saisie) return saisie;
     if (String(p.etat || "").trim().toLowerCase() !== "en cours") return null;
     const auj = aujourdhui();
     const a = [["fin_collectif", "Fin engagement collectif"], ["courrier", "Courrier obligations remplies"]]
@@ -1582,6 +1591,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   }
   function fmtDelai(j) {
     if (j == null) return "";
+    if (j < 0) return `en retard de ${-j} j`;
     if (j === 0) return "aujourd’hui";
     if (j < 60) return `dans ${j} j`;
     const mois = Math.round(j / 30.4);
@@ -1633,7 +1643,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         const e = prochaineEcheance(p);
         return el("button", { type: "button", class: "d-carte " + urgence(p), onclick: () => ouvrirPacte(i) },
           el("div", { class: "haut" }, el("b", null, p.societe), el("span", { class: "etat" }, p.etat || "—")),
-          e ? el("div", { class: "ech" }, el("strong", null, fmtDate(e[0])), ` · ${e[1]} · ${fmtDelai(e[2])}`) : el("div", { class: "ech" }, "Pas d’échéance à venir"),
+          e ? el("div", { class: "ech" }, el("strong", null, (echeanceSaisie(p) ? "" : "≈ ") + fmtDate(e[0])), ` · ${e[1]} · ${fmtDelai(e[2])}`) : el("div", { class: "ech" }, "Pas d’échéance à venir"),
           el("div", { class: "detail" }, `Collectif : ${fmtDouT(p.debut_collectif) || "—"} → ${fmtDouT(dateEffective(p, "fin_collectif")[0]) || "—"} · Individuel jusqu’au ${fmtDouT(dateEffective(p, "courrier")[0]) || "—"}`));
       });
     } else {
@@ -1650,7 +1660,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
             el("td", { class: "n" }, p.honoraires ? euros(p.honoraires) : ""),
             cellule(p, "debut_collectif"), cellule(p, "fin_collectif"), el("td", null, p.donation || ""), el("td", null, p.denonciation || ""),
             cellule(p, "debut_individuel"), cellule(p, "courrier"),
-            el("td", null, e ? `${fmtDate(e[0])} · ${e[1]}` : ""), el("td", { class: "c" }, e ? fmtDelai(e[2]) : ""));
+            el("td", { class: echeanceSaisie(p) ? "" : "calc" }, e ? `${echeanceSaisie(p) ? "" : "≈ "}${fmtDate(e[0])} · ${e[1]}` : ""),
+            el("td", { class: "c" }, e ? fmtDelai(e[2]) : ""));
         })))];
     }
     $("dutreilContenu").replaceChildren(...contenu);
@@ -1677,7 +1688,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       else if (nature === "montant") ctrl = el("input", { name: cle, type: "number", inputmode: "decimal", step: "any", value: p[cle] ?? "" });
       else ctrl = el("input", { name: cle, type: "text", value: nature === "date" ? fmtDouT(p[cle]) : (p[cle] || ""), placeholder: nature === "date" ? "jj/mm/aaaa" : "" });
       const bloc = [ctrl];
-      if (CALCULS[cle]) { indices[cle] = el("span", { class: "calcule" }); bloc.push(indices[cle]); }
+      if (CALCULS[cle] || cle === "echeance") { indices[cle] = el("span", { class: "calcule" }); bloc.push(indices[cle]); }
       return el("div", { class: "champ" }, el("label", null, lib), ...bloc);
     });
     const majIndices = () => {
@@ -1687,6 +1698,13 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         if (nature === "date") brouillon[c.name] = lireDouT(c.value);
       });
       for (const [cle, span] of Object.entries(indices)) {
+        if (cle === "echeance") {
+          const etat = $("corpsPacte").querySelector("[name=etat]").value;
+          const e = prochaineEcheance({ ...brouillon, echeance: "", etat });
+          span.textContent = brouillon.echeance ? "Votre date passe avant le calcul automatique."
+            : (e ? `Laissée vide, elle sera calculée : ${fmtDate(e[0])} · ${e[1]}` : "Laissée vide : aucune échéance calculée");
+          continue;
+        }
         const [v, calc] = dateEffective(brouillon, cle);
         span.textContent = brouillon[cle] ? "" : (calc ? `Laissée vide, elle sera calculée : ${fmtDate(v)}` : "Laissée vide : non calculable");
       }
@@ -1694,6 +1712,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     $("corpsPacte").replaceChildren(...corps,
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerPacte }, "Supprimer ce pacte") : "");
     $("corpsPacte").oninput = majIndices;
+    $("corpsPacte").onchange = majIndices;
     majIndices();
     ouvrirFeuille("feuillePacte");
   }
