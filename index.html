@@ -388,6 +388,23 @@ body.vue-activite #rdv { display: none !important; }
 .badge-taches { display: inline-block; margin-left: 6px; font-size: 11.5px; font-weight: 600; border-radius: 9px; padding: 0 7px; background: var(--or-doux); color: #6e5220; vertical-align: 1px; }
 .badge-taches.retard { background: #f7d4d4; color: #7a1f1f; }
 .pastille-rdv.tache-p b::before { content: "☐ "; }
+/* rendez-vous en vert sauge, tâches en blanc à bord pointillé (doré / rouge selon l'urgence) */
+.pastille-rdv.rdv-p { background: #e4efe3; border-color: #a9c6a8; color: #2f4a2e; }
+.pastille-rdv.rdv-p b { color: #2f4a2e; }
+.pastille-rdv.rdv-p b::before { content: "📅 "; }
+.pastille-rdv.rdv-p.jour { background: #4f6f4e; border-color: #4f6f4e; color: #fff; }
+.pastille-rdv.rdv-p.demain { background: #7d9c7c; border-color: #7d9c7c; color: #fff; }
+.pastille-rdv.rdv-p.jour b, .pastille-rdv.rdv-p.demain b { color: #fff; }
+.pastille-rdv.tache-p { border-style: dashed; border-color: #c9b98f; }
+.pastille-rdv.tache-p.demain { background: var(--or-doux); border-color: var(--or); color: #6e5220; }
+.pastille-rdv.tache-p.demain b { color: #6e5220; }
+.pastille-rdv.tache-p.retard { background: #f7d4d4; border-color: #d99a9a; color: #7a1f1f; border-style: solid; }
+.pastille-rdv.tache-p.retard b { color: #7a1f1f; }
+.legende-rdv { display: inline-flex; gap: 10px; font-size: 11.5px; color: var(--discret); white-space: nowrap; margin-right: 4px; }
+.legende-rdv i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.m-rdv-date.vert { background: #e4efe3; color: #2f4a2e; }
+.m-rdv-date.vert.jour { background: #4f6f4e; color: #fff; }
+.m-rdv-date.vert.demain { background: #7d9c7c; color: #fff; }
 
 /* ---------- Dutreil ---------- */
 body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres, body.vue-dutreil .voile-filtres { display: none !important; }
@@ -1539,13 +1556,15 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0]);
     const taches = tachesAVenir(7);
     const pastillesTaches = taches.slice(0, 8).map(([t, nom, j]) => el("button", {
-      class: "pastille-rdv tache-p" + (j <= 0 ? " jour" : j === 1 ? " demain" : ""), type: "button", onclick: () => ouvrirClient(nom) },
+      class: "pastille-rdv tache-p" + (j < 0 ? " retard" : j === 0 ? " jour" : j === 1 ? " demain" : ""), type: "button", onclick: () => ouvrirClient(nom) },
       el("b", null, j < 0 ? "En retard" : j === 0 ? "Aujourd’hui" : j === 1 ? "Demain" : fmtDate(t.pour).slice(0, 5)), `${nom} · ${t.texte}`));
-    $("rdv").replaceChildren(el("strong", null, taches.length ? "Rendez-vous et tâches" : "Prochains rendez-vous"), ...pastillesTaches,
+    const legende = taches.length ? el("span", { class: "legende-rdv" },
+      el("span", null, el("i", { style: "background:#7d9c7c" }), "rendez-vous"), el("span", null, el("i", { style: "background:var(--carte);border:1px dashed #c9b98f" }), "tâches")) : null;
+    $("rdv").replaceChildren(el("strong", null, taches.length ? "Rendez-vous et tâches" : "Prochains rendez-vous"), ...(legende ? [legende] : []), ...pastillesTaches,
       ...(rdv.length ? rdv.slice(0, 12).map(([e, d, i]) => {
         const jour = versDate(d.rdv);
         const quand = e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`;
-        return el("button", { class: "pastille-rdv" + (e === 0 ? " jour" : e === 1 ? " demain" : ""), onclick: () => ouvrirDossier(i) },
+        return el("button", { class: "pastille-rdv rdv-p" + (e === 0 ? " jour" : e === 1 ? " demain" : ""), onclick: () => ouvrirDossier(i) },
           el("b", null, quand), d.client + (d.tache ? " · " + d.tache : ""));
       }) : (taches.length ? [] : [el("em", null, "Aucun rendez-vous prévu dans les 30 prochains jours.")])));
   }
@@ -1646,7 +1665,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       const jour = versDate(d.rdv);
       const quand = e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`;
       return el("button", { class: "m-rdv", type: "button", onclick: () => ouvrirDossier(i) },
-        el("div", { class: "m-rdv-date" + (e === 0 ? " jour" : e === 1 ? " demain" : "") }, quand),
+        el("div", { class: "m-rdv-date vert" + (e === 0 ? " jour" : e === 1 ? " demain" : "") }, quand),
         el("div", null, el("b", null, d.client), el("span", null, [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "))));
     }) : [el("p", { class: "m-vide" }, "Aucun rendez-vous dans les 30 prochains jours.")]));
     $("mEtapes").replaceChildren(...ETAPES.map(([n, nom]) => {
@@ -2368,6 +2387,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date")), champ("A-vie", saisie("a_vie", d.a_vie), true), champ("Millionnaire", avecListe("millionnaire", d.millionnaire, "millionnaire"), true)),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       el("h4", { class: "rubrique" }, "Client"),
+      i >= 0 && d.client ? blocTaches(d.client, { id: d.id, libelle: [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") }) : "",
       el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", zoneComm), champ("Notes client", zoneNotes)),
       champ("Commentaire propre à ce dossier", el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "")),
       i >= 0 ? el("div", { class: "actions-fiche" },
@@ -2455,18 +2475,21 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     majTaches(nom, (l) => l.map((t) => (t.id === id ? { ...t, fait: fait ? new Date().toISOString() : null } : t)));
   }
 
-  function blocTaches(nom) {
+  // dossier : { id, libelle } quand le bloc est affiché dans la fiche d'un dossier (la tâche y est rattachée)
+  function blocTaches(nom, dossier) {
     const bloc = el("div", { class: "taches" });
     const dessiner = () => {
       const toutes = tachesDe(nom);
-      const ouvertes = toutes.filter((t) => !t.fait).sort(triTaches);
+      // dans un dossier : ses tâches d'abord, puis les autres tâches du client
+      const ouvertes = toutes.filter((t) => !t.fait).sort((a, b) => dossier ? ((b.dossier === dossier.id) - (a.dossier === dossier.id)) || triTaches(a, b) : triTaches(a, b));
       const faites = toutes.filter((t) => t.fait).sort((a, b) => b.fait.localeCompare(a.fait));
       const texte = el("input", { type: "text", placeholder: "Nouvelle tâche… (ex. relancer pour l’avis d’imposition)", "aria-label": "Nouvelle tâche", enterkeyhint: "done" });
       const date = el("input", { type: "date", "aria-label": "Pour le (facultatif)", title: "Pour le (facultatif)" });
       const ajouter = () => {
         const t = texte.value.trim();
         if (!t) { texte.focus(); return; }
-        majTaches(nom, (l) => [...l, { id: nouvelId(), texte: t, pour: date.value || "", fait: null, cree: new Date().toISOString() }]);
+        majTaches(nom, (l) => [...l, { id: nouvelId(), texte: t, pour: date.value || "", fait: null, cree: new Date().toISOString(),
+          ...(dossier ? { dossier: dossier.id, dossier_libelle: dossier.libelle } : {}) }]);
         dessiner();
         bloc.querySelector("input[type=text]").focus();
         afficherTout();
@@ -2477,14 +2500,17 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         const c = el("input", { type: "checkbox", checked: !!t.fait, "aria-label": "Fait" });
         c.addEventListener("change", () => { cocherTache(nom, t.id, c.checked); dessiner(); afficherTout(); });
         return el("div", { class: "tache" + (t.fait ? " faite" : "") }, c,
-          el("div", { class: "texte" }, t.texte, t.fait ? el("small", null, `fait le ${new Date(t.fait).toLocaleDateString("fr-FR")}`) : null),
+          el("div", { class: "texte" }, t.texte,
+            t.fait ? el("small", null, `fait le ${new Date(t.fait).toLocaleDateString("fr-FR")}`)
+              : t.dossier_libelle && !(dossier && t.dossier === dossier.id) ? el("small", null, `dossier : ${t.dossier_libelle}`)
+              : dossier && t.dossier === dossier.id ? el("small", null, "ce dossier") : null),
           quand && !t.fait ? el("span", { class: "echeance-tache " + classe }, quand) : el("span"),
           el("button", { type: "button", class: "suppr", "aria-label": "Supprimer la tâche", onclick: () => {
             majTaches(nom, (l) => l.filter((x) => x.id !== t.id)); dessiner(); afficherTout();
           } }, "×"));
       };
       bloc.replaceChildren(
-        el("h4", null, `À faire pour ce client${ouvertes.length ? ` (${ouvertes.length})` : ""}`),
+        el("h4", null, `À faire pour ${dossier ? "le client" : "ce client"}${ouvertes.length ? ` (${ouvertes.length})` : ""}`),
         el("div", { class: "tache-ajout" }, texte, date, el("button", { type: "button", "aria-label": "Ajouter", onclick: ajouter }, "+")),
         el("div", { class: "suggestions" }, ["Relancer pour les pièces", "Envoyer le projet", "Appeler le notaire", "Préparer le RDV", "Facturer"].map((sug) =>
           el("button", { type: "button", onclick: () => { texte.value = sug; texte.focus(); } }, sug))),
