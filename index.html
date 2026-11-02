@@ -723,6 +723,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   "use strict";
 
   // ---------------------------------------------------------------- constantes
+  const VERSION = "31/10/2026 · tâches clients";
   const CLE_STOCKAGE = "suivi-gp-donnees";
   const CLE_AFFICHAGE = "suivi-gp-affichage";
   const ETAPES = [["1", "En attente"], ["2", "À faire"], ["3", "Terminé"], ["4", "Sans suite / reporté"]];
@@ -1510,7 +1511,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     $("alerteModif").hidden = !(donnees && donnees.modifie) || !!github;
     if (donnees) {
       const d = new Date(donnees.importe);
-      $("infoFichier").textContent = `${donnees.dossiers.length} dossiers, ${Object.keys(donnees.clients).length} clients. Chargé le ${d.toLocaleDateString("fr-FR")}.`
+      $("infoFichier").textContent = `Version de l’appli : ${VERSION}. ${donnees.dossiers.length} dossiers, ${Object.keys(donnees.clients).length} clients. Chargé le ${d.toLocaleDateString("fr-FR")}.`
         + (github ? ` Relié à GitHub : ${github.proprietaire}/${github.depot}/${github.chemin}.`
           : (donnees.modifie ? " Des modifications n’ont pas encore été exportées." : ""));
     } else {
@@ -2701,7 +2702,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
 
   // ---------------------------------------------------------------- installation comme une appli
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((r) => r.update()).catch(() => {});
   }
 
   // ---------------------------------------------------------------- démarrage
