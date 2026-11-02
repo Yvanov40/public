@@ -486,6 +486,59 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier 
 .cal-element .cal-date-tel { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 6px 9px; font-size: 13px; color: var(--bleu); white-space: nowrap; }
 .feuille-boite { transition: transform .15s ease-out; }
 
+/* ---------- barre d'onglets fixe (ordinateur) ---------- */
+.onglets-haut { display: flex; gap: 2px; margin-left: 28px; align-self: stretch; align-items: stretch; }
+.onglets-haut a { color: rgba(255,255,255,.72); text-decoration: none; padding: 0 14px; display: flex; align-items: center; font-size: 14.5px; border-bottom: 3px solid transparent; white-space: nowrap; }
+.onglets-haut a:hover { color: #fff; background: rgba(255,255,255,.06); }
+.onglets-haut a[aria-current="page"] { color: #fff; font-weight: 600; border-bottom-color: var(--barre-discret); }
+.onglets-haut .nb-clients { color: var(--barre-discret); }
+.entete-int { padding-top: 0; padding-bottom: 0; min-height: 62px; }
+.entete-int > div:first-child { padding: 10px 0; }
+
+/* ---------- accueil : tableau de bord ---------- */
+.acc-bonjour { margin: 4px 2px 14px; font: italic 500 18px var(--titre); color: var(--discret); }
+@media (min-width: 901px) {
+  body.vue-accueil #indicateurs, body.vue-accueil #rdv, body.vue-accueil .filtres, body.vue-accueil .voile-filtres { display: none !important; }
+  .acc-grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .acc-carte { background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px; padding: 14px 16px 16px; min-width: 0; }
+  .acc-carte .m-h2 { margin: 0 0 10px; font: 600 20px/1.2 var(--titre); color: var(--bleu); }
+  .acc-carte .m-bloc { background: none; border: 0; padding: 0; }
+  .acc-carte .m-releve { display: grid; gap: 10px; }
+  .acc-carte .m-releve-ligne { display: flex; justify-content: space-between; align-items: baseline; }
+  .acc-carte .m-releve-ligne span { color: var(--discret); }
+  .acc-carte .m-releve-ligne b { color: var(--bleu); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .acc-carte .m-releve-ligne.or b { color: var(--or); }
+  .acc-carte .m-releve-ligne.reste { border-top: 1px solid var(--bordure); padding-top: 10px; }
+  .acc-carte .m-releve-ligne.reste b { font: 600 30px/1 var(--titre); font-variant-numeric: lining-nums tabular-nums; }
+  .acc-carte .m-jauge { height: 8px; border-radius: 4px; background: var(--bleu-doux); overflow: hidden; }
+  .acc-carte .m-jauge i { display: block; height: 100%; background: var(--or); }
+  .acc-carte .m-note { font-size: 13px; color: var(--discret); }
+  .acc-carte .m-rdv { display: flex; gap: 12px; align-items: center; padding: 9px 2px; border: 0; border-bottom: 1px solid var(--bordure); width: 100%; background: none; text-align: left; }
+  .acc-carte .m-rdv:last-child { border-bottom: 0; }
+  .acc-carte .m-rdv:hover b { text-decoration: underline; }
+  .acc-carte .m-rdv-date { min-width: 82px; white-space: nowrap; text-align: center; border-radius: 8px; padding: 5px 4px; background: var(--bleu-doux); color: var(--bleu); font-weight: 600; font-size: 13px; }
+  .acc-carte .m-rdv-date.jour { background: var(--or); color: #fff; }
+  .acc-carte .m-rdv-date.demain { background: var(--bleu); color: var(--carte); }
+  .acc-carte .m-rdv-date.vert { background: #e4efe3; color: #2f4a2e; }
+  .acc-carte .m-rdv-date.vert.jour { background: #4f6f4e; color: #fff; }
+  .acc-carte .m-rdv-date.vert.demain { background: #7d9c7c; color: #fff; }
+  .acc-carte .m-rdv b { display: block; color: var(--bleu); }
+  .acc-carte .m-rdv span { color: var(--discret); font-size: 13px; }
+  .acc-carte .m-vide { color: var(--discret); font-style: italic; margin: 0; }
+  .acc-carte .m-etapes { display: grid; gap: 8px; }
+  .acc-carte .m-etape { display: grid; grid-template-columns: 6px 1fr auto; gap: 12px; align-items: center; width: 100%; background: var(--fond); border: 1px solid var(--bordure); border-radius: 10px; padding: 10px 14px 10px 0; text-align: left; }
+  .acc-carte .m-etape:hover { border-color: var(--or); }
+  .acc-carte .m-etape::before { content: ""; align-self: stretch; border-radius: 0 3px 3px 0; background: var(--c); }
+  .acc-carte .m-etape b { display: block; font: 600 17px/1.2 var(--titre); }
+  .acc-carte .m-etape span { font-size: 13px; color: var(--discret); }
+  .acc-carte .m-etape em { font-style: normal; font-weight: 600; font-size: 20px; color: var(--bleu); }
+  .acc-carte .tache { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--bordure); }
+  .acc-carte .tache:first-child { border-top: 0; }
+  .acc-carte .bouton-discret { margin-top: 8px; }
+  .colonne.mise-en-avant { box-shadow: 0 0 0 3px var(--or); }
+}
+@media (max-width: 900px) { .onglets-haut { display: none; } .entete-int { padding-top: 10px; padding-bottom: 12px; } .entete-int > div:first-child { padding: 0; } }
+
 /* ---------- Dutreil ---------- */
 body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres, body.vue-dutreil .voile-filtres { display: none !important; }
 .d-alerte { background: #f7e2dc; border: 1px solid #e9c3b8; color: #7a2a1c; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-top: 10px; display: grid; gap: 3px; }
@@ -617,9 +670,13 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       <h1>Suivi des dossiers</h1>
       <span class="etat-sync local" id="etatSync"><i></i><span id="etatSyncTexte">Pas encore connecté à GitHub</span></span>
     </div>
-    <nav class="vues" aria-label="Vue">
-      <a href="#kanban" data-vue="kanban">Kanban</a>
-      <a href="#clients" data-vue="clients">Clients</a>
+    <nav class="onglets-haut" aria-label="Vue">
+      <a href="#accueil" data-vue="accueil">◉ Accueil</a>
+      <a href="#kanban" data-vue="kanban">▦ Kanban</a>
+      <a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a>
+      <a href="#calendrier" data-vue="calendrier">📅 Calendrier</a>
+      <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
+      <a href="#activite" data-vue="activite">📊 Activité</a>
     </nav>
     <button class="icone" id="btnMenu" aria-label="GitHub, import et export">⋯</button>
     <div class="entete-recherche">
@@ -665,19 +722,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     <div class="voile-filtres" id="voileFiltres"></div>
 
     <!-- téléphone : accueil -->
-    <section class="vue tel" id="vue-accueil">
-      <h2 class="m-h2">Honoraires</h2>
-      <div class="m-bloc m-releve" id="mReleve"></div>
-      <h2 class="m-h2">Tâches</h2>
-      <div class="m-bloc" id="mTaches"></div>
-      <h2 class="m-h2">Prochains rendez-vous</h2>
-      <div class="m-bloc" id="mRdv"></div>
-      <h2 class="m-h2">Étapes</h2>
-      <div class="m-etapes" id="mEtapes"></div>
-      <h2 class="m-h2">À relancer</h2>
-      <div class="m-bloc" id="mDorment"></div>
-      <h2 class="m-h2">Échéances Dutreil</h2>
-      <div class="m-bloc" id="mDutreil"></div>
+    <section class="vue" id="vue-accueil">
+      <p class="acc-bonjour ordi" id="accBonjour"></p>
+      <div class="acc-grille">
+        <div class="acc-carte"><h2 class="m-h2">Honoraires</h2><div class="m-bloc m-releve" id="mReleve"></div></div>
+        <div class="acc-carte"><h2 class="m-h2">Tâches</h2><div class="m-bloc" id="mTaches"></div></div>
+        <div class="acc-carte"><h2 class="m-h2">Prochains rendez-vous</h2><div class="m-bloc" id="mRdv"></div></div>
+        <div class="acc-carte"><h2 class="m-h2">Étapes</h2><div class="m-etapes" id="mEtapes"></div></div>
+        <div class="acc-carte"><h2 class="m-h2">À relancer</h2><div class="m-bloc" id="mDorment"></div></div>
+        <div class="acc-carte"><h2 class="m-h2">Échéances Dutreil</h2><div class="m-bloc" id="mDutreil"></div></div>
+      </div>
     </section>
 
     <section class="vue" id="vue-kanban">
@@ -687,7 +741,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         <div class="m-sections" id="mSections"></div>
       </div>
       <div class="outils ordi">
-        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
+        
         <span class="aide">Glissez une carte sur un autre type pour la déplacer · clic sur un titre de section : replier / déplier</span>
         <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
         <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
@@ -697,7 +751,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     </section>
 
     <section class="vue" id="vue-calendrier">
-      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Glissez un élément sur un autre jour pour le déplacer · cliquez sur un jour pour le détail.</span></div>
+      <div class="outils ordi"><span class="aide">Glissez un élément sur un autre jour pour le déplacer · cliquez sur un jour pour le détail.</span></div>
       <div class="cal">
         <div>
           <div class="cal-entete" id="calEntete"></div>
@@ -708,7 +762,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     </section>
 
     <section class="vue" id="vue-activite">
-      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Calculé sur les dossiers retenus par les filtres ci-dessus.</span></div>
+      <div class="outils ordi"><span class="aide">Calculé sur les dossiers retenus par les filtres ci-dessus.</span></div>
       <div class="a-grille" id="activite"></div>
     </section>
 
@@ -716,7 +770,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       <div class="d-indic" id="dIndicateurs"></div>
       <section class="rdv" id="dAlerte" aria-label="Prochaines échéances Dutreil"></section>
       <div class="d-outils ordi">
-        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
+        
         <input type="search" id="rechercheDutreil" placeholder="Rechercher une société…" aria-label="Rechercher un pacte">
         <select id="etatDutreil" aria-label="État"><option value="">Tous les états</option><option>en cours</option><option>pas utilisé</option><option>terminé</option></select>
         <label><input type="checkbox" id="prochesDutreil"> Échéance dans moins d’un an</label>
@@ -727,7 +781,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
 
     <section class="vue" id="vue-clients">
       <div class="tel" id="mClients"></div>
-      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide" id="aideClients"></span></div>
+      <div class="outils ordi"><span class="aide" id="aideClients"></span></div>
       <table class="table-clients ordi">
         <thead><tr><th>Client</th><th>Dossiers</th><th>Notaire</th><th class="n">Prévu</th><th class="n">Encaissé</th><th class="n">Reste</th></tr></thead>
         <tbody id="clientsListe"></tbody>
@@ -1763,7 +1817,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     $("mEtapes").replaceChildren(...ETAPES.map(([n, nom]) => {
       const ds = liste.filter(([d]) => etapeDe(d) === n);
       const pe = ds.reduce((s, [d]) => s + prevu(d), 0);
-      return el("button", { class: "m-etape", type: "button", style: `--c:${COULEURS[n]}`, onclick: () => { etapeActive = n; afficherKanbanTel(visibles()); location.hash = "#kanban"; } },
+      return el("button", { class: "m-etape", type: "button", style: `--c:${COULEURS[n]}`, onclick: () => {
+        etapeActive = n; afficherKanbanTel(visibles()); location.hash = "#kanban";
+        if (!estTel()) setTimeout(() => {
+          const col = $("col-" + n);
+          if (!col) return;
+          col.scrollIntoView({ behavior: "smooth", block: "start", inline: "center" });
+          col.classList.add("mise-en-avant");
+          setTimeout(() => col.classList.remove("mise-en-avant"), 1600);
+        }, 80);
+      } },
         el("div", null, el("b", null, nom), el("span", null, pe ? `${euros(pe)} prévus` : "Aucun montant prévu")), el("em", null, ds.length));
     }));
   }
@@ -2469,6 +2532,9 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       afficherRdv();
       afficherKanban(liste);
       afficherClients(liste);
+      afficherAccueilTel(liste);  // l'accueil sert aussi de tableau de bord sur ordinateur
+      const h = new Date().getHours();
+      $("accBonjour").textContent = `${h < 18 ? "Bonjour" : "Bonsoir"}, voici où en sont vos dossiers ce ${new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}.`;
     }
     afficherDutreil();
     if (vueCourante() === "activite") afficherActivite(liste);
@@ -2599,7 +2665,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   function vueCourante() {
     const v = location.hash.replace("#", "");
     if (estTel()) return ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"].includes(v) ? v : "accueil";
-    return ["kanban", "clients", "dutreil", "calendrier", "activite"].includes(v) ? v : "kanban";
+    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite"].includes(v) ? v : "accueil";
   }
   // ---- téléphone : glisser le doigt vers la gauche ou la droite pour changer de vue ----
   const ORDRE_VUES = ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"];
