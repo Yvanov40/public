@@ -366,6 +366,29 @@ body.vue-activite #rdv { display: none !important; }
   nav.bas a { font-size: 11.5px; }
 }
 
+/* ---------- tâches des clients ---------- */
+.taches { background: var(--carte); border: 1px solid var(--bordure); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+.taches h4 { margin: 0 0 10px; font: 600 17px var(--titre); color: var(--bleu); }
+.tache-ajout { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+.tache-ajout input { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 9px 10px; min-width: 0; }
+.tache-ajout button { border: 0; background: var(--bleu); color: var(--carte); border-radius: 8px; padding: 0 16px; font-size: 20px; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.suggestions button { border: 1px dashed var(--bordure); background: none; color: var(--discret); border-radius: 14px; padding: 4px 10px; font-size: 12.5px; }
+.tache { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--bordure); }
+.tache:first-child { border-top: 0; }
+.tache input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--bleu); }
+.tache .texte { overflow-wrap: anywhere; }
+.tache .texte small { display: block; color: var(--discret); font-size: 12px; }
+.tache.faite .texte { text-decoration: line-through; color: var(--discret); }
+.echeance-tache { font-size: 12px; border-radius: 10px; padding: 2px 8px; background: var(--section); color: var(--bleu); white-space: nowrap; }
+.echeance-tache.retard { background: #f7d4d4; color: #7a1f1f; font-weight: 600; }
+.echeance-tache.proche { background: var(--or-doux); color: #6e5220; font-weight: 600; }
+.tache .suppr { border: 0; background: none; color: var(--discret); font-size: 18px; padding: 0 4px; }
+.liste-taches { margin-top: 10px; }
+.badge-taches { display: inline-block; margin-left: 6px; font-size: 11.5px; font-weight: 600; border-radius: 9px; padding: 0 7px; background: var(--or-doux); color: #6e5220; vertical-align: 1px; }
+.badge-taches.retard { background: #f7d4d4; color: #7a1f1f; }
+.pastille-rdv.tache-p b::before { content: "☐ "; }
+
 /* ---------- Dutreil ---------- */
 body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres, body.vue-dutreil .voile-filtres { display: none !important; }
 .d-alerte { background: #f7e2dc; border: 1px solid #e9c3b8; color: #7a2a1c; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-top: 10px; display: grid; gap: 3px; }
@@ -548,6 +571,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     <section class="vue tel" id="vue-accueil">
       <h2 class="m-h2">Honoraires</h2>
       <div class="m-bloc m-releve" id="mReleve"></div>
+      <h2 class="m-h2">Tâches</h2>
+      <div class="m-bloc" id="mTaches"></div>
       <h2 class="m-h2">Prochains rendez-vous</h2>
       <div class="m-bloc" id="mRdv"></div>
       <h2 class="m-h2">Étapes</h2>
@@ -1511,13 +1536,17 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const rdv = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => !d.archives && d.rdv)
       .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
       .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0]);
-    $("rdv").replaceChildren(el("strong", null, "Prochains rendez-vous"),
+    const taches = tachesAVenir(7);
+    const pastillesTaches = taches.slice(0, 8).map(([t, nom, j]) => el("button", {
+      class: "pastille-rdv tache-p" + (j <= 0 ? " jour" : j === 1 ? " demain" : ""), type: "button", onclick: () => ouvrirClient(nom) },
+      el("b", null, j < 0 ? "En retard" : j === 0 ? "Aujourd’hui" : j === 1 ? "Demain" : fmtDate(t.pour).slice(0, 5)), `${nom} · ${t.texte}`));
+    $("rdv").replaceChildren(el("strong", null, taches.length ? "Rendez-vous et tâches" : "Prochains rendez-vous"), ...pastillesTaches,
       ...(rdv.length ? rdv.slice(0, 12).map(([e, d, i]) => {
         const jour = versDate(d.rdv);
         const quand = e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`;
         return el("button", { class: "pastille-rdv" + (e === 0 ? " jour" : e === 1 ? " demain" : ""), onclick: () => ouvrirDossier(i) },
           el("b", null, quand), d.client + (d.tache ? " · " + d.tache : ""));
-      }) : [el("em", null, "Aucun rendez-vous prévu dans les 30 prochains jours.")]));
+      }) : (taches.length ? [] : [el("em", null, "Aucun rendez-vous prévu dans les 30 prochains jours.")])));
   }
 
   function carteDossier(i) {
@@ -1641,7 +1670,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       return el("button", { class: "m-client", type: "button", onclick: () => ouvrirClient(nom) },
-        el("b", null, nom), el("span", { class: "r" }, p ? euros(p - ca) : ""),
+        el("b", null, nom, badgeTaches(nom)), el("span", { class: "r" }, p ? euros(p - ca) : ""),
         el("span", null, `${ds.length} dossier${ds.length > 1 ? "s" : ""} · ${etapes}`), el("span", { class: "r or" }, ca ? euros(ca) : ""));
     }), ...(tries.length > max ? [el("p", { class: "plus-de" }, `${tries.length - max} autres clients : affinez avec la recherche.`)] : []),
       ...(!tries.length ? [el("p", { class: "m-vide" }, "Aucun client ne correspond.")] : []));
@@ -1702,7 +1731,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       const notaires = [...new Set(ds.map((d) => d.notaire).filter(Boolean))];
       return el("tr", { class: "ligne", onclick: () => ouvrirClient(nom) },
-        el("td", null, el("b", null, nom), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
+        el("td", null, el("b", null, nom), badgeTaches(nom), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
         el("td", { class: "types" }, `${ds.length} dossier${ds.length > 1 ? "s" : ""}`, el("small", null, etapes)),
         el("td", { class: "cache-tel" }, notaires.length === 1 ? notaires[0] : notaires.length ? `${notaires.length} notaires` : ""),
         el("td", { class: "n cache-tel" }, p ? euros(p) : ""),
@@ -2094,6 +2123,18 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     }
     afficherDutreil();
     if (vueCourante() === "activite") afficherActivite(liste);
+    if ($("mTaches")) {
+      const taches = tachesAVenir(7);
+      const toutes = Object.values(donnees.clients).reduce((n, f) => n + (f.taches || []).filter((t) => !t.fait).length, 0);
+      $("mTaches").replaceChildren(...(taches.length ? taches.slice(0, 6).map(([t, nom, j]) => {
+        const c = el("input", { type: "checkbox", "aria-label": "Fait" });
+        c.addEventListener("change", () => { cocherTache(nom, t.id, true); informer(`« ${t.texte} » est fait.`); afficherTout(); });
+        const [quand, classe] = etatEcheance(t);
+        return el("div", { class: "tache" }, c,
+          el("button", { type: "button", class: "texte", style: "all:unset;cursor:pointer", onclick: () => ouvrirClient(nom) }, t.texte, el("small", null, nom)),
+          el("span", { class: "echeance-tache " + classe }, quand), el("span"));
+      }) : [el("p", { class: "m-vide" }, toutes ? `Aucune tâche datée cette semaine (${toutes} tâche(s) sans date dans les fiches clients).` : "Aucune tâche. Ajoutez-en depuis la fiche d’un client.")]));
+    }
     if ($("mDorment")) {
       const dort = dorment(liste);
       $("mDorment").replaceChildren(...(dort.length ? [
@@ -2331,7 +2372,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       i >= 0 ? el("div", { class: "actions-fiche" },
         d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · ")) }, "📅 Ajouter le RDV à l’agenda") : null,
         el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
-        el("button", { type: "button", onclick: () => { fermerFeuilles(); ouvrirClient(d.client); } }, "👤 Fiche client")) : "",
+        el("button", { type: "button", onclick: () => { fermerFeuilles(); ouvrirClient(d.client); } }, "👤 Fiche client",
+          tachesOuvertes(d.client).length ? ` · ☐ ${tachesOuvertes(d.client).length} tâche(s)` : "")) : "",
       historique.length ? el("details", { class: "repli" }, el("summary", null, `Historique (${historique.length})`),
         el("div", { class: "historique" }, historique.map((h) => el("div", null,
           el("b", null, `${new Date(h.le).toLocaleDateString("fr-FR")} ${new Date(h.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`),
@@ -2370,6 +2412,86 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         ? `Bonjour,\n\nPour avancer sur votre dossier (${d.tache || "analyse"}), il me manque encore quelques pièces.\nPourriez-vous me les transmettre dès que possible ?\n\nJe reste à votre disposition pour toute question.\n\nBien cordialement,`
         : `Bonjour,\n\nJe reviens vers vous au sujet de votre dossier (${d.tache || sansNumero(d.type)}).\nPouvons-nous faire un point prochainement ?\n\nBien cordialement,`;
     location.href = `mailto:?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`;
+  }
+
+  // ================================================================ tâches des clients
+  // chaque client a sa liste : { id, texte, pour (date, facultative), fait (date ou null), cree }
+  const tachesDe = (nom) => (fiche(nom).taches || []);
+  const tachesOuvertes = (nom) => tachesDe(nom).filter((t) => !t.fait);
+  function majTaches(nom, modifier) {
+    const cle = cleClient(nom);
+    const f = { ...fiche(nom), nom: fiche(nom).nom || nom };
+    f.taches = modifier([...(f.taches || [])]);
+    donnees.clients[cle] = f;
+    sauver();
+  }
+  function etatEcheance(t) {
+    if (!t.pour) return ["", ""];
+    const j = Math.round((versDate(t.pour) - aujourdhui()) / 86400000);
+    const texte = j < 0 ? `en retard (${fmtDate(t.pour)})` : j === 0 ? "aujourd’hui" : j === 1 ? "demain" : `pour le ${fmtDate(t.pour)}`;
+    return [texte, j < 0 ? "retard" : j <= 3 ? "proche" : ""];
+  }
+  const triTaches = (a, b) => (a.pour || "9999").localeCompare(b.pour || "9999") || (a.cree || "").localeCompare(b.cree || "");
+  // toutes les tâches ouvertes datées, tous clients confondus (pour l'accueil et le bandeau)
+  function tachesAVenir(jours) {
+    const liste = [];
+    for (const f of Object.values(donnees ? donnees.clients : {})) {
+      for (const t of f.taches || []) {
+        if (t.fait || !t.pour) continue;
+        const j = Math.round((versDate(t.pour) - aujourdhui()) / 86400000);
+        if (j <= jours) liste.push([t, f.nom, j]);
+      }
+    }
+    return liste.sort((a, b) => a[2] - b[2]);
+  }
+  function badgeTaches(nom) {
+    const ouvertes = tachesOuvertes(nom);
+    if (!ouvertes.length) return "";
+    const retard = ouvertes.some((t) => etatEcheance(t)[1] === "retard");
+    return el("span", { class: "badge-taches" + (retard ? " retard" : ""), title: `${ouvertes.length} tâche(s) à faire` }, `☐ ${ouvertes.length}`);
+  }
+  function cocherTache(nom, id, fait) {
+    majTaches(nom, (l) => l.map((t) => (t.id === id ? { ...t, fait: fait ? new Date().toISOString() : null } : t)));
+  }
+
+  function blocTaches(nom) {
+    const bloc = el("div", { class: "taches" });
+    const dessiner = () => {
+      const toutes = tachesDe(nom);
+      const ouvertes = toutes.filter((t) => !t.fait).sort(triTaches);
+      const faites = toutes.filter((t) => t.fait).sort((a, b) => b.fait.localeCompare(a.fait));
+      const texte = el("input", { type: "text", placeholder: "Nouvelle tâche… (ex. relancer pour l’avis d’imposition)", "aria-label": "Nouvelle tâche", enterkeyhint: "done" });
+      const date = el("input", { type: "date", "aria-label": "Pour le (facultatif)", title: "Pour le (facultatif)" });
+      const ajouter = () => {
+        const t = texte.value.trim();
+        if (!t) { texte.focus(); return; }
+        majTaches(nom, (l) => [...l, { id: nouvelId(), texte: t, pour: date.value || "", fait: null, cree: new Date().toISOString() }]);
+        dessiner();
+        bloc.querySelector("input[type=text]").focus();
+        afficherTout();
+      };
+      texte.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); ajouter(); } });
+      const ligne = (t) => {
+        const [quand, classe] = etatEcheance(t);
+        const c = el("input", { type: "checkbox", checked: !!t.fait, "aria-label": "Fait" });
+        c.addEventListener("change", () => { cocherTache(nom, t.id, c.checked); dessiner(); afficherTout(); });
+        return el("div", { class: "tache" + (t.fait ? " faite" : "") }, c,
+          el("div", { class: "texte" }, t.texte, t.fait ? el("small", null, `fait le ${new Date(t.fait).toLocaleDateString("fr-FR")}`) : null),
+          quand && !t.fait ? el("span", { class: "echeance-tache " + classe }, quand) : el("span"),
+          el("button", { type: "button", class: "suppr", "aria-label": "Supprimer la tâche", onclick: () => {
+            majTaches(nom, (l) => l.filter((x) => x.id !== t.id)); dessiner(); afficherTout();
+          } }, "×"));
+      };
+      bloc.replaceChildren(
+        el("h4", null, `À faire pour ce client${ouvertes.length ? ` (${ouvertes.length})` : ""}`),
+        el("div", { class: "tache-ajout" }, texte, date, el("button", { type: "button", "aria-label": "Ajouter", onclick: ajouter }, "+")),
+        el("div", { class: "suggestions" }, ["Relancer pour les pièces", "Envoyer le projet", "Appeler le notaire", "Préparer le RDV", "Facturer"].map((sug) =>
+          el("button", { type: "button", onclick: () => { texte.value = sug; texte.focus(); } }, sug))),
+        el("div", { class: "liste-taches" }, ouvertes.length ? ouvertes.map(ligne) : el("p", { class: "m-vide" }, "Rien à faire pour l’instant.")),
+        faites.length ? el("details", { class: "repli" }, el("summary", null, `Faites (${faites.length})`), el("div", null, faites.map(ligne))) : "");
+    };
+    dessiner();
+    return bloc;
   }
 
   // ---- fiche client imprimable (ou enregistrable en PDF) ----
@@ -2452,6 +2574,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         el("div", null, el("span", null, "Prévu"), el("b", null, euros(p))),
         el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
+      blocTaches(nom),
       el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", f.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true)),
       el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true), champ("A-vie", saisie("a_vie", f.a_vie), true)),
       champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || "")),
