@@ -362,7 +362,7 @@ body.vue-activite #rdv { display: none !important; }
   .a-grille { grid-template-columns: 1fr; }
   .a-chiffres { grid-template-columns: 1fr; }
   .a-ligne { grid-template-columns: minmax(80px, 110px) 1fr auto; }
-  nav.bas { grid-template-columns: repeat(5, 1fr) !important; }
+  nav.bas { grid-template-columns: repeat(6, 1fr) !important; }
   nav.bas a { font-size: 11.5px; }
 }
 
@@ -406,6 +406,60 @@ body.vue-activite #rdv { display: none !important; }
 .m-rdv-date.vert.jour { background: #4f6f4e; color: #fff; }
 .m-rdv-date.vert.demain { background: #7d9c7c; color: #fff; }
 
+/* ---------- Calendrier ---------- */
+body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier .filtres, body.vue-calendrier .voile-filtres { display: none !important; }
+.cal { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; margin-top: 4px; }
+.cal-entete { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.cal-entete h2 { margin: 0 8px 0 0; font: 600 24px/1.1 var(--titre); color: var(--bleu); text-transform: capitalize; min-width: 180px; font-variant-numeric: lining-nums; }
+.cal-entete button { border: 1px solid var(--bordure); background: var(--carte); color: var(--bleu); border-radius: 8px; padding: 6px 12px; }
+.cal-types { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.cal-types button { border-radius: 16px; font-size: 13px; padding: 5px 11px; }
+.cal-types button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.cal-types i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.cal-grille { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: var(--bordure); gap: 1px; border: 1px solid var(--bordure); border-radius: 12px; overflow: hidden; }
+.cal-jsem { background: var(--colonne); font-size: 12px; color: var(--discret); font-weight: 600; text-align: center; padding: 7px 0; }
+.cal-jour { background: var(--carte); min-height: 104px; padding: 5px 6px; display: flex; flex-direction: column; gap: 3px; cursor: pointer; text-align: left; border: 0; min-width: 0; }
+.cal-jour:hover { background: var(--bleu-doux); }
+.cal-jour.autre { background: var(--fond); color: var(--estompe); }
+.cal-jour.weekend { background: #fbf8f1; }
+.cal-jour .num { font-size: 13px; font-weight: 600; color: var(--texte); align-self: flex-start; border-radius: 12px; padding: 1px 7px; font-variant-numeric: tabular-nums; }
+.cal-jour.autre .num { color: var(--estompe); font-weight: 400; }
+.cal-jour.aujourdhui .num { background: var(--bleu); color: var(--carte); }
+.cal-jour.choisi { box-shadow: inset 0 0 0 2px var(--or); }
+.ev { font-size: 11.5px; line-height: 1.3; border-radius: 5px; padding: 2px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid transparent; }
+.ev.rdv { background: #e4efe3; color: #2f4a2e; border-color: #a9c6a8; }
+.ev.tache { background: var(--carte); color: #6e5220; border: 1px dashed #c9b98f; }
+.ev.tache.retard { background: #f7d4d4; color: #7a1f1f; border: 1px solid #d99a9a; }
+.ev.dutreil { background: #e3e6f2; color: #2f3a6b; border-color: #b8bfdc; }
+.ev.plus { color: var(--discret); background: none; padding-left: 2px; }
+.points { display: none; gap: 3px; flex-wrap: wrap; }
+.points i { width: 6px; height: 6px; border-radius: 3px; display: inline-block; }
+.cal-panneau { background: var(--carte); border: 1px solid var(--bordure); border-radius: 12px; padding: 14px; position: sticky; top: 80px; }
+.cal-panneau h3 { margin: 0 0 2px; font: 600 19px var(--titre); color: var(--bleu); text-transform: capitalize; font-variant-numeric: lining-nums; }
+.cal-panneau .sous { font-size: 12.5px; color: var(--discret); margin-bottom: 10px; }
+.cal-element { display: grid; grid-template-columns: 4px 1fr; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--bordure); padding: 9px 0; }
+.cal-element:first-of-type { border-top: 0; }
+.cal-element::before { content: ""; border-radius: 2px; background: var(--c); }
+.cal-element b { display: block; color: var(--bleu); font-weight: 600; }
+.cal-element span { font-size: 12.5px; color: var(--discret); }
+.cal-ajout { margin-top: 12px; border-top: 1px solid var(--bordure); padding-top: 12px; display: grid; gap: 8px; }
+.cal-ajout input { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 8px 10px; }
+.cal-ajout button { border: 0; background: var(--bleu); color: var(--carte); border-radius: 8px; padding: 9px; font-weight: 600; }
+.cal-avenir h4 { font: 600 15px var(--titre); color: var(--bleu); margin: 14px 0 4px; text-transform: capitalize; }
+@media (max-width: 1100px) { .cal { grid-template-columns: 1fr; } .cal-panneau { position: static; } }
+@media (max-width: 900px) {
+  body.vue-calendrier #btnFiltres { display: none; }
+  .cal-entete h2 { font-size: 21px; min-width: 0; flex: 1; }
+  .cal-types { margin-left: 0; width: 100%; }
+  .cal-jour { min-height: 50px; padding: 4px 3px; align-items: center; }
+  .cal-jour .num { align-self: center; font-size: 13px; }
+  .cal-jour .ev { display: none; }
+  .points { display: flex; justify-content: center; }
+  .cal-jsem { font-size: 11px; }
+  nav.bas { grid-template-columns: repeat(6, 1fr) !important; }
+  nav.bas a { font-size: 10.5px !important; }
+}
+
 /* ---------- Dutreil ---------- */
 body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres, body.vue-dutreil .voile-filtres { display: none !important; }
 .d-alerte { background: #f7e2dc; border: 1px solid #e9c3b8; color: #7a2a1c; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-top: 10px; display: grid; gap: 3px; }
@@ -448,7 +502,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   body.vue-dutreil #btnFiltres { display: none; }
   .d-indic { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; }
   .d-indic .indic { flex: 0 0 auto; min-width: 46%; }
-  nav.bas { grid-template-columns: repeat(5, 1fr) !important; }
+  nav.bas { grid-template-columns: repeat(6, 1fr) !important; }
 }
 
 /* ---------- disposition téléphone (première version) ---------- */
@@ -607,7 +661,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         <div class="m-sections" id="mSections"></div>
       </div>
       <div class="outils ordi">
-        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
+        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
         <span class="aide">Glissez une carte sur un autre type pour la déplacer · clic sur un titre de section : replier / déplier</span>
         <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
         <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
@@ -616,8 +670,19 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       <div class="kanban ordi" id="kanban"></div>
     </section>
 
+    <section class="vue" id="vue-calendrier">
+      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Rendez-vous des dossiers, tâches des clients et échéances Dutreil. Cliquez sur un jour pour le détail.</span></div>
+      <div class="cal">
+        <div>
+          <div class="cal-entete" id="calEntete"></div>
+          <div class="cal-grille" id="calGrille"></div>
+        </div>
+        <aside class="cal-panneau" id="calPanneau"></aside>
+      </div>
+    </section>
+
     <section class="vue" id="vue-activite">
-      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Calculé sur les dossiers retenus par les filtres ci-dessus.</span></div>
+      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Calculé sur les dossiers retenus par les filtres ci-dessus.</span></div>
       <div class="a-grille" id="activite"></div>
     </section>
 
@@ -625,7 +690,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       <div class="d-indic" id="dIndicateurs"></div>
       <section class="rdv" id="dAlerte" aria-label="Prochaines échéances Dutreil"></section>
       <div class="d-outils ordi">
-        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
+        <nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav>
         <input type="search" id="rechercheDutreil" placeholder="Rechercher une société…" aria-label="Rechercher un pacte">
         <select id="etatDutreil" aria-label="État"><option value="">Tous les états</option><option>en cours</option><option>pas utilisé</option><option>terminé</option></select>
         <label><input type="checkbox" id="prochesDutreil"> Échéance dans moins d’un an</label>
@@ -636,7 +701,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
 
     <section class="vue" id="vue-clients">
       <div class="tel" id="mClients"></div>
-      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide" id="aideClients"></span></div>
+      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide" id="aideClients"></span></div>
       <table class="table-clients ordi">
         <thead><tr><th>Client</th><th>Dossiers</th><th>Notaire</th><th class="n">Prévu</th><th class="n">Encaissé</th><th class="n">Reste</th></tr></thead>
         <tbody id="clientsListe"></tbody>
@@ -651,6 +716,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   <a href="#accueil" data-vue="accueil"><span>◉</span>Accueil</a>
   <a href="#kanban" data-vue="kanban"><span>▦</span>Étapes</a>
   <a href="#clients" data-vue="clients"><span>☰</span>Clients</a>
+  <a href="#calendrier" data-vue="calendrier"><span>📅</span>Agenda</a>
   <a href="#dutreil" data-vue="dutreil"><span>⚖</span>Dutreil</a>
   <a href="#activite" data-vue="activite"><span>📊</span>Activité</a>
 </nav>
@@ -2098,7 +2164,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     try {
       localStorage.setItem(CLE_FILTRES, JSON.stringify({
         selections: Object.fromEntries(Object.entries(selections).map(([k, v]) => [k, [...v]])),
-        archives: $("masquerArchives").checked, etapeActive,
+        archives: $("masquerArchives").checked, etapeActive, typesCalendrier: [...typesCalendrier],
         etatDutreil: $("etatDutreil").value, prochesDutreil: $("prochesDutreil").checked, etatDutreilTel
       }));
     } catch (e) {}
@@ -2113,9 +2179,118 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         $("etatDutreil").value = f.etatDutreil || "";
         $("prochesDutreil").checked = !!f.prochesDutreil;
         etatDutreilTel = f.etatDutreilTel || "";
+        if (Array.isArray(f.typesCalendrier)) typesCalendrier = new Set(f.typesCalendrier);
       }
     } catch (e) {}
     filtresRestaures = true;
+  }
+
+  // ================================================================ Calendrier
+  let moisCalendrier = (() => { const d = aujourdhui(); d.setDate(1); return d; })();
+  let jourCalendrier = enIso(aujourdhui());
+  let typesCalendrier = new Set(["rdv", "tache", "dutreil"]);
+  const COULEURS_CAL = { rdv: "#7d9c7c", tache: "#c9a45c", dutreil: "#6b77b0" };
+  const NOMS_CAL = { rdv: "Rendez-vous", tache: "Tâches", dutreil: "Échéances Dutreil" };
+
+  // tous les événements, par date : { iso: [ { type, titre, sous, ouvrir, retard } ] }
+  function evenementsCalendrier() {
+    const parJour = {};
+    const ajouter = (iso, ev) => { if (estIso(iso) && typesCalendrier.has(ev.type)) (parJour[iso] ||= []).push(ev); };
+    if (donnees) {
+      donnees.dossiers.forEach((d, i) => {
+        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: d.client, sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i) });
+      });
+      for (const f of Object.values(donnees.clients)) {
+        for (const t of f.taches || []) {
+          if (t.fait || !t.pour) continue;
+          ajouter(t.pour, { type: "tache", titre: t.texte, sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirClient(f.nom),
+            retard: t.pour < enIso(aujourdhui()), id: t.id, client: f.nom });
+        }
+      }
+    }
+    dutreil.pactes.forEach((pacte, j) => {
+      const vues = new Set();
+      const saisie = echeanceSaisie(pacte);
+      if (saisie) { ajouter(saisie[0], { type: "dutreil", titre: pacte.societe, sous: saisie[1], ouvrir: () => ouvrirPacte(j) }); vues.add(saisie[0]); }
+      if (String(pacte.etat || "").trim().toLowerCase() === "en cours") {
+        for (const [cle, lib] of [["fin_collectif", "Fin engagement collectif"], ["courrier", "Courrier obligations remplies"]]) {
+          const v = dateEffective(pacte, cle)[0];
+          if (estIso(v) && !vues.has(v)) ajouter(v, { type: "dutreil", titre: pacte.societe, sous: lib, ouvrir: () => ouvrirPacte(j) });
+        }
+      }
+    });
+    for (const l of Object.values(parJour)) l.sort((a, b) => "rdv tache dutreil".indexOf(a.type) - "rdv tache dutreil".indexOf(b.type));
+    return parJour;
+  }
+
+  function afficherCalendrier() {
+    if (!$("calGrille")) return;
+    const ev = evenementsCalendrier();
+    const auj = enIso(aujourdhui());
+    const titreMois = moisCalendrier.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    const changerMois = (n) => { moisCalendrier = new Date(moisCalendrier.getFullYear(), moisCalendrier.getMonth() + n, 1); afficherCalendrier(); };
+    $("calEntete").replaceChildren(
+      el("h2", null, titreMois),
+      el("button", { type: "button", "aria-label": "Mois précédent", onclick: () => changerMois(-1) }, "‹"),
+      el("button", { type: "button", onclick: () => { const d = aujourdhui(); d.setDate(1); moisCalendrier = d; jourCalendrier = auj; afficherCalendrier(); } }, "Aujourd’hui"),
+      el("button", { type: "button", "aria-label": "Mois suivant", onclick: () => changerMois(1) }, "›"),
+      el("div", { class: "cal-types" }, ["rdv", "tache", "dutreil"].map((t) => el("button", { type: "button", "aria-pressed": String(typesCalendrier.has(t)),
+        onclick: () => { typesCalendrier.has(t) ? typesCalendrier.delete(t) : typesCalendrier.add(t); memoriserFiltres(); afficherCalendrier(); } },
+        el("i", { style: `background:${COULEURS_CAL[t]}` }), NOMS_CAL[t]))));
+    // grille : 6 semaines, lundi en premier
+    const premier = new Date(moisCalendrier);
+    const decalage = (premier.getDay() + 6) % 7;
+    const debut = new Date(premier.getFullYear(), premier.getMonth(), 1 - decalage);
+    const cellules = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."].map((j) => el("div", { class: "cal-jsem" }, j));
+    for (let k = 0; k < 42; k++) {
+      const jour = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate() + k);
+      const iso = enIso(jour);
+      const liste = ev[iso] || [];
+      const classes = ["cal-jour"];
+      if (jour.getMonth() !== moisCalendrier.getMonth()) classes.push("autre");
+      if (jour.getDay() === 0 || jour.getDay() === 6) classes.push("weekend");
+      if (iso === auj) classes.push("aujourdhui");
+      if (iso === jourCalendrier) classes.push("choisi");
+      cellules.push(el("button", { type: "button", class: classes.join(" "), "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
+        onclick: () => { jourCalendrier = iso; afficherCalendrier(); if (estTel()) $("calPanneau").scrollIntoView({ behavior: "smooth", block: "start" }); } },
+        el("span", { class: "num" }, jour.getDate()),
+        ...liste.slice(0, 3).map((e) => el("span", { class: `ev ${e.type}${e.retard ? " retard" : ""}`, title: `${e.titre} · ${e.sous}` }, e.titre)),
+        liste.length > 3 ? el("span", { class: "ev plus" }, `+ ${liste.length - 3}`) : "",
+        liste.length ? el("span", { class: "points" }, liste.slice(0, 4).map((e) => el("i", { style: `background:${COULEURS_CAL[e.type]}` }))) : ""));
+    }
+    $("calGrille").replaceChildren(...cellules);
+
+    // panneau du jour choisi + ajout d'une tâche + jours suivants
+    const jourChoisi = versDate(jourCalendrier);
+    const elements = ev[jourCalendrier] || [];
+    const ligne = (e) => el("button", { type: "button", class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}`, onclick: e.ouvrir },
+      el("div", null, el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre), el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`)));
+    const client = el("input", { type: "text", list: "liste-clients-cal", placeholder: "Client" });
+    const texte = el("input", { type: "text", placeholder: "Tâche à faire ce jour-là" });
+    const ajouterTache = () => {
+      const nom = client.value.trim(), t = texte.value.trim();
+      if (!nom || !t) { informer("Indiquez le client et la tâche."); return; }
+      const existant = (donnees.dossiers.find((d) => cleClient(d.client) === cleClient(nom)) || {}).client || nom;
+      majTaches(existant, (l) => [...l, { id: nouvelId(), texte: t, pour: jourCalendrier, fait: null, cree: new Date().toISOString() }]);
+      informer(`Tâche ajoutée pour ${existant} le ${fmtDate(jourCalendrier)}.`);
+      afficherTout();
+    };
+    texte.addEventListener("keydown", (e) => { if (e.key === "Enter") ajouterTache(); });
+    // les 14 jours qui suivent, pour avoir une vue d'ensemble
+    const suite = [];
+    for (let k = 1; k <= 14; k++) {
+      const iso = enIso(new Date(jourChoisi.getFullYear(), jourChoisi.getMonth(), jourChoisi.getDate() + k));
+      if (ev[iso]) suite.push([iso, ev[iso]]);
+    }
+    $("calPanneau").replaceChildren(
+      el("h3", null, jourChoisi.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })),
+      el("div", { class: "sous" }, elements.length ? `${elements.length} élément(s)` : "Rien de prévu ce jour-là."),
+      ...elements.map(ligne),
+      donnees ? el("div", { class: "cal-ajout" }, el("b", { style: "font-size:13px;color:var(--bleu)" }, "Ajouter une tâche ce jour-là"), client,
+        el("datalist", { id: "liste-clients-cal" }, [...new Set(donnees.dossiers.map((d) => d.client))].sort().map((v) => el("option", { value: v }))),
+        texte, el("button", { type: "button", onclick: ajouterTache }, "＋ Ajouter")) : "",
+      suite.length ? el("div", { class: "cal-avenir" }, ...suite.map(([iso, l]) => el("div", null,
+        el("h4", null, versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })), ...l.map(ligne)))) : "");
   }
 
   function afficherTout() {
@@ -2143,6 +2318,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     }
     afficherDutreil();
     if (vueCourante() === "activite") afficherActivite(liste);
+    if (vueCourante() === "calendrier") afficherCalendrier();
     if ($("mTaches")) {
       const taches = tachesAVenir(7);
       const toutes = Object.values(donnees.clients).reduce((n, f) => n + (f.taches || []).filter((t) => !t.fait).length, 0);
@@ -2268,11 +2444,11 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   // ---------------------------------------------------------------- navigation
   function vueCourante() {
     const v = location.hash.replace("#", "");
-    if (estTel()) return ["accueil", "kanban", "clients", "dutreil", "activite"].includes(v) ? v : "accueil";
-    return ["kanban", "clients", "dutreil", "activite"].includes(v) ? v : "kanban";
+    if (estTel()) return ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"].includes(v) ? v : "accueil";
+    return ["kanban", "clients", "dutreil", "calendrier", "activite"].includes(v) ? v : "kanban";
   }
   // ---- téléphone : glisser le doigt vers la gauche ou la droite pour changer de vue ----
-  const ORDRE_VUES = ["accueil", "kanban", "clients", "dutreil", "activite"];
+  const ORDRE_VUES = ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"];
   let sensVue = null;
   let doigt = null;
   document.querySelector("main").addEventListener("touchstart", (e) => {
@@ -2312,7 +2488,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     document.querySelectorAll(".vue").forEach((s) => { s.hidden = s.id !== "vue-" + v; });
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    ["accueil", "kanban", "clients", "dutreil", "activite"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    if (v === "calendrier") afficherCalendrier();
     if (v === "activite") afficherActivite(visibles());
     if (v === "kanban" && estTel() && donnees) afficherKanbanTel(visibles());  // l'étape choisie à l'accueil s'affiche
     if (v === "dutreil") afficherDutreil();
