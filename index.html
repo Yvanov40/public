@@ -468,6 +468,24 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier 
   nav.bas a { font-size: 10.5px !important; }
 }
 
+/* ---------- sélecteur de date (téléphone) ---------- */
+.choix-date { position: fixed; inset: 0; z-index: 70; background: rgba(8, 20, 25, .45); display: flex; align-items: flex-end; }
+.choix-date-boite { background: var(--carte); width: 100%; border-radius: 16px 16px 0 0; padding: 14px 14px calc(18px + env(safe-area-inset-bottom, 0px)); }
+.choix-date-entete { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.choix-date-entete b { flex: 1; font: 600 18px var(--titre); color: var(--bleu); text-transform: capitalize; font-variant-numeric: lining-nums; }
+.choix-date-entete button { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 6px 12px; font-size: 16px; color: var(--bleu); }
+.choix-date-titre { font-size: 13px; color: var(--discret); margin-bottom: 8px; }
+.choix-date-grille { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.choix-date-grille span { text-align: center; font-size: 11.5px; color: var(--discret); padding: 4px 0; }
+.choix-date-grille button { border: 0; background: var(--fond); border-radius: 10px; padding: 11px 0; font-size: 15px; color: var(--texte); font-variant-numeric: tabular-nums; }
+.choix-date-grille button.autre { color: var(--estompe); background: none; }
+.choix-date-grille button.auj { box-shadow: inset 0 0 0 2px var(--bleu); }
+.choix-date-grille button.actuel { background: var(--bleu); color: var(--carte); font-weight: 600; }
+.choix-date-rapides { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.choix-date-rapides button { border: 1px solid var(--bordure); background: var(--fond); border-radius: 16px; padding: 6px 12px; font-size: 13px; color: var(--bleu); }
+.cal-element .cal-date-tel { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 6px 9px; font-size: 13px; color: var(--bleu); white-space: nowrap; }
+.feuille-boite { transition: transform .15s ease-out; }
+
 /* ---------- Dutreil ---------- */
 body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres, body.vue-dutreil .voile-filtres { display: none !important; }
 .d-alerte { background: #f7e2dc; border: 1px solid #e9c3b8; color: #7a2a1c; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-top: 10px; display: grid; gap: 3px; }
@@ -1408,7 +1426,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       await chargerDepuisGithub();
       chargerDutreil();
       localStorage.setItem(CLE_GITHUB, JSON.stringify(g));
-      fermerFeuilles();
+      fermerToutesFeuilles();
     } catch (e) {
       await diagnostiquer(g, e).catch(() => afficherErreurGithub("Connexion à GitHub impossible (réseau ?)."));
       github = ancien;
@@ -2031,12 +2049,12 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     };
     $("corpsPacte").replaceChildren(...corps,
       ech ? el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => menuAgenda(`Dutreil ${p.societe} : ${ech[1]}`, ech[0], "Suivi des pactes Dutreil") }, "📅 Ajouter l’échéance à l’agenda"),
-        p.client_lie ? el("button", { type: "button", onclick: () => { fermerFeuilles(); ouvrirClient(p.client_lie); } }, "👤 Fiche client") : null) : "",
+        p.client_lie ? el("button", { type: "button", onclick: () => ouvrirClient(p.client_lie) }, "👤 Fiche client") : null) : "",
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerPacte }, "Supprimer ce pacte") : "");
     $("corpsPacte").oninput = majIndices;
     $("corpsPacte").onchange = majIndices;
     majIndices();
-    ouvrirFeuille("feuillePacte");
+    ouvrirFeuille("feuillePacte", () => ouvrirPacte(i));
   }
   function enregistrerPacte() {
     const v = lireFormulaire($("corpsPacte"));
@@ -2046,14 +2064,14 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       p[cle] = nature === "date" ? lireDouT(v[cle]) : nature === "montant" ? montant(v[cle]) : (v[cle] || "");
     }
     if (pacteEnCours >= 0) dutreil.pactes[pacteEnCours] = p; else dutreil.pactes.push(p);
-    sauverDutreil(); fermerFeuilles(); afficherDutreil();
+    sauverDutreil(); terminerFeuille(); afficherDutreil();
     informer(pacteEnCours >= 0 ? "Pacte enregistré." : "Pacte ajouté.");
   }
   function supprimerPacte() {
     const p = dutreil.pactes[pacteEnCours];
     if (!confirm(`Supprimer le pacte « ${p.societe} » ?`)) return;
     dutreil.pactes.splice(pacteEnCours, 1);
-    sauverDutreil(); fermerFeuilles(); afficherDutreil(); informer("Pacte supprimé.");
+    sauverDutreil(); terminerFeuille(); afficherDutreil(); informer("Pacte supprimé.");
   }
 
   // ================================================================ Activité : le pilotage
@@ -2262,6 +2280,42 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     informer(`${quoi} déplacé au ${fmtDate(iso)}.`, annulable ? { texte: "Annuler", faire: () => deplacerEvenement(e, ancienne, false) } : null);
   }
 
+  // sur téléphone : un calendrier simple et grand, à la place du sélecteur natif
+  function choisirDate(iso, titre, choisi) {
+    let mois = versDate(estIso(iso) ? iso : enIso(aujourdhui()));
+    mois = new Date(mois.getFullYear(), mois.getMonth(), 1);
+    const voile = el("div", { class: "choix-date", role: "dialog", "aria-label": "Choisir une date" });
+    const fermer = () => voile.remove();
+    voile.addEventListener("click", (e) => { if (e.target === voile) fermer(); });
+    const valider = (d) => { fermer(); choisi(d); };
+    const dessiner = () => {
+      const decalage = (mois.getDay() + 6) % 7;
+      const debut = new Date(mois.getFullYear(), mois.getMonth(), 1 - decalage);
+      const jours = [];
+      for (let k = 0; k < 42; k++) {
+        const j = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate() + k);
+        const v = enIso(j);
+        jours.push(el("button", { type: "button", class: [j.getMonth() !== mois.getMonth() ? "autre" : "", v === enIso(aujourdhui()) ? "auj" : "", v === iso ? "actuel" : ""].join(" "),
+          onclick: () => valider(v) }, j.getDate()));
+      }
+      const plus = (n) => { const d = aujourdhui(); d.setDate(d.getDate() + n); return enIso(d); };
+      voile.replaceChildren(el("div", { class: "choix-date-boite" },
+        el("div", { class: "choix-date-titre" }, titre),
+        el("div", { class: "choix-date-entete" },
+          el("button", { type: "button", "aria-label": "Mois précédent", onclick: () => { mois = new Date(mois.getFullYear(), mois.getMonth() - 1, 1); dessiner(); } }, "‹"),
+          el("b", null, mois.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })),
+          el("button", { type: "button", "aria-label": "Mois suivant", onclick: () => { mois = new Date(mois.getFullYear(), mois.getMonth() + 1, 1); dessiner(); } }, "›")),
+        el("div", { class: "choix-date-grille" }, ["L", "M", "M", "J", "V", "S", "D"].map((x) => el("span", null, x)), jours),
+        el("div", { class: "choix-date-rapides" },
+          el("button", { type: "button", onclick: () => valider(plus(0)) }, "Aujourd’hui"),
+          el("button", { type: "button", onclick: () => valider(plus(1)) }, "Demain"),
+          el("button", { type: "button", onclick: () => valider(plus(7)) }, "Dans une semaine"),
+          el("button", { type: "button", onclick: fermer }, "Annuler"))));
+    };
+    dessiner();
+    document.body.append(voile);
+  }
+
   let glisseCal = null;
   function activerGlisserEvenement(puce, e) {
     puce.addEventListener("pointerdown", (ev) => {
@@ -2350,8 +2404,14 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const jourChoisi = versDate(jourCalendrier);
     const elements = ev[jourCalendrier] || [];
     const ligne = (e) => {
-      const date = el("input", { type: "date", class: "cal-date", value: e.date || "", title: "Changer la date", "aria-label": `Changer la date de ${e.titre}` });
-      date.addEventListener("change", () => deplacerEvenement(e, date.value));
+      let date;
+      if (estTel()) {
+        date = el("button", { type: "button", class: "cal-date-tel", "aria-label": `Changer la date de ${e.titre}`,
+          onclick: () => choisirDate(e.date, `Nouvelle date pour « ${e.titre} »`, (iso) => deplacerEvenement(e, iso)) }, "📆 " + fmtDate(e.date).slice(0, 5));
+      } else {
+        date = el("input", { type: "date", class: "cal-date", value: e.date || "", title: "Changer la date", "aria-label": `Changer la date de ${e.titre}` });
+        date.addEventListener("change", () => deplacerEvenement(e, date.value));
+      }
       return el("div", { class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}` },
         el("span"),
         el("button", { type: "button", class: "ouvrir", onclick: e.ouvrir },
@@ -2664,14 +2724,14 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       i >= 0 ? el("div", { class: "actions-fiche" },
         d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · ")) }, "📅 Ajouter le RDV à l’agenda") : null,
         el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
-        el("button", { type: "button", onclick: () => { fermerFeuilles(); ouvrirClient(d.client); } }, "👤 Fiche client",
+        el("button", { type: "button", onclick: () => ouvrirClient(d.client) }, "👤 Fiche client",
           tachesOuvertes(d.client).length ? ` · ☐ ${tachesOuvertes(d.client).length} tâche(s)` : "")) : "",
       historique.length ? el("details", { class: "repli" }, el("summary", null, `Historique (${historique.length})`),
         el("div", { class: "historique" }, historique.map((h) => el("div", null,
           el("b", null, `${new Date(h.le).toLocaleDateString("fr-FR")} ${new Date(h.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`),
           ` · ${h.par || ""} · `, h.changements.map(([lib, a, b]) => lib === "Création" ? `création (${sansNumero(b)})` : `${lib} : ${valeurLisible(a)} → ${valeurLisible(b)}`).join(" ; "))))) : "",
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerDossier }, "Supprimer ce dossier") : "");
-    ouvrirFeuille("feuilleDossier");
+    ouvrirFeuille("feuilleDossier", () => ouvrirDossier(i));
   }
 
   // ---- agenda : Google Agenda ou fichier .ics (Outlook, Apple, Samsung…) ----
@@ -2845,7 +2905,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     f.notes = v.notes_client;
     donnees.clients[cle] = f;
     sauver();
-    fermerFeuilles();
+    terminerFeuille();
     afficherTout();
     informer(enCours >= 0 ? "Dossier enregistré." : "Dossier ajouté.");
   }
@@ -2854,7 +2914,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     if (!confirm(`Supprimer le dossier « ${d.tache || sansNumero(d.type)} » de ${d.client} ?`)) return;
     donnees.dossiers.splice(enCours, 1);
     choisi = null;
-    sauver(); fermerFeuilles(); afficherTout(); informer("Dossier supprimé.");
+    sauver(); terminerFeuille(); afficherTout(); informer("Dossier supprimé.");
   }
 
   // ---------------------------------------------------------------- fiche client
@@ -2880,17 +2940,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF")),
       pactesDuClient(nom).length ? el("div", null, el("h4", null, "Ses pactes Dutreil"), el("div", { class: "lien-dutreil" }, pactesDuClient(nom).map(([pacte, j]) => {
         const e = prochaineEcheance(pacte);
-        return el("button", { type: "button", class: "d-carte " + urgence(pacte), onclick: () => { fermerFeuilles(); ouvrirPacte(j); } },
+        return el("button", { type: "button", class: "d-carte " + urgence(pacte), onclick: () => ouvrirPacte(j) },
           el("div", { class: "haut" }, el("b", null, pacte.societe), el("span", { class: "etat" }, pacte.etat || "—")),
           e ? el("div", { class: "ech" }, el("strong", null, fmtDate(e[0])), ` · ${e[1]} · ${fmtDelai(e[2])}`) : null);
       }))) : "",
       el("h4", null, `Ses dossiers (${liste.length})`),
       el("div", { class: "liste-dossiers" }, liste.map(([, i]) => {
         const c = carteDossier(i);
-        c.addEventListener("click", () => fermerFeuilles(), { capture: true });
         return c;
       })));
-    ouvrirFeuille("feuilleClient");
+    ouvrirFeuille("feuilleClient", () => ouvrirClient(nom));
   }
   function enregistrerClient() {
     const v = lireFormulaire($("corpsClient"));
@@ -2903,25 +2962,103 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     }
     f.commentaire = v.commentaire; f.notes = v.notes; f.nom = f.nom || clientEnCours;
     donnees.clients[cle] = f;
-    sauver(); fermerFeuilles(); afficherTout(); informer("Fiche client enregistrée.");
+    sauver(); terminerFeuille(); afficherTout(); informer("Fiche client enregistrée.");
   }
 
   // ---------------------------------------------------------------- feuilles et menu
-  function ouvrirFeuille(id) {
+  // ---- navigation entre fiches : « retour » ramène à la fiche d'avant (ex. client ouvert depuis un dossier -> le dossier) ----
+  // Chaque fiche ouverte ajoute une étape à l'historique du navigateur : le geste « retour » d'Android, le bouton
+  // retour du navigateur, Fermer, Échap et le glissement vers la droite reviennent tous à la fiche précédente.
+  const pile = [];                 // fiches à retrouver : { id, rouvrir, rendu }
+  const rendus = {};               // nombre de fois où chaque fiche a été remplie
+  let ficheCourante = null;        // { id, rouvrir }
+  let restauration = false, retourFrais = false, ignorerRetour = 0;
+  function ouvrirFeuille(id, rouvrir) {
     fermerSegment();
+    rendus[id] = (rendus[id] || 0) + 1;
+    const dejaOuverte = document.querySelector(".feuille.ouverte");
+    if (!restauration) {
+      if (dejaOuverte && ficheCourante) pile.push({ ...ficheCourante, rendu: ficheCourante.id === id ? -1 : rendus[ficheCourante.id] });
+      history.pushState({ fiche: pile.length + 1 }, "");
+    }
+    ficheCourante = { id, rouvrir: rouvrir || null, rendu: rendus[id] };
     document.querySelectorAll(".feuille.ouverte").forEach((f) => f.classList.remove("ouverte"));
     const f = $(id);
     f.classList.add("ouverte");
-    f.querySelector(".feuille-corps").scrollTop = 0;
+    f.querySelector(".feuille-boite").style.transform = "";
+    if (!restauration) f.querySelector(".feuille-corps").scrollTop = 0;
     document.body.style.overflow = "hidden";
   }
-  function fermerFeuilles() {
+  function cacherFeuilles() {
     document.querySelectorAll(".feuille.ouverte").forEach((f) => f.classList.remove("ouverte"));
     document.body.style.overflow = "";
+    ficheCourante = null;
     if (rechargementEnAttente) setTimeout(verifierChangements, 300);
+  }
+  // revient à la fiche précédente, ou à l'affichage d'avant s'il n'y en a pas
+  function retourFiche(frais) {
+    const precedente = pile.pop();
+    if (!precedente) { cacherFeuilles(); return; }
+    restauration = true;
+    try {
+      if (!frais && precedente.rendu === rendus[precedente.id]) {
+        ficheCourante = precedente;  // la fiche est intacte : on la remontre telle quelle (saisies en cours comprises)
+        document.querySelectorAll(".feuille.ouverte").forEach((f) => f.classList.remove("ouverte"));
+        $(precedente.id).classList.add("ouverte");
+        $(precedente.id).querySelector(".feuille-boite").style.transform = "";
+      } else if (precedente.rouvrir) {
+        precedente.rouvrir();          // remplie à nouveau avec les données à jour
+      } else cacherFeuilles();
+    } finally { restauration = false; }
+  }
+  window.addEventListener("popstate", () => {
+    if (ignorerRetour > 0) { ignorerRetour--; return; }
+    if (!document.querySelector(".feuille.ouverte")) return;
+    const frais = retourFrais;
+    retourFrais = false;
+    retourFiche(frais);
+  });
+  // Fermer, Échap, glissement : on passe par l'historique pour rester cohérent avec le geste « retour »
+  function fermerFeuilles() {
+    if (!document.querySelector(".feuille.ouverte")) return;
+    if (history.state && history.state.fiche) history.back(); else retourFiche(false);
+  }
+  // après un enregistrement : retour à la fiche d'avant, remise à jour avec les nouvelles données
+  function terminerFeuille() {
+    retourFrais = true;
+    if (history.state && history.state.fiche) history.back(); else { retourFrais = false; retourFiche(true); }
+  }
+  // tout fermer d'un coup (connexion GitHub…)
+  function fermerToutesFeuilles() {
+    const n = pile.length + (ficheCourante ? 1 : 0);
+    pile.length = 0;
+    cacherFeuilles();
+    if (n && history.state && history.state.fiche) { ignorerRetour = 1; history.go(-n); }
   }
   document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerFeuilles));
   document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && window.innerWidth > 900) fermerFeuilles(); }));
+  // glisser le doigt vers la droite dans une fiche : retour
+  document.querySelectorAll(".feuille-boite").forEach((boite) => {
+    let depart = null;
+    boite.addEventListener("touchstart", (e) => {
+      depart = null;
+      if (e.touches.length !== 1 || e.target.closest("input, textarea, select, .tache-ajout, .suggestions")) return;
+      depart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    }, { passive: true });
+    boite.addEventListener("touchmove", (e) => {
+      if (!depart) return;
+      const dx = e.touches[0].clientX - depart.x, dy = e.touches[0].clientY - depart.y;
+      if (dx > 10 && dx > 2 * Math.abs(dy)) boite.style.transform = `translateX(${Math.min(dx, 160) * 0.6}px)`;
+    }, { passive: true });
+    boite.addEventListener("touchend", (e) => {
+      if (!depart) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - depart.x, dy = t.clientY - depart.y, duree = Date.now() - depart.t;
+      depart = null;
+      if (dx > 80 && dx > 2 * Math.abs(dy) && duree < 800) fermerFeuilles();
+      else boite.style.transform = "";
+    }, { passive: true });
+  });
   $("enregistrerDossier").addEventListener("click", enregistrerDossier);
   $("enregistrerClient").addEventListener("click", enregistrerClient);
 
@@ -2967,7 +3104,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     localStorage.removeItem(CLE_GITHUB);
     github = null;
     etatSync("local", "Pas connecté à GitHub");
-    fermerFeuilles(); majAlerte();
+    fermerToutesFeuilles(); majAlerte();
   });
   window.addEventListener("online", () => { if (github && donnees && donnees.modifie) envoyerGithub(); });
 
@@ -2994,7 +3131,12 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   $("toutDeplier").addEventListener("click", () => toutDeplier(true));
   $("toutReplier").addEventListener("click", () => toutDeplier(false));
   window.addEventListener("hashchange", montrerVue);
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { fermerSegment(); fermerFeuilles(); fermerMenu(); } });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const choix = document.querySelector(".choix-date");
+    if (choix) { choix.remove(); return; }
+    fermerSegment(); fermerMenu(); fermerFeuilles();
+  });
   window.addEventListener("resize", () => { if (segmentOuvert) fermerSegment(); });
 
   // ---------------------------------------------------------------- installation comme une appli
