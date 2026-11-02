@@ -437,9 +437,17 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier 
 .cal-panneau { background: var(--carte); border: 1px solid var(--bordure); border-radius: 12px; padding: 14px; position: sticky; top: 80px; }
 .cal-panneau h3 { margin: 0 0 2px; font: 600 19px var(--titre); color: var(--bleu); text-transform: capitalize; font-variant-numeric: lining-nums; }
 .cal-panneau .sous { font-size: 12.5px; color: var(--discret); margin-bottom: 10px; }
-.cal-element { display: grid; grid-template-columns: 4px 1fr; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--bordure); padding: 9px 0; }
+.cal-element { display: grid; grid-template-columns: 4px 1fr auto; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--bordure); padding: 9px 0; align-items: center; }
+.cal-element .ouvrir { all: unset; cursor: pointer; display: block; min-width: 0; }
+.cal-element .ouvrir:hover b { text-decoration: underline; }
+.cal-element .cal-date { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 4px 6px; font-size: 12.5px; color: var(--bleu); width: 132px; }
+.cal-element .cal-date:hover { border-color: var(--or); }
+.ev[data-cle] { cursor: grab; }
+.ev.souleve { opacity: .35; }
+.cal-jour.cible { box-shadow: inset 0 0 0 2px var(--or); background: var(--or-doux) !important; }
+.fantome-ev { position: fixed; z-index: 60; pointer-events: none; transform: rotate(-2deg); box-shadow: 0 8px 20px rgba(12,45,57,.3); max-width: 200px; }
 .cal-element:first-of-type { border-top: 0; }
-.cal-element::before { content: ""; border-radius: 2px; background: var(--c); }
+.cal-element > span:first-child { align-self: stretch; border-radius: 2px; background: var(--c); }
 .cal-element b { display: block; color: var(--bleu); font-weight: 600; }
 .cal-element span { font-size: 12.5px; color: var(--discret); }
 .cal-ajout { margin-top: 12px; border-top: 1px solid var(--bordure); padding-top: 12px; display: grid; gap: 8px; }
@@ -671,7 +679,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     </section>
 
     <section class="vue" id="vue-calendrier">
-      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Rendez-vous des dossiers, tâches des clients et échéances Dutreil. Cliquez sur un jour pour le détail.</span></div>
+      <div class="outils ordi"><nav class="onglets-vues" aria-label="Vue"><a href="#kanban" data-vue="kanban">▦ Kanban</a><a href="#clients" data-vue="clients">☰ Clients<span class="nb-clients"></span></a><a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a><a href="#calendrier" data-vue="calendrier">📅 Calendrier</a><a href="#activite" data-vue="activite">📊 Activité</a></nav><span class="aide">Glissez un élément sur un autre jour pour le déplacer · cliquez sur un jour pour le détail.</span></div>
       <div class="cal">
         <div>
           <div class="cal-entete" id="calEntete"></div>
@@ -2198,24 +2206,25 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     const ajouter = (iso, ev) => { if (estIso(iso) && typesCalendrier.has(ev.type)) (parJour[iso] ||= []).push(ev); };
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
-        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: d.client, sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i) });
+        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: d.client, sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
+          date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
         for (const t of f.taches || []) {
           if (t.fait || !t.pour) continue;
           ajouter(t.pour, { type: "tache", titre: t.texte, sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirClient(f.nom),
-            retard: t.pour < enIso(aujourdhui()), id: t.id, client: f.nom });
+            retard: t.pour < enIso(aujourdhui()), id: t.id, client: f.nom, date: t.pour, ref: { client: f.nom, tache: t.id } });
         }
       }
     }
     dutreil.pactes.forEach((pacte, j) => {
       const vues = new Set();
       const saisie = echeanceSaisie(pacte);
-      if (saisie) { ajouter(saisie[0], { type: "dutreil", titre: pacte.societe, sous: saisie[1], ouvrir: () => ouvrirPacte(j) }); vues.add(saisie[0]); }
+      if (saisie) { ajouter(saisie[0], { type: "dutreil", titre: pacte.societe, sous: saisie[1], ouvrir: () => ouvrirPacte(j), date: saisie[0], ref: { pacte: j } }); vues.add(saisie[0]); }
       if (String(pacte.etat || "").trim().toLowerCase() === "en cours") {
         for (const [cle, lib] of [["fin_collectif", "Fin engagement collectif"], ["courrier", "Courrier obligations remplies"]]) {
           const v = dateEffective(pacte, cle)[0];
-          if (estIso(v) && !vues.has(v)) ajouter(v, { type: "dutreil", titre: pacte.societe, sous: lib, ouvrir: () => ouvrirPacte(j) });
+          if (estIso(v) && !vues.has(v)) ajouter(v, { type: "dutreil", titre: pacte.societe, sous: lib, ouvrir: () => ouvrirPacte(j), date: v, ref: { pacte: j }, calculee: !saisie });
         }
       }
     });
@@ -2223,9 +2232,80 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     return parJour;
   }
 
+  // ---- déplacer un élément à une autre date (glisser dans la grille, ou choisir la date dans le détail du jour) ----
+  const indexEvenements = new Map();  // clé -> événement, pour retrouver ce qu'on glisse
+  function deplacerEvenement(e, iso, annulable = true) {
+    if (!estIso(iso) || iso === e.date) return;
+    const ancienne = e.date;
+    const r = e.ref || {};
+    if (e.type === "rdv") {
+      const i = donnees.dossiers.findIndex((d, k) => (d.id || k) === r.dossier);
+      if (i < 0) return;
+      const d = donnees.dossiers[i], avant = { ...d };
+      d.rdv = iso;
+      noterHistorique(d, avant);
+      sauver();
+    } else if (e.type === "tache") {
+      majTaches(r.client, (l) => l.map((t) => (t.id === r.tache ? { ...t, pour: iso } : t)));
+    } else if (e.type === "dutreil") {
+      const pacte = dutreil.pactes[r.pacte];
+      if (!pacte) return;
+      // une échéance calculée qu'on déplace devient une échéance saisie à la main
+      if (!pacte.echeance_objet || e.calculee) pacte.echeance_objet = e.sous;
+      pacte.echeance = iso;
+      sauverDutreil();
+    }
+    e.date = iso;
+    if (jourCalendrier === ancienne) jourCalendrier = iso;
+    afficherTout();
+    const quoi = { rdv: `Rendez-vous de ${e.titre}`, tache: `« ${e.titre} »`, dutreil: `Échéance ${e.titre}` }[e.type];
+    informer(`${quoi} déplacé au ${fmtDate(iso)}.`, annulable ? { texte: "Annuler", faire: () => deplacerEvenement(e, ancienne, false) } : null);
+  }
+
+  let glisseCal = null;
+  function activerGlisserEvenement(puce, e) {
+    puce.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0 || ev.pointerType !== "mouse") return;  // au doigt : on passe par la date du détail
+      glisseCal = { e, puce, x: ev.clientX, y: ev.clientY, parti: false, cible: null, fantome: null };
+    });
+  }
+  document.addEventListener("pointermove", (ev) => {
+    const g = glisseCal;
+    if (!g) return;
+    if (!g.parti) {
+      if (Math.abs(ev.clientX - g.x) + Math.abs(ev.clientY - g.y) < 6) return;
+      g.parti = true;
+      g.fantome = g.puce.cloneNode(true);
+      g.fantome.classList.add("fantome-ev");
+      document.body.append(g.fantome);
+      g.puce.classList.add("souleve");
+    }
+    g.fantome.style.left = ev.clientX + 8 + "px";
+    g.fantome.style.top = ev.clientY + 6 + "px";
+    const sous = document.elementFromPoint(ev.clientX, ev.clientY);
+    const jour = sous && sous.closest(".cal-jour");
+    if (g.cible && g.cible !== jour) g.cible.classList.remove("cible");
+    if (jour) jour.classList.add("cible");
+    g.cible = jour;
+  });
+  document.addEventListener("pointerup", () => {
+    const g = glisseCal;
+    glisseCal = null;
+    if (!g || !g.parti) return;
+    g.fantome.remove();
+    g.puce.classList.remove("souleve");
+    if (g.cible) {
+      g.cible.classList.remove("cible");
+      g.cible.dataset.bloque = "1";  // pas de « clic » sur le jour juste après avoir lâché
+      setTimeout(() => { if (g.cible) delete g.cible.dataset.bloque; }, 300);
+      deplacerEvenement(g.e, g.cible.dataset.jour);
+    }
+  });
+
   function afficherCalendrier() {
     if (!$("calGrille")) return;
     const ev = evenementsCalendrier();
+    indexEvenements.clear();
     const auj = enIso(aujourdhui());
     const titreMois = moisCalendrier.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
     const changerMois = (n) => { moisCalendrier = new Date(moisCalendrier.getFullYear(), moisCalendrier.getMonth() + n, 1); afficherCalendrier(); };
@@ -2251,10 +2331,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       if (jour.getDay() === 0 || jour.getDay() === 6) classes.push("weekend");
       if (iso === auj) classes.push("aujourdhui");
       if (iso === jourCalendrier) classes.push("choisi");
-      cellules.push(el("button", { type: "button", class: classes.join(" "), "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
-        onclick: () => { jourCalendrier = iso; afficherCalendrier(); if (estTel()) $("calPanneau").scrollIntoView({ behavior: "smooth", block: "start" }); } },
+      cellules.push(el("button", { type: "button", class: classes.join(" "), "data-jour": iso, "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
+        onclick: (ev) => { if (ev.currentTarget.dataset.bloque) return; jourCalendrier = iso; afficherCalendrier(); if (estTel()) $("calPanneau").scrollIntoView({ behavior: "smooth", block: "start" }); } },
         el("span", { class: "num" }, jour.getDate()),
-        ...liste.slice(0, 3).map((e) => el("span", { class: `ev ${e.type}${e.retard ? " retard" : ""}`, title: `${e.titre} · ${e.sous}` }, e.titre)),
+        ...liste.slice(0, 3).map((e) => {
+          const cle = `${e.type}-${iso}-${indexEvenements.size}`;
+          indexEvenements.set(cle, e);
+          const puce = el("span", { class: `ev ${e.type}${e.retard ? " retard" : ""}`, "data-cle": cle, title: `${e.titre} · ${e.sous}\nGlissez sur un autre jour pour le déplacer` }, e.titre);
+          activerGlisserEvenement(puce, e);
+          return puce;
+        }),
         liste.length > 3 ? el("span", { class: "ev plus" }, `+ ${liste.length - 3}`) : "",
         liste.length ? el("span", { class: "points" }, liste.slice(0, 4).map((e) => el("i", { style: `background:${COULEURS_CAL[e.type]}` }))) : ""));
     }
@@ -2263,8 +2349,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     // panneau du jour choisi + ajout d'une tâche + jours suivants
     const jourChoisi = versDate(jourCalendrier);
     const elements = ev[jourCalendrier] || [];
-    const ligne = (e) => el("button", { type: "button", class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}`, onclick: e.ouvrir },
-      el("div", null, el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre), el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`)));
+    const ligne = (e) => {
+      const date = el("input", { type: "date", class: "cal-date", value: e.date || "", title: "Changer la date", "aria-label": `Changer la date de ${e.titre}` });
+      date.addEventListener("change", () => deplacerEvenement(e, date.value));
+      return el("div", { class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}` },
+        el("span"),
+        el("button", { type: "button", class: "ouvrir", onclick: e.ouvrir },
+          el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre),
+          el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`)),
+        date);
+    };
     const client = el("input", { type: "text", list: "liste-clients-cal", placeholder: "Client" });
     const texte = el("input", { type: "text", placeholder: "Tâche à faire ce jour-là" });
     const ajouterTache = () => {
