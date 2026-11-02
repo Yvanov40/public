@@ -1,7 +1,7 @@
 // Service de l'appli « Suivi des dossiers » : permet l'installation et l'ouverture hors connexion.
 // La page est toujours prise sur Internet en priorité (pour recevoir les mises à jour) ;
 // la copie gardée ne sert que sans réseau. Les échanges avec GitHub ne sont jamais mis en cache.
-const CACHE = "suivi-v2";
+const CACHE = "suivi-v3";
 const FICHIERS = ["./", "./index.html", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -17,7 +17,8 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;  // GitHub, polices : réseau direct
   e.respondWith(
-    fetch(e.request)
+    // « no-cache » : le navigateur revérifie toujours auprès de GitHub Pages, pour avoir la dernière version tout de suite
+    fetch(e.request, { cache: "no-cache" })
       .then((reponse) => {
         const copie = reponse.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copie));
