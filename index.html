@@ -407,7 +407,7 @@ body.vue-activite #rdv { display: none !important; }
 .m-rdv-date.vert.demain { background: #7d9c7c; color: #fff; }
 
 /* ---------- Calendrier ---------- */
-body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier .filtres, body.vue-calendrier .voile-filtres { display: none !important; }
+body.vue-calendrier #indicateurs, body.vue-calendrier #rdv { display: none !important; }
 .cal { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; margin-top: 4px; }
 .cal-entete { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .cal-entete h2 { margin: 0 8px 0 0; font: 600 24px/1.1 var(--titre); color: var(--bleu); text-transform: capitalize; min-width: 180px; font-variant-numeric: lining-nums; }
@@ -456,7 +456,6 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier 
 .cal-avenir h4 { font: 600 15px var(--titre); color: var(--bleu); margin: 14px 0 4px; text-transform: capitalize; }
 @media (max-width: 1100px) { .cal { grid-template-columns: 1fr; } .cal-panneau { position: static; } }
 @media (max-width: 900px) {
-  body.vue-calendrier #btnFiltres { display: none; }
   .cal-entete h2 { font-size: 21px; min-width: 0; flex: 1; }
   .cal-types { margin-left: 0; width: 100%; }
   .cal-jour { min-height: 50px; padding: 4px 3px; align-items: center; }
@@ -495,10 +494,17 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier 
 .entete-int { padding-top: 0; padding-bottom: 0; min-height: 62px; }
 .entete-int > div:first-child { padding: 10px 0; }
 
+/* ---------- filtres toujours au même endroit ---------- */
+@media (min-width: 901px) {
+  .filtres { position: sticky; top: calc(62px + env(safe-area-inset-top, 0px)); z-index: 6; margin-top: 0; box-shadow: 0 6px 14px -10px rgba(12,45,57,.35); }
+  main { padding-top: 12px; }
+}
+.filtre-portee { grid-column: 1 / -1; font-size: 12px; color: var(--discret); margin: -2px 0 0; }
+
 /* ---------- accueil : tableau de bord ---------- */
 .acc-bonjour { margin: 4px 2px 14px; font: italic 500 18px var(--titre); color: var(--discret); }
 @media (min-width: 901px) {
-  body.vue-accueil #indicateurs, body.vue-accueil #rdv, body.vue-accueil .filtres, body.vue-accueil .voile-filtres { display: none !important; }
+  body.vue-accueil #indicateurs, body.vue-accueil #rdv { display: none !important; }
   .acc-grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
   .acc-carte { background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px; padding: 14px 16px 16px; min-width: 0; }
   .acc-carte .m-h2 { margin: 0 0 10px; font: 600 20px/1.2 var(--titre); color: var(--bleu); }
@@ -540,7 +546,7 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv, body.vue-calendrier 
 @media (max-width: 900px) { .onglets-haut { display: none; } .entete-int { padding-top: 10px; padding-bottom: 12px; } .entete-int > div:first-child { padding: 0; } }
 
 /* ---------- Dutreil ---------- */
-body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres, body.vue-dutreil .voile-filtres { display: none !important; }
+body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important; }
 .d-alerte { background: #f7e2dc; border: 1px solid #e9c3b8; color: #7a2a1c; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-top: 10px; display: grid; gap: 3px; }
 .d-alerte button { all: unset; cursor: pointer; }
 .d-alerte button:hover { text-decoration: underline; }
@@ -578,7 +584,6 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
 .champ .calcule { font-size: 12px; color: var(--discret); font-style: italic; }
 .d-vide { background: var(--carte); border: 1px dashed var(--bordure); border-radius: 10px; padding: 18px; color: var(--discret); }
 @media (max-width: 900px) {
-  body.vue-dutreil #btnFiltres { display: none; }
   .d-indic { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; }
   .d-indic .indic { flex: 0 0 auto; min-width: 46%; }
   nav.bas { grid-template-columns: repeat(6, 1fr) !important; }
@@ -680,7 +685,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     </nav>
     <button class="icone" id="btnMenu" aria-label="GitHub, import et export">⋯</button>
     <div class="entete-recherche">
-      <input id="rechercheTel" type="search" placeholder="Rechercher un client, une tâche…" autocomplete="off" enterkeyhint="search" aria-label="Rechercher">
+      <input id="rechercheTel" type="search" placeholder="Rechercher un client, une tâche, une société…" autocomplete="off" enterkeyhint="search" aria-label="Rechercher">
       <button class="btn-filtres" id="btnFiltres" type="button">Filtres<i id="nbFiltres"></i></button>
     </div>
   </div>
@@ -696,6 +701,22 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   </div>
 
   <div id="contenu">
+    <section class="filtres" aria-label="Filtres">
+      <div class="filtre recherche">
+        <label for="recherche">Rechercher</label>
+        <input id="recherche" type="search" placeholder="Client, tâche, commentaire, société…" autocomplete="off" enterkeyhint="search">
+      </div>
+      <div class="filtre"><span class="lib">Type</span><button class="segment" data-cle="type"><span data-titre="Type">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Partenaire</span><button class="segment" data-cle="partenaire"><span data-titre="Partenaire">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Ancienneté</span><button class="segment" data-cle="anciennete"><span data-titre="Ancienneté">Tous</span></button></div>
+      <label class="option-archives"><input type="checkbox" id="masquerArchives"> Masquer les archives</label>
+      <button class="bouton-discret" id="reinitialiser">Réinitialiser</button>
+      <p class="filtre-portee" id="filtrePortee"></p>
+      <button class="bouton large filtres-fermer" id="fermerFiltres" type="button">Voir les dossiers</button>
+    </section>
+    <div class="voile-filtres" id="voileFiltres"></div>
     <div id="alerteCle" class="alerte-modif" hidden></div>
     <div id="alerteModif" class="alerte-modif" hidden>
       <span>Des modifications ne sont pas encore dans votre fichier.</span>
@@ -705,21 +726,6 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     <section class="indicateurs ordi" id="indicateurs" aria-label="Totaux des dossiers affichés"></section>
     <section class="rdv ordi" id="rdv" aria-label="Prochains rendez-vous"></section>
 
-    <section class="filtres" aria-label="Filtres">
-      <div class="filtre recherche">
-        <label for="recherche">Rechercher</label>
-        <input id="recherche" type="search" placeholder="Client, tâche, commentaire…" autocomplete="off" enterkeyhint="search">
-      </div>
-      <div class="filtre"><span class="lib">Type</span><button class="segment" data-cle="type"><span data-titre="Type">Tous</span></button></div>
-      <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
-      <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
-      <div class="filtre"><span class="lib">Partenaire</span><button class="segment" data-cle="partenaire"><span data-titre="Partenaire">Tous</span></button></div>
-      <div class="filtre"><span class="lib">Ancienneté</span><button class="segment" data-cle="anciennete"><span data-titre="Ancienneté">Tous</span></button></div>
-      <label class="option-archives"><input type="checkbox" id="masquerArchives"> Masquer les archives</label>
-      <button class="bouton-discret" id="reinitialiser">Réinitialiser</button>
-      <button class="bouton large filtres-fermer" id="fermerFiltres" type="button">Voir les dossiers</button>
-    </section>
-    <div class="voile-filtres" id="voileFiltres"></div>
 
     <!-- téléphone : accueil -->
     <section class="vue" id="vue-accueil">
@@ -771,7 +777,6 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       <section class="rdv" id="dAlerte" aria-label="Prochaines échéances Dutreil"></section>
       <div class="d-outils ordi">
         
-        <input type="search" id="rechercheDutreil" placeholder="Rechercher une société…" aria-label="Rechercher un pacte">
         <select id="etatDutreil" aria-label="État"><option value="">Tous les états</option><option>en cours</option><option>pas utilisé</option><option>terminé</option></select>
         <label><input type="checkbox" id="prochesDutreil"> Échéance dans moins d’un an</label>
       </div>
@@ -1697,7 +1702,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
 
   function afficherRdv() {
     const auj = aujourdhui();
-    const rdv = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => !d.archives && d.rdv)
+    const rdv = visibles().filter(([d]) => !d.archives && d.rdv)
       .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
       .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0]);
     const taches = tachesAVenir(7);
@@ -1804,7 +1809,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
       el("div", { class: "m-releve-ligne reste" }, el("span", null, "Reste à encaisser"), el("b", null, euros(total - ca))),
       el("div", { class: "m-note" }, filtre ? `Pour les ${liste.length} dossiers filtrés.` : `Sur ${liste.length} dossiers, ${part} % du prévisionnel est encaissé.`));
     const auj = aujourdhui();
-    const rdv = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => !d.archives && d.rdv)
+    const rdv = liste.filter(([d]) => !d.archives && d.rdv)
       .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
       .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0]);
     $("mRdv").replaceChildren(...(rdv.length ? rdv.slice(0, 8).map(([e, d, i]) => {
@@ -1980,7 +1985,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   }
   let etatDutreilTel = "";
   function pactesVisibles() {
-    const t = (estTel() ? $("rechercheTel").value : $("rechercheDutreil").value).trim().toLocaleLowerCase("fr");
+    const t = $("recherche").value.trim().toLocaleLowerCase("fr");
     const etat = estTel() ? etatDutreilTel : $("etatDutreil").value;
     const proches = !estTel() && $("prochesDutreil").checked;
     return dutreil.pactes.map((p, i) => [p, i]).filter(([p]) => {
@@ -2285,20 +2290,24 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   function evenementsCalendrier() {
     const parJour = {};
     const ajouter = (iso, ev) => { if (estIso(iso) && typesCalendrier.has(ev.type)) (parJour[iso] ||= []).push(ev); };
+    const retenus = clientsFiltres();
+    const recherche = texteRecherche();
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
+        if (retenus && !correspond(d)) return;
         if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: d.client, sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
         for (const t of f.taches || []) {
-          if (t.fait || !t.pour) continue;
+          if (t.fait || !t.pour || !tacheRetenue(f.nom, t, retenus)) continue;
           ajouter(t.pour, { type: "tache", titre: t.texte, sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirClient(f.nom),
             retard: t.pour < enIso(aujourdhui()), id: t.id, client: f.nom, date: t.pour, ref: { client: f.nom, tache: t.id } });
         }
       }
     }
     dutreil.pactes.forEach((pacte, j) => {
+      if (recherche && !Object.values(pacte).join(" ").toLocaleLowerCase("fr").includes(recherche)) return;
       const vues = new Set();
       const saisie = echeanceSaisie(pacte);
       if (saisie) { ajouter(saisie[0], { type: "dutreil", titre: pacte.societe, sous: saisie[1], ouvrir: () => ouvrirPacte(j), date: saisie[0], ref: { pacte: j } }); vues.add(saisie[0]); }
@@ -2510,6 +2519,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         el("h4", null, versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })), ...l.map(ligne)))) : "");
   }
 
+  // filtres actifs ? (recherche, segments ou archives)
+  const filtreActif = () => !!texteRecherche() || Object.values(selections).some((x) => x.size) || $("masquerArchives").checked;
+  // clients concernés par les filtres (pour les tâches, qui appartiennent aux clients)
+  function clientsFiltres() {
+    if (!filtreActif()) return null;
+    return new Set(visibles().map(([d]) => cleClient(d.client)));
+  }
+  const tacheRetenue = (nom, t, clients) => !clients || clients.has(cleClient(nom))
+    || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche()));
+
   function afficherTout() {
     memoriserFiltres();
     const vide = !donnees || !donnees.dossiers.length;
@@ -2560,6 +2579,17 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
         : [el("p", { class: "m-vide" }, "Aucun dossier ne dort depuis plus de 90 jours.")]));
     }
     majComptesSegment();
+    majPortee();
+  }
+  // petite phrase sous les filtres : ce qu'ils filtrent sur l'onglet affiché
+  function majPortee() {
+    const v = vueCourante();
+    $("filtrePortee").textContent = {
+      dutreil: "Sur l’onglet Dutreil, seule la recherche s’applique (sur le nom de la société, l’objet ou les notes).",
+      calendrier: "Le calendrier montre les rendez-vous des dossiers filtrés, les tâches de leurs clients et les échéances Dutreil trouvées par la recherche.",
+      accueil: "L’accueil se calcule sur les dossiers filtrés."
+    }[v] || "";
+    $("filtrePortee").hidden = !filtreActif() || !$("filtrePortee").textContent;
   }
 
   // ---------------------------------------------------------------- glisser-déposer
@@ -2709,6 +2739,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
     ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    if (donnees) majPortee();
     if (v === "calendrier") afficherCalendrier();
     if (v === "activite") afficherActivite(visibles());
     if (v === "kanban" && estTel() && donnees) afficherKanbanTel(visibles());  // l'étape choisie à l'accueil s'affiche
@@ -2853,9 +2884,10 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   // toutes les tâches ouvertes datées, tous clients confondus (pour l'accueil et le bandeau)
   function tachesAVenir(jours) {
     const liste = [];
+    const retenus = clientsFiltres();
     for (const f of Object.values(donnees ? donnees.clients : {})) {
       for (const t of f.taches || []) {
-        if (t.fait || !t.pour) continue;
+        if (t.fait || !t.pour || !tacheRetenue(f.nom, t, retenus)) continue;
         const j = Math.round((versDate(t.pour) - aujourdhui()) / 86400000);
         if (j <= jours) liste.push([t, f.nom, j]);
       }
@@ -3153,7 +3185,6 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   });
   $("btnNouveau").addEventListener("click", () => (vueCourante() === "dutreil" ? ouvrirPacte(-1) : ouvrirDossier(-1)));
   $("enregistrerPacte").addEventListener("click", enregistrerPacte);
-  $("rechercheDutreil").addEventListener("input", afficherDutreil);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
   $("btnGithub").addEventListener("click", ouvrirReglages);
@@ -3179,7 +3210,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv, body.vue-dutreil .filtres,
   $("rechercheTel").addEventListener("input", () => {
     $("recherche").value = $("rechercheTel").value;
     clearTimeout(attente);
-    attente = setTimeout(() => { afficherTout(); if (vueCourante() === "accueil" && $("rechercheTel").value.trim()) location.hash = "#kanban";
+    attente = setTimeout(() => { afficherTout();
       if (vueCourante() === "dutreil") afficherDutreil(); }, 220);
   });
   const ouvrirFiltres = () => document.body.classList.add("filtres-ouverts");
