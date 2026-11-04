@@ -385,6 +385,9 @@ body.vue-activite #rdv { display: none !important; }
 .echeance-tache.proche { background: var(--or-doux); color: #6e5220; font-weight: 600; }
 .tache .suppr { border: 0; background: none; color: var(--discret); font-size: 18px; padding: 0 4px; }
 .liste-taches { margin-top: 10px; }
+.table-clients .renommer { border: 0; background: none; color: var(--discret); font-size: 14px; padding: 0 6px; margin-left: 4px; cursor: pointer; opacity: 0; }
+.table-clients tr.ligne:hover .renommer, .table-clients .renommer:focus-visible { opacity: 1; }
+.table-clients .renommer:hover { color: var(--or); }
 .badge-taches { display: inline-block; margin-left: 6px; font-size: 11.5px; font-weight: 600; border-radius: 9px; padding: 0 7px; background: var(--or-doux); color: #6e5220; vertical-align: 1px; }
 .badge-taches.retard { background: #f7d4d4; color: #7a1f1f; }
 .pastille-rdv.tache-p b::before { content: "☐ "; }
@@ -1853,6 +1856,47 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       .filter(([, f]) => !t || [f.nom, f.commentaire, f.notes, ...(f.taches || []).map((x) => x.texte)].join(" ").toLocaleLowerCase("fr").includes(t))
       .map(([, f]) => f.nom);
   }
+  // ---- renommer un client : ses dossiers, sa fiche, ses tâches et ses pactes Dutreil suivent ----
+  function renommerClient(ancien) {
+    const saisi = prompt(`Nouveau nom pour « ${ancien} » :`, ancien);
+    if (saisi === null) return;
+    const nouveau = saisi.replace(/\s+/g, " ").trim();
+    if (!nouveau || nouveau === ancien) return;
+    const cleA = cleClient(ancien), cleN = cleClient(nouveau);
+    const autre = cleN !== cleA ? nomsClients().find((x) => cleClient(x) === cleN) : null;
+    if (autre && !confirm(`Un client « ${autre} » existe déjà.\n\nRegrouper les deux fiches sous ce nom ? Les dossiers, tâches et commentaires de « ${ancien} » lui seront rattachés.`)) return;
+    const final = autre || nouveau;
+    for (const d of donnees.dossiers) {
+      if (cleClient(d.client) !== cleA) continue;
+      const avant = { ...d };
+      d.client = final;
+      noterHistorique(d, avant);
+    }
+    const fA = donnees.clients[cleA] || { nom: ancien };
+    delete donnees.clients[cleA];
+    if (autre) {
+      const fN = donnees.clients[cleN] || { nom: autre };
+      const joindre = (a, b) => [a, b].map((x) => (x || "").trim()).filter(Boolean).filter((x, k, l) => l.indexOf(x) === k).join("\n");
+      const resultat = { ...fA, ...fN, nom: final, commentaire: joindre(fN.commentaire, fA.commentaire), notes: joindre(fN.notes, fA.notes),
+        taches: [...(fN.taches || []), ...(fA.taches || [])] };
+      for (const c of COMMUNS) resultat[c] = fN[c] || fA[c] || "";
+      donnees.clients[cleN] = resultat;
+    } else {
+      donnees.clients[cleN] = { ...fA, nom: final };
+    }
+    let pactes = 0;
+    for (const pacte of dutreil.pactes) if (pacte.client_lie && cleClient(pacte.client_lie) === cleA) { pacte.client_lie = final; pactes++; }
+    if (pactes) sauverDutreil();
+    sauver();
+    afficherTout();
+    // fiche client ouverte : on la remet à jour sous le nouveau nom, sans ajouter d'étape « retour »
+    if ($("feuilleClient").classList.contains("ouverte") && cleClient(clientEnCours || "") === cleA) {
+      restauration = true;
+      try { ouvrirClient(final); } finally { restauration = false; }
+    }
+    informer(autre ? `« ${ancien} » regroupé avec « ${final} ».` : `Client renommé en « ${final} ».`);
+  }
+
   function nouveauClient() {
     clientEnCours = null;
     $("enregistrerClient").hidden = false;
@@ -1952,7 +1996,9 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       const notaires = [...new Set(ds.map((d) => d.notaire).filter(Boolean))];
       return el("tr", { class: "ligne", onclick: () => ouvrirClient(nom) },
-        el("td", null, el("b", null, nom), badgeTaches(nom), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
+        el("td", null, el("b", null, nom), badgeTaches(nom),
+          el("button", { type: "button", class: "renommer", title: "Renommer ce client", "aria-label": `Renommer ${nom}`,
+            onclick: (e) => { e.stopPropagation(); renommerClient(nom); } }, "✎"), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
         el("td", { class: "types" }, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""}` : "Sans dossier", el("small", null, etapes)),
         el("td", { class: "cache-tel" }, notaires.length === 1 ? notaires[0] : notaires.length ? `${notaires.length} notaires` : ""),
         el("td", { class: "n cache-tel" }, p ? euros(p) : ""),
@@ -2563,9 +2609,11 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   // filtres actifs ? (recherche, segments ou archives)
   const filtreActif = () => !!texteRecherche() || Object.values(selections).some((x) => x.size) || $("masquerArchives").checked;
   // clients concernés par les filtres (pour les tâches, qui appartiennent aux clients)
+  // les tâches suivent la recherche et les filtres, sauf l'exercice (une tâche n'a pas d'exercice)
   function clientsFiltres() {
-    if (!filtreActif()) return null;
-    return new Set(visibles().map(([d]) => cleClient(d.client)));
+    const autres = !!texteRecherche() || Object.entries(selections).some(([k, x]) => k !== "exercice" && x.size) || $("masquerArchives").checked;
+    if (!autres) return null;
+    return new Set(donnees.dossiers.filter((d) => correspond(d, "exercice")).map((d) => cleClient(d.client)));
   }
   const tacheRetenue = (nom, t, clients) => !clients || clients.has(cleClient(nom))
     || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche()));
@@ -2698,7 +2746,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   document.addEventListener("pointercancel", () => finGlisser(true));
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
-  const SUIVIS = { type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
+  const SUIVIS = { client: "Client", type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
     honos_art4: "Prévu article IV", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
   const appareil = () => (estTel() ? "téléphone" : "appli");
   function noterHistorique(d, avant) {
@@ -3083,6 +3131,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       champ("Notes client", el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || "")),
       el("div", { class: "actions-fiche" },
         el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
+        el("button", { type: "button", onclick: () => renommerClient(clientEnCours) }, "✎ Renommer"),
         el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF"),
         !liste.length ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => supprimerClientSeul(nom) }, "Supprimer ce client") : null),
       pactesDuClient(nom).length ? el("div", null, el("h4", null, "Ses pactes Dutreil"), el("div", { class: "lien-dutreil" }, pactesDuClient(nom).map(([pacte, j]) => {
