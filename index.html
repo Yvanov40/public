@@ -786,7 +786,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
 
     <section class="vue" id="vue-clients">
       <div class="tel" id="mClients"></div>
-      <div class="outils ordi"><span class="aide" id="aideClients"></span></div>
+      <div class="outils ordi"><button class="bouton-discret" id="btnNouveauClient" type="button">＋ Nouveau client</button><span class="aide" id="aideClients"></span></div>
       <table class="table-clients ordi">
         <thead><tr><th>Client</th><th>Dossiers</th><th>Notaire</th><th class="n">Prévu</th><th class="n">Encaissé</th><th class="n">Reste</th></tr></thead>
         <tbody id="clientsListe"></tbody>
@@ -1836,6 +1836,44 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     }));
   }
 
+  // ---- clients sans dossier (prospects…) : ils n'existent que par leur fiche client ----
+  function nomsClients() {
+    const noms = new Map();
+    for (const d of donnees ? donnees.dossiers : []) if (d.client) noms.set(cleClient(d.client), d.client);
+    for (const [cle, f] of Object.entries(donnees ? donnees.clients : {})) if (f.nom && !noms.has(cle)) noms.set(cle, f.nom);
+    return [...noms.values()].sort((a, b) => a.localeCompare(b, "fr"));
+  }
+  function clientsSansDossier() {
+    // seulement sans filtre de dossier (type, notaire…) : ces clients n'ont pas de dossier à filtrer
+    if (Object.values(selections).some((x) => x.size)) return [];
+    const avecDossier = new Set(donnees.dossiers.map((d) => cleClient(d.client)));
+    const t = texteRecherche();
+    return Object.entries(donnees.clients)
+      .filter(([cle, f]) => f.nom && !avecDossier.has(cle) && !f.supprime)
+      .filter(([, f]) => !t || [f.nom, f.commentaire, f.notes, ...(f.taches || []).map((x) => x.texte)].join(" ").toLocaleLowerCase("fr").includes(t))
+      .map(([, f]) => f.nom);
+  }
+  function nouveauClient() {
+    clientEnCours = null;
+    $("enregistrerClient").hidden = false;
+    $("titreClient").textContent = "Nouveau client";
+    const nom = el("input", { name: "nom_client", type: "text", autocomplete: "off", placeholder: "Nom du client" });
+    $("corpsClient").replaceChildren(
+      el("p", { class: "aide" }, "Un client peut exister sans dossier : prospect, contact à rappeler… Vous lui créerez un dossier plus tard depuis sa fiche."),
+      champ("Nom du client", nom),
+      el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", "", "notaire"), true), champ("Partenaire", avecListe("partenaire", "", "partenaire"), true)),
+      el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", "", "millionnaire"), true), champ("A-vie", saisie("a_vie", ""), true)),
+      champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:120px" }, "")),
+      champ("Notes client", el("textarea", { name: "notes", style: "min-height:70px" }, "")));
+    ouvrirFeuille("feuilleClient", nouveauClient);
+    setTimeout(() => nom.focus(), 50);
+  }
+  function supprimerClientSeul(nom) {
+    if (!confirm(`Supprimer la fiche du client « ${nom} » ? Il n’a aucun dossier ; ses tâches et commentaires seront effacés.`)) return;
+    delete donnees.clients[cleClient(nom)];
+    sauver(); terminerFeuille(); afficherTout(); informer("Client supprimé.");
+  }
+
   function afficherClientsTel(liste) {
     const groupes = new Map();
     for (const [d] of liste) {
@@ -1843,15 +1881,17 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       if (!groupes.has(cle)) groupes.set(cle, { nom: d.client, liste: [] });
       groupes.get(cle).liste.push(d);
     }
+    for (const nom of clientsSansDossier()) groupes.set(cleClient(nom), { nom, liste: [] });
     const tries = [...groupes.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
     const max = 150;
-    $("mClients").replaceChildren(...tries.slice(0, max).map(({ nom, liste: ds }) => {
+    $("mClients").replaceChildren(el("button", { class: "bouton-discret", type: "button", style: "margin:0 0 10px", onclick: nouveauClient }, "＋ Nouveau client"),
+      ...tries.slice(0, max).map(({ nom, liste: ds }) => {
       const p = ds.reduce((s, d) => s + prevu(d), 0);
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       return el("button", { class: "m-client", type: "button", onclick: () => ouvrirClient(nom) },
         el("b", null, nom, badgeTaches(nom)), el("span", { class: "r" }, p ? euros(p - ca) : ""),
-        el("span", null, `${ds.length} dossier${ds.length > 1 ? "s" : ""} · ${etapes}`), el("span", { class: "r or" }, ca ? euros(ca) : ""));
+        el("span", null, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""} · ${etapes}` : "Sans dossier"), el("span", { class: "r or" }, ca ? euros(ca) : ""));
     }), ...(tries.length > max ? [el("p", { class: "plus-de" }, `${tries.length - max} autres clients : affinez avec la recherche.`)] : []),
       ...(!tries.length ? [el("p", { class: "m-vide" }, "Aucun client ne correspond.")] : []));
   }
@@ -1901,6 +1941,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       if (!groupes.has(cle)) groupes.set(cle, { nom: d.client, liste: [] });
       groupes.get(cle).liste.push(d);
     }
+    for (const nom of clientsSansDossier()) groupes.set(cleClient(nom), { nom, liste: [] });
     const tries = [...groupes.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
     const max = 300;
     $("aideClients").textContent = `${tries.length} client(s) pour ${liste.length} dossier(s) affiché(s). Cliquez sur un client pour ouvrir sa fiche.`;
@@ -1912,7 +1953,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       const notaires = [...new Set(ds.map((d) => d.notaire).filter(Boolean))];
       return el("tr", { class: "ligne", onclick: () => ouvrirClient(nom) },
         el("td", null, el("b", null, nom), badgeTaches(nom), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
-        el("td", { class: "types" }, `${ds.length} dossier${ds.length > 1 ? "s" : ""}`, el("small", null, etapes)),
+        el("td", { class: "types" }, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""}` : "Sans dossier", el("small", null, etapes)),
         el("td", { class: "cache-tel" }, notaires.length === 1 ? notaires[0] : notaires.length ? `${notaires.length} notaires` : ""),
         el("td", { class: "n cache-tel" }, p ? euros(p) : ""),
         el("td", { class: "n or" }, ca ? euros(ca) : ""),
@@ -2090,7 +2131,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       else if (nature === "long") ctrl = el("textarea", { name: cle }, p[cle] || "");
       else if (nature === "montant") ctrl = el("input", { name: cle, type: "number", inputmode: "decimal", step: "any", value: p[cle] ?? "" });
       else if (nature === "client") ctrl = [el("input", { name: cle, type: "text", value: p[cle] || "", list: "liste-clients-dutreil", placeholder: "Nom du client, pour retrouver ce pacte dans sa fiche" }),
-        el("datalist", { id: "liste-clients-dutreil" }, donnees ? [...new Set(donnees.dossiers.map((x) => x.client))].sort().map((v) => el("option", { value: v })) : [])];
+        el("datalist", { id: "liste-clients-dutreil" }, donnees ? nomsClients().map((v) => el("option", { value: v })) : [])];
       else ctrl = el("input", { name: cle, type: "text", value: nature === "date" ? fmtDouT(p[cle]) : (p[cle] || ""), placeholder: nature === "date" ? "jj/mm/aaaa" : "" });
       const bloc = [ctrl];
       if (CALCULS[cle] || cle === "echeance") { indices[cle] = el("span", { class: "calcule" }); bloc.push(indices[cle]); }
@@ -2496,7 +2537,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const ajouterTache = () => {
       const nom = client.value.trim(), t = texte.value.trim();
       if (!nom || !t) { informer("Indiquez le client et la tâche."); return; }
-      const existant = (donnees.dossiers.find((d) => cleClient(d.client) === cleClient(nom)) || {}).client || nom;
+      const existant = nomsClients().find((x) => cleClient(x) === cleClient(nom)) || nom;
       majTaches(existant, (l) => [...l, { id: nouvelId(), texte: t, pour: jourCalendrier, fait: null, cree: new Date().toISOString() }]);
       informer(`Tâche ajoutée pour ${existant} le ${fmtDate(jourCalendrier)}.`);
       afficherTout();
@@ -2513,7 +2554,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       el("div", { class: "sous" }, elements.length ? `${elements.length} élément(s)` : "Rien de prévu ce jour-là."),
       ...elements.map(ligne),
       donnees ? el("div", { class: "cal-ajout" }, el("b", { style: "font-size:13px;color:var(--bleu)" }, "Ajouter une tâche ce jour-là"), client,
-        el("datalist", { id: "liste-clients-cal" }, [...new Set(donnees.dossiers.map((d) => d.client))].sort().map((v) => el("option", { value: v }))),
+        el("datalist", { id: "liste-clients-cal" }, nomsClients().map((v) => el("option", { value: v }))),
         texte, el("button", { type: "button", onclick: ajouterTache }, "＋ Ajouter")) : "",
       suite.length ? el("div", { class: "cal-avenir" }, ...suite.map(([iso, l]) => el("div", null,
         el("h4", null, versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })), ...l.map(ligne)))) : "");
@@ -2766,9 +2807,14 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     return n > (i >= 0 ? 1 : 0) ? `Fiche client, commune à ses ${n} dossiers` : "Fiche client, partagée avec ses futurs dossiers";
   }
 
-  function ouvrirDossier(i) {
+  // nouveau dossier déjà rattaché à un client (depuis sa fiche)
+  function nouveauDossierPour(nom) {
+    const f = fiche(nom);
+    ouvrirDossier(-1, { client: nom, notaire: f.notaire || "", partenaire: f.partenaire || "", millionnaire: f.millionnaire || "", a_vie: f.a_vie || "" });
+  }
+  function ouvrirDossier(i, modele) {
     enCours = i;
-    const d = i >= 0 ? donnees.dossiers[i] : { client: "", type: "2. Analyse à faire", debut: enIso(aujourdhui()), exercice: String(new Date().getFullYear()) };
+    const d = i >= 0 ? donnees.dossiers[i] : { client: "", type: "2. Analyse à faire", debut: enIso(aujourdhui()), exercice: String(new Date().getFullYear()), ...(modele || {}) };
     const f = fiche(d.client);
     $("titreDossier").textContent = i >= 0 ? (d.client || "Dossier") : "Nouveau dossier";
     const selectType = el("select", { name: "type" },
@@ -2783,7 +2829,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const zoneNotes = el("textarea", { name: "notes_client", style: "min-height:70px" }, f.notes || "");
     const titreEncart = el("p", null, encartTitre(d.client, i));
     const entreeClient = saisie("client", d.client, "text", { autocomplete: "off", list: "liste-client" });
-    const listeClients = el("datalist", { id: "liste-client" }, [...new Set(donnees.dossiers.map((x) => x.client))].sort().map((v) => el("option", { value: v })));
+    const listeClients = el("datalist", { id: "liste-client" }, nomsClients().map((v) => el("option", { value: v })));
     let prefixe = (f.commentaire || "").trim(), prefixeNotes = (f.notes || "").trim(), cleAffichee = cleClient(d.client);
     entreeClient.addEventListener("input", () => {
       const cle = cleClient(entreeClient.value);
@@ -2828,7 +2874,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
           el("b", null, `${new Date(h.le).toLocaleDateString("fr-FR")} ${new Date(h.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`),
           ` · ${h.par || ""} · `, h.changements.map(([lib, a, b]) => lib === "Création" ? `création (${sansNumero(b)})` : `${lib} : ${valeurLisible(a)} → ${valeurLisible(b)}`).join(" ; "))))) : "",
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerDossier }, "Supprimer ce dossier") : "");
-    ouvrirFeuille("feuilleDossier", () => ouvrirDossier(i));
+    ouvrirFeuille("feuilleDossier", () => ouvrirDossier(i, modele));
   }
 
   // ---- agenda : Google Agenda ou fichier .ics (Outlook, Apple, Samsung…) ----
@@ -3035,7 +3081,10 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true), champ("A-vie", saisie("a_vie", f.a_vie), true)),
       champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || "")),
       champ("Notes client", el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || "")),
-      el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF")),
+      el("div", { class: "actions-fiche" },
+        el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
+        el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF"),
+        !liste.length ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => supprimerClientSeul(nom) }, "Supprimer ce client") : null),
       pactesDuClient(nom).length ? el("div", null, el("h4", null, "Ses pactes Dutreil"), el("div", { class: "lien-dutreil" }, pactesDuClient(nom).map(([pacte, j]) => {
         const e = prochaineEcheance(pacte);
         return el("button", { type: "button", class: "d-carte " + urgence(pacte), onclick: () => ouvrirPacte(j) },
@@ -3051,6 +3100,19 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   }
   function enregistrerClient() {
     const v = lireFormulaire($("corpsClient"));
+    if (clientEnCours === null) {  // création d'un client sans dossier
+      const nom = (v.nom_client || "").trim();
+      if (!nom) { informer("Indiquez le nom du client."); return; }
+      const cleNouveau = cleClient(nom);
+      const existant = nomsClients().find((x) => cleClient(x) === cleNouveau);
+      if (existant) { informer(`« ${existant} » existe déjà : voici sa fiche.`); terminerFeuille(); setTimeout(() => ouvrirClient(existant), 200); return; }
+      donnees.clients[cleNouveau] = { nom, commentaire: v.commentaire || "", notes: v.notes || "", notaire: v.notaire || "", partenaire: v.partenaire || "",
+        millionnaire: v.millionnaire || "", a_vie: v.a_vie || "", taches: [], cree: new Date().toISOString() };
+      sauver(); terminerFeuille(); afficherTout();
+      informer(`Client « ${nom} » créé : ajoutez-lui des tâches ou un dossier.`);
+      setTimeout(() => ouvrirClient(nom), 200);  // sa fiche s'ouvre, pour les tâches
+      return;
+    }
     const cle = cleClient(clientEnCours);
     const f = { ...fiche(clientEnCours) };
     for (const c of COMMUNS) {
@@ -3183,7 +3245,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     lecteur.onerror = () => informer("Le fichier n’a pas pu être lu.");
     lecteur.readAsText(f, "utf-8");
   });
-  $("btnNouveau").addEventListener("click", () => (vueCourante() === "dutreil" ? ouvrirPacte(-1) : ouvrirDossier(-1)));
+  $("btnNouveau").addEventListener("click", () => (vueCourante() === "dutreil" ? ouvrirPacte(-1) : vueCourante() === "clients" ? nouveauClient() : ouvrirDossier(-1)));
+  $("btnNouveauClient").addEventListener("click", nouveauClient);
   $("enregistrerPacte").addEventListener("click", enregistrerPacte);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
