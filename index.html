@@ -425,6 +425,13 @@ body.vue-activite #rdv { display: none !important; }
 .echeance-tache { font-size: 12px; border-radius: 10px; padding: 2px 8px; background: var(--section); color: var(--bleu); white-space: nowrap; }
 .echeance-tache.retard { background: #f7d4d4; color: #7a1f1f; font-weight: 600; }
 .echeance-tache.proche { background: var(--or-doux); color: #6e5220; font-weight: 600; }
+.echeance-tache.modifiable { border: 0; cursor: pointer; font: inherit; font-size: 12px; }
+.echeance-tache.modifiable:hover { outline: 1px solid var(--or); }
+.edition-echeance { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.edition-echeance input { border: 1px solid var(--bordure); background: var(--fond); border-radius: 6px; padding: 3px 5px; font-size: 12.5px; }
+.edition-echeance button { border: 0; background: var(--bleu); color: var(--carte); border-radius: 6px; padding: 4px 9px; font-size: 12.5px; }
+.cal-element .cal-heure { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 4px 5px; font-size: 12.5px; color: var(--bleu); width: 84px; }
+.cal-element .reglages { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .tache .suppr { border: 0; background: none; color: var(--discret); font-size: 18px; padding: 0 4px; }
 .liste-taches { margin-top: 10px; }
 .table-clients .renommer { border: 0; background: none; color: var(--discret); font-size: 14px; padding: 0 6px; margin-left: 4px; cursor: pointer; opacity: 0; }
@@ -970,6 +977,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   function migrerTypes(liste) {
     let n = 0;
     for (const d of liste || []) {
+      // dossier sans exercice : rattaché à l'année de son début
+      if (!String(d.exercice ?? "").trim() && /^\d{4}-\d{2}-\d{2}$/.test(d.debut || "")) { d.exercice = d.debut.slice(0, 4); n++; }
       const m = MIGRATION_TYPES[String(d.type || "").trim()];
       if (m) { d.type = m[0]; if (m[1] && !d.precision) d.precision = m[1]; n++; }
     }
@@ -2486,6 +2495,22 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
 
   // ---- déplacer un élément à une autre date (glisser dans la grille, ou choisir la date dans le détail du jour) ----
   const indexEvenements = new Map();  // clé -> événement, pour retrouver ce qu'on glisse
+  function changerHeureEvenement(e, heure) {
+    const r = e.ref || {};
+    if (e.type === "rdv") {
+      const i = donnees.dossiers.findIndex((d, k) => (d.id || k) === r.dossier);
+      if (i < 0) return;
+      const d = donnees.dossiers[i], avant = { ...d };
+      d.rdv_heure = heure || "";
+      noterHistorique(d, avant);
+      sauver();
+    } else if (e.type === "tache") {
+      majTaches(r.client, (l) => l.map((t) => (t.id === r.tache ? { ...t, heure: heure || "" } : t)));
+    } else return;
+    afficherTout();
+    informer(heure ? `« ${e.titre.replace(/^\d\d:\d\d /, "")} » : ${heure}.` : "Heure retirée.");
+  }
+
   function deplacerEvenement(e, iso, annulable = true) {
     if (!estIso(iso) || iso === e.date) return;
     const ancienne = e.date;
@@ -2646,12 +2671,17 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         date = el("input", { type: "date", class: "cal-date", value: e.date || "", title: "Changer la date", "aria-label": `Changer la date de ${e.titre}` });
         date.addEventListener("change", () => deplacerEvenement(e, date.value));
       }
+      let heure = null;
+      if (e.type !== "dutreil") {
+        heure = el("input", { type: "time", class: "cal-heure", value: e.heure || "", title: "Changer l’heure", "aria-label": `Changer l’heure de ${e.titre}` });
+        heure.addEventListener("change", () => changerHeureEvenement(e, heure.value));
+      }
       return el("div", { class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}` },
         el("span"),
         el("button", { type: "button", class: "ouvrir", onclick: e.ouvrir },
           el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre),
           el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`)),
-        date);
+        el("div", { class: "reglages" }, date, heure));
     };
     const client = el("input", { type: "text", list: "liste-clients-cal", placeholder: "Client" });
     const texte = el("input", { type: "text", placeholder: "Tâche à faire ce jour-là" });
@@ -3185,6 +3215,19 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         afficherTout();
       };
       texte.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); ajouter(); } });
+      // remplace la pastille de date par deux champs (date, heure) et un bouton OK
+      const modifierEcheance = (pastille, t) => {
+        const date = el("input", { type: "date", value: t.pour || "", "aria-label": "Date" });
+        const heure = el("input", { type: "time", value: t.heure || "", "aria-label": "Heure" });
+        const valider = () => {
+          majTaches(nom, (l) => l.map((x) => (x.id === t.id ? { ...x, pour: date.value || "", heure: date.value ? (heure.value || "") : "" } : x)));
+          dessiner(); afficherTout();
+        };
+        const editeur = el("span", { class: "edition-echeance" }, date, heure, el("button", { type: "button", onclick: valider }, "OK"));
+        [date, heure].forEach((c) => c.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); valider(); } }));
+        pastille.replaceWith(editeur);
+        date.focus();
+      };
       const ligne = (t) => {
         const [quand, classe] = etatEcheance(t);
         const c = el("input", { type: "checkbox", checked: !!t.fait, "aria-label": "Fait" });
@@ -3194,7 +3237,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
             t.fait ? el("small", null, `fait le ${new Date(t.fait).toLocaleDateString("fr-FR")}`)
               : t.dossier_libelle && !(dossier && t.dossier === dossier.id) ? el("small", null, `dossier : ${t.dossier_libelle}`)
               : dossier && t.dossier === dossier.id ? el("small", null, "ce dossier") : null),
-          quand && !t.fait ? el("span", { class: "echeance-tache " + classe }, quand) : el("span"),
+          !t.fait ? el("button", { type: "button", class: "echeance-tache modifiable " + classe, title: "Modifier la date et l’heure",
+            onclick: (ev) => modifierEcheance(ev.currentTarget, t) }, quand || "📅 date") : el("span"),
           el("button", { type: "button", class: "suppr", "aria-label": "Supprimer la tâche", onclick: () => {
             majTaches(nom, (l) => l.filter((x) => x.id !== t.id)); dessiner(); afficherTout();
           } }, "×"));
@@ -3250,7 +3294,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     Object.assign(d, {
       client: v.client, tache: v.tache, type: `${v.statut || "2"}. ${natureNormale(v.nature)}`, precision: v.precision || "", notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
-      exercice: v.exercice, debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
+      exercice: v.exercice || (v.debut ? v.debut.slice(0, 4) : ""), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
       archives: v.archives, commentaire: v.commentaire
     });
     if (!d.id) d.id = nouvelId();
