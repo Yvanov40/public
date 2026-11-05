@@ -427,10 +427,17 @@ body.vue-activite #rdv { display: none !important; }
 .echeance-tache.proche { background: var(--or-doux); color: #6e5220; font-weight: 600; }
 .echeance-tache.modifiable { border: 0; cursor: pointer; font: inherit; font-size: 12px; }
 .echeance-tache.modifiable:hover { outline: 1px solid var(--or); }
-.edition-echeance { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.edition-echeance { display: flex; gap: 6px; align-items: center; grid-column: 2 / -1; grid-row: 2; }
+.edition-echeance input[type="date"] { flex: 1; min-width: 0; }
+.edition-echeance input[type="time"] { width: 96px; flex: none; }
 .edition-echeance input { border: 1px solid var(--bordure); background: var(--fond); border-radius: 6px; padding: 3px 5px; font-size: 12.5px; }
 .edition-echeance button { border: 0; background: var(--bleu); color: var(--carte); border-radius: 6px; padding: 4px 9px; font-size: 12.5px; }
-.cal-element .cal-heure { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 4px 5px; font-size: 12.5px; color: var(--bleu); width: 84px; }
+.cal-element { grid-template-columns: 4px minmax(0, 1fr) !important; align-items: stretch !important; }
+.cal-contenu { min-width: 0; display: grid; gap: 6px; }
+.cal-contenu .ouvrir span { display: block; }
+.cal-element .reglages { justify-content: flex-start !important; }
+.cal-element .cal-date { width: 136px; }
+.cal-element .cal-heure { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 4px 5px; font-size: 12.5px; color: var(--bleu); width: 100px; }
 .cal-element .reglages { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .tache .suppr { border: 0; background: none; color: var(--discret); font-size: 18px; padding: 0 4px; }
 .liste-taches { margin-top: 10px; }
@@ -2801,12 +2808,14 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         heure = el("input", { type: "time", class: "cal-heure", value: e.heure || "", title: "Changer l’heure", "aria-label": `Changer l’heure de ${e.titre}` });
         heure.addEventListener("change", () => changerHeureEvenement(e, heure.value));
       }
+      // le texte sur toute la largeur, la date et l'heure en dessous
       return el("div", { class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}` },
         el("span"),
-        el("button", { type: "button", class: "ouvrir", onclick: e.ouvrir },
-          el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre),
-          el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`)),
-        el("div", { class: "reglages" }, date, heure));
+        el("div", { class: "cal-contenu" },
+          el("button", { type: "button", class: "ouvrir", onclick: e.ouvrir },
+            el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre),
+            el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`)),
+          el("div", { class: "reglages" }, date, heure)));
     };
     const client = el("input", { type: "text", list: "liste-clients-cal", placeholder: "Client" });
     const texte = el("input", { type: "text", placeholder: "Tâche à faire ce jour-là" });
