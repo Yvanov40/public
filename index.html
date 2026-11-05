@@ -303,6 +303,7 @@ nav.bas { display: none; }
 @media (prefers-reduced-motion: reduce) { .section-titre .fl { transition: none; } }
 
 /* ---------- fiches : rubriques, actions, historique ---------- */
+.rdv-champs { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; }
 .rubrique { font: 600 16px/1.2 var(--titre); color: var(--bleu); margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--bordure); font-variant-numeric: lining-nums; }
 .rubrique:first-child { margin-top: 0; }
 .actions-fiche { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
@@ -1707,7 +1708,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const auj = aujourdhui();
     const rdv = visibles().filter(([d]) => !d.archives && d.rdv)
       .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
-      .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0]);
+      .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99"));
     const taches = tachesAVenir(7);
     const pastillesTaches = taches.slice(0, 8).map(([t, nom, j]) => el("button", {
       class: "pastille-rdv tache-p" + (j < 0 ? " retard" : j === 0 ? " jour" : j === 1 ? " demain" : ""), type: "button", onclick: () => ouvrirClient(nom) },
@@ -1717,7 +1718,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     $("rdv").replaceChildren(el("strong", null, taches.length ? "Rendez-vous et tâches" : "Prochains rendez-vous"), ...(legende ? [legende] : []), ...pastillesTaches,
       ...(rdv.length ? rdv.slice(0, 12).map(([e, d, i]) => {
         const jour = versDate(d.rdv);
-        const quand = e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`;
+        const quand = (e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`) + (d.rdv_heure ? " " + d.rdv_heure : "");
         return el("button", { class: "pastille-rdv rdv-p" + (e === 0 ? " jour" : e === 1 ? " demain" : ""), onclick: () => ouvrirDossier(i) },
           el("b", null, quand), d.client + (d.tache ? " · " + d.tache : ""));
       }) : (taches.length ? [] : [el("em", null, "Aucun rendez-vous prévu dans les 30 prochains jours.")])));
@@ -1814,10 +1815,11 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const auj = aujourdhui();
     const rdv = liste.filter(([d]) => !d.archives && d.rdv)
       .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
-      .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0]);
+      .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99"));
     $("mRdv").replaceChildren(...(rdv.length ? rdv.slice(0, 8).map(([e, d, i]) => {
       const jour = versDate(d.rdv);
-      const quand = e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`;
+      const quand = [e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`,
+        d.rdv_heure ? el("small", { style: "display:block;font-weight:500" }, d.rdv_heure) : null];
       return el("button", { class: "m-rdv", type: "button", onclick: () => ouvrirDossier(i) },
         el("div", { class: "m-rdv-date vert" + (e === 0 ? " jour" : e === 1 ? " demain" : "") }, quand),
         el("div", null, el("b", null, d.client), el("span", null, [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "))));
@@ -2382,7 +2384,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
         if (retenus && !correspond(d)) return;
-        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: d.client, sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
+        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? d.rdv_heure + " " : "") + d.client, heure: d.rdv_heure || "", sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
@@ -2405,7 +2407,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         }
       }
     });
-    for (const l of Object.values(parJour)) l.sort((a, b) => "rdv tache dutreil".indexOf(a.type) - "rdv tache dutreil".indexOf(b.type));
+    for (const l of Object.values(parJour)) l.sort((a, b) => "rdv tache dutreil".indexOf(a.type) - "rdv tache dutreil".indexOf(b.type)
+      || (a.heure || "99").localeCompare(b.heure || "99"));
     return parJour;
   }
 
@@ -2746,7 +2749,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   document.addEventListener("pointercancel", () => finGlisser(true));
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
-  const SUIVIS = { client: "Client", type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
+  const SUIVIS = { client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
     honos_art4: "Prévu article IV", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
   const appareil = () => (estTel() ? "téléphone" : "appli");
   function noterHistorique(d, avant) {
@@ -2905,7 +2908,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
         champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
       el("h4", { class: "rubrique" }, "Dates"),
-      el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV", saisie("rdv", d.rdv, "date"))),
+      el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV (date et heure)", el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" })))),
       el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date")), champ("A-vie", saisie("a_vie", d.a_vie), true), champ("Millionnaire", avecListe("millionnaire", d.millionnaire, "millionnaire"), true)),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       el("h4", { class: "rubrique" }, "Client"),
@@ -2913,7 +2916,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", zoneComm), champ("Notes client", zoneNotes)),
       champ("Commentaire propre à ce dossier", el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "")),
       i >= 0 ? el("div", { class: "actions-fiche" },
-        d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · ")) }, "📅 Ajouter le RDV à l’agenda") : null,
+        d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure) }, "📅 Ajouter le RDV à l’agenda") : null,
         el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
         el("button", { type: "button", onclick: () => ouvrirClient(d.client) }, "👤 Fiche client",
           tachesOuvertes(d.client).length ? ` · ☐ ${tachesOuvertes(d.client).length} tâche(s)` : "")) : "",
@@ -2926,18 +2929,29 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   }
 
   // ---- agenda : Google Agenda ou fichier .ics (Outlook, Apple, Samsung…) ----
-  function menuAgenda(titre, iso, description) {
-    const debut = iso.replace(/-/g, "");
-    const fin = enIso(new Date(versDate(iso).getTime() + 86400000)).replace(/-/g, "");
+  function menuAgenda(titre, iso, description, heure) {
+    // avec une heure : rendez-vous d'une heure, rappel une heure avant ; sans heure : journée entière, rappel la veille
+    let debut, fin;
+    if (heure) {
+      const [h, m] = heure.split(":").map(Number);
+      const d0 = versDate(iso); d0.setHours(h, m, 0, 0);
+      const d1 = new Date(d0.getTime() + 3600000);
+      const f = (d) => `${enIso(d).replace(/-/g, "")}T${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}00`;
+      debut = f(d0); fin = f(d1);
+    } else {
+      debut = iso.replace(/-/g, "");
+      fin = enIso(new Date(versDate(iso).getTime() + 86400000)).replace(/-/g, "");
+    }
+    const valeur = heure ? "" : ";VALUE=DATE";
     const google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titre)}&dates=${debut}/${fin}&details=${encodeURIComponent(description || "")}`;
     const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Suivi des dossiers//FR", "BEGIN:VEVENT",
       `UID:${nouvelId()}@suivi`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`,
-      `DTSTART;VALUE=DATE:${debut}`, `DTEND;VALUE=DATE:${fin}`, `SUMMARY:${titre.replace(/[,;]/g, " ")}`,
+      `DTSTART${valeur}:${debut}`, `DTEND${valeur}:${fin}`, `SUMMARY:${titre.replace(/[,;]/g, " ")}`,
       `DESCRIPTION:${(description || "").replace(/[,;]/g, " ")}`,
-      "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", `DESCRIPTION:${titre.replace(/[,;]/g, " ")}`, "END:VALARM",
+      "BEGIN:VALARM", heure ? "TRIGGER:-PT1H" : "TRIGGER:-P1D", "ACTION:DISPLAY", `DESCRIPTION:${titre.replace(/[,;]/g, " ")}`, "END:VALARM",
       "END:VEVENT", "END:VCALENDAR"].join("\r\n");
     const lien = el("a", { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar" })), download: "rendez-vous.ics" });
-    if (confirm(`Ajouter « ${titre} » le ${fmtDate(iso)} à votre agenda ?\n\nOK : Google Agenda\nAnnuler : fichier pour Outlook, Apple ou un autre agenda (avec un rappel la veille)`)) {
+    if (confirm(`Ajouter « ${titre} » le ${fmtDate(iso)}${heure ? " à " + heure : ""} à votre agenda ?\n\nOK : Google Agenda\nAnnuler : fichier pour Outlook, Apple ou un autre agenda (avec un rappel ${heure ? "une heure avant" : "la veille"})`)) {
       window.open(google, "_blank", "noopener");
     } else {
       document.body.append(lien); lien.click(); lien.remove();
@@ -3080,7 +3094,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     Object.assign(d, {
       client: v.client, tache: v.tache, type: v.type, notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
-      exercice: v.exercice, debut: v.debut, rdv: v.rdv, fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
+      exercice: v.exercice, debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
       archives: v.archives, commentaire: v.commentaire
     });
     if (!d.id) d.id = nouvelId();
