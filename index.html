@@ -837,7 +837,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       </div>
       <div class="outils ordi">
         
-        <span class="aide">Glissez une carte pour la déplacer · Ctrl+clic : sélection multiple · clic droit : archiver, déplacer</span>
+        <span class="aide">Glissez une carte pour la déplacer · Ctrl+clic : ajouter à la sélection · Maj+clic : sélectionner tout l’intervalle · clic droit : archiver, déplacer</span>
         <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
         <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
         <button class="bouton-discret" id="toutReplier">Tout replier</button>
@@ -2916,6 +2916,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   let glisse = null;
   // ---- sélection de plusieurs cartes : Ctrl+clic (⌘+clic sur Mac), puis glisser ou clic droit ----
   const selectionMulti = new Set();
+  let ancreSelection = null;  // dernière carte cliquée : point de départ de Maj+clic
   function majSelection() {
     document.querySelectorAll(".carte-dossier[data-i]").forEach((c) => c.classList.toggle("multi", selectionMulti.has(+c.dataset.i)));
     const barre = $("barreSelection");
@@ -2938,14 +2939,26 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     });
     carte.addEventListener("click", (e) => {
       if (carte.dataset.bloque) { delete carte.dataset.bloque; e.preventDefault(); return; }
-      if (e.ctrlKey || e.metaKey || e.shiftKey) {  // ajoute ou retire la carte de la sélection
+      if (e.shiftKey) {  // Maj+clic : toutes les cartes entre la dernière cliquée et celle-ci
+        e.preventDefault();
+        const ordre = [...document.querySelectorAll("#kanban .carte-dossier[data-i], #mSections .carte-dossier[data-i]")]
+          .filter((c) => c.offsetParent !== null).map((c) => +c.dataset.i);
+        const a = ordre.indexOf(ancreSelection ?? choisi), b = ordre.indexOf(i);
+        if (a < 0 || b < 0) selectionMulti.add(i);
+        else for (const k of ordre.slice(Math.min(a, b), Math.max(a, b) + 1)) selectionMulti.add(k);
+        majSelection();
+        return;
+      }
+      if (e.ctrlKey || e.metaKey) {  // Ctrl+clic (⌘+clic) : ajoute ou retire la carte de la sélection
         e.preventDefault();
         if (choisi !== null && choisi !== undefined && !selectionMulti.size) selectionMulti.add(choisi);
         selectionMulti.has(i) ? selectionMulti.delete(i) : selectionMulti.add(i);
+        ancreSelection = i;
         majSelection();
         return;
       }
       viderSelection();
+      ancreSelection = i;
       choisi = i;
       ouvrirDossier(i);
     });
