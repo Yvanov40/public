@@ -337,6 +337,11 @@ nav.bas { display: none; }
 .liens a:hover, .liens button:hover { border-color: var(--or); }
 .liens .tel { background: #e4efe3; border-color: #a9c6a8; color: #2f4a2e; }
 .texte a.lien { color: var(--bleu); text-decoration: underline; }
+.statuts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.statuts button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 9px; padding: 9px 6px; font-size: 13.5px; color: var(--texte);
+  border-left: 4px solid var(--c); }
+.statuts button[aria-checked="true"] { background: var(--c); color: #fff; font-weight: 600; border-color: var(--c); }
+@media (max-width: 900px) { .statuts { grid-template-columns: 1fr 1fr; } }
 .rdv-champs { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; }
 .rubrique { font: 600 16px/1.2 var(--titre); color: var(--bleu); margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--bordure); font-variant-numeric: lining-nums; }
 .rubrique:first-child { margin-top: 0; }
@@ -748,7 +753,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         <label for="recherche">Rechercher</label>
         <input id="recherche" type="search" placeholder="Client, tâche, commentaire, société…" autocomplete="off" enterkeyhint="search">
       </div>
-      <div class="filtre"><span class="lib">Type</span><button class="segment" data-cle="type"><span data-titre="Type">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Nature</span><button class="segment" data-cle="type"><span data-titre="Nature">Tous</span></button></div>
       <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
       <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
       <div class="filtre"><span class="lib">Partenaire</span><button class="segment" data-cle="partenaire"><span data-titre="Partenaire">Tous</span></button></div>
@@ -938,15 +943,38 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   const CLE_AFFICHAGE = "suivi-gp-affichage";
   const ETAPES = [["1", "En attente"], ["2", "À faire"], ["3", "Terminé"], ["4", "Sans suite / reporté"]];
   const COULEURS = { "1": "#a77d2f", "2": "#0c2d39", "3": "#5b7b5a", "4": "#9a9187" };
-  const TYPES = [
-    "1. Analyse en attente notaire", "1. Analyse en attente pièces", "1. Suivi juridique en attente",
-    "2. Acte à faire", "2. Acte en attente", "2. Analyse à faire", "2. Fiche / Aides notaire",
-    "2. Formalités à faire", "2. Formalités en attente de validation", "2. Suivi juridique à faire",
-    "3. Acte terminé", "3. Analyse terminée", "3. Formalité terminée", "3. Suivi juridique réalisée",
-    "4. Acte rejeté / reporté", "4. Analyse sans suite", "4. Analyse reportée"
-  ];
+  // Un dossier = une NATURE (Analyse, Acte… ou toute nouvelle) + un STATUT (en attente, à faire, terminé, sans suite)
+  // + une PRÉCISION facultative (en attente du notaire, des pièces, reporté…). « type » garde la forme « 2. Analyse ».
+  const NATURES = ["Analyse", "Acte", "Formalités", "Suivi juridique", "Fiche / Aides notaire"];
+  const TYPES = ["1", "2", "3", "4"].flatMap((n) => NATURES.map((x) => `${n}. ${x}`));
+  const PRECISIONS = ["notaire", "pièces", "client", "validation", "signature", "reporté", "rejeté", "sans suite"];
+  const MIGRATION_TYPES = {
+    "1. Analyse en attente notaire": ["1. Analyse", "notaire"], "1. Analyse en attente pièces": ["1. Analyse", "pièces"],
+    "1. Suivi juridique en attente": ["1. Suivi juridique", ""], "2. Acte à faire": ["2. Acte", ""], "2. Acte en attente": ["1. Acte", ""],
+    "2. Analyse à faire": ["2. Analyse", ""], "2. Fiche / Aides notaire": ["2. Fiche / Aides notaire", ""],
+    "2. Formalités à faire": ["2. Formalités", ""], "2. Formalités en attente de validation": ["1. Formalités", "validation"],
+    "2. Suivi juridique à faire": ["2. Suivi juridique", ""], "3. Acte terminé": ["3. Acte", ""], "3. Analyse terminée": ["3. Analyse", ""],
+    "3. Formalité terminée": ["3. Formalités", ""], "3. Formalités terminées": ["3. Formalités", ""],
+    "3. Suivi juridique réalisée": ["3. Suivi juridique", ""], "3. Fiche / Aides notaire terminé": ["3. Fiche / Aides notaire", ""],
+    "4. Acte rejeté / reporté": ["4. Acte", "rejeté / reporté"], "4. Analyse sans suite": ["4. Analyse", "sans suite"],
+    "4. Analyse reportée": ["4. Analyse", "reporté"]
+  };
+  // anciens types du classeur -> nouveau format (sans effet s'ils le sont déjà)
+  // natures proposées : celles de base, puis les nouvelles trouvées dans les dossiers
+  function naturesConnues() {
+    const autres = new Set((donnees ? donnees.dossiers : []).map((d) => sansNumero(d.type)).filter((x) => x && !NATURES.includes(x)));
+    return [...NATURES, ...[...autres].sort((a, b) => a.localeCompare(b, "fr"))];
+  }
+  function migrerTypes(liste) {
+    let n = 0;
+    for (const d of liste || []) {
+      const m = MIGRATION_TYPES[String(d.type || "").trim()];
+      if (m) { d.type = m[0]; if (m[1] && !d.precision) d.precision = m[1]; n++; }
+    }
+    return n;
+  }
   const ANCIENNETES = ["-30j", "+30j", "+60j", "+90j", "Arch", "(sans date)"];
-  const SEGMENTS = { type: "Type", notaire: "Notaire", exercice: "Exercice", partenaire: "Partenaire", anciennete: "Ancienneté" };
+  const SEGMENTS = { type: "Nature", notaire: "Notaire", exercice: "Exercice", partenaire: "Partenaire", anciennete: "Ancienneté" };
   const COMMUNS = ["notaire", "partenaire", "millionnaire", "a_vie"];
   const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
@@ -1019,6 +1047,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   }
   function valeurFiltre(d, cle) {
     if (cle === "anciennete") return anciennete(d) || "(sans date)";
+    if (cle === "type") return sansNumero(d.type) || "(vide)";
     return String(d[cle] ?? "").trim() || "(vide)";
   }
   function correspond(d, saufSegment) {
@@ -1046,7 +1075,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     if (cle === "anciennete") valeurs = [...ANCIENNETES];
     else {
       const toutes = new Set(donnees.dossiers.map((d) => String(d[cle] ?? "").trim()).filter(Boolean));
-      if (cle === "type") valeurs = [...TYPES.filter((t) => toutes.has(t)), ...[...toutes].filter((t) => !TYPES.includes(t)).sort()];
+      if (cle === "type") valeurs = naturesConnues().filter((n) => comptes.has(n) || selections.type.has(n));
       else if (cle === "exercice") valeurs = [...toutes].sort().reverse();
       else valeurs = [...toutes].sort((a, b) => a.localeCompare(b, "fr"));
       if (comptes.has("(vide)")) valeurs.push("(vide)");
@@ -1205,7 +1234,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
       donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: github.chemin, source: "github" };
       shaDistant = sha;
-      const nouveaux = assurerIds(donnees.dossiers);
+      const nouveaux = assurerIds(donnees.dossiers) + migrerTypes(donnees.dossiers);
       localStorage.setItem(CLE_STOCKAGE + "-base", JSON.stringify({ dossiers: donnees.dossiers, clients: donnees.clients }));
       localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
       localStorage.setItem(CLE_STOCKAGE + "-sha", sha);
@@ -1420,6 +1449,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const contenu = JSON.parse(texte);
     const distant = { dossiers: Array.isArray(contenu) ? contenu : contenu.dossiers, clients: contenu.clients || {} };
     assurerIds(distant.dossiers);
+    migrerTypes(distant.dossiers);
     const resultat = fusionner(base, donnees, distant);
     donnees.dossiers = resultat.dossiers;
     donnees.clients = resultat.clients;
@@ -1595,6 +1625,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     try {
       const brut = localStorage.getItem(CLE_STOCKAGE);
       if (brut) donnees = JSON.parse(brut);
+      if (donnees && migrerTypes(donnees.dossiers)) { donnees.modifie = donnees.modifie || new Date().toISOString(); localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees)); }
     } catch (e) { donnees = null; }
   }
 
@@ -1632,6 +1663,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     if (!Array.isArray(dossiers)) { informer("Ce fichier ne contient pas de dossiers : choisissez suivi_gp.json."); return; }
     const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
     assurerIds(dossiers);
+    migrerTypes(dossiers);
     donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: nomFichier || "suivi_gp.json" };
     sauver(false);
     informer(`${dossiers.length} dossiers chargés.`);
@@ -1775,7 +1807,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       style: `--c:${COULEURS[etapeDe(d)]}`, "data-i": i, type: "button"
     },
       el("div", { class: "haut" }, el("b", null, d.client || "Sans nom"), p ? el("span", { class: "prevu" }, euros(p)) : null),
-      el("div", { class: "ligne" }, [d.tache, d.notaire].filter(Boolean).join(" · ") || sansNumero(d.type)),
+      el("div", { class: "ligne" }, [d.precision ? (etapeDe(d) === "1" ? "⏳ " : "") + d.precision : "", d.tache, d.notaire].filter(Boolean).join(" · ") || sansNumero(d.type)),
       comm ? el("div", { class: "ligne comm" }, comm) : null,
       (bas || anc || d.ca) ? el("div", { class: "bas" }, el("span", null, bas, bas && anc ? "   " : "", marqueAnc || ""), d.ca ? el("span", { class: "or" }, euros(d.ca)) : null) : null);
     activerGlisser(carte, i);
@@ -2329,7 +2361,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const avecAnalyse = [...parClient.values()].filter((e) => e.analyse);
     const transformes = avecAnalyse.filter((e) => e.acte).length;
     const taux = avecAnalyse.length ? Math.round(transformes / avecAnalyse.length * 100) : 0;
-    const sansSuite = liste.filter(([d]) => /sans suite/i.test(d.type || "")).length;
+    const sansSuite = liste.filter(([d]) => etapeDe(d) === "4" && /^analyse/i.test(sansNumero(d.type))).length;
     blocs.push(el("div", { class: "a-bloc" }, el("h3", null, "Des analyses aux actes"),
       el("p", { class: "soustitre" }, "Clients ayant eu une analyse, et parmi eux ceux qui ont un acte."),
       el("div", { class: "a-chiffres", style: "grid-template-columns:1fr 1fr" },
@@ -2394,7 +2426,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     try {
       const f = JSON.parse(localStorage.getItem(CLE_FILTRES) || "null");
       if (f) {
-        for (const [k, v] of Object.entries(f.selections || {})) if (selections[k]) selections[k] = new Set(v);
+        for (const [k, v] of Object.entries(f.selections || {})) if (selections[k]) selections[k] = new Set(k === "type" ? v.filter((x) => !/^\d\./.test(x)) : v);
         $("masquerArchives").checked = !!f.archives;
         if (f.etapeActive) etapeActive = f.etapeActive;
         $("etatDutreil").value = f.etatDutreil || "";
@@ -2787,7 +2819,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   document.addEventListener("pointercancel", () => finGlisser(true));
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
-  const SUIVIS = { client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
+  const SUIVIS = { precision: "Précision", client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
     honos_art4: "Prévu article IV", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
   const appareil = () => (estTel() ? "téléphone" : "appli");
   function noterHistorique(d, avant) {
@@ -2807,8 +2839,9 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     if (nouveau === ancien || nouveau == null) return;
     const avantChangement = { ...d };
     d.type = nouveau;
+    if (ancien.charAt(0) !== nouveau.charAt(0)) d.precision = "";  // « en attente du notaire » n'a plus de sens une fois terminé
     noterHistorique(d, avantChangement);
-    dernierDeplacement = { i, ancien };
+    dernierDeplacement = { i, ancien, precision: avantChangement.precision || "" };
     repliees.delete(nouveau);
     choisi = i;
     sauver();
@@ -2816,6 +2849,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     informer(`${d.client} : ${sansNumero(nouveau)}`, { texte: "Annuler", faire: () => {
       if (!dernierDeplacement) return;
       donnees.dossiers[dernierDeplacement.i].type = dernierDeplacement.ancien;
+      donnees.dossiers[dernierDeplacement.i].precision = dernierDeplacement.precision;
       dernierDeplacement = null;
       sauver(); afficherTout(); informer("Déplacement annulé.");
     } });
@@ -2906,14 +2940,20 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const d = i >= 0 ? donnees.dossiers[i] : { client: "", type: "2. Analyse à faire", debut: enIso(aujourdhui()), exercice: String(new Date().getFullYear()), ...(modele || {}) };
     const f = fiche(d.client);
     $("titreDossier").textContent = i >= 0 ? (d.client || "Dossier") : "Nouveau dossier";
-    const selectType = el("select", { name: "type" },
-      ETAPES.map(([n, nom]) => el("optgroup", { label: `${n} · ${nom}` },
-        TYPES.filter((t) => t.startsWith(n + ".")).map((t) => el("option", { value: t, selected: t === d.type }, sansNumero(t))))),
-      d.type && !TYPES.includes(d.type) ? el("option", { value: d.type, selected: true }, d.type) : null);
-    const rapides = el("div", { class: "etapes-rapides" }, ETAPES.map(([n, nom]) => el("button", { type: "button", onclick: () => {
-      const mot = sansNumero(selectType.value).split(" ")[0].replace(/s$/, "");
-      selectType.value = TYPES.find((t) => t.startsWith(n + ".") && sansNumero(t).startsWith(mot)) || TYPES.find((t) => t.startsWith(n + "."));
-    } }, `→ ${nom}`)));
+    const statutCourant = etapeDe(d);
+    const champStatut = el("input", { type: "hidden", name: "statut", value: statutCourant });
+    const boutonsStatut = el("div", { class: "statuts", role: "radiogroup", "aria-label": "Statut" }, ETAPES.map(([n, nom]) => el("button", {
+      type: "button", role: "radio", "aria-checked": String(n === statutCourant), style: `--c:${COULEURS[n]}`,
+      onclick: (e) => {
+        champStatut.value = n;
+        boutonsStatut.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b === e.currentTarget)));
+      } }, nom)));
+    const listeNatures = el("datalist", { id: "liste-natures" }, naturesConnues().map((x) => el("option", { value: x })));
+    const champNature = el("input", { name: "nature", type: "text", value: sansNumero(d.type) === "Sans type" ? "" : sansNumero(d.type), list: "liste-natures",
+      placeholder: "Analyse, Acte… ou une nouvelle nature", autocomplete: "off" });
+    const listePrecisions = el("datalist", { id: "liste-precisions" }, PRECISIONS.map((x) => el("option", { value: x })));
+    const champPrecision = el("input", { name: "precision", type: "text", value: d.precision || "", list: "liste-precisions",
+      placeholder: "facultatif : notaire, pièces, reporté…", autocomplete: "off" });
     const zoneComm = el("textarea", { name: "commentaire_client" }, f.commentaire || "");
     const zoneNotes = el("textarea", { name: "notes_client", style: "min-height:70px" }, f.notes || "");
     const titreEncart = el("p", null, encartTitre(d.client, i));
@@ -2939,7 +2979,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     $("corpsDossier").replaceChildren(
       el("h4", { class: "rubrique" }, "Le dossier"),
       el("div", { class: "deux" }, champ("Client", [entreeClient, listeClients]), champ("Tâche", saisie("tache", d.tache))),
-      champ("Type", selectType), rapides,
+      champ("Statut", [boutonsStatut, champStatut]),
+      el("div", { class: "deux" }, champ("Nature du dossier", [champNature, listeNatures]), champ("Précision", [champPrecision, listePrecisions])),
       el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", d.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", d.partenaire, "partenaire"), true)),
       el("h4", { class: "rubrique" }, "Honoraires"),
       el("div", { class: "trois" },
@@ -3064,7 +3105,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
 
   // ---- relance par e-mail, préremplie selon l'étape ----
   function preparerRelance(d) {
-    const type = sansNumero(d.type).toLowerCase();
+    const type = (sansNumero(d.type) + " " + (d.precision || "")).toLowerCase();
     const notaire = /notaire/.test(type);
     const objet = `${d.client}${d.tache ? " – " + d.tache : ""}`;
     const corps = notaire
@@ -3190,13 +3231,16 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   }
   const montant = (t) => t === "" || t == null ? null : (Number(String(t).replace(",", ".")) || 0);
 
+  // « analyse » -> « Analyse » si la nature existe déjà, sinon la nouvelle nature telle quelle
+  const natureNormale = (x) => { const t = String(x || "").replace(/\s+/g, " ").trim(); return naturesConnues().find((n) => n.toLowerCase() === t.toLowerCase()) || (t.charAt(0).toLocaleUpperCase("fr") + t.slice(1)); };
   function enregistrerDossier() {
     const v = lireFormulaire($("corpsDossier"));
     if (!v.client) { informer("Indiquez le nom du client."); return; }
+    if (!String(v.nature || "").trim()) { informer("Indiquez la nature du dossier (Analyse, Acte… ou une nouvelle)."); return; }
     const avant = enCours >= 0 ? { ...donnees.dossiers[enCours] } : null;
     const d = avant ? { ...avant } : { coche: false, repere: "", heures: 0, reglementaire: "", societe: "", suivi_j: "", notes: "" };
     Object.assign(d, {
-      client: v.client, tache: v.tache, type: v.type, notaire: v.notaire, partenaire: v.partenaire,
+      client: v.client, tache: v.tache, type: `${v.statut || "2"}. ${natureNormale(v.nature)}`, precision: v.precision || "", notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
       exercice: v.exercice, debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
       archives: v.archives, commentaire: v.commentaire
