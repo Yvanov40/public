@@ -303,6 +303,32 @@ nav.bas { display: none; }
 @media (prefers-reduced-motion: reduce) { .section-titre .fl { transition: none; } }
 
 /* ---------- fiches : rubriques, actions, historique ---------- */
+/* ---------- recherche éclair (Ctrl+K / ⌘K) ---------- */
+.eclair { position: fixed; inset: 0; z-index: 80; background: rgba(8, 20, 25, .5); display: flex; justify-content: center; align-items: flex-start;
+  padding: max(9vh, calc(env(safe-area-inset-top, 0px) + 20px)) 14px 14px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.eclair-boite { width: min(640px, 100%); background: var(--carte); border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.35); overflow: hidden;
+  display: flex; flex-direction: column; max-height: min(620px, 80vh); animation: eclair .14s ease-out; }
+@keyframes eclair { from { transform: translateY(-8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+.eclair-saisie { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--bordure); }
+.eclair-saisie span { font-size: 20px; color: var(--or); }
+.eclair-saisie input { flex: 1; border: 0; background: none; font-size: 19px; outline: none; color: var(--texte); min-width: 0; }
+.eclair-saisie kbd { font: 12px var(--ui); color: var(--discret); border: 1px solid var(--bordure); border-radius: 5px; padding: 1px 6px; }
+.eclair-resultats { overflow-y: auto; padding: 6px 0 8px; }
+.eclair-groupe { font-size: 11.5px; font-weight: 600; color: var(--discret); text-transform: uppercase; letter-spacing: .04em; padding: 10px 18px 4px; }
+.eclair-ligne { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; width: 100%; border: 0; background: none;
+  text-align: left; padding: 8px 18px; cursor: pointer; }
+.eclair-ligne .ic { font-size: 16px; text-align: center; }
+.eclair-ligne b { display: block; color: var(--bleu); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eclair-ligne small { display: block; color: var(--discret); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eclair-ligne .dr { font-size: 12px; color: var(--discret); white-space: nowrap; }
+.eclair-ligne.actif { background: var(--bleu-doux); box-shadow: inset 3px 0 0 var(--or); }
+.eclair-ligne mark { background: var(--or-doux); color: inherit; border-radius: 3px; padding: 0 1px; }
+.eclair-vide { padding: 22px 18px; color: var(--discret); font-style: italic; }
+.eclair-pied { display: flex; gap: 16px; padding: 8px 18px; border-top: 1px solid var(--bordure); font-size: 12px; color: var(--discret); background: var(--fond); }
+.eclair-pied kbd { font: 11.5px var(--ui); border: 1px solid var(--bordure); border-radius: 4px; padding: 0 5px; background: var(--carte); }
+.btn-eclair { width: 40px; height: 40px; border-radius: 20px; border: 0; background: rgba(255,255,255,.08); color: var(--barre-texte); font-size: 17px; flex: none; }
+@media (max-width: 900px) { .eclair-pied { display: none; } .eclair-saisie input { font-size: 17px; } .btn-eclair { margin-left: auto; } .btn-eclair + .icone { margin-left: 6px; } }
+@media (min-width: 901px) { .btn-eclair { margin-left: auto; } .btn-eclair + .icone { margin-left: 8px; } }
 .liens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .liens:empty { display: none; }
 .liens a, .liens button { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; border: 1px solid var(--bordure); background: var(--carte);
@@ -695,6 +721,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
       <a href="#activite" data-vue="activite">📊 Activité</a>
     </nav>
+    <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
     <button class="icone" id="btnMenu" aria-label="GitHub, import et export">⋯</button>
     <div class="entete-recherche">
       <input id="rechercheTel" type="search" placeholder="Rechercher un client, une tâche, une société…" autocomplete="off" enterkeyhint="search" aria-label="Rechercher">
@@ -3200,6 +3227,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   // ---------------------------------------------------------------- fiche client
   function ouvrirClient(nom) {
     clientEnCours = nom;
+    if (typeof noterRecent === "function") noterRecent(nom);
     $("enregistrerClient").hidden = false;
     const f = fiche(nom);
     const liste = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => cleClient(d.client) === cleClient(nom))
@@ -3438,14 +3466,156 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const cible = e.target;
     const enSaisie = cible && (cible.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(cible.tagName));
     const raccourci = (e.key === "k" || e.key === "K") && (surMac ? e.metaKey : e.ctrlKey) && !e.altKey;
-    if (!raccourci && !(e.key === "/" && !enSaisie)) return;
-    if (document.querySelector(".feuille.ouverte, .choix-date")) return;  // une fiche est ouverte : on n'y touche pas
+    if (raccourci) {  // Ctrl+K / ⌘K : la recherche éclair, de partout (même depuis une fiche)
+      e.preventDefault();
+      document.querySelector(".eclair") ? fermerEclair() : ouvrirEclair();
+      return;
+    }
+    if (!(e.key === "/" && !enSaisie)) return;
+    if (document.querySelector(".feuille.ouverte, .choix-date, .eclair")) return;
     e.preventDefault();
     const champ = champRecherche();
     champ.focus();
     champ.select();
   });
-  $("recherche").placeholder = `Client, tâche, commentaire, société… (${surMac ? "⌘K" : "Ctrl+K"})`;
+  $("recherche").placeholder = `Filtrer les dossiers… (« / »)`;
+  $("btnEclair").title = `Recherche éclair (${surMac ? "⌘K" : "Ctrl+K"})`;
+  $("btnEclair").addEventListener("click", () => ouvrirEclair());
+
+  // ================================================================ recherche éclair
+  // Une seule case : clients, dossiers, pactes Dutreil, tâches et actions. ↑ ↓ pour choisir, Entrée pour ouvrir.
+  const CLE_RECENTS = CLE_STOCKAGE + "-recents";
+  const recents = () => { try { return JSON.parse(localStorage.getItem(CLE_RECENTS) || "[]"); } catch (e) { return []; } };
+  function noterRecent(nom) {
+    try { localStorage.setItem(CLE_RECENTS, JSON.stringify([nom, ...recents().filter((n) => cleClient(n) !== cleClient(nom))].slice(0, 6))); } catch (e) {}
+  }
+  const ACTIONS = [
+    ["＋", "Nouveau dossier", "créer ajouter", () => ouvrirDossier(-1)],
+    ["＋", "Nouveau client", "créer ajouter prospect", () => nouveauClient()],
+    ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
+    ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
+    ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
+    ["☰", "Aller aux clients", "liste", () => { location.hash = "#clients"; }],
+    ["📅", "Aller au calendrier", "agenda rendez-vous", () => { location.hash = "#calendrier"; }],
+    ["⚖", "Aller au Dutreil", "pactes", () => { location.hash = "#dutreil"; }],
+    ["📊", "Aller à l’activité", "statistiques graphiques", () => { location.hash = "#activite"; }],
+    ["✕", "Réinitialiser les filtres", "effacer", () => $("reinitialiser").click()],
+    ["↻", "Recharger depuis GitHub", "synchroniser actualiser", () => $("btnActualiser").click()]
+  ];
+  // surligne les mots trouvés
+  function surligner(texte, mots) {
+    const t = String(texte || "");
+    if (!mots.length) return [t];
+    const base = sansAccents(t);
+    const zones = [];
+    for (const m of mots) { let k = base.indexOf(m); if (k >= 0) zones.push([k, k + m.length]); }
+    zones.sort((a, b) => a[0] - b[0]);
+    const morceaux = [];
+    let pos = 0;
+    for (const [a, b] of zones) { if (a < pos) continue; morceaux.push(t.slice(pos, a), el("mark", null, t.slice(a, b))); pos = b; }
+    morceaux.push(t.slice(pos));
+    return morceaux;
+  }
+  function resultatsEclair(texte) {
+    const mots = sansAccents(texte).split(/\s+/).filter(Boolean);
+    const contient = (s) => mots.every((m) => sansAccents(s).includes(m));
+    const score = (s) => (sansAccents(s).startsWith(mots[0] || "") ? 0 : 1);
+    const groupes = [];
+    if (!mots.length) {
+      const r = recents().filter((n) => nomsClients().some((x) => cleClient(x) === cleClient(n)));
+      if (r.length) groupes.push(["Récents", r.map((nom) => ({ ic: "👤", titre: nom, sous: resume(nom), faire: () => ouvrirClient(nom) }))]);
+      groupes.push(["Actions", ACTIONS.slice(0, 5).map(([ic, titre, , faire]) => ({ ic, titre, faire }))]);
+      return groupes;
+    }
+    // clients
+    const clients = donnees ? nomsClients().filter(contient).sort((a, b) => score(a) - score(b) || a.localeCompare(b, "fr")).slice(0, 6) : [];
+    if (clients.length) groupes.push(["Clients", clients.map((nom) => ({ ic: "👤", titre: nom, sous: resume(nom), dr: tachesOuvertes(nom).length ? `☐ ${tachesOuvertes(nom).length}` : "",
+      faire: () => ouvrirClient(nom) }))]);
+    // dossiers : client + tâche + type + notaire
+    if (donnees) {
+      const ds = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => contient([d.client, d.tache, sansNumero(d.type), d.notaire, d.partenaire, d.exercice].join(" ")))
+        .filter(([d]) => !clients.some((c) => cleClient(c) === cleClient(d.client)) || mots.length > 1 || clients.length === 1)
+        .sort(([a], [b]) => (a.archives - b.archives) || (b.debut || "").localeCompare(a.debut || "")).slice(0, 6);
+      if (ds.length) groupes.push(["Dossiers", ds.map(([d, i]) => ({ ic: d.archives ? "🗄" : "📄", titre: `${d.client}${d.tache ? " · " + d.tache : ""}`,
+        sous: [sansNumero(d.type), d.notaire, d.exercice].filter(Boolean).join(" · "), dr: prevu(d) ? euros(prevu(d)) : "", faire: () => ouvrirDossier(i) }))]);
+    }
+    // pactes Dutreil
+    const pactes = dutreil.pactes.map((p, j) => [p, j]).filter(([p]) => contient([p.societe, p.client_lie, p.notes].join(" "))).slice(0, 4);
+    if (pactes.length) groupes.push(["Pactes Dutreil", pactes.map(([p, j]) => {
+      const e = prochaineEcheance(p);
+      return { ic: "⚖", titre: p.societe, sous: e ? `${e[1]} · ${fmtDate(e[0])}` : (p.etat || ""), faire: () => ouvrirPacte(j) };
+    })]);
+    // tâches ouvertes
+    const taches = [];
+    if (donnees) for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (!t.fait && contient(t.texte + " " + f.nom)) taches.push([t, f.nom]);
+    if (taches.length) groupes.push(["Tâches", taches.slice(0, 4).map(([t, nom]) => ({ ic: "☐", titre: t.texte, sous: nom + (t.pour ? " · " + etatEcheance(t)[0] : ""),
+      faire: () => ouvrirClient(nom) }))]);
+    // actions
+    const actions = ACTIONS.filter(([, titre, mc]) => contient(titre + " " + mc)).slice(0, 4);
+    if (actions.length) groupes.push(["Actions", actions.map(([ic, titre, , faire]) => ({ ic, titre, faire }))]);
+    return groupes;
+  }
+  function resume(nom) {
+    const ds = dossiersDe(nom);
+    if (!ds.length) return "Sans dossier";
+    const encours = ds.filter((d) => "12".includes(etapeDe(d)) && !d.archives).length;
+    return `${ds.length} dossier${ds.length > 1 ? "s" : ""}${encours ? ` · ${encours} en cours` : ""}${fiche(nom).notaire ? " · " + fiche(nom).notaire : ""}`;
+  }
+
+  let eclairActif = 0, eclairLignes = [];
+  function ouvrirEclair() {
+    if (document.querySelector(".eclair")) return;
+    const saisie = el("input", { type: "search", placeholder: "Rechercher un client, un dossier, un pacte, une action…", "aria-label": "Recherche éclair",
+      autocomplete: "off", enterkeyhint: "go", spellcheck: "false" });
+    const liste = el("div", { class: "eclair-resultats", role: "listbox" });
+    const fond = el("div", { class: "eclair", role: "dialog", "aria-label": "Recherche éclair" },
+      el("div", { class: "eclair-boite" },
+        el("div", { class: "eclair-saisie" }, el("span", null, "⚡"), saisie, el("kbd", null, "Échap")),
+        liste,
+        el("div", { class: "eclair-pied" }, el("span", null, el("kbd", null, "↑"), " ", el("kbd", null, "↓"), " choisir"),
+          el("span", null, el("kbd", null, "Entrée"), " ouvrir"), el("span", null, el("kbd", null, surMac ? "⌘K" : "Ctrl+K"), " ouvrir / fermer"))));
+    fond.addEventListener("click", (e) => { if (e.target === fond) fermerEclair(); });
+    const dessiner = () => {
+      const groupes = resultatsEclair(saisie.value);
+      eclairLignes = [];
+      liste.replaceChildren(...(groupes.length ? groupes.flatMap(([titre, items]) => [el("div", { class: "eclair-groupe" }, titre),
+        ...items.map((it) => {
+          const k = eclairLignes.length;
+          const ligne = el("button", { type: "button", class: "eclair-ligne", role: "option", onclick: () => choisir(k), onmousemove: () => surbrillance(k) },
+            el("span", { class: "ic" }, it.ic), el("div", null, el("b", null, ...surligner(it.titre, sansAccents(saisie.value).split(/\s+/).filter(Boolean))),
+              it.sous ? el("small", null, it.sous) : null), el("span", { class: "dr" }, it.dr || ""));
+          eclairLignes.push([ligne, it]);
+          return ligne;
+        })]) : [el("div", { class: "eclair-vide" }, `Rien ne correspond à « ${saisie.value} ».`)]));
+      surbrillance(0);
+    };
+    const surbrillance = (k) => {
+      eclairActif = Math.max(0, Math.min(k, eclairLignes.length - 1));
+      eclairLignes.forEach(([l], n) => l.classList.toggle("actif", n === eclairActif));
+      const l = eclairLignes[eclairActif];
+      if (l) l[0].scrollIntoView({ block: "nearest" });
+    };
+    const choisir = (k) => {
+      const l = eclairLignes[k];
+      if (!l) return;
+      fermerEclair();
+      setTimeout(() => l[1].faire(), 30);
+    };
+    saisie.addEventListener("input", dessiner);
+    saisie.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); surbrillance(eclairActif + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); surbrillance(eclairActif - 1); }
+      else if (e.key === "Enter") { e.preventDefault(); choisir(eclairActif); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fermerEclair(); }
+    });
+    document.body.append(fond);
+    dessiner();
+    setTimeout(() => saisie.focus(), 20);
+  }
+  function fermerEclair() {
+    const f = document.querySelector(".eclair");
+    if (f) f.remove();
+  }
 
   let attente = null;
   $("recherche").addEventListener("input", () => { $("rechercheTel").value = $("recherche").value; clearTimeout(attente); attente = setTimeout(afficherTout, 180); });
@@ -3474,6 +3644,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     if (e.key !== "Escape") return;
     const choix = document.querySelector(".choix-date");
     if (choix) { choix.remove(); return; }
+    if (document.querySelector(".eclair")) { fermerEclair(); return; }
     fermerSegment(); fermerMenu(); fermerFeuilles();
   });
   window.addEventListener("resize", () => { if (segmentOuvert) fermerSegment(); });
