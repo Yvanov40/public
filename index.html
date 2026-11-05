@@ -94,7 +94,7 @@ main { max-width: 1680px; margin: 0 auto; padding: 14px 18px 30px; }
 .pastille-rdv.jour b, .pastille-rdv.demain b { color: inherit; }
 
 /* ---------- filtres ---------- */
-.filtres { margin-top: 10px; background: var(--carte); border: 1px solid var(--bordure); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: minmax(180px, 1.4fr) repeat(5, minmax(0, 1fr)) auto auto; gap: 10px; align-items: end; }
+.filtres { margin-top: 10px; background: var(--carte); border: 1px solid var(--bordure); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: minmax(170px, 1.3fr) repeat(6, minmax(0, 1fr)) auto auto; gap: 10px; align-items: end; }
 .filtre label, .filtre .lib { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
 .filtre input[type="search"] { width: 100%; border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 8px 10px; }
 .segment { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; }
@@ -522,6 +522,24 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv { display: none !impo
   nav.bas a { font-size: 10.5px !important; }
 }
 
+/* ---------- horloge ronde (choix de l'heure) ---------- */
+.horloge-voile { position: fixed; inset: 0; z-index: 90; background: rgba(8, 20, 25, .4); display: flex; align-items: center; justify-content: center; }
+.horloge-boite { background: var(--carte); border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.35); animation: eclair .14s ease-out; }
+.horloge-entete { background: var(--barre); color: #fff; display: flex; align-items: center; gap: 4px; padding: 14px 22px; font: 600 34px var(--ui); }
+.horloge-chiffre { border: 0; background: none; color: rgba(255,255,255,.75); font: inherit; padding: 0 4px; border-radius: 6px; cursor: pointer; }
+.horloge-chiffre.actif { color: var(--barre-discret); background: rgba(255,255,255,.08); }
+.horloge-cadran { position: relative; margin: 18px 22px 8px; border-radius: 50%; background: var(--colonne); touch-action: none; cursor: pointer; user-select: none; }
+.horloge-n { position: absolute; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 17px; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--texte); pointer-events: none; font-variant-numeric: tabular-nums; }
+.horloge-n.int { font-size: 12px; color: var(--discret); width: 28px; height: 28px; }
+.horloge-n.choisi { background: var(--bleu); color: var(--carte); font-weight: 600; }
+.horloge-aiguille { position: absolute; left: 50%; bottom: 50%; width: 2px; margin-left: -1px; background: var(--bleu); transform-origin: bottom center; pointer-events: none; }
+.horloge-centre { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 4px; background: var(--bleu); }
+.horloge-boutons { display: flex; gap: 8px; padding: 6px 16px 14px; }
+.horloge-boutons button { border: 0; background: var(--section); color: var(--bleu); border-radius: 8px; padding: 8px 14px; font-weight: 600; }
+.horloge-boutons button.ok { background: var(--bleu); color: var(--carte); }
+input[type="time"] { cursor: pointer; }
+
 /* ---------- sélecteur de date (téléphone) ---------- */
 .choix-date { position: fixed; inset: 0; z-index: 70; background: rgba(8, 20, 25, .45); display: flex; align-items: flex-end; }
 .choix-date-boite { background: var(--carte); width: 100%; border-radius: 16px 16px 0 0; padding: 14px 14px calc(18px + env(safe-area-inset-bottom, 0px)); }
@@ -762,6 +780,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         <label for="recherche">Rechercher</label>
         <input id="recherche" type="search" placeholder="Client, tâche, commentaire, société…" autocomplete="off" enterkeyhint="search">
       </div>
+      <div class="filtre"><span class="lib">Statut</span><button class="segment" data-cle="statut"><span data-titre="Statut">Tous</span></button></div>
       <div class="filtre"><span class="lib">Nature</span><button class="segment" data-cle="type"><span data-titre="Nature">Tous</span></button></div>
       <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
       <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
@@ -985,7 +1004,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     return n;
   }
   const ANCIENNETES = ["-30j", "+30j", "+60j", "+90j", "Arch", "(sans date)"];
-  const SEGMENTS = { type: "Nature", notaire: "Notaire", exercice: "Exercice", partenaire: "Partenaire", anciennete: "Ancienneté" };
+  const SEGMENTS = { statut: "Statut", type: "Nature", notaire: "Notaire", exercice: "Exercice", partenaire: "Partenaire", anciennete: "Ancienneté" };
   const COMMUNS = ["notaire", "partenaire", "millionnaire", "a_vie"];
   const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
@@ -993,7 +1012,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   let donnees = null;
   let enCours = null;
   let clientEnCours = null;
-  const selections = { type: new Set(), notaire: new Set(), exercice: new Set(), partenaire: new Set(), anciennete: new Set() };
+  const selections = { statut: new Set(), type: new Set(), notaire: new Set(), exercice: new Set(), partenaire: new Set(), anciennete: new Set() };
   let repliees = new Set();       // sections du Kanban repliées
   let dejaVues = new Set();
   let bascules = new Set();       // ouvertures faites pendant une recherche
@@ -1059,6 +1078,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   function valeurFiltre(d, cle) {
     if (cle === "anciennete") return anciennete(d) || "(sans date)";
     if (cle === "type") return sansNumero(d.type) || "(vide)";
+    if (cle === "statut") return (ETAPES.find(([n]) => n === etapeDe(d)) || ["", ""])[1];
     return String(d[cle] ?? "").trim() || "(vide)";
   }
   function correspond(d, saufSegment) {
@@ -1084,6 +1104,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     }
     let valeurs;
     if (cle === "anciennete") valeurs = [...ANCIENNETES];
+    else if (cle === "statut") valeurs = ETAPES.map(([, nom]) => nom);
     else {
       const toutes = new Set(donnees.dossiers.map((d) => String(d[cle] ?? "").trim()).filter(Boolean));
       if (cle === "type") valeurs = naturesConnues().filter((n) => comptes.has(n) || selections.type.has(n));
@@ -2574,6 +2595,85 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     dessiner();
     document.body.append(voile);
   }
+
+  function choisirHeureHorloge(valeur, choisi) {
+    const m0 = /^(\d{1,2}):(\d{2})$/.exec(valeur || "");
+    const maintenant = new Date();
+    const etat = { h: m0 ? +m0[1] : maintenant.getHours(), m: m0 ? +m0[2] : Math.floor(maintenant.getMinutes() / 5) * 5, mode: "h" };
+    const T = 260, C = T / 2, R_EXT = T * 0.39, R_INT = T * 0.255;
+    const voile = el("div", { class: "horloge-voile", role: "dialog", "aria-label": "Choisir l’heure" });
+    const fermer = () => { voile.remove(); document.removeEventListener("keydown", clavier, true); };
+    const valider = () => { fermer(); choisi(`${String(etat.h).padStart(2, "0")}:${String(etat.m).padStart(2, "0")}`); };
+    const lH = el("button", { type: "button", class: "horloge-chiffre", onclick: () => { etat.mode = "h"; dessiner(); } });
+    const lM = el("button", { type: "button", class: "horloge-chiffre", onclick: () => { etat.mode = "m"; dessiner(); } });
+    const cadran = el("div", { class: "horloge-cadran", style: `width:${T}px;height:${T}px` });
+    const dessiner = () => {
+      lH.textContent = String(etat.h).padStart(2, "0"); lM.textContent = String(etat.m).padStart(2, "0");
+      lH.classList.toggle("actif", etat.mode === "h"); lM.classList.toggle("actif", etat.mode === "m");
+      const valeurs = etat.mode === "h" ? [...Array(24).keys()].map((h) => [h, h >= 1 && h <= 12 ? R_EXT : R_INT, (h % 12) * 30])
+        : [...Array(12).keys()].map((k) => [k * 5, R_EXT, k * 30]);
+      const v = etat.mode === "h" ? etat.h : etat.m;
+      const rayon = etat.mode === "h" ? (etat.h >= 1 && etat.h <= 12 ? R_EXT : R_INT) : R_EXT;
+      const angle = (etat.mode === "h" ? (v % 12) * 30 : v * 6);
+      cadran.replaceChildren(
+        el("div", { class: "horloge-aiguille", style: `height:${rayon}px;transform:rotate(${angle}deg)` }),
+        el("div", { class: "horloge-centre" }),
+        ...valeurs.map(([val, r, a]) => {
+          const x = C + r * Math.sin(a * Math.PI / 180), y = C - r * Math.cos(a * Math.PI / 180);
+          const choisi = val === v && (etat.mode === "m" || r === rayon);
+          return el("span", { class: "horloge-n" + (r === R_INT ? " int" : "") + (choisi ? " choisi" : ""), style: `left:${x}px;top:${y}px` },
+            etat.mode === "m" || r === R_INT ? String(val).padStart(2, "0") : String(val));
+        }));
+    };
+    // clic (ou glisser) sur le cadran : on lit l'angle et la distance au centre
+    const lire = (e, final) => {
+      const b = cadran.getBoundingClientRect();
+      const dx = e.clientX - b.left - C, dy = e.clientY - b.top - C;
+      const angle = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+      if (etat.mode === "h") {
+        const pas = Math.round(angle / 30) % 12;
+        const dedans = Math.hypot(dx, dy) < (R_EXT + R_INT) / 2;
+        etat.h = dedans ? (pas === 0 ? 0 : pas + 12) : (pas === 0 ? 12 : pas);
+        dessiner();
+        if (final) setTimeout(() => { etat.mode = "m"; dessiner(); }, 160);
+      } else {
+        etat.m = final ? (Math.round(angle / 30) * 5) % 60 : Math.round(angle / 6) % 60;
+        dessiner();
+        if (final) setTimeout(valider, 140);
+      }
+    };
+    let appuye = false;
+    cadran.addEventListener("pointerdown", (e) => { appuye = true; lire(e, false); });
+    cadran.addEventListener("pointermove", (e) => { if (appuye) lire(e, false); });
+    cadran.addEventListener("pointerup", (e) => { if (appuye) { appuye = false; lire(e, true); } });
+    const clavier = (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); fermer(); }
+      else if (e.key === "Enter") { e.preventDefault(); valider(); }
+    };
+    document.addEventListener("keydown", clavier, true);
+    voile.addEventListener("pointerdown", (e) => { if (e.target === voile) fermer(); });
+    voile.append(el("div", { class: "horloge-boite" },
+      el("div", { class: "horloge-entete" }, lH, el("span", null, ":"), lM),
+      cadran,
+      el("div", { class: "horloge-boutons" },
+        el("button", { type: "button", onclick: () => { fermer(); choisi(""); } }, "Effacer"),
+        el("span", { style: "flex:1" }),
+        el("button", { type: "button", onclick: fermer }, "Annuler"),
+        el("button", { type: "button", class: "ok", onclick: valider }, "OK"))));
+    dessiner();
+    document.body.append(voile);
+  }
+  // sur ordinateur, un clic dans n'importe quel champ d'heure ouvre l'horloge (Tab + clavier reste possible)
+  document.addEventListener("mousedown", (e) => {
+    const champ = e.target.closest && e.target.closest('input[type="time"]');
+    if (!champ || estTel() || e.button !== 0) return;
+    e.preventDefault();
+    choisirHeureHorloge(champ.value, (v) => {
+      champ.value = v;
+      champ.dispatchEvent(new Event("input", { bubbles: true }));
+      champ.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }, true);
 
   let glisseCal = null;
   function activerGlisserEvenement(puce, e) {
