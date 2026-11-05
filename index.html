@@ -522,6 +522,20 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv { display: none !impo
   nav.bas a { font-size: 10.5px !important; }
 }
 
+/* ---------- sélection multiple et menu du clic droit ---------- */
+.carte-dossier.multi { outline: 2px solid var(--or); background: var(--or-doux); }
+.fantome-nombre { position: absolute; top: -10px; right: -10px; background: var(--or); color: #fff; border-radius: 12px; min-width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; padding: 0 6px; }
+.menu-contextuel { position: fixed; z-index: 95; background: var(--carte); border: 1px solid var(--bordure); border-radius: 10px; padding: 6px;
+  box-shadow: 0 12px 30px rgba(12,45,57,.25); min-width: 220px; display: grid; }
+.menu-contextuel .titre { font-size: 12px; color: var(--discret); padding: 4px 10px 6px; font-weight: 600; }
+.menu-contextuel button { border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 6px; font-size: 14px; color: var(--texte); cursor: pointer; }
+.menu-contextuel button:hover { background: var(--bleu-doux); }
+.menu-contextuel .sep { height: 1px; background: var(--bordure); margin: 4px 6px; }
+.barre-selection { position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 50; background: var(--bleu); color: var(--carte);
+  border-radius: 12px; padding: 8px 10px 8px 16px; display: flex; gap: 10px; align-items: center; box-shadow: 0 10px 26px rgba(0,0,0,.25); font-size: 14px; }
+.barre-selection button { border: 0; background: rgba(255,255,255,.12); color: inherit; border-radius: 8px; padding: 6px 10px; font-weight: 600; }
+
 /* ---------- horloge ronde (choix de l'heure) ---------- */
 .horloge-voile { position: fixed; inset: 0; z-index: 90; background: rgba(8, 20, 25, .4); display: flex; align-items: center; justify-content: center; }
 .horloge-boite { background: var(--carte); border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.35); animation: eclair .14s ease-out; }
@@ -823,7 +837,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       </div>
       <div class="outils ordi">
         
-        <span class="aide">Glissez une carte sur un autre type pour la déplacer · clic sur un titre de section : replier / déplier</span>
+        <span class="aide">Glissez une carte pour la déplacer · Ctrl+clic : sélection multiple · clic droit : archiver, déplacer</span>
         <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
         <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
         <button class="bouton-discret" id="toutReplier">Tout replier</button>
@@ -881,6 +895,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   <a href="#activite" data-vue="activite"><span>📊</span>Activité</a>
 </nav>
 
+<div class="barre-selection" id="barreSelection" hidden><span id="barreSelectionTexte"></span>
+  <button type="button" id="selArchiver">🗄 Archiver</button><button type="button" id="selVider">✕</button></div>
 <div class="voile" id="voile"></div>
 <div class="fen-segment" id="fenSegment" hidden role="dialog" aria-label="Filtre"></div>
 
@@ -993,11 +1009,20 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const autres = new Set((donnees ? donnees.dossiers : []).map((d) => sansNumero(d.type)).filter((x) => x && !NATURES.includes(x)));
     return [...NATURES, ...[...autres].sort((a, b) => a.localeCompare(b, "fr"))];
   }
+  // « 2022 », « 2021 », une année antérieure ou rien : regroupés dans l'exercice « 2021-2022 »
+  const EXERCICE_REGROUPE = "2021-2022";
+  function exerciceNormal(ex) {
+    ex = String(ex || "").trim();
+    if (!ex) return EXERCICE_REGROUPE;
+    return /^\d{4}$/.test(ex) && +ex <= 2022 ? EXERCICE_REGROUPE : ex;
+  }
   function migrerTypes(liste) {
     let n = 0;
     for (const d of liste || []) {
-      // dossier sans exercice : rattaché à l'année de son début
-      if (!String(d.exercice ?? "").trim() && /^\d{4}-\d{2}-\d{2}$/.test(d.debut || "")) { d.exercice = d.debut.slice(0, 4); n++; }
+      // dossier sans exercice : rattaché à l'année de son début ; sans date, ou jusqu'en 2022 : exercice « 2021-2022 »
+      const ex = String(d.exercice ?? "").trim();
+      const voulu = exerciceNormal(ex || (/^\d{4}-\d{2}-\d{2}$/.test(d.debut || "") ? d.debut.slice(0, 4) : ""));
+      if (voulu !== ex) { d.exercice = voulu; n++; }
       const m = MIGRATION_TYPES[String(d.type || "").trim()];
       if (m) { d.type = m[0]; if (m[1] && !d.precision) d.precision = m[1]; n++; }
     }
@@ -1835,7 +1860,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const bas = [fmtDate(d.debut), d.exercice].filter(Boolean).join("   ");
     const comm = commentaire(d);
     const carte = el("button", {
-      class: "carte-dossier" + (d.archives ? " archive" : "") + (choisi === i ? " choisie" : ""),
+      class: "carte-dossier" + (d.archives ? " archive" : "") + (choisi === i ? " choisie" : "") + (selectionMulti.has(i) ? " multi" : ""),
       style: `--c:${COULEURS[etapeDe(d)]}`, "data-i": i, type: "button"
     },
       el("div", { class: "haut" }, el("b", null, d.client || "Sans nom"), p ? el("span", { class: "prevu" }, euros(p)) : null),
@@ -2889,14 +2914,38 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
 
   // ---------------------------------------------------------------- glisser-déposer
   let glisse = null;
+  // ---- sélection de plusieurs cartes : Ctrl+clic (⌘+clic sur Mac), puis glisser ou clic droit ----
+  const selectionMulti = new Set();
+  function majSelection() {
+    document.querySelectorAll(".carte-dossier[data-i]").forEach((c) => c.classList.toggle("multi", selectionMulti.has(+c.dataset.i)));
+    const barre = $("barreSelection");
+    barre.hidden = selectionMulti.size < 2;
+    $("barreSelectionTexte").textContent = `${selectionMulti.size} dossiers sélectionnés · glissez-les ensemble, ou clic droit pour les archiver`;
+  }
+  function viderSelection() { selectionMulti.clear(); majSelection(); }
   function activerGlisser(carte, i) {
+    carte.addEventListener("contextmenu", (e) => {
+      if (estTel()) return;
+      e.preventDefault();
+      if (!selectionMulti.has(i)) { selectionMulti.clear(); selectionMulti.add(i); majSelection(); }
+      menuSelection(e.clientX, e.clientY);
+    });
     carte.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return;  // sélection : géré au clic
       glisse = { i, carte, x: e.clientX, y: e.clientY, parti: false, tactile: e.pointerType !== "mouse", fantome: null, cible: null };
       if (glisse.tactile) glisse.minuteur = setTimeout(() => demarrer(), 380);  // appui long sur téléphone
     });
     carte.addEventListener("click", (e) => {
       if (carte.dataset.bloque) { delete carte.dataset.bloque; e.preventDefault(); return; }
+      if (e.ctrlKey || e.metaKey || e.shiftKey) {  // ajoute ou retire la carte de la sélection
+        e.preventDefault();
+        if (choisi !== null && choisi !== undefined && !selectionMulti.size) selectionMulti.add(choisi);
+        selectionMulti.has(i) ? selectionMulti.delete(i) : selectionMulti.add(i);
+        majSelection();
+        return;
+      }
+      viderSelection();
       choisi = i;
       ouvrirDossier(i);
     });
@@ -2906,6 +2955,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     glisse.parti = true;
     const f = glisse.carte.cloneNode(true);
     f.classList.add("fantome");
+    if (selectionMulti.has(glisse.i) && selectionMulti.size > 1) f.append(el("span", { class: "fantome-nombre" }, selectionMulti.size));
+    else if (!selectionMulti.has(glisse.i)) viderSelection();
     document.body.append(f);
     glisse.fantome = f;
     glisse.carte.classList.add("souleve");
@@ -2946,10 +2997,80 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     g.fantome.remove();
     g.carte.classList.remove("souleve");
     if (g.cible) g.cible.classList.remove("cible");
-    if (!annule && g.cible) changerType(g.i, g.cible.dataset.type);
+    if (!annule && g.cible) {
+      if (selectionMulti.has(g.i) && selectionMulti.size > 1) deplacerSelection(g.cible.dataset.type);
+      else changerType(g.i, g.cible.dataset.type);
+    }
   }
   document.addEventListener("pointerup", () => finGlisser(false));
   document.addEventListener("pointercancel", () => finGlisser(true));
+
+  // plusieurs dossiers déplacés ensemble : vers une autre colonne, chacun garde sa nature ;
+  // dans la même colonne, ils prennent la nature de la section visée
+  function deplacerSelection(cible, statutSeul) {
+    const statut = cible.charAt(0);
+    const avant = [];
+    for (const i of selectionMulti) {
+      const d = donnees.dossiers[i];
+      if (!d) continue;
+      const nouveau = (statutSeul || etapeDe(d) !== statut) ? `${statut}. ${sansNumero(d.type)}` : cible;
+      if (nouveau === d.type) continue;
+      avant.push({ i, type: d.type, precision: d.precision || "" });
+      const copie = { ...d };
+      d.type = nouveau;
+      if (copie.type.charAt(0) !== statut) d.precision = "";
+      noterHistorique(d, copie);
+    }
+    if (!avant.length) return;
+    repliees.delete(cible);
+    sauver(); afficherTout(); majSelection();
+    informer(`${avant.length} dossiers déplacés.`, { texte: "Annuler", faire: () => {
+      for (const a of avant) Object.assign(donnees.dossiers[a.i], { type: a.type, precision: a.precision });
+      sauver(); afficherTout(); informer("Déplacement annulé.");
+    } });
+  }
+  function archiverSelection(archiver) {
+    const changes = [];
+    for (const i of selectionMulti) {
+      const d = donnees.dossiers[i];
+      if (!d || !!d.archives === archiver) continue;
+      const copie = { ...d };
+      d.archives = archiver;
+      noterHistorique(d, copie);
+      changes.push(i);
+    }
+    if (!changes.length) { informer(archiver ? "Déjà archivés." : "Aucun n’était archivé."); return; }
+    sauver(); afficherTout(); majSelection();
+    informer(`${changes.length} dossier${changes.length > 1 ? "s" : ""} ${archiver ? "archivé" : "désarchivé"}${changes.length > 1 ? "s" : ""}.`, { texte: "Annuler", faire: () => {
+      for (const i of changes) donnees.dossiers[i].archives = !archiver;
+      sauver(); afficherTout(); informer("Annulé.");
+    } });
+  }
+  // menu du clic droit
+  function menuSelection(x, y) {
+    fermerMenuSelection();
+    const n = selectionMulti.size;
+    const tous = [...selectionMulti].map((i) => donnees.dossiers[i]).filter(Boolean);
+    const action = (texte, faire) => el("button", { type: "button", onclick: () => { fermerMenuSelection(); faire(); } }, texte);
+    const menu = el("div", { class: "menu-contextuel", role: "menu" },
+      el("div", { class: "titre" }, n > 1 ? `${n} dossiers sélectionnés` : (tous[0] ? tous[0].client : "")),
+      tous.some((d) => !d.archives) ? action(`🗄  Archiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(true)) : null,
+      tous.some((d) => d.archives) ? action(`↩  Désarchiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(false)) : null,
+      el("div", { class: "sep" }),
+      ...ETAPES.map(([num, nom]) => action(`→  ${nom}`, () => deplacerSelection(`${num}. ${sansNumero(tous[0].type)}`, true))),
+      n === 1 ? [el("div", { class: "sep" }), action("✎  Ouvrir le dossier", () => ouvrirDossier([...selectionMulti][0]))] : null,
+      n > 1 ? [el("div", { class: "sep" }), action("✕  Tout désélectionner", viderSelection)] : null);
+    document.body.append(menu);
+    const b = menu.getBoundingClientRect();
+    menu.style.left = Math.min(x, window.innerWidth - b.width - 8) + "px";
+    menu.style.top = Math.min(y, window.innerHeight - b.height - 8) + "px";
+    setTimeout(() => document.addEventListener("pointerdown", fermerSiDehors, true), 0);
+  }
+  function fermerSiDehors(e) { if (!e.target.closest(".menu-contextuel")) fermerMenuSelection(); }
+  function fermerMenuSelection() {
+    document.querySelectorAll(".menu-contextuel").forEach((m) => m.remove());
+    document.removeEventListener("pointerdown", fermerSiDehors, true);
+  }
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
   const SUIVIS = { precision: "Précision", client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
@@ -3394,7 +3515,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     Object.assign(d, {
       client: v.client, tache: v.tache, type: `${v.statut || "2"}. ${natureNormale(v.nature)}`, precision: v.precision || "", notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
-      exercice: v.exercice || (v.debut ? v.debut.slice(0, 4) : ""), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
+      exercice: exerciceNormal(v.exercice || (v.debut ? v.debut.slice(0, 4) : "")), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
       archives: v.archives, commentaire: v.commentaire
     });
     if (!d.id) d.id = nouvelId();
@@ -3610,6 +3731,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     lecteur.onerror = () => informer("Le fichier n’a pas pu être lu.");
     lecteur.readAsText(f, "utf-8");
   });
+  $("selArchiver").addEventListener("click", () => archiverSelection(true));
+  $("selVider").addEventListener("click", viderSelection);
   $("btnNouveau").addEventListener("click", () => (vueCourante() === "dutreil" ? ouvrirPacte(-1) : vueCourante() === "clients" ? nouveauClient() : ouvrirDossier(-1)));
   $("btnNouveauClient").addEventListener("click", nouveauClient);
   $("enregistrerPacte").addEventListener("click", enregistrerPacte);
@@ -3845,6 +3968,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const choix = document.querySelector(".choix-date");
     if (choix) { choix.remove(); return; }
     if (document.querySelector(".eclair")) { fermerEclair(); return; }
+    if (document.querySelector(".menu-contextuel")) { fermerMenuSelection(); return; }
+    if (selectionMulti.size && !document.querySelector(".feuille.ouverte")) { viderSelection(); return; }
     fermerSegment(); fermerMenu(); fermerFeuilles();
   });
   window.addEventListener("resize", () => { if (segmentOuvert) fermerSegment(); });
