@@ -303,6 +303,14 @@ nav.bas { display: none; }
 @media (prefers-reduced-motion: reduce) { .section-titre .fl { transition: none; } }
 
 /* ---------- fiches : rubriques, actions, historique ---------- */
+.liens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.liens:empty { display: none; }
+.liens a, .liens button { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; border: 1px solid var(--bordure); background: var(--carte);
+  color: var(--bleu); border-radius: 14px; padding: 4px 10px; font-size: 12.5px; text-decoration: none; cursor: pointer; }
+.liens a span, .liens button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.liens a:hover, .liens button:hover { border-color: var(--or); }
+.liens .tel { background: #e4efe3; border-color: #a9c6a8; color: #2f4a2e; }
+.texte a.lien { color: var(--bleu); text-decoration: underline; }
 .rdv-champs { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; }
 .rubrique { font: 600 16px/1.2 var(--titre); color: var(--bleu); margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--bordure); font-variant-numeric: lining-nums; }
 .rubrique:first-child { margin-top: 0; }
@@ -1598,7 +1606,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     sauver(false);
     informer(`${dossiers.length} dossiers chargés.`);
     afficherTout();
-    location.hash = "#kanban";
+    location.hash = "#accueil";
   }
 
   // Le service d'enregistrement de Claude est préparé dès l'ouverture : au moment du clic,
@@ -2176,7 +2184,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       let ctrl;
       if (nature === "etat") ctrl = el("select", { name: cle }, ETATS_DUTREIL.map((e) => el("option", { value: e, selected: (p.etat || "") === e }, e)),
         p.etat && !ETATS_DUTREIL.includes(p.etat) ? el("option", { value: p.etat, selected: true }, p.etat) : null);
-      else if (nature === "long") ctrl = el("textarea", { name: cle }, p[cle] || "");
+      else if (nature === "long") ctrl = avecLiens(el("textarea", { name: cle }, p[cle] || ""));
       else if (nature === "montant") ctrl = el("input", { name: cle, type: "number", inputmode: "decimal", step: "any", value: p[cle] ?? "" });
       else if (nature === "client") ctrl = [el("input", { name: cle, type: "text", value: p[cle] || "", list: "liste-clients-dutreil", placeholder: "Nom du client, pour retrouver ce pacte dans sa fiche" }),
         el("datalist", { id: "liste-clients-dutreil" }, donnees ? nomsClients().map((v) => el("option", { value: v })) : [])];
@@ -2892,6 +2900,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       prefixe = (nf.commentaire || "").trim(); prefixeNotes = (nf.notes || "").trim();
       zoneComm.value = [prefixe, ecrit].filter(Boolean).join("\n");
       zoneNotes.value = [prefixeNotes, ecritNotes].filter(Boolean).join("\n");
+      zoneComm._majLiens && zoneComm._majLiens(); zoneNotes._majLiens && zoneNotes._majLiens();
       cleAffichee = cle;
       titreEncart.textContent = encartTitre(entreeClient.value, -1);
       for (const c of COMMUNS) { const ch = $("corpsDossier").querySelector(`[name="${c}"]`); if (ch && !ch.value && nf[c]) ch.value = nf[c]; }
@@ -2913,8 +2922,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       el("h4", { class: "rubrique" }, "Client"),
       i >= 0 && d.client ? blocTaches(d.client, { id: d.id, libelle: [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") }) : "",
-      el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", zoneComm), champ("Notes client", zoneNotes)),
-      champ("Commentaire propre à ce dossier", el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "")),
+      el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", avecLiens(zoneComm)), champ("Notes client", avecLiens(zoneNotes))),
+      champ("Commentaire propre à ce dossier", avecLiens(el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || ""))),
       i >= 0 ? el("div", { class: "actions-fiche" },
         d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure) }, "📅 Ajouter le RDV à l’agenda") : null,
         el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
@@ -2926,6 +2935,71 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
           ` · ${h.par || ""} · `, h.changements.map(([lib, a, b]) => lib === "Création" ? `création (${sansNumero(b)})` : `${lib} : ${valeurLisible(a)} → ${valeurLisible(b)}`).join(" ; "))))) : "",
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerDossier }, "Supprimer ce dossier") : "");
     ouvrirFeuille("feuilleDossier", () => ouvrirDossier(i, modele));
+  }
+
+  // ---- liens, téléphones, e-mails et chemins dans les textes : ils deviennent cliquables ----
+  const MOTIFS = [
+    ["url", /\b(?:https?:\/\/|www\.)[^\s<>"']*[^\s<>"'.,;:!?)\]]/gi],
+    ["mail", /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g],
+    ["tel", /(?:(?:\+|00)33[\s.-]?|\b0)[1-9](?:[\s.-]?\d{2}){4}\b/g],
+    ["chemin", /(?:\b[A-Za-z]:\\|\\\\)[^\n"<>|?*]*[^\s"<>|?*.,;:)]/g],
+    ["chemin", /(?:^|\s)(\/(?:Users|Volumes|home)\/[^\n"<>|?*]*[^\s"<>|?*.,;:)])/gm]
+  ];
+  function liensDans(texte) {
+    const trouves = [];
+    const prend = (debut, fin) => trouves.some((t) => debut < t.fin && fin > t.debut);
+    for (const [type, motif] of MOTIFS) {
+      motif.lastIndex = 0;
+      let m;
+      while ((m = motif.exec(texte || ""))) {
+        const valeur = (m[1] || m[0]).trim();
+        const debut = m.index + m[0].indexOf(valeur), fin = debut + valeur.length;
+        if (!valeur || prend(debut, fin)) continue;
+        trouves.push({ type, valeur, debut, fin });
+      }
+    }
+    return trouves.sort((a, b) => a.debut - b.debut);
+  }
+  function lienPour(t) {
+    if (t.type === "url") return /^https?:/i.test(t.valeur) ? t.valeur : "https://" + t.valeur;
+    if (t.type === "mail") return "mailto:" + t.valeur;
+    if (t.type === "tel") { const n = t.valeur.replace(/[^\d+]/g, "").replace(/^00/, "+"); return "tel:" + (n.startsWith("0") ? "+33" + n.slice(1) : n); }
+    return null;
+  }
+  function puceLien(t) {
+    const icone = { url: "🔗", mail: "✉", tel: "📞", chemin: "📁" }[t.type];
+    const affiche = t.type === "url" ? t.valeur.replace(/^https?:\/\//i, "").replace(/\/$/, "") : t.valeur;
+    if (t.type === "chemin") {
+      // une page web ne peut pas ouvrir un dossier de l'ordinateur : on copie le chemin
+      return el("button", { type: "button", title: "Copier le chemin", onclick: async () => {
+        try { await navigator.clipboard.writeText(t.valeur); informer("Chemin copié : collez-le dans l’Explorateur (Windows + E, puis Ctrl + L, puis Ctrl + V)."); }
+        catch (e) { prompt("Copiez ce chemin :", t.valeur); }
+      } }, icone, el("span", null, affiche));
+    }
+    return el("a", { href: lienPour(t), target: t.type === "url" ? "_blank" : null, rel: "noopener", class: t.type === "tel" ? "tel" : null,
+      title: t.type === "tel" ? "Appeler" : t.type === "mail" ? "Écrire un e-mail" : "Ouvrir le lien" }, icone, el("span", null, affiche));
+  }
+  // une zone de texte suivie des liens qu'elle contient (mis à jour pendant la saisie)
+  function avecLiens(zone) {
+    const puces = el("div", { class: "liens" });
+    const maj = () => puces.replaceChildren(...liensDans(zone.value).map(puceLien));
+    zone.addEventListener("input", maj);
+    zone._majLiens = maj;
+    maj();
+    return [zone, puces];
+  }
+  // texte simple dont les liens sont cliquables (tâches…)
+  function texteAvecLiens(texte) {
+    const morceaux = [];
+    let pos = 0;
+    for (const t of liensDans(texte)) {
+      if (t.debut > pos) morceaux.push(texte.slice(pos, t.debut));
+      const href = lienPour(t);
+      morceaux.push(href ? el("a", { class: "lien", href, target: t.type === "url" ? "_blank" : null, rel: "noopener", onclick: (e) => e.stopPropagation() }, t.valeur) : t.valeur);
+      pos = t.fin;
+    }
+    morceaux.push(texte.slice(pos));
+    return morceaux;
   }
 
   // ---- agenda : Google Agenda ou fichier .ics (Outlook, Apple, Samsung…) ----
@@ -3037,7 +3111,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         const c = el("input", { type: "checkbox", checked: !!t.fait, "aria-label": "Fait" });
         c.addEventListener("change", () => { cocherTache(nom, t.id, c.checked); dessiner(); afficherTout(); });
         return el("div", { class: "tache" + (t.fait ? " faite" : "") }, c,
-          el("div", { class: "texte" }, t.texte,
+          el("div", { class: "texte" }, ...texteAvecLiens(t.texte),
             t.fait ? el("small", null, `fait le ${new Date(t.fait).toLocaleDateString("fr-FR")}`)
               : t.dossier_libelle && !(dossier && t.dossier === dossier.id) ? el("small", null, `dossier : ${t.dossier_libelle}`)
               : dossier && t.dossier === dossier.id ? el("small", null, "ce dossier") : null),
@@ -3141,8 +3215,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       blocTaches(nom),
       el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", f.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true)),
       el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true), champ("A-vie", saisie("a_vie", f.a_vie), true)),
-      champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || "")),
-      champ("Notes client", el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || "")),
+      champ("Commentaire client", avecLiens(el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || ""))),
+      champ("Notes client", avecLiens(el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || ""))),
       el("div", { class: "actions-fiche" },
         el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
         el("button", { type: "button", onclick: () => renommerClient(clientEnCours) }, "✎ Renommer"),
@@ -3330,6 +3404,48 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     fermerToutesFeuilles(); majAlerte();
   });
   window.addEventListener("online", () => { if (github && donnees && donnees.modifie) envoyerGithub(); });
+
+  // ---- raccourci : Ctrl+K (⌘K sur Mac) ou « / » pour aller dans la recherche ; Entrée ouvre la fiche du client ----
+  const surMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const champRecherche = () => (estTel() ? $("rechercheTel") : $("recherche"));
+  const sansAccents = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  function clientsCorrespondants(texte) {
+    const mots = sansAccents(texte).split(/\s+/).filter(Boolean);
+    if (!mots.length || !donnees) return [];
+    return nomsClients().filter((n) => mots.every((m) => sansAccents(n).includes(m)));
+  }
+  function rechercheEntree(champ) {
+    const texte = champ.value.trim();
+    const trouves = clientsCorrespondants(texte);
+    const exact = trouves.filter((n) => sansAccents(n).replace(/\s+/g, " ").trim() === sansAccents(texte).replace(/\s+/g, " "));
+    if (trouves.length === 1 || exact.length === 1) {
+      champ.blur();
+      ouvrirClient((exact.length === 1 ? exact : trouves)[0]);
+    } else if (!trouves.length) {
+      informer(`Aucun client ne s’appelle « ${texte} ».`);
+    } else {
+      informer(`${trouves.length} clients correspondent : précisez le nom pour ouvrir directement la fiche.`);
+      if (vueCourante() !== "clients") location.hash = "#clients";
+    }
+  }
+  for (const id of ["recherche", "rechercheTel"]) {
+    $(id).addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); clearTimeout(attente); afficherTout(); rechercheEntree($(id)); }
+      else if (e.key === "Escape") { $(id).value = ""; $(id).dispatchEvent(new Event("input")); $(id).blur(); }
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    const cible = e.target;
+    const enSaisie = cible && (cible.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(cible.tagName));
+    const raccourci = (e.key === "k" || e.key === "K") && (surMac ? e.metaKey : e.ctrlKey) && !e.altKey;
+    if (!raccourci && !(e.key === "/" && !enSaisie)) return;
+    if (document.querySelector(".feuille.ouverte, .choix-date")) return;  // une fiche est ouverte : on n'y touche pas
+    e.preventDefault();
+    const champ = champRecherche();
+    champ.focus();
+    champ.select();
+  });
+  $("recherche").placeholder = `Client, tâche, commentaire, société… (${surMac ? "⌘K" : "Ctrl+K"})`;
 
   let attente = null;
   $("recherche").addEventListener("input", () => { $("rechercheTel").value = $("recherche").value; clearTimeout(attente); attente = setTimeout(afficherTout, 180); });
