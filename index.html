@@ -1978,7 +1978,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       el("p", { class: "aide" }, "Un client peut exister sans dossier : prospect, contact à rappeler… Vous lui créerez un dossier plus tard depuis sa fiche."),
       champ("Nom du client", nom),
       el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", "", "notaire"), true), champ("Partenaire", avecListe("partenaire", "", "partenaire"), true)),
-      el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", "", "millionnaire"), true), champ("A-vie", saisie("a_vie", ""), true)),
+      champ("Millionnaire", avecListe("millionnaire", "", "millionnaire"), true),
       champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:120px" }, "")),
       champ("Notes client", el("textarea", { name: "notes", style: "min-height:70px" }, "")));
     ouvrirFeuille("feuilleClient", nouveauClient);
@@ -2376,7 +2376,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       blocs.push(el("div", { class: "a-bloc" }, el("h3", null, titre),
         el("p", { class: "soustitre" }, "Honoraires prévus et encaissés, nombre de dossiers."),
         g.length ? g.map((e) => el("div", { class: "a-ligne" }, el("span", { class: "nom", title: e.nom }, e.nom),
-          barresHtml([[e.p], [e.ca, "or"]], max), el("span", { class: "val" }, el("b", null, euros(e.p)), ` · ${e.n} doss.`)))
+          barresHtml([[e.p], [e.ca, "or"]], max), el("span", { class: "val" }, el("b", null, euros(e.p)), " / ", el("b", { class: "or" }, euros(e.ca)), ` · ${e.n} doss.`)))
           : el("p", { class: "m-vide" }, "Aucune donnée.")));
     }
     // 5. temps passé par étape (d'après l'historique)
@@ -3213,8 +3213,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     zone.replaceChildren(
       el("h1", null, nom),
       el("div", { class: "sous" }, `Fiche client du ${new Date().toLocaleDateString("fr-FR")} · ${ds.length} dossier(s) · prévu ${euros(p)} · encaissé ${euros(ca)} · reste ${euros(p - ca)}`),
-      el("table", null, el("tr", null, ...["Notaire", "Partenaire", "Millionnaire", "A-vie"].map((t) => el("th", null, t))),
-        el("tr", null, el("td", null, f.notaire || "—"), el("td", null, f.partenaire || "—"), el("td", null, f.millionnaire || "—"), el("td", null, f.a_vie || "—"))),
+      el("table", null, el("tr", null, ...["Notaire", "Partenaire", "Millionnaire"].map((t) => el("th", null, t))),
+        el("tr", null, el("td", null, f.notaire || "—"), el("td", null, f.partenaire || "—"), el("td", null, f.millionnaire || "—"))),
       el("h2", null, "Dossiers"),
       el("table", null, el("tr", null, ...["Tâche", "Étape", "Début", "Prévu", "Encaissé"].map((t) => el("th", null, t))),
         ...ds.map((d) => el("tr", null, el("td", null, d.tache || ""), el("td", null, sansNumero(d.type)), el("td", null, fmtDate(d.debut)),
@@ -3289,7 +3289,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       blocTaches(nom),
       el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", f.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true)),
-      el("div", { class: "deux" }, champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true), champ("A-vie", saisie("a_vie", f.a_vie), true)),
+      champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true),
       champ("Commentaire client", avecLiens(el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || ""))),
       champ("Notes client", avecLiens(el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || ""))),
       el("div", { class: "actions-fiche" },
@@ -3328,6 +3328,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const cle = cleClient(clientEnCours);
     const f = { ...fiche(clientEnCours) };
     for (const c of COMMUNS) {
+      if (!(c in v)) continue;  // champ absent de la fiche (A-vie) : on n'y touche pas
       const vieux = f[c] || "";
       if ((v[c] || "") !== vieux) for (const d of dossiersDe(clientEnCours)) if (!d[c] || d[c] === vieux) d[c] = v[c];
       f[c] = v[c];
