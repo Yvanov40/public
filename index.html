@@ -303,6 +303,18 @@ nav.bas { display: none; }
 @media (prefers-reduced-motion: reduce) { .section-titre .fl { transition: none; } }
 
 /* ---------- fiches : rubriques, actions, historique ---------- */
+/* ---------- loupe de la recherche éclair au-dessus du + (téléphone, sous le pouce) ---------- */
+.flottant-eclair { display: none; }
+@media (max-width: 900px) {
+  .btn-eclair { display: none !important; }
+  .flottant-eclair { display: flex; align-items: center; justify-content: center; position: fixed; right: 24px; z-index: 7;
+    bottom: calc(72px + 54px + 12px + env(safe-area-inset-bottom, 0px)); width: 42px; height: 42px; border-radius: 21px;
+    border: 1px solid var(--bordure); background: var(--carte); color: var(--bleu); font-size: 17px; opacity: .92;
+    box-shadow: 0 4px 12px rgba(12,45,57,.18); }
+  .flottant-eclair:active { transform: scale(.94); }
+  body.filtres-ouverts .flottant-eclair { display: none; }
+}
+
 /* ---------- recherche éclair (Ctrl+K / ⌘K) ---------- */
 .eclair { position: fixed; inset: 0; z-index: 80; background: rgba(8, 20, 25, .5); display: flex; justify-content: center; align-items: flex-start;
   padding: max(9vh, calc(env(safe-area-inset-top, 0px) + 20px)) 14px 14px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
@@ -902,6 +914,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   </div>
 </main>
 
+<button class="flottant-eclair" id="btnEclairPouce" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
 <button class="flottant" id="btnNouveau" aria-label="Nouveau dossier" title="Nouveau dossier">+</button>
 <nav class="bas">
   <a href="#accueil" data-vue="accueil"><span>◉</span>Accueil</a>
@@ -2887,6 +2900,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     $("accueilVide").hidden = !vide;
     $("contenu").hidden = vide;
     $("btnNouveau").hidden = vide;
+    $("btnEclairPouce").hidden = vide;
     majAlerte();
     if (vide) return;
     const liste = visibles();
@@ -3894,6 +3908,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   $("recherche").placeholder = `Filtrer les dossiers… (« / »)`;
   $("btnEclair").title = `Recherche éclair (${surMac ? "⌘K" : "Ctrl+K"})`;
   $("btnEclair").addEventListener("click", () => ouvrirEclair());
+  $("btnEclairPouce").addEventListener("click", () => ouvrirEclair());
 
   // ================================================================ recherche éclair
   // Une seule case : clients, dossiers, pactes Dutreil, tâches et actions. ↑ ↓ pour choisir, Entrée pour ouvrir.
