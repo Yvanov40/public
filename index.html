@@ -549,7 +549,8 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv { display: none !impo
 .tache-liens button { border: 1px solid var(--bordure); background: var(--carte); color: var(--bleu); border-radius: 16px; padding: 6px 12px; font-size: 13.5px; }
 .tache-fait { display: flex; align-items: center; gap: 10px; margin: 6px 0 14px; font-size: 15px; }
 .tache-fait input { width: 20px; height: 20px; accent-color: var(--bleu); }
-.tache .texte.cliquable, .ev.tache, .pastille-rdv.tache-p { cursor: pointer; }
+.tache .texte.cliquable, .ev.tache, .pastille-rdv.tache-p, #mTaches .tache button.texte { cursor: pointer; }
+#mTaches .tache button.texte:hover { text-decoration: underline; text-decoration-color: var(--or); }
 .tache .texte.cliquable:hover { color: var(--bleu); text-decoration: underline; text-decoration-color: var(--or); }
 
 /* ---------- horloge ronde (choix de l'heure) ---------- */
@@ -2918,7 +2919,8 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
         const [quand, classe] = etatEcheance(t);
         return el("div", { class: "tache" }, c,
           el("button", { type: "button", class: "texte", style: "all:unset;cursor:pointer", onclick: () => ouvrirTache(nom, t.id) }, t.texte, el("small", null, nom)),
-          el("span", { class: "echeance-tache " + classe }, quand), el("span"));
+          el("button", { type: "button", class: "echeance-tache modifiable " + classe, title: "Modifier la date et l’heure",
+            onclick: (ev) => editerEcheanceTache(ev.currentTarget, nom, t, afficherTout) }, quand), el("span"));
       }) : [el("p", { class: "m-vide" }, toutes ? `Aucune tâche datée cette semaine (${toutes} tâche(s) sans date dans les fiches clients).` : "Aucune tâche. Ajoutez-en depuis la fiche d’un client.")]));
     }
     if ($("mDorment")) {
@@ -3481,18 +3483,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       };
       texte.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); ajouter(); } });
       // remplace la pastille de date par deux champs (date, heure) et un bouton OK
-      const modifierEcheance = (pastille, t) => {
-        const date = el("input", { type: "date", value: t.pour || "", "aria-label": "Date" });
-        const heure = el("input", { type: "time", value: t.heure || "", "aria-label": "Heure" });
-        const valider = () => {
-          majTaches(nom, (l) => l.map((x) => (x.id === t.id ? { ...x, pour: date.value || "", heure: date.value ? (heure.value || "") : "" } : x)));
-          dessiner(); afficherTout();
-        };
-        const editeur = el("span", { class: "edition-echeance" }, date, heure, el("button", { type: "button", onclick: valider }, "OK"));
-        [date, heure].forEach((c) => c.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); valider(); } }));
-        pastille.replaceWith(editeur);
-        date.focus();
-      };
+      const modifierEcheance = (pastille, t) => editerEcheanceTache(pastille, nom, t, () => { dessiner(); afficherTout(); });
       const ligne = (t) => {
         const [quand, classe] = etatEcheance(t);
         const c = el("input", { type: "checkbox", checked: !!t.fait, "aria-label": "Fait" });
@@ -3518,6 +3509,21 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     };
     dessiner();
     return bloc;
+  }
+
+  // ---- modifier la date et l'heure d'une tâche sur place : la pastille devient deux champs et OK ----
+  function editerEcheanceTache(pastille, nom, t, apres) {
+    const date = el("input", { type: "date", value: t.pour || "", "aria-label": "Date" });
+    const heure = el("input", { type: "time", value: t.heure || "", "aria-label": "Heure" });
+    const valider = () => {
+      majTaches(nom, (l) => l.map((x) => (x.id === t.id ? { ...x, pour: date.value || "", heure: date.value ? (heure.value || "") : "" } : x)));
+      informer(date.value ? `« ${t.texte} » : ${fmtDate(date.value)}${heure.value ? " à " + heure.value : ""}.` : `« ${t.texte} » : sans date.`);
+      apres();
+    };
+    const editeur = el("span", { class: "edition-echeance" }, date, heure, el("button", { type: "button", onclick: valider }, "OK"));
+    [date, heure].forEach((c) => c.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); valider(); } }));
+    pastille.replaceWith(editeur);
+    date.focus();
   }
 
   // ---- fiche d'une tâche : s'ouvre d'un clic partout où la tâche apparaît ----
