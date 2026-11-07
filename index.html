@@ -1044,6 +1044,13 @@ body.vue-calendrier .filtres .filtre:not(.recherche), body.vue-calendrier .filtr
 body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinitialiser, body.vue-calendrier .filtres .nb-affiches { display: none !important; }
 @media (min-width: 901px) { body.vue-calendrier .filtres .filtre.recherche { flex: 0 1 380px; } }
 @media (max-width: 900px) { body.vue-calendrier #btnFiltres { display: none; } }
+
+/* ---------- demandeurs et sociétés ---------- */
+.societe-bloc { margin-bottom: 6px; }
+.societe-bloc h4 small { font-weight: 400; color: var(--discret); font-size: 12px; }
+.demandeur-ligne { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--bordure); font-size: 14px; }
+.demandeur-ligne small { color: var(--discret); }
+.demandeur-ligne input, #corpsDemandeurs .agenda-ajout input { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 7px 8px; min-width: 0; }
 </style>
 </head>
 <body>
@@ -1091,7 +1098,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       </div>
       <div class="filtre"><span class="lib">Statut</span><button class="segment" data-cle="statut"><span data-titre="Statut">Tous</span></button></div>
       <div class="filtre"><span class="lib">Nature</span><button class="segment" data-cle="type"><span data-titre="Nature">Tous</span></button></div>
-      <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Demandeur</span><button class="segment" data-cle="notaire"><span data-titre="Demandeur">Tous</span></button></div>
       <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
       <div class="filtre"><span class="lib">En attente de</span><button class="segment" data-cle="attente"><span data-titre="En attente de">Tous</span></button></div>
       <div class="filtre"><span class="lib">Prochaine action</span><button class="segment" data-cle="action"><span data-titre="Prochaine action">Tous</span></button></div>
@@ -1182,7 +1189,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       <div class="tel" id="mClients"></div>
       <div class="outils ordi"><button class="bouton-discret" id="btnNouveauClient" type="button">＋ Nouveau client</button><span class="aide" id="aideClients"></span></div>
       <table class="table-clients ordi">
-        <thead><tr><th>Client</th><th>Dossiers</th><th>Notaire</th><th class="n">Prévu</th><th class="n">Encaissé</th><th class="n">Reste</th></tr></thead>
+        <thead><tr><th>Client</th><th>Dossiers</th><th>Demandeur</th><th class="n">Prévu</th><th class="n">Encaissé</th><th class="n">Reste</th></tr></thead>
         <tbody id="clientsListe"></tbody>
       </table>
       <p class="plus-de" id="plusDe" hidden></p>
@@ -1264,6 +1271,18 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   </div>
 </div>
 
+<!-- demandeurs et sociétés -->
+<div class="feuille feuille-petite" id="feuilleDemandeurs" role="dialog" aria-modal="true" aria-labelledby="titreDemandeurs">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreDemandeurs">Demandeurs et sociétés</h3>
+      <span></span>
+    </div>
+    <div class="feuille-corps" id="corpsDemandeurs"></div>
+  </div>
+</div>
+
 <!-- horaires et congés -->
 <div class="feuille feuille-petite" id="feuilleAgenda" role="dialog" aria-modal="true" aria-labelledby="titreAgenda">
   <div class="feuille-boite">
@@ -1309,6 +1328,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     <button class="bouton large" id="btnActualiser">Recharger depuis GitHub</button>
     <button class="bouton leger large" id="btnGithub">Réglages GitHub</button>
     <button class="bouton leger large" id="btnHoraires">Horaires et congés</button>
+    <button class="bouton leger large" id="btnDemandeurs">Demandeurs et sociétés</button>
     <button class="bouton leger large" id="btnExporter">Exporter une copie</button>
     <button class="bouton leger large" id="btnImporter">Ouvrir un autre fichier</button>
     <button class="bouton leger large" id="btnFermerMenu">Fermer</button>
@@ -1370,7 +1390,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     return n;
   }
   const ANCIENNETES = ["-30j", "+30j", "+60j", "+90j", "Arch", "(sans date)"];
-  const SEGMENTS = { statut: "Statut", attente: "En attente de", action: "Prochaine action", type: "Nature", notaire: "Notaire", exercice: "Exercice",
+  const SEGMENTS = { statut: "Statut", attente: "En attente de", action: "Prochaine action", type: "Nature", notaire: "Demandeur", exercice: "Exercice",
     partenaire: "Partenaire", anciennete: "Ancienneté", encaisse: "Encaissement", modifie: "Modifié", rdvf: "Rendez-vous" };
   // valeurs fixes des nouveaux filtres, dans cet ordre
   const VALEURS_FIXES = {
@@ -1537,41 +1557,110 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   // --- fenêtre façon segment Excel ---
   let segmentOuvert = null, minuteurSurvol = null, veille = null;
   const survolPossible = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  // ---- études notariales : chaque notaire est rattaché à son étude (ville) ----
-  const ETUDES = [
-    ["Bordeaux", ["Jean-Charles Bouzonie", "Charlotte Hottin", "Nicolas Inguere", "Elwood Alvarez", "Paul Letierce", "Nathalie Festal"]],
-    ["Auros", ["Alexie Sage"]],
-    ["Bègles", ["Emmanuelle Bouzonie"]],
-    ["Cabourg", ["Nicolas Clouet", "Lloyd Foulonneau"]],
-    ["Genissac", ["Marie-Pierre Becuwe"]],
-    ["Lesparre", ["Stéphane Aiello"]],
-    ["Lille", ["Gautier Walkowiak"]],
-    ["Maubourguet", ["Sophie Paulet"]],
-    ["Paris", ["Anne Bernhart"]],
-    ["Poitiers", ["Xavier Godin"]],
-    ["Saint-Michel-sur-Orge", ["Chaimaa Talbi"]],
-    ["Toulouse", ["Béatrice Carmeret"]],
-    ["Valence", ["Thomas Leroy"]]
-  ];
-  const AUTRES_ETUDES = "Autres études";
+  // ---- demandeurs et sociétés : chaque demandeur (champ « notaire » des données) est rattaché à une société ----
+  // Le rattachement se règle dans « Demandeurs et sociétés » (menu ⋯) ou depuis une fiche ; il est partagé par GitHub (societes.json).
+  const SOCIETES_DEFAUT = {
+    "Jean-Charles Bouzonie": "Bordeaux", "Charlotte Hottin": "Bordeaux", "Nicolas Inguere": "Bordeaux", "Elwood Alvarez": "Bordeaux",
+    "Paul Letierce": "Bordeaux", "Nathalie Festal": "Bordeaux", "Alexie Sage": "Auros", "Emmanuelle Bouzonie": "Bègles",
+    "Nicolas Clouet": "Cabourg", "Lloyd Foulonneau": "Cabourg", "Marie-Pierre Becuwe": "Genissac", "Stéphane Aiello": "Lesparre",
+    "Gautier Walkowiak": "Lille", "Sophie Paulet": "Maubourguet", "Anne Bernhart": "Paris", "Xavier Godin": "Poitiers",
+    "Chaimaa Talbi": "Saint-Michel-sur-Orge", "Béatrice Carmeret": "Toulouse", "Thomas Leroy": "Valence"
+  };
+  const CLE_SOCIETES = "suivi-gp-donnees-societes";
+  let societes = (() => { try { return JSON.parse(localStorage.getItem(CLE_SOCIETES)) || { ...SOCIETES_DEFAUT }; } catch (e) { return { ...SOCIETES_DEFAUT }; } })();
+  const AUTRES_ETUDES = "Autres sociétés";
   const normerNom = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
-  const INDEX_ETUDES = (() => {
+  let INDEX_ETUDES = null;
+  function indexSocietes() {
+    if (INDEX_ETUDES) return INDEX_ETUDES;
     const complet = new Map(), parNom = new Map();
-    for (const [ville, notaires] of ETUDES) for (const n of notaires) {
-      complet.set(normerNom(n), ville);
+    for (const [n, soc] of Object.entries(societes)) {
+      if (!soc) continue;
+      complet.set(normerNom(n), soc);
       const nom = normerNom(n).split(" ").pop();
-      parNom.set(nom, parNom.has(nom) && parNom.get(nom) !== ville ? null : ville);  // nom ambigu (Bouzonie) : seulement le nom complet
+      parNom.set(nom, parNom.has(nom) && parNom.get(nom) !== soc ? null : soc);  // nom ambigu (Bouzonie) : seulement le nom complet
     }
-    return { complet, parNom };
-  })();
+    return (INDEX_ETUDES = { complet, parNom });
+  }
   function etudeDe(notaire) {
     const n = normerNom(notaire);
     if (!n) return "";
-    if (INDEX_ETUDES.complet.has(n)) return INDEX_ETUDES.complet.get(n);
-    const parNom = INDEX_ETUDES.parNom.get(n.split(" ").pop());
-    return parNom || AUTRES_ETUDES;
+    const ix = indexSocietes();
+    if (ix.complet.has(n)) return ix.complet.get(n);
+    return ix.parNom.get(n.split(" ").pop()) || AUTRES_ETUDES;
   }
-  const ordreEtude = (v) => { const k = ETUDES.findIndex(([ville]) => ville === v); return k < 0 ? 99 : k; };
+  const listeSocietes = () => [...new Set(Object.values(societes).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+  const ordreEtude = (v) => { const k = listeSocietes().indexOf(v); return k < 0 ? 99 : k; };
+  // rattache un demandeur à une société (vide : le détacher), enregistre et partage
+  function rattacherDemandeur(demandeur, societe) {
+    const nom = String(demandeur || "").trim();
+    if (!nom) return;
+    const existant = Object.keys(societes).find((k) => normerNom(k) === normerNom(nom)) || nom;
+    const soc = String(societe || "").trim();
+    const actuelle = societes[existant] || "";
+    const normale = listeSocietes().find((x) => normerNom(x) === normerNom(soc)) || soc;
+    if (actuelle === normale) return;
+    if (normale) societes[existant] = normale; else delete societes[existant];
+    INDEX_ETUDES = null;
+    enregistrerSocietes();
+  }
+  const cheminSocietes = () => [...github.chemin.split("/").slice(0, -1), "societes.json"].join("/");
+  async function chargerSocietes() {
+    if (!github) return;
+    try {
+      const r = await fetch(adresseDe(cheminSocietes()) + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
+      if (!r.ok) { if (r.status === 404) enregistrerSocietes(); return; }  // pas encore de fichier : on le crée
+      societes = JSON.parse(depuisBase64((await r.json()).content));
+      INDEX_ETUDES = null;
+      localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes));
+      afficherTout();
+    } catch (e) { /* on garde ceux de cet appareil */ }
+  }
+  async function enregistrerSocietes() {
+    localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes));
+    if (!github) return;
+    try {
+      const url = adresseDe(cheminSocietes());
+      const actuel = await fetch(url + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
+      const sha = actuel.ok ? (await actuel.json()).sha : undefined;
+      await fetch(url, { method: "PUT", headers: { ...entetes(), "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Demandeurs et sociétés", content: versBase64(JSON.stringify(societes, null, 1)), sha, branch: github.branche }) });
+    } catch (e) { /* réessayé au prochain changement */ }
+  }
+  // fenêtre « Demandeurs et sociétés »
+  function ouvrirDemandeurs() {
+    fermerMenu();
+    const dessiner = () => {
+      const tous = new Set([...Object.keys(societes), ...(donnees ? donnees.dossiers.map((d) => String(d.notaire || "").trim()).filter(Boolean) : [])]);
+      const parSociete = new Map();
+      for (const n of tous) {
+        const soc = etudeDe(n);
+        if (!parSociete.has(soc)) parSociete.set(soc, []);
+        if (!parSociete.get(soc).some((x) => normerNom(x) === normerNom(n))) parSociete.get(soc).push(n);
+      }
+      const nb = (n) => donnees ? donnees.dossiers.filter((d) => normerNom(d.notaire) === normerNom(n)).length : 0;
+      const ligne = (n) => {
+        const champSoc = el("input", { type: "text", value: etudeDe(n) === AUTRES_ETUDES ? "" : etudeDe(n), list: "liste-societes-reglage", placeholder: "Société" });
+        champSoc.addEventListener("change", () => { rattacherDemandeur(n, champSoc.value); setTimeout(() => { dessiner(); afficherTout(); }, 0); });
+        return el("div", { class: "demandeur-ligne" }, el("span", null, n, el("small", null, ` · ${nb(n)} doss.`)), champSoc);
+      };
+      const nouveauNom = el("input", { type: "text", placeholder: "Nouveau demandeur" });
+      const nouvelleSoc = el("input", { type: "text", placeholder: "Société", list: "liste-societes-reglage" });
+      $("corpsDemandeurs").replaceChildren(
+        el("datalist", { id: "liste-societes-reglage" }, listeSocietes().map((x) => el("option", { value: x }))),
+        el("p", { class: "aide" }, "Changez la société d’un demandeur pour le déplacer ; videz-la pour le détacher. Les sociétés servent au filtre Demandeur et à l’onglet Activité."),
+        ...[...parSociete.entries()].sort((a, b) => (a[0] === AUTRES_ETUDES) - (b[0] === AUTRES_ETUDES) || a[0].localeCompare(b[0], "fr"))
+          .map(([soc, noms]) => el("div", { class: "societe-bloc" }, el("h4", { class: "rubrique" }, soc, el("small", null, ` · ${noms.length}`)),
+            ...noms.sort((a, b) => a.localeCompare(b, "fr")).map(ligne))),
+        el("h4", { class: "rubrique" }, "Ajouter un demandeur"),
+        el("div", { class: "agenda-ajout" }, nouveauNom, nouvelleSoc, el("button", { type: "button", class: "bouton", onclick: () => {
+          if (!nouveauNom.value.trim() || !nouvelleSoc.value.trim()) { informer("Indiquez le demandeur et sa société."); return; }
+          rattacherDemandeur(nouveauNom.value, nouvelleSoc.value); informer(`${nouveauNom.value.trim()} rattaché à ${nouvelleSoc.value.trim()}.`); dessiner(); afficherTout();
+        } }, "＋ Ajouter")));
+    };
+    dessiner();
+    ouvrirFeuille("feuilleDemandeurs", ouvrirDemandeurs);
+  }
 
   function ouvrirSegment(bouton) {
     if (!donnees) return;
@@ -2107,6 +2196,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       await chargerDepuisGithub();
       chargerDutreil();
       chargerReglagesAgenda();
+    chargerSocietes();
       localStorage.setItem(CLE_GITHUB, JSON.stringify(g));
       fermerToutesFeuilles();
     } catch (e) {
@@ -2534,7 +2624,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     $("corpsClient").replaceChildren(
       el("p", { class: "aide" }, "Un client peut exister sans dossier : prospect, contact à rappeler… Vous lui créerez un dossier plus tard depuis sa fiche."),
       champ("Nom du client", nom),
-      el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", "", "notaire"), true), champ("Partenaire", avecListe("partenaire", "", "partenaire"), true)),
+      el("div", { class: "deux" }, champ("Demandeur", avecListe("notaire", "", "notaire"), true), champ("Partenaire", avecListe("partenaire", "", "partenaire"), true)),
       champ("Millionnaire", avecListe("millionnaire", "", "millionnaire"), true),
       champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:120px" }, "")),
       champ("Notes client", el("textarea", { name: "notes", style: "min-height:70px" }, "")));
@@ -2938,12 +3028,12 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       }
       const etudes = [...g.values()].sort((a, b) => b.p - a.p);
       const max = Math.max(1, ...etudes.map((e) => e.p));
-      blocs.push(el("div", { class: "a-bloc" }, el("h3", null, "Par étude"),
-        el("p", { class: "soustitre" }, "Les notaires regroupés par étude : honoraires prévus et encaissés."),
+      blocs.push(el("div", { class: "a-bloc" }, el("h3", null, "Par société"),
+        el("p", { class: "soustitre" }, "Les demandeurs regroupés par société : honoraires prévus et encaissés."),
         etudes.map((e) => el("div", { class: "a-ligne" }, el("span", { class: "nom", title: e.nom }, e.nom),
           barresHtml([[e.p], [e.ca, "or"]], max), el("span", { class: "val" }, el("b", null, euros(e.p)), " / ", el("b", { class: "or" }, euros(e.ca)), ` · ${e.n} doss.`)))));
     }
-    for (const [cle, titre] of [["notaire", "Par notaire"], ["partenaire", "Par partenaire"]]) {
+    for (const [cle, titre] of [["notaire", "Par demandeur"], ["partenaire", "Par partenaire"]]) {
       const g = regrouperPar(liste, cle).slice(0, 8);
       const max = Math.max(1, ...g.map((e) => e.p));
       blocs.push(el("div", { class: "a-bloc" }, el("h3", null, titre),
@@ -3968,7 +4058,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   }
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
-  const SUIVIS = { precision: "Précision", client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Notaire", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
+  const SUIVIS = { precision: "Précision", client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Demandeur", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
     honos_art4: "Prévu article IV", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
   const appareil = () => (estTel() ? "téléphone" : "appli");
   function noterHistorique(d, avant) {
@@ -4078,6 +4168,11 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     Object.values(donnees.clients).forEach((c) => { if (c[cle]) vals.add(String(c[cle])); });
     return [...vals].sort((a, b) => a.localeCompare(b, "fr"));
   }
+  document.addEventListener("change", (e) => {
+    if (e.target.name !== "notaire") return;
+    const soc = e.target.closest(".feuille-corps") && e.target.closest(".feuille-corps").querySelector("[name=societe]");
+    if (soc && e.target.value.trim()) { const x = etudeDe(e.target.value); soc.value = x === AUTRES_ETUDES ? "" : x; }
+  });
   function avecListe(nom, valeur, cle) {
     const id = "liste-" + cle + "-" + nom;
     return [saisie(nom, valeur, "text", { list: id }), el("datalist", { id }, listeValeurs(cle).map((v) => el("option", { value: v })))];
@@ -4138,7 +4233,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       el("div", { class: "deux" }, champ("Client", [entreeClient, listeClients]), champ("Tâche", saisie("tache", d.tache))),
       champ("Statut", [boutonsStatut, champStatut]),
       el("div", { class: "deux" }, champ("Nature du dossier", [champNature, listeNatures]), champ("Précision", [champPrecision, listePrecisions])),
-      el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", d.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", d.partenaire, "partenaire"), true)),
+      el("div", { class: "deux" }, champ("Demandeur", avecListe("notaire", d.notaire, "notaire"), true), champ("Société", [saisie("societe", (d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
+      champ("Partenaire", avecListe("partenaire", d.partenaire, "partenaire"), true),
       el("h4", { class: "rubrique" }, "Honoraires"),
       el("div", { class: "trois" },
         champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
@@ -4642,7 +4738,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     zone.replaceChildren(
       el("h1", null, nom),
       el("div", { class: "sous" }, `Fiche client du ${new Date().toLocaleDateString("fr-FR")} · ${ds.length} dossier(s) · prévu ${euros(p)} · encaissé ${euros(ca)} · reste ${euros(p - ca)}`),
-      el("table", null, el("tr", null, ...["Notaire", "Partenaire", "Millionnaire"].map((t) => el("th", null, t))),
+      el("table", null, el("tr", null, ...["Demandeur", "Partenaire", "Millionnaire"].map((t) => el("th", null, t))),
         el("tr", null, el("td", null, f.notaire || "—"), el("td", null, f.partenaire || "—"), el("td", null, f.millionnaire || "—"))),
       el("h2", null, "Dossiers"),
       el("table", null, el("tr", null, ...["Tâche", "Étape", "Début", "Prévu", "Encaissé"].map((t) => el("th", null, t))),
@@ -4664,6 +4760,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   const natureNormale = (x) => { const t = String(x || "").replace(/\s+/g, " ").trim(); return naturesConnues().find((n) => n.toLowerCase() === t.toLowerCase()) || (t.charAt(0).toLocaleUpperCase("fr") + t.slice(1)); };
   function enregistrerDossier() {
     const v = lireFormulaire($("corpsDossier"));
+    if (v.notaire && v.societe !== undefined && v.societe.trim()) rattacherDemandeur(v.notaire, v.societe);
+    delete v.societe;
     if (!v.client) { informer("Indiquez le nom du client."); return; }
     if (!String(v.nature || "").trim()) { informer("Indiquez la nature du dossier (Analyse, Acte… ou une nouvelle)."); return; }
     const avant = enCours >= 0 ? { ...donnees.dossiers[enCours] } : null;
@@ -4719,7 +4817,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
         el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       blocTaches(nom),
-      el("div", { class: "deux" }, champ("Notaire", avecListe("notaire", f.notaire, "notaire"), true), champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true)),
+      el("div", { class: "deux" }, champ("Demandeur", avecListe("notaire", f.notaire, "notaire"), true), champ("Société", [saisie("societe", (f.notaire && etudeDe(f.notaire) !== AUTRES_ETUDES ? etudeDe(f.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
+      champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true),
       champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true),
       champ("Commentaire client", avecLiens(el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || ""))),
       champ("Notes client", avecLiens(el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || ""))),
@@ -4743,6 +4842,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   }
   function enregistrerClient() {
     const v = lireFormulaire($("corpsClient"));
+    if (v.notaire && v.societe !== undefined && v.societe.trim()) rattacherDemandeur(v.notaire, v.societe);
+    delete v.societe;
     if (clientEnCours === null) {  // création d'un client sans dossier
       const nom = (v.nom_client || "").trim();
       if (!nom) { informer("Indiquez le nom du client."); return; }
@@ -4981,6 +5082,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   $("enregistrerPacte").addEventListener("click", enregistrerPacte);
   $("enregistrerAgenda").addEventListener("click", validerReglagesAgenda);
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
+  $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
   $("enregistrerTache").addEventListener("click", enregistrerTache);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
@@ -5254,6 +5356,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     else chargerDepuisGithub(true).catch(() => {});
     if (dutreil.modifie) envoyerDutreil(); else chargerDutreil(true);
     chargerReglagesAgenda();
+    chargerSocietes();
   } else if (donnees) {
     etatSync("local", "Copie sur cet appareil, sans GitHub");
   }
