@@ -961,6 +961,8 @@ body.glisser .section.vide { display: block; }
     <button class="bouton large" id="btnGithubVide">Se connecter à GitHub</button>
     <p style="margin-top:18px">Ou, sans GitHub, ouvrez une copie du fichier.</p>
     <button class="bouton leger large" id="btnImporterVide">Choisir un fichier suivi_gp.json</button>
+    <p style="margin-top:18px">Ou partez de zéro : l’appli crée un suivi vide, à remplir dossier par dossier.</p>
+    <button class="bouton leger large" id="btnSuiviVide">Commencer un suivi vide</button>
   </div>
 
   <div id="contenu">
@@ -1870,6 +1872,20 @@ body.glisser .section.vide { display: block; }
     $("deconnecterGithub").hidden = !github;
     ouvrirFeuille("feuilleGithub");
   }
+  // crée le fichier de suivi dans le dépôt : avec les dossiers déjà sur cet appareil, ou vide
+  async function creerFichierGithub(g) {
+    const vide = !donnees || !donnees.dossiers.length;
+    if (!confirm(vide ? `Créer un fichier « ${g.chemin} » vide dans le dépôt ${g.depot} ?`
+      : `Créer « ${g.chemin} » dans le dépôt ${g.depot} avec les ${donnees.dossiers.length} dossiers de cet appareil ?`)) return;
+    const contenu = JSON.stringify({ version: 2, dossiers: vide ? [] : donnees.dossiers, clients: vide ? {} : donnees.clients }, null, 1);
+    const url = `https://api.github.com/repos/${encodeURIComponent(g.proprietaire)}/${encodeURIComponent(g.depot)}/contents/${g.chemin.split("/").map(encodeURIComponent).join("/")}`;
+    const r = await fetch(url, { method: "PUT", headers: { "Authorization": "Bearer " + g.cle, "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
+      body: JSON.stringify({ message: `Création de ${g.chemin}`, content: versBase64(contenu), branch: g.branche }) });
+    if (!r.ok) { afficherErreurGithub(`<b>Création impossible</b> (code ${r.status}) : vérifiez que la clé a l’autorisation « Contents : Read and write ».`); return; }
+    informer(`« ${g.chemin} » créé dans le dépôt.`);
+    connecter();
+  }
+
   async function connecter() {
     const g = {
       proprietaire: $("ghProprietaire").value.trim(), depot: $("ghDepot").value.trim(),
@@ -1916,6 +1932,10 @@ body.glisser .section.vide { display: block; }
     if (!depot.ok) return afficherErreurGithub("GitHub ne répond pas comme prévu (code " + depot.status + ").");
     const infoDepot = await depot.json();
     const branche = await api(`repos/${nomDepot}/branches/${encodeURIComponent(g.branche)}`);
+    if (branche.status === 404 && (infoDepot.size === 0 || g.branche === infoDepot.default_branch)) {
+      return afficherErreurGithub(`<b>Le dépôt ${esc(g.depot)} est tout neuf et vide.</b> L’appli peut y créer le fichier « ${esc(g.chemin)} » elle-même.`,
+        [[`＋ Créer « ${g.chemin} » ici`, () => creerFichierGithub(g)]]);
+    }
     if (branche.status === 404) {
       return afficherErreurGithub(`<b>La branche « ${esc(g.branche)} » n’existe pas dans ce dépôt.</b> Sa branche principale s’appelle « ${esc(infoDepot.default_branch)} ».`,
         [[`Utiliser « ${infoDepot.default_branch} »`, () => { $("ghBranche").value = infoDepot.default_branch; connecter(); }]]);
@@ -1925,10 +1945,11 @@ body.glisser .section.vide { display: block; }
       const fichiers = (await racine.json()).filter((f) => f.type === "file").map((f) => f.path);
       const json = fichiers.filter((f) => /\.json$/i.test(f));
       if (!fichiers.includes(g.chemin)) {
-        if (!fichiers.length) return afficherErreurGithub("<b>Le dépôt est vide.</b> Ajoutez-y votre fichier suivi_gp.json (Add file, puis Upload files).");
+        const creer = [`＋ Créer « ${g.chemin} » ici`, () => creerFichierGithub(g)];
+        if (!fichiers.length) return afficherErreurGithub(`<b>Le dépôt est vide.</b> L’appli peut y créer le fichier « ${esc(g.chemin)} » elle-même.`, [creer]);
         return afficherErreurGithub(`<b>Le fichier « ${esc(g.chemin)} » n’est pas à la racine du dépôt.</b> `
-          + (json.length ? "Fichiers JSON trouvés :" : "Aucun fichier JSON à la racine. Fichiers présents : " + esc(fichiers.slice(0, 8).join(", "))),
-          json.map((f) => [f, () => { $("ghChemin").value = f; connecter(); }]));
+          + (json.length ? "Fichiers JSON trouvés, ou créez-le :" : "L’appli peut le créer elle-même."),
+          [...json.map((f) => [f, () => { $("ghChemin").value = f; connecter(); }]), creer]);
       }
     }
     if (erreur && erreur.statut === 403) return afficherErreurGithub("<b>La clé n’a pas le droit de lire le fichier.</b> Dans ses réglages, mettez « Contents » sur « Read and write ».");
@@ -3143,7 +3164,7 @@ body.glisser .section.vide { display: block; }
 
   function afficherTout() {
     memoriserFiltres();
-    const vide = !donnees || !donnees.dossiers.length;
+    const vide = !donnees;
     $("accueilVide").hidden = !vide;
     $("contenu").hidden = vide;
     $("btnNouveau").hidden = vide;
@@ -4107,6 +4128,12 @@ body.glisser .section.vide { display: block; }
   };
   $("btnImporter").addEventListener("click", choisirFichier);
   $("btnImporterVide").addEventListener("click", choisirFichier);
+  $("btnSuiviVide").addEventListener("click", () => {
+    donnees = { version: 2, dossiers: [], clients: {}, importe: new Date().toISOString(), modifie: new Date().toISOString(), fichier: "suivi_gp.json" };
+    sauver(false);
+    afficherTout(); montrerVue();
+    informer("Suivi vide créé : ajoutez un dossier avec le bouton +.");
+  });
   $("fichier").addEventListener("change", () => {
     const f = $("fichier").files[0];
     if (!f) return;
