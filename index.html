@@ -1053,8 +1053,13 @@ body.glisser .section.vide { display: block; }
       <div class="filtre"><span class="lib">Nature</span><button class="segment" data-cle="type"><span data-titre="Nature">Tous</span></button></div>
       <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
       <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
+      <div class="filtre"><span class="lib">En attente de</span><button class="segment" data-cle="attente"><span data-titre="En attente de">Tous</span></button></div>
+      <div class="filtre"><span class="lib">Prochaine action</span><button class="segment" data-cle="action"><span data-titre="Prochaine action">Tous</span></button></div>
       <div class="filtre secondaire"><span class="lib">Partenaire</span><button class="segment" data-cle="partenaire"><span data-titre="Partenaire">Tous</span></button></div>
       <div class="filtre secondaire"><span class="lib">Ancienneté</span><button class="segment" data-cle="anciennete"><span data-titre="Ancienneté">Tous</span></button></div>
+      <div class="filtre secondaire"><span class="lib">Encaissement</span><button class="segment" data-cle="encaisse"><span data-titre="Encaissement">Tous</span></button></div>
+      <div class="filtre secondaire"><span class="lib">Modifié</span><button class="segment" data-cle="modifie"><span data-titre="Modifié">Tous</span></button></div>
+      <div class="filtre secondaire"><span class="lib">Rendez-vous</span><button class="segment" data-cle="rdvf"><span data-titre="Rendez-vous">Tous</span></button></div>
       <label class="option-archives secondaire"><input type="checkbox" id="masquerArchives"> Masquer les archives</label>
       <div class="filtres-fin">
         <button class="bouton-discret plus-filtres" id="plusFiltres" type="button" aria-expanded="false">Plus de filtres<i id="nbSecondaires"></i></button>
@@ -1312,7 +1317,15 @@ body.glisser .section.vide { display: block; }
     return n;
   }
   const ANCIENNETES = ["-30j", "+30j", "+60j", "+90j", "Arch", "(sans date)"];
-  const SEGMENTS = { statut: "Statut", type: "Nature", notaire: "Notaire", exercice: "Exercice", partenaire: "Partenaire", anciennete: "Ancienneté" };
+  const SEGMENTS = { statut: "Statut", attente: "En attente de", action: "Prochaine action", type: "Nature", notaire: "Notaire", exercice: "Exercice",
+    partenaire: "Partenaire", anciennete: "Ancienneté", encaisse: "Encaissement", modifie: "Modifié", rdvf: "Rendez-vous" };
+  // valeurs fixes des nouveaux filtres, dans cet ordre
+  const VALEURS_FIXES = {
+    action: ["Sans prochaine action", "Tâche prévue", "Rendez-vous prévu", "Non concerné"],
+    encaisse: ["Reste à encaisser", "Soldé", "Sans honoraires"],
+    modifie: ["Aujourd’hui", "Cette semaine", "Ce mois-ci", "Plus ancien", "Jamais modifié"],
+    rdvf: ["Rendez-vous à venir", "Rendez-vous passé", "Sans rendez-vous"]
+  };
   const COMMUNS = ["notaire", "partenaire", "millionnaire", "a_vie"];
   const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
@@ -1320,7 +1333,8 @@ body.glisser .section.vide { display: block; }
   let donnees = null;
   let enCours = null;
   let clientEnCours = null;
-  const selections = { statut: new Set(), type: new Set(), notaire: new Set(), exercice: new Set(), partenaire: new Set(), anciennete: new Set() };
+  const selections = { statut: new Set(), attente: new Set(), action: new Set(), type: new Set(), notaire: new Set(), exercice: new Set(), partenaire: new Set(),
+    anciennete: new Set(), encaisse: new Set(), modifie: new Set(), rdvf: new Set() };
   let repliees = new Set();       // sections du Kanban repliées
   let dejaVues = new Set();
   let bascules = new Set();       // ouvertures faites pendant une recherche
@@ -1383,8 +1397,39 @@ body.glisser .section.vide { display: block; }
     const meule = [d.client, d.tache, d.commentaire, d.notes, d.notaire, d.partenaire, f.commentaire, f.notes].join(" ").toLocaleLowerCase("fr");
     return t.split(/\s+/).every((m) => meule.includes(m));
   }
+  // clients qui ont une tâche ouverte (calculé une fois par affichage)
+  let cacheTachesOuvertes = null;
+  function clientsAvecTache() {
+    if (!cacheTachesOuvertes) {
+      cacheTachesOuvertes = new Set();
+      for (const [cle, f] of Object.entries(donnees ? donnees.clients : {})) if ((f.taches || []).some((t) => !t.fait)) cacheTachesOuvertes.add(cle);
+    }
+    return cacheTachesOuvertes;
+  }
+  function derniereModif(d) {
+    const h = (d.historique || []).map((x) => x.le).sort().pop();
+    return h ? h.slice(0, 10) : "";
+  }
   function valeurFiltre(d, cle) {
     if (cle === "anciennete") return anciennete(d) || "(sans date)";
+    if (cle === "attente") return String(d.precision || "").trim() ? String(d.precision).trim().toLowerCase() : "(aucune précision)";
+    if (cle === "action") {
+      if (!"12".includes(etapeDe(d)) || d.archives) return "Non concerné";
+      if (d.rdv && d.rdv >= enIso(aujourdhui())) return "Rendez-vous prévu";
+      if (clientsAvecTache().has(cleClient(d.client))) return "Tâche prévue";
+      return "Sans prochaine action";
+    }
+    if (cle === "encaisse") {
+      const p = prevu(d), ca = Number(d.ca) || 0;
+      return !p ? "Sans honoraires" : ca >= p ? "Soldé" : "Reste à encaisser";
+    }
+    if (cle === "modifie") {
+      const m = derniereModif(d);
+      if (!m) return "Jamais modifié";
+      const j = Math.round((aujourdhui() - versDate(m)) / 86400000);
+      return j <= 0 ? "Aujourd’hui" : j <= 7 ? "Cette semaine" : j <= 31 ? "Ce mois-ci" : "Plus ancien";
+    }
+    if (cle === "rdvf") return !d.rdv ? "Sans rendez-vous" : d.rdv >= enIso(aujourdhui()) ? "Rendez-vous à venir" : "Rendez-vous passé";
     if (cle === "type") return sansNumero(d.type) || "(vide)";
     if (cle === "statut") return (ETAPES.find(([n]) => n === etapeDe(d)) || ["", ""])[1];
     return String(d[cle] ?? "").trim() || "(vide)";
@@ -1413,6 +1458,9 @@ body.glisser .section.vide { display: block; }
     let valeurs;
     if (cle === "anciennete") valeurs = [...ANCIENNETES];
     else if (cle === "statut") valeurs = ETAPES.map(([, nom]) => nom);
+    else if (VALEURS_FIXES[cle]) valeurs = [...VALEURS_FIXES[cle]];
+    else if (cle === "attente") valeurs = [...new Set(donnees.dossiers.map((d) => valeurFiltre(d, "attente")))]
+      .sort((a, b) => (a.startsWith("(") ? 1 : 0) - (b.startsWith("(") ? 1 : 0) || a.localeCompare(b, "fr"));
     else {
       const toutes = new Set(donnees.dossiers.map((d) => String(d[cle] ?? "").trim()).filter(Boolean));
       if (cle === "type") valeurs = naturesConnues().filter((n) => comptes.has(n) || selections.type.has(n));
@@ -3520,6 +3568,7 @@ body.glisser .section.vide { display: block; }
     || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche()));
 
   function afficherTout() {
+    cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     const vide = !donnees;
     $("accueilVide").hidden = !vide;
@@ -3531,7 +3580,7 @@ body.glisser .section.vide { display: block; }
     const liste = visibles();
     majSegments();
     const nbFiltres = Object.values(selections).reduce((s, x) => s + (x.size ? 1 : 0), 0) + ($("masquerArchives").checked ? 1 : 0);
-    const nbSec = (selections.partenaire.size ? 1 : 0) + (selections.anciennete.size ? 1 : 0) + ($("masquerArchives").checked ? 1 : 0);
+    const nbSec = ["partenaire", "anciennete", "encaisse", "modifie", "rdvf"].filter((k) => selections[k].size).length + ($("masquerArchives").checked ? 1 : 0);
     $("nbSecondaires").textContent = nbSec ? ` · ${nbSec}` : "";
     $("plusFiltres").classList.toggle("actif", nbSec > 0);
     $("fermerFiltres").textContent = `Voir ${liste.length === donnees.dossiers.length ? "les" : "ces"} ${liste.length} dossier${liste.length > 1 ? "s" : ""}`;
