@@ -1004,6 +1004,24 @@ body.glisser .section.vide { display: block; }
 .frise.compacte .frise-bloc b { font-size: 11.5px; }
 .frise.compacte .frise-bloc small { font-size: 10px; }
 .frise.cible { background: rgba(167,125,47,.08); }
+
+/* ---------- horaires et congés ---------- */
+.btn-horaires { border: 1px solid var(--bordure) !important; background: var(--carte) !important; border-radius: 8px !important; padding: 6px 11px !important; font-size: 13px; color: var(--bleu); }
+.agenda-jours { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.agenda-jours button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 18px; padding: 7px 12px; font-size: 14px; min-width: 48px; }
+.agenda-jours button[aria-pressed="true"] { background: var(--bleu); color: var(--carte); border-color: var(--bleu); font-weight: 600; }
+.agenda-plage { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.agenda-plage span:first-child { width: 90px; color: var(--discret); font-size: 13.5px; }
+.agenda-plage input, .agenda-ajout input { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 7px 8px; }
+.agenda-conges { display: grid; gap: 6px; margin-bottom: 10px; }
+.agenda-conge { display: flex; justify-content: space-between; align-items: center; background: var(--section); border-radius: 8px; padding: 7px 10px; font-size: 13.5px; }
+.agenda-conge button { border: 0; background: none; color: var(--discret); font-size: 16px; }
+.agenda-ajout { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.agenda-ajout label { display: grid; gap: 3px; font-size: 12px; color: var(--discret); }
+.agenda-ajout label.large { flex: 1; min-width: 140px; }
+.semaine-tete em.conge { font-style: normal; font-size: 10.5px; background: #e3e6f2; color: #2f3a6b; border-radius: 6px; padding: 1px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; }
+.conge-jour { margin: 0 0 6px; font-size: 13px; color: #2f3a6b; }
+.cal-jour.conge { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(107,119,176,.08) 6px 12px), var(--fond) !important; }
 </style>
 </head>
 <body>
@@ -1224,6 +1242,18 @@ body.glisser .section.vide { display: block; }
   </div>
 </div>
 
+<!-- horaires et congés -->
+<div class="feuille feuille-petite" id="feuilleAgenda" role="dialog" aria-modal="true" aria-labelledby="titreAgenda">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreAgenda">Horaires et congés</h3>
+      <button class="valider" id="enregistrerAgenda">Enregistrer</button>
+    </div>
+    <div class="feuille-corps" id="corpsAgenda"></div>
+  </div>
+</div>
+
 <!-- réglages GitHub -->
 <div class="feuille" id="feuilleGithub" role="dialog" aria-modal="true" aria-labelledby="titreGithub">
   <div class="feuille-boite">
@@ -1256,6 +1286,7 @@ body.glisser .section.vide { display: block; }
     <p id="infoFichier"></p>
     <button class="bouton large" id="btnActualiser">Recharger depuis GitHub</button>
     <button class="bouton leger large" id="btnGithub">Réglages GitHub</button>
+    <button class="bouton leger large" id="btnHoraires">Horaires et congés</button>
     <button class="bouton leger large" id="btnExporter">Exporter une copie</button>
     <button class="bouton leger large" id="btnImporter">Ouvrir un autre fichier</button>
     <button class="bouton leger large" id="btnFermerMenu">Fermer</button>
@@ -1783,6 +1814,32 @@ body.glisser .section.vide { display: block; }
   }
   const adresseDe = (chemin) => `https://api.github.com/repos/${encodeURIComponent(github.proprietaire)}/${encodeURIComponent(github.depot)}/contents/${chemin.split("/").map(encodeURIComponent).join("/")}`;
 
+  const cheminAgenda = () => [...github.chemin.split("/").slice(0, -1), "agenda.json"].join("/");
+  async function chargerReglagesAgenda() {
+    if (!github) return;
+    try {
+      const r = await fetch(adresseDe(cheminAgenda()) + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
+      if (!r.ok) return;
+      const info = await r.json();
+      reglagesAgenda = { ...AGENDA_DEFAUT, ...JSON.parse(depuisBase64(info.content)), sha: info.sha };
+      localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda));
+      if (vueCourante() === "calendrier") afficherCalendrier();
+    } catch (e) { /* on garde les réglages de cet appareil */ }
+  }
+  async function enregistrerReglagesAgenda() {
+    localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda));
+    if (!github) return;
+    try {
+      const url = adresseDe(cheminAgenda());
+      const actuel = await fetch(url + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
+      const sha = actuel.ok ? (await actuel.json()).sha : undefined;
+      const { sha: _ignore, ...contenu } = reglagesAgenda;
+      const r = await fetch(url, { method: "PUT", headers: { ...entetes(), "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Agenda : horaires et congés", content: versBase64(JSON.stringify(contenu, null, 1)), sha, branch: github.branche }) });
+      if (r.ok) { reglagesAgenda.sha = (await r.json()).content.sha; localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda)); }
+    } catch (e) { informer("Réglages gardés sur cet appareil : GitHub injoignable pour l’instant."); }
+  }
+
   async function chargerDutreil(silencieux) {
     if (!github) return;
     const url = adresseDe(cheminDutreil()) + "?ref=" + encodeURIComponent(github.branche);
@@ -2027,6 +2084,7 @@ body.glisser .section.vide { display: block; }
     try {
       await chargerDepuisGithub();
       chargerDutreil();
+      chargerReglagesAgenda();
       localStorage.setItem(CLE_GITHUB, JSON.stringify(g));
       fermerToutesFeuilles();
     } catch (e) {
@@ -3294,7 +3352,8 @@ body.glisser .section.vide { display: block; }
   // ---- roue d'actions : décaler d'un jour, avancer d'un jour, heure fixe, faite ----
   function jourOuvrePrecedent(iso) {
     const d = versDate(iso);
-    do { d.setDate(d.getDate() - 1); } while (!JOURS_TRAVAILLES.includes(d.getDay()));
+    let n = 0;
+    do { d.setDate(d.getDate() - 1); } while (!jourTravaille(enIso(d)) && ++n < 120);
     return enIso(d);
   }
   function actionsRoue(e) {
@@ -3443,7 +3502,8 @@ body.glisser .section.vide { display: block; }
       const repos = !jourTravaille(iso);
       return el("div", { class: "semaine-col" + (iso === auj ? " aujourdhui" : "") + (repos ? " repos" : "") + (iso === jourCalendrier ? " choisi" : "") },
         el("button", { type: "button", class: "semaine-tete", onclick: () => { jourCalendrier = iso; afficherCalendrier(); } },
-          el("span", null, d.toLocaleDateString("fr-FR", { weekday: "short" })), el("b", null, d.getDate())),
+          el("span", null, d.toLocaleDateString("fr-FR", { weekday: "short" })), el("b", null, d.getDate()),
+          congeDu(iso) ? el("em", { class: "conge" }, congeDu(iso).libelle || "Congé") : null),
         el("div", { class: "semaine-sans-heure" }, sansHeure.map((e) => {
           const puce = el("button", { type: "button", class: `ev ${e.type}${e.retard ? " retard" : ""}`, title: e.sous, onclick: e.ouvrir }, e.titre);
           puce.addEventListener("contextmenu", (x) => { x.preventDefault(); ouvrirRoue(x.clientX, x.clientY, e, false); });
@@ -3451,7 +3511,8 @@ body.glisser .section.vide { display: block; }
         })),
         friseJour(avecHeure, iso, true));
     });
-    $("calSemaine").replaceChildren(el("div", { class: "semaine" }, el("div", { class: "semaine-axe-col" }, el("div", { class: "semaine-tete vide" }), el("div", { class: "semaine-sans-heure vide" }), axe), ...colonnes));
+    const gabarit = `46px ${jours.map((d) => (jourTravaille(enIso(d)) ? "minmax(0, 1fr)" : "minmax(0, .5fr)")).join(" ")}`;
+    $("calSemaine").replaceChildren(el("div", { class: "semaine", style: `grid-template-columns:${gabarit}` }, el("div", { class: "semaine-axe-col" }, el("div", { class: "semaine-tete vide" }), el("div", { class: "semaine-sans-heure vide" }), axe), ...colonnes));
     // les zones « sans heure » ont la même hauteur dans toutes les colonnes, pour aligner les heures
     requestAnimationFrame(() => {
       const zones = [...document.querySelectorAll(".semaine .semaine-sans-heure")];
@@ -3459,6 +3520,55 @@ body.glisser .section.vide { display: block; }
       const h = Math.max(...zones.map((z) => z.offsetHeight));
       zones.forEach((z) => (z.style.minHeight = h + "px"));
     });
+  }
+
+  // ---- fenêtre des horaires et congés ----
+  let brouillonAgenda = null;
+  function ouvrirReglagesAgenda() {
+    fermerMenu();
+    brouillonAgenda = JSON.parse(JSON.stringify(reglagesAgenda));
+    const dessiner = () => {
+      const b = brouillonAgenda;
+      const jours = [[1, "Lun"], [2, "Mar"], [3, "Mer"], [4, "Jeu"], [5, "Ven"], [6, "Sam"], [0, "Dim"]];
+      const plage = (k, lib) => {
+        const [a, z] = b.plages[k] || ["", ""];
+        const d = el("input", { type: "time", value: a }), f = el("input", { type: "time", value: z });
+        const maj = () => { b.plages[k] = [d.value, f.value]; };
+        d.addEventListener("change", maj); f.addEventListener("change", maj);
+        return el("div", { class: "agenda-plage" }, el("span", null, lib), d, el("span", null, "–"), f);
+      };
+      const du = el("input", { type: "date" }), au = el("input", { type: "date" }), lib = el("input", { type: "text", placeholder: "Vacances, formation…" });
+      $("corpsAgenda").replaceChildren(
+        el("h4", { class: "rubrique" }, "Jours travaillés"),
+        el("div", { class: "agenda-jours" }, jours.map(([n, nom]) => el("button", { type: "button", "aria-pressed": String(b.jours.includes(n)),
+          onclick: () => { b.jours = b.jours.includes(n) ? b.jours.filter((x) => x !== n) : [...b.jours, n]; dessiner(); } }, nom))),
+        el("h4", { class: "rubrique" }, "Horaires"),
+        plage(0, "Matin"), plage(1, "Après-midi"),
+        el("p", { class: "aide" }, "Laissez une plage vide pour la supprimer (journée continue, par exemple)."),
+        el("h4", { class: "rubrique" }, "Congés et jours off"),
+        el("div", { class: "agenda-conges" }, (b.conges || []).length ? b.conges.slice().sort((x, y) => x.du.localeCompare(y.du)).map((c) => el("div", { class: "agenda-conge" },
+          el("span", null, el("b", null, c.au && c.au !== c.du ? `du ${fmtDate(c.du)} au ${fmtDate(c.au)}` : `le ${fmtDate(c.du)}`), c.libelle ? ` · ${c.libelle}` : ""),
+          el("button", { type: "button", "aria-label": "Retirer", onclick: () => { b.conges = b.conges.filter((x) => x !== c); dessiner(); } }, "✕")))
+          : el("p", { class: "m-vide" }, "Aucun congé prévu.")),
+        el("div", { class: "agenda-ajout" }, el("label", null, "Du", du), el("label", null, "au", au), el("label", { class: "large" }, "Motif", lib),
+          el("button", { type: "button", class: "bouton", onclick: () => {
+            if (!du.value) { informer("Indiquez au moins le premier jour."); return; }
+            b.conges = [...(b.conges || []), { du: du.value, au: au.value && au.value >= du.value ? au.value : du.value, libelle: lib.value.trim() }];
+            dessiner();
+          } }, "＋ Ajouter")));
+    };
+    dessiner();
+    ouvrirFeuille("feuilleAgenda", ouvrirReglagesAgenda);
+  }
+  async function validerReglagesAgenda() {
+    reglagesAgenda = { ...reglagesAgenda, ...brouillonAgenda };
+    // les tâches qui tombent sur un jour devenu non travaillé partent au jour travaillé suivant
+    const jours = [];
+    for (let k = 0; k < 90; k++) { const d = aujourdhui(); d.setDate(d.getDate() + k); jours.push(enIso(d)); }
+    const resume = apresAgenda(jours);
+    terminerFeuille(); afficherTout();
+    informer("Horaires et congés enregistrés." + resume);
+    enregistrerReglagesAgenda();
   }
 
   function afficherCalendrier() {
@@ -3477,6 +3587,7 @@ body.glisser .section.vide { display: block; }
       el("button", { type: "button", "aria-label": semaine ? "Semaine précédente" : "Mois précédent", onclick: () => (semaine ? changerSemaine(-1) : changerMois(-1)) }, "‹"),
       el("button", { type: "button", onclick: () => { const d = aujourdhui(); d.setDate(1); moisCalendrier = d; jourCalendrier = auj; afficherCalendrier(); } }, "Aujourd’hui"),
       el("button", { type: "button", "aria-label": semaine ? "Semaine suivante" : "Mois suivant", onclick: () => (semaine ? changerSemaine(1) : changerMois(1)) }, "›"),
+      el("button", { type: "button", class: "btn-horaires", title: "Horaires et congés", onclick: ouvrirReglagesAgenda }, "⚙ Horaires"),
       el("div", { class: "cal-modes ordi" }, [["mois", "Mois"], ["semaine", "Semaine"]].map(([m, lib]) =>
         el("button", { type: "button", "aria-pressed": String(modeCalendrier === m), onclick: () => { modeCalendrier = m; memoriserFiltres(); afficherCalendrier(); } }, lib))),
       el("div", { class: "cal-types" }, ["rdv", "tache", "dutreil"].map((t) => el("button", { type: "button", "aria-pressed": String(typesCalendrier.has(t)),
@@ -3493,7 +3604,8 @@ body.glisser .section.vide { display: block; }
       const liste = ev[iso] || [];
       const classes = ["cal-jour"];
       if (jour.getMonth() !== moisCalendrier.getMonth()) classes.push("autre");
-      if (jour.getDay() === 0 || jour.getDay() === 6) classes.push("weekend");
+      if (!jourTravaille(iso)) classes.push("weekend");
+      if (congeDu(iso)) classes.push("conge");
       if (iso === auj) classes.push("aujourdhui");
       if (iso === jourCalendrier) classes.push("choisi");
       cellules.push(el("button", { type: "button", class: classes.join(" "), "data-jour": iso, "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
@@ -3547,6 +3659,7 @@ body.glisser .section.vide { display: block; }
     }
     $("calPanneau").replaceChildren(
       el("h3", null, jourChoisi.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })),
+      congeDu(jourCalendrier) ? el("p", { class: "conge-jour" }, `🌴 ${congeDu(jourCalendrier).libelle || "Congé"}`) : null,
       el("div", { class: "sous" }, elements.length ? `${elements.length} élément(s)` : "Rien de prévu ce jour-là."),
       elements.some((e) => e.heure && e.type !== "dutreil") ? friseJour(elements.filter((e) => e.heure && e.type !== "dutreil")) : "",
       ...elements.filter((e) => !e.heure || e.type === "dutreil").map(ligne),
@@ -4226,11 +4339,17 @@ body.glisser .section.vide { display: block; }
   const DUREES = [["", "—"], ["15", "15 min"], ["30", "30 min"], ["45", "45 min"], ["60", "1 h"], ["90", "1 h 30"], ["120", "2 h"], ["180", "3 h"], ["240", "4 h"]];
   const DUREE_TACHE = 30, DUREE_RDV = 60;          // valeurs par défaut quand rien n'est indiqué
   const JOURNEE = [9 * 60, 18 * 60];              // amplitude de la journée de travail
-  // horaires de travail : du lundi au jeudi, 9 h – 12 h 30 et 14 h – 18 h (vendredi, samedi, dimanche : non travaillés)
-  const PLAGES_TRAVAIL = [[9 * 60, 12 * 60 + 30], [14 * 60, 18 * 60]];
-  const JOURS_TRAVAILLES = [1, 2, 3, 4];           // 1 = lundi … 4 = jeudi
-  const jourTravaille = (iso) => JOURS_TRAVAILLES.includes(versDate(iso).getDay());
-  const plagesDu = (iso) => (jourTravaille(iso) ? PLAGES_TRAVAIL : []);
+  // ---- horaires de travail, jours travaillés et congés : réglables (⚙ Horaires), partagés par GitHub (agenda.json) ----
+  const CLE_AGENDA = "suivi-gp-donnees-agenda";
+  const AGENDA_DEFAUT = { jours: [1, 2, 3, 4, 5], plages: [["09:00", "12:30"], ["14:00", "18:00"]], conges: [] };
+  let reglagesAgenda = (() => { try { return { ...AGENDA_DEFAUT, ...JSON.parse(localStorage.getItem(CLE_AGENDA) || "{}") }; } catch (e) { return { ...AGENDA_DEFAUT }; } })();
+  const congeDu = (iso) => (reglagesAgenda.conges || []).find((c) => c.du && c.du <= iso && iso <= (c.au || c.du));
+  const jourTravaille = (iso) => (reglagesAgenda.jours || []).includes(versDate(iso).getDay()) && !congeDu(iso);
+  function plagesDu(iso) {
+    if (!jourTravaille(iso)) return [];
+    const mn = (h) => { const m = /^(\d{1,2}):(\d{2})$/.exec(h || ""); return m ? +m[1] * 60 + +m[2] : null; };
+    return (reglagesAgenda.plages || []).map(([a, b]) => [mn(a), mn(b)]).filter(([a, b]) => a !== null && b !== null && a < b).sort((x, y) => x[0] - y[0]);
+  }
   const enMinutes = (h) => { const m = /^(\d{1,2}):(\d{2})$/.exec(h || ""); return m ? +m[1] * 60 + +m[2] : null; };
   const enHeure = (min) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
   function plage(heure, duree) {
@@ -4292,7 +4411,8 @@ body.glisser .section.vide { display: block; }
   const dureeTache = (t) => Number(t.duree) || DUREE_TACHE;
   function jourOuvreSuivant(iso) {
     const d = versDate(iso);
-    do { d.setDate(d.getDate() + 1); } while (!JOURS_TRAVAILLES.includes(d.getDay()));
+    let n = 0;
+    do { d.setDate(d.getDate() + 1); } while (!jourTravaille(enIso(d)) && ++n < 120);
     return enIso(d);
   }
   function tachesDuJour(iso) {
@@ -4818,6 +4938,8 @@ body.glisser .section.vide { display: block; }
   $("fabVoile").addEventListener("pointerdown", fermerFab);
   $("btnNouveauClient").addEventListener("click", nouveauClient);
   $("enregistrerPacte").addEventListener("click", enregistrerPacte);
+  $("enregistrerAgenda").addEventListener("click", validerReglagesAgenda);
+  $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("enregistrerTache").addEventListener("click", enregistrerTache);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
@@ -5090,6 +5212,7 @@ body.glisser .section.vide { display: block; }
     if (donnees && donnees.modifie) envoyerGithub();
     else chargerDepuisGithub(true).catch(() => {});
     if (dutreil.modifie) envoyerDutreil(); else chargerDutreil(true);
+    chargerReglagesAgenda();
   } else if (donnees) {
     etatSync("local", "Copie sur cet appareil, sans GitHub");
   }
