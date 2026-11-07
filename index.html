@@ -954,6 +954,10 @@ body.glisser .section.vide { display: block; }
 .frise-bloc.saisi { box-shadow: 0 6px 16px rgba(12,45,57,.25); z-index: 3; opacity: .92; }
 .frise-bloc .poignee { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; cursor: ns-resize; touch-action: none; }
 .frise-bloc .poignee::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 22px; height: 3px; margin-left: -11px; border-radius: 2px; background: currentColor; opacity: .35; }
+
+.frise-repos { position: absolute; left: 40px; right: 0; background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(12,45,57,.035) 6px 12px); background-color: rgba(12,45,57,.03); }
+.cal-panneau.glisse-g { animation: arrive-droite .2s ease-out; }
+.cal-panneau.glisse-d { animation: arrive-gauche .2s ease-out; }
 </style>
 </head>
 <body>
@@ -3092,6 +3096,13 @@ body.glisser .section.vide { display: block; }
     for (let h = DEBUT_FRISE / 60; h <= FIN_FRISE / 60; h++) {
       frise.append(el("div", { class: "frise-heure", style: `top:${(h * 60 - DEBUT_FRISE) * pxMin}px` }, el("span", null, `${h} h`)));
     }
+    // les heures non travaillées (avant, pause de midi, après, et jours non travaillés) en grisé
+    const travail = plagesDu(jourCalendrier);
+    let c = DEBUT_FRISE;
+    for (const [a, b] of [...travail, [FIN_FRISE, FIN_FRISE]]) {
+      if (a > c) frise.append(el("div", { class: "frise-repos", style: `top:${(c - DEBUT_FRISE) * pxMin}px;height:${(a - c) * pxMin}px` }));
+      c = Math.max(c, b);
+    }
     if (jourCalendrier === enIso(aujourdhui())) {
       const n = new Date(), m = n.getHours() * 60 + n.getMinutes();
       if (m > DEBUT_FRISE && m < FIN_FRISE) frise.append(el("div", { class: "frise-maintenant", style: `top:${(m - DEBUT_FRISE) * pxMin}px` }));
@@ -3176,6 +3187,19 @@ body.glisser .section.vide { display: block; }
     } else return;
     afficherTout();
     informer(`Durée : ${DUREES.find(([v]) => v === String(duree)) ? DUREES.find(([v]) => v === String(duree))[1] : duree + " min"}.${resume}`);
+  }
+
+  function changerJourCalendrier(n) {
+    const d = versDate(jourCalendrier); d.setDate(d.getDate() + n);
+    jourCalendrier = enIso(d);
+    if (d.getMonth() !== moisCalendrier.getMonth() || d.getFullYear() !== moisCalendrier.getFullYear()) moisCalendrier = new Date(d.getFullYear(), d.getMonth(), 1);
+    afficherCalendrier();
+    const pan = $("calPanneau");
+    pan.classList.remove("glisse-g", "glisse-d"); void pan.offsetWidth; pan.classList.add(n > 0 ? "glisse-g" : "glisse-d");
+  }
+  function changerMoisCalendrier(n) {
+    moisCalendrier = new Date(moisCalendrier.getFullYear(), moisCalendrier.getMonth() + n, 1);
+    afficherCalendrier();
   }
 
   function afficherCalendrier() {
@@ -3595,6 +3619,8 @@ body.glisser .section.vide { display: block; }
     }
     doigt = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
   }, { passive: true });
+  let doigtCible = null;
+  document.addEventListener("touchstart", (e) => { doigtCible = e.target instanceof Element ? e.target : null; }, { passive: true, capture: true });
   document.addEventListener("touchend", (e) => {
     if (!doigt) return;
     const t = e.changedTouches[0];
@@ -3602,6 +3628,10 @@ body.glisser .section.vide { display: block; }
     doigt = null;
     if (Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy) || duree > 700) return;
     if (glisse || document.querySelector(".feuille.ouverte") || document.body.classList.contains("filtres-ouverts")) return;
+    if (vueCourante() === "calendrier" && doigtCible) {
+      if (doigtCible.closest("#calPanneau")) { changerJourCalendrier(dx < 0 ? 1 : -1); return; }
+      if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
+    }
     const i = ORDRE_VUES.indexOf(vueCourante()) + (dx < 0 ? 1 : -1);
     if (i < 0 || i >= ORDRE_VUES.length) return;
     sensVue = dx < 0 ? "depuis-droite" : "depuis-gauche";
@@ -3940,7 +3970,12 @@ body.glisser .section.vide { display: block; }
   // ---- durées et créneaux : une tâche sans heure se place au prochain créneau libre de sa journée ----
   const DUREES = [["", "—"], ["15", "15 min"], ["30", "30 min"], ["45", "45 min"], ["60", "1 h"], ["90", "1 h 30"], ["120", "2 h"], ["180", "3 h"], ["240", "4 h"]];
   const DUREE_TACHE = 30, DUREE_RDV = 60;          // valeurs par défaut quand rien n'est indiqué
-  const JOURNEE = [9 * 60, 19 * 60];              // créneaux cherchés entre 9 h et 19 h
+  const JOURNEE = [9 * 60, 18 * 60];              // amplitude de la journée de travail
+  // horaires de travail : du lundi au jeudi, 9 h – 12 h 30 et 14 h – 18 h (vendredi, samedi, dimanche : non travaillés)
+  const PLAGES_TRAVAIL = [[9 * 60, 12 * 60 + 30], [14 * 60, 18 * 60]];
+  const JOURS_TRAVAILLES = [1, 2, 3, 4];           // 1 = lundi … 4 = jeudi
+  const jourTravaille = (iso) => JOURS_TRAVAILLES.includes(versDate(iso).getDay());
+  const plagesDu = (iso) => (jourTravaille(iso) ? PLAGES_TRAVAIL : []);
   const enMinutes = (h) => { const m = /^(\d{1,2}):(\d{2})$/.exec(h || ""); return m ? +m[1] * 60 + +m[2] : null; };
   const enHeure = (min) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
   function plage(heure, duree) {
@@ -3968,16 +4003,24 @@ body.glisser .section.vide { display: block; }
   // premier créneau libre assez long (aujourd'hui : pas avant l'heure qu'il est)
   function prochainCreneau(iso, duree, sauf) {
     const besoin = Number(duree) || DUREE_TACHE;
-    let debut = JOURNEE[0];
-    if (iso === enIso(aujourdhui())) {
-      const n = new Date();
-      debut = Math.max(debut, Math.ceil((n.getHours() * 60 + n.getMinutes()) / 15) * 15);
+    const maintenant = iso === enIso(aujourdhui()) ? Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / 15) * 15 : -1;
+    for (const [a, b] of creneauxLibres(iso, occupations(iso, sauf), maintenant)) if (b - a >= besoin) return enHeure(a);
+    return "";
+  }
+  // créneaux libres d'une journée : les plages de travail, moins ce qui est déjà occupé
+  function creneauxLibres(iso, occupe, maintenant) {
+    const libres = [];
+    for (const [p0, p1] of plagesDu(iso)) {
+      let c = Math.max(p0, maintenant);
+      for (const [a, b] of occupe) {
+        if (b <= c || a >= p1) continue;
+        if (a > c) libres.push([c, Math.min(a, p1)]);
+        c = Math.max(c, b);
+        if (c >= p1) break;
+      }
+      if (c < p1) libres.push([c, p1]);
     }
-    for (const [a, b] of occupations(iso, sauf)) {
-      if (a - debut >= besoin) break;
-      debut = Math.max(debut, b);
-    }
-    return debut + besoin <= JOURNEE[1] ? enHeure(debut) : "";
+    return libres;
   }
   // tâche datée sans heure : on lui trouve sa place
   function placerTache(t) {
@@ -3994,7 +4037,7 @@ body.glisser .section.vide { display: block; }
   const dureeTache = (t) => Number(t.duree) || DUREE_TACHE;
   function jourOuvreSuivant(iso) {
     const d = versDate(iso);
-    do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+    do { d.setDate(d.getDate() + 1); } while (!JOURS_TRAVAILLES.includes(d.getDay()));
     return enIso(d);
   }
   function tachesDuJour(iso) {
@@ -4021,14 +4064,8 @@ body.glisser .section.vide { display: block; }
       else mobiles.push([m, t]);
     }
     fixes.sort((a, b) => a[0] - b[0]);
-    // créneaux libres de la journée
-    const libres = [];
-    let curseur = Math.max(JOURNEE[0], maintenant);
-    for (const [a, b] of fixes) {
-      if (a > curseur) libres.push([curseur, Math.min(a, JOURNEE[1])]);
-      curseur = Math.max(curseur, b);
-    }
-    if (curseur < JOURNEE[1]) libres.push([curseur, JOURNEE[1]]);
+    // créneaux libres de la journée (plages de travail seulement)
+    const libres = creneauxLibres(iso, fixes, maintenant);
     // on garde l'ordre actuel des tâches, mais une plus courte peut passer devant pour boucher un trou
     const file = mobiles.sort((a, b) => a[0] - b[0] || String(a[1].cree || "").localeCompare(String(b[1].cree || ""))).map(([, t]) => t);
     for (const [a, b] of libres) {
