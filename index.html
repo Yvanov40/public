@@ -922,6 +922,11 @@ body.glisser .section.vide { display: block; }
 .fab-options button.vise i, .fab-options button:hover i { transform: scale(1.15); }
 
 .fab-options button span { top: 50%; left: 50%; transform: translate(calc(-50% + var(--lx, 0px) * 2.3), calc(-50% + var(--ly, 0px))); font-size: 12px; }
+
+/* ---------- filtre Notaire groupé par étude ---------- */
+.fen-segment label.etude-titre { font-weight: 600; color: var(--bleu); border-top: 1px solid var(--bordure); margin-top: 4px; padding-top: 8px; }
+.fen-segment label.etude-titre:first-child { border-top: 0; margin-top: 0; }
+.fen-segment .etude-notaires label { padding-left: 24px; font-size: 13.5px; }
 </style>
 </head>
 <body>
@@ -1351,6 +1356,36 @@ body.glisser .section.vide { display: block; }
   // --- fenêtre façon segment Excel ---
   let segmentOuvert = null, minuteurSurvol = null, veille = null;
   const survolPossible = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  // ---- études notariales : chaque notaire est rattaché à son étude (ville) ----
+  const ETUDES = [
+    ["Bordeaux", ["Jean-Charles Bouzonie", "Charlotte Hottin", "Nicolas Inguere", "Elwood Alvarez", "Paul Letierce"]],
+    ["Bègles", ["Emmanuelle Bouzonie"]],
+    ["Cabourg", ["Nicolas Clouet"]],
+    ["Genissac", ["Marie-Pierre Becuwe"]],
+    ["Lesparre", ["Stéphane Aiello"]],
+    ["Poitiers", ["Xavier Godin"]],
+    ["Saint-Michel-sur-Orge", ["Chaimaa Talbi"]]
+  ];
+  const AUTRES_ETUDES = "Autres études";
+  const normerNom = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
+  const INDEX_ETUDES = (() => {
+    const complet = new Map(), parNom = new Map();
+    for (const [ville, notaires] of ETUDES) for (const n of notaires) {
+      complet.set(normerNom(n), ville);
+      const nom = normerNom(n).split(" ").pop();
+      parNom.set(nom, parNom.has(nom) && parNom.get(nom) !== ville ? null : ville);  // nom ambigu (Bouzonie) : seulement le nom complet
+    }
+    return { complet, parNom };
+  })();
+  function etudeDe(notaire) {
+    const n = normerNom(notaire);
+    if (!n) return "";
+    if (INDEX_ETUDES.complet.has(n)) return INDEX_ETUDES.complet.get(n);
+    const parNom = INDEX_ETUDES.parNom.get(n.split(" ").pop());
+    return parNom || AUTRES_ETUDES;
+  }
+  const ordreEtude = (v) => { const k = ETUDES.findIndex(([ville]) => ville === v); return k < 0 ? 99 : k; };
+
   function ouvrirSegment(bouton) {
     if (!donnees) return;
     const cle = bouton.dataset.cle;
@@ -1361,12 +1396,35 @@ body.glisser .section.vide { display: block; }
       el("header", null, el("b", null, SEGMENTS[cle]),
         el("button", { type: "button", onclick: () => { selections[cle].clear(); filtreChange(); ouvrirSegment(bouton); } }, "✕ Effacer le filtre"),
         el("button", { type: "button", class: "ok-tel", onclick: fermerSegment }, "OK")),
-      el("div", { class: "liste" }, valeurs.map((v) => {
-        const n = comptes.get(v) || 0;
-        const c = el("input", { type: "checkbox", checked: selections[cle].has(v) });
-        c.addEventListener("change", () => { c.checked ? selections[cle].add(v) : selections[cle].delete(v); filtreChange(); majComptesSegment(); });
-        return el("label", { class: n ? "" : "zero", "data-v": v }, c, el("span", null, cle === "type" ? v : v), el("i", null, n));
-      })));
+      el("div", { class: "liste" }, (() => {
+        const ligne = (v) => {
+          const n = comptes.get(v) || 0;
+          const c = el("input", { type: "checkbox", checked: selections[cle].has(v) });
+          c.addEventListener("change", () => { c.checked ? selections[cle].add(v) : selections[cle].delete(v); filtreChange(); majComptesSegment(); majCasesEtudes(); });
+          return el("label", { class: n ? "" : "zero", "data-v": v }, c, el("span", null, v), el("i", null, n));
+        };
+        if (cle !== "notaire") return valeurs.map(ligne);
+        // notaires rangés par étude ; la case de l'étude coche ou décoche tous ses notaires
+        const groupes = new Map();
+        for (const v of valeurs) {
+          const e = v === "(vide)" ? "" : etudeDe(v);
+          if (!groupes.has(e)) groupes.set(e, []);
+          groupes.get(e).push(v);
+        }
+        return [...groupes.entries()].sort((a, b) => (a[0] ? ordreEtude(a[0]) : 100) - (b[0] ? ordreEtude(b[0]) : 100)).flatMap(([etude, vs]) => {
+          if (!etude) return vs.map(ligne);
+          const total = vs.reduce((t, v) => t + (comptes.get(v) || 0), 0);
+          const caseEtude = el("input", { type: "checkbox", "data-etude": etude });
+          caseEtude.addEventListener("change", () => {
+            for (const v of vs) caseEtude.checked ? selections.notaire.add(v) : selections.notaire.delete(v);
+            filtreChange(); ouvrirSegment(bouton);
+          });
+          caseEtude._notaires = vs;
+          return [el("label", { class: "etude-titre" }, caseEtude, el("span", null, etude), el("i", null, total)),
+            el("div", { class: "etude-notaires" }, vs.map(ligne))];
+        });
+      })()));
+    majCasesEtudes();
     fen.hidden = false;
     if (window.innerWidth > 900) {
       const r = bouton.getBoundingClientRect();
@@ -1379,13 +1437,23 @@ body.glisser .section.vide { display: block; }
     }
     if (survolPossible) { clearInterval(veille); veille = setInterval(surveiller, 150); }
   }
+  function majCasesEtudes() {
+    document.querySelectorAll("#fenSegment input[data-etude]").forEach((c) => {
+      const pris = c._notaires.filter((v) => selections.notaire.has(v)).length;
+      c.checked = pris === c._notaires.length;
+      c.indeterminate = pris > 0 && pris < c._notaires.length;
+    });
+  }
   function majComptesSegment() {
     if (!segmentOuvert) return;
     const { comptes } = valeursSegment(segmentOuvert.dataset.cle);
-    $("fenSegment").querySelectorAll("label").forEach((l) => {
+    $("fenSegment").querySelectorAll("label[data-v]").forEach((l) => {
       const n = comptes.get(l.dataset.v) || 0;
       l.querySelector("i").textContent = n;
       l.classList.toggle("zero", !n);
+    });
+    $("fenSegment").querySelectorAll("input[data-etude]").forEach((c) => {  // total de chaque étude
+      c.parentElement.querySelector("i").textContent = c._notaires.reduce((t, v) => t + (comptes.get(v) || 0), 0);
     });
   }
   function fermerSegment() {
@@ -2626,6 +2694,22 @@ body.glisser .section.vide { display: block; }
       el("div", { class: "a-jauge" }, el("i", { style: `width:${taux}%` })),
       el("p", { class: "soustitre" }, `${sansSuite} analyse(s) classée(s) sans suite.`)));
     // 4. apporteurs
+    {
+      const g = new Map();
+      for (const [d] of liste) {
+        const e = etudeDe(d.notaire);
+        if (!e) continue;
+        const x = g.get(e) || { nom: e, n: 0, p: 0, ca: 0 };
+        x.n++; x.p += prevu(d); x.ca += Number(d.ca) || 0;
+        g.set(e, x);
+      }
+      const etudes = [...g.values()].sort((a, b) => b.p - a.p);
+      const max = Math.max(1, ...etudes.map((e) => e.p));
+      blocs.push(el("div", { class: "a-bloc" }, el("h3", null, "Par étude"),
+        el("p", { class: "soustitre" }, "Les notaires regroupés par étude : honoraires prévus et encaissés."),
+        etudes.map((e) => el("div", { class: "a-ligne" }, el("span", { class: "nom", title: e.nom }, e.nom),
+          barresHtml([[e.p], [e.ca, "or"]], max), el("span", { class: "val" }, el("b", null, euros(e.p)), " / ", el("b", { class: "or" }, euros(e.ca)), ` · ${e.n} doss.`)))));
+    }
     for (const [cle, titre] of [["notaire", "Par notaire"], ["partenaire", "Par partenaire"]]) {
       const g = regrouperPar(liste, cle).slice(0, 8);
       const max = Math.max(1, ...g.map((e) => e.p));
