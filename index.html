@@ -886,6 +886,29 @@ body.glisser .section.vide { display: block; }
   .filtres-fermer { border-radius: 12px !important; padding: 13px !important; }
   .fen-segment { backdrop-filter: none; }
 }
+
+/* ---------- bouton + qui se déploie ---------- */
+#btnEclairPouce { display: none !important; }
+.fab { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 8; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.fab .flottant { position: static; touch-action: none; transition: transform .18s ease, background .18s; -webkit-user-select: none; user-select: none; }
+.fab.ouvert .flottant { transform: rotate(45deg); background: var(--bleu); }
+.fab-options { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
+.fab-options button { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 0; opacity: 0; transform: translateY(14px) scale(.9);
+  transition: opacity .15s ease, transform .18s ease; cursor: pointer; }
+.fab.ouvert .fab-options { pointer-events: auto; }
+.fab.ouvert .fab-options button { opacity: 1; transform: none; }
+.fab.ouvert .fab-options button:nth-last-child(2) { transition-delay: .02s; }
+.fab.ouvert .fab-options button:nth-last-child(3) { transition-delay: .04s; }
+.fab.ouvert .fab-options button:nth-last-child(4) { transition-delay: .06s; }
+.fab.ouvert .fab-options button:nth-last-child(5) { transition-delay: .08s; }
+.fab-options button span { background: var(--carte); color: var(--texte); font-size: 14px; font-weight: 500; padding: 7px 12px; border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(12,45,57,.18); white-space: nowrap; }
+.fab-options button i { font-style: normal; width: 46px; height: 46px; border-radius: 23px; background: var(--carte); color: var(--bleu);
+  display: flex; align-items: center; justify-content: center; font-size: 19px; box-shadow: 0 3px 10px rgba(12,45,57,.2); margin-right: 4px; }
+.fab-options button.vise i, .fab-options button:hover i { background: var(--or); color: #fff; transform: scale(1.12); }
+.fab-options button.vise span, .fab-options button:hover span { background: var(--bleu); color: var(--carte); }
+.fab-voile { position: fixed; inset: 0; z-index: 7; background: rgba(8, 20, 25, .3); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+@media (max-width: 900px) { .fab { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } }
 </style>
 </head>
 <body>
@@ -1025,7 +1048,17 @@ body.glisser .section.vide { display: block; }
 </main>
 
 <button class="flottant-eclair" id="btnEclairPouce" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
-<button class="flottant" id="btnNouveau" aria-label="Nouveau dossier" title="Nouveau dossier">+</button>
+<div class="fab-voile" id="fabVoile" hidden></div>
+<div class="fab" id="fab">
+  <div class="fab-options" id="fabOptions" role="menu" aria-label="Créer ou chercher">
+    <button type="button" role="menuitem" data-action="eclair"><span>Recherche éclair</span><i>🔍</i></button>
+    <button type="button" role="menuitem" data-action="pacte"><span>Nouveau pacte Dutreil</span><i>⚖</i></button>
+    <button type="button" role="menuitem" data-action="client"><span>Nouveau client</span><i>👤</i></button>
+    <button type="button" role="menuitem" data-action="dossier"><span>Nouveau dossier</span><i>📄</i></button>
+    <button type="button" role="menuitem" data-action="tache"><span>Nouvelle tâche</span><i>☐</i></button>
+  </div>
+  <button class="flottant" id="btnNouveau" aria-label="Créer ou chercher" aria-haspopup="menu" aria-expanded="false">+</button>
+</div>
 <nav class="bas">
   <a href="#accueil" data-vue="accueil"><span>◉</span>Accueil</a>
   <a href="#kanban" data-vue="kanban"><span>▦</span>Étapes</a>
@@ -3685,10 +3718,35 @@ body.glisser .section.vide { display: block; }
         } }, "Supprimer")));
     ouvrirFeuille("feuilleTache", () => ouvrirTache(nom, id));
   }
+  function nouvelleTache() {
+    tacheEnCours = { nouveau: true };
+    $("titreTache").textContent = "Nouvelle tâche";
+    const demain = new Date(); demain.setDate(demain.getDate() + 1);
+    $("corpsTache").replaceChildren(
+      champ("Client", [el("input", { name: "client", type: "text", list: "liste-clients-tache", autocomplete: "off", placeholder: "Nom du client" }),
+        el("datalist", { id: "liste-clients-tache" }, nomsClients().map((n) => el("option", { value: n })))]),
+      champ("Tâche", el("input", { name: "texte", type: "text", autocomplete: "off", placeholder: "Appeler, relancer, envoyer…" })),
+      el("div", { class: "deux" },
+        champ("Pour le", el("input", { name: "pour", type: "date", value: enIso(demain) })),
+        champ("À", el("input", { name: "heure", type: "time", value: "" }))),
+      champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Détails, numéro à appeler, lien…" }, ""))));
+    ouvrirFeuille("feuilleTache", nouvelleTache);
+    setTimeout(() => $("corpsTache").querySelector("[name=client]").focus(), 60);
+  }
   function enregistrerTache() {
     if (!tacheEnCours) return;
     const v = lireFormulaire($("corpsTache"));
     if (!v.texte) { informer("Indiquez la tâche."); return; }
+    if (tacheEnCours.nouveau) {
+      const saisi = (v.client || "").replace(/\s+/g, " ").trim();
+      if (!saisi) { informer("Indiquez le client."); return; }
+      const nom = nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi;
+      const existe = nomsClients().some((n) => cleClient(n) === cleClient(saisi));
+      majTaches(nom, (l) => [...l, { id: nouvelId(), texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", note: v.note || "", fait: null, cree: new Date().toISOString() }]);
+      terminerFeuille(); afficherTout();
+      informer(existe ? `Tâche ajoutée pour ${nom}.` : `Tâche ajoutée, et nouveau client « ${nom} » créé.`);
+      return;
+    }
     const { nom, id } = tacheEnCours;
     majTaches(nom, (l) => l.map((t) => t.id !== id ? t : {
       ...t, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", note: v.note || "",
@@ -3954,7 +4012,59 @@ body.glisser .section.vide { display: block; }
   });
   $("selArchiver").addEventListener("click", () => archiverSelection(true));
   $("selVider").addEventListener("click", viderSelection);
-  $("btnNouveau").addEventListener("click", () => (vueCourante() === "dutreil" ? ouvrirPacte(-1) : vueCourante() === "clients" ? nouveauClient() : ouvrirDossier(-1)));
+  // ---- bouton + : un toucher le déploie (puis on touche un choix) ; un appui long le déploie,
+  //      on glisse le doigt sur le choix et on lâche pour valider ----
+  const ACTIONS_FAB = {
+    eclair: () => ouvrirEclair(), client: () => nouveauClient(), dossier: () => ouvrirDossier(-1),
+    tache: () => nouvelleTache(), pacte: () => ouvrirPacte(-1)
+  };
+  let fabOuvert = false, fabAppui = null;
+  function ouvrirFab() {
+    fabOuvert = true;
+    $("fab").classList.add("ouvert");
+    $("fabVoile").hidden = false;
+    $("btnNouveau").setAttribute("aria-expanded", "true");
+    $("fabOptions").querySelector('[data-action="pacte"]').hidden = vueCourante() !== "dutreil";
+    if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {}
+  }
+  function fermerFab() {
+    fabOuvert = false;
+    $("fab").classList.remove("ouvert");
+    $("fabVoile").hidden = true;
+    $("btnNouveau").setAttribute("aria-expanded", "false");
+    $("fabOptions").querySelectorAll("button").forEach((b) => b.classList.remove("vise"));
+  }
+  function lancerFab(action) {
+    fermerFab();
+    if (ACTIONS_FAB[action]) setTimeout(ACTIONS_FAB[action], 60);
+  }
+  const optionSous = (x, y) => { const e = document.elementFromPoint(x, y); return e && e.closest("#fabOptions button:not([hidden])"); };
+  $("btnNouveau").addEventListener("contextmenu", (e) => e.preventDefault());
+  $("btnNouveau").addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    try { $("btnNouveau").setPointerCapture(e.pointerId); } catch (err) {}
+    const dejaOuvert = fabOuvert;
+    fabAppui = { dejaOuvert, maintenu: false, minuteur: setTimeout(() => { fabAppui.maintenu = true; if (!fabOuvert) ouvrirFab(); }, 280) };
+  });
+  $("btnNouveau").addEventListener("pointermove", (e) => {
+    if (!fabAppui || !fabOuvert) return;
+    const vise = optionSous(e.clientX, e.clientY);
+    $("fabOptions").querySelectorAll("button").forEach((b) => b.classList.toggle("vise", b === vise));
+  });
+  $("btnNouveau").addEventListener("pointerup", (e) => {
+    if (!fabAppui) return;
+    clearTimeout(fabAppui.minuteur);
+    const a = fabAppui;
+    fabAppui = null;
+    const vise = optionSous(e.clientX, e.clientY);
+    if (vise) { lancerFab(vise.dataset.action); return; }       // glissé jusqu'à un choix, puis lâché
+    if (a.maintenu) { if (!a.dejaOuvert) return fermerFab(); }  // appui long lâché ailleurs : on referme
+    else if (a.dejaOuvert) fermerFab(); else ouvrirFab();         // simple toucher : ouvre ou referme
+  });
+  $("btnNouveau").addEventListener("pointercancel", () => { if (fabAppui) clearTimeout(fabAppui.minuteur); fabAppui = null; });
+  $("fabOptions").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) lancerFab(b.dataset.action); });
+  $("fabVoile").addEventListener("pointerdown", fermerFab);
   $("btnNouveauClient").addEventListener("click", nouveauClient);
   $("enregistrerPacte").addEventListener("click", enregistrerPacte);
   $("enregistrerTache").addEventListener("click", enregistrerTache);
@@ -4197,6 +4307,7 @@ body.glisser .section.vide { display: block; }
     const choix = document.querySelector(".choix-date");
     if (choix) { choix.remove(); return; }
     if (document.querySelector(".eclair")) { fermerEclair(); return; }
+    if (fabOuvert) { fermerFab(); return; }
     if (document.querySelector(".menu-contextuel")) { fermerMenuSelection(); return; }
     if (selectionMulti.size && !document.querySelector(".feuille.ouverte")) { viderSelection(); return; }
     fermerSegment(); fermerMenu(); fermerFeuilles();
