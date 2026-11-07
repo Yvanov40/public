@@ -781,6 +781,72 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   .m-client .r.or { color: var(--or); }
   nav.bas { grid-template-columns: repeat(3, 1fr); }
 }
+/* ---------- version sobre : moins de cadres, d'ombres et de couleurs, plus d'air ---------- */
+:root { --bordure: #e8e2d6; --section: #f1ece2; --colonne: #f6f2ea; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bordure: #223740; --section: #1a2e36; --colonne: #122027; } }
+.entete-int { min-height: 56px; }
+.entete h1 { font-size: 21px; }
+.etat-sync { font-size: 12px; }
+.onglets-haut a { padding: 0 12px; font-size: 14px; }
+main { padding-top: 10px; }
+.indicateurs { gap: 0; background: none; border-bottom: 1px solid var(--bordure); padding: 2px 0 8px; }
+.indic { background: none; border: 0; border-left: 0; border-radius: 0; padding: 4px 14px 4px 0; }
+.indic + .indic { border-left: 1px solid var(--bordure); padding-left: 14px; }
+.indic span { font-size: 11.5px; }
+.indic b { font-size: 17px; }
+.rdv { background: none; border-left: 0; border-radius: 0; padding: 6px 0; margin-top: 2px; border-bottom: 1px solid var(--bordure); }
+.pastille-rdv { padding: 4px 9px; font-size: 12.5px; border-radius: 7px; }
+.filtres { background: none; border: 0; border-radius: 0; padding: 6px 0 8px; gap: 8px; border-bottom: 1px solid var(--bordure); }
+.filtre label, .filtre .lib { font-size: 11.5px; font-weight: 500; color: var(--discret); margin-bottom: 3px; }
+.filtre input[type="search"], .segment { padding: 6px 9px; border-radius: 7px; background: var(--carte); font-size: 13.5px; }
+.option-archives { font-size: 13px; padding-bottom: 6px; }
+.bouton-discret { padding: 6px 10px; font-size: 13px; background: none; border: 1px solid var(--bordure); }
+.bouton-discret:hover { background: var(--section); }
+@media (min-width: 901px) { .filtres { position: sticky; box-shadow: none; background: var(--fond); } }
+.outils { margin: 8px 0 6px; }
+.outils .aide { font-size: 12px; }
+.colonne { background: none; border: 0; border-top: 2px solid var(--c); border-radius: 0; max-height: calc(100vh - 230px); }
+.colonne > header { padding: 8px 4px 6px; }
+.colonne > header h2 { font-size: 17px; }
+.colonne > header p { font-size: 12px; }
+.colonne .defile { padding: 0 6px 8px 2px; }
+.section-titre { background: none; border-radius: 6px; padding: 6px 6px; }
+.section-titre:hover { background: var(--section); }
+.section-titre b { font-size: 13px; }
+.section-titre .montants { display: none; }
+.recherche-active .section.trouvee .section-titre { background: var(--bleu-doux); box-shadow: none; }
+.section.vide { display: none; }
+body.glisser .section.vide { display: block; }
+.section.cible > .section-titre { outline: 2px dashed var(--or); }
+.vide-section { padding: 6px; font-size: 12px; }
+.cartes { gap: 5px; padding: 4px 0 2px; }
+.carte-dossier { border-left-width: 3px; padding: 7px 9px; box-shadow: 0 1px 1px rgba(12,45,57,.04); }
+.carte-dossier .ligne { font-size: 12px; }
+.carte-dossier .bas { font-size: 11.5px; }
+.carte-dossier .prevu { font-size: 13px; }
+@media (min-width: 901px) {
+  .acc-carte { background: none; border: 0; border-top: 2px solid var(--bordure); border-radius: 0; padding: 10px 2px 8px; }
+  .acc-carte .m-h2 { font-size: 18px; margin-bottom: 8px; }
+  .acc-carte .m-etape { background: none; border: 0; border-bottom: 1px solid var(--bordure); border-radius: 0; padding: 8px 10px 8px 0; }
+  .acc-carte .m-etape:hover { background: var(--section); border-color: var(--bordure); }
+  .acc-carte .m-rdv-date { min-width: 76px; font-size: 12.5px; }
+  .acc-bonjour { margin-bottom: 10px; font-size: 17px; }
+}
+.table-clients, .table-dutreil { border: 0; border-radius: 0; background: none; }
+.table-clients th, .table-dutreil th { background: none; border-bottom: 1px solid var(--bordure); }
+.table-clients td, .table-dutreil td { padding: 7px 10px; border-top-color: var(--bordure); }
+.table-clients tr.ligne:hover td, .table-dutreil tr:hover td { background: var(--section); }
+.a-bloc { border: 0; border-top: 2px solid var(--bordure); border-radius: 0; background: none; padding: 10px 2px 8px; }
+.flottant { box-shadow: 0 4px 12px rgba(12,45,57,.22); }
+.message { font-size: 13.5px; padding: 8px 14px; }
+@media (max-width: 900px) {
+  .m-bloc { border: 0; border-radius: 0; background: none; padding: 0 2px; }
+  .m-h2 { font-size: 18px; margin: 16px 2px 6px; }
+  .m-rdv { padding: 8px 2px; }
+  .m-sections .section-titre { padding: 9px 8px; background: var(--section); }
+  .m-sections .section-titre .montants { display: block; }
+}
+
 </style>
 </head>
 <body>
@@ -1339,7 +1405,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
       localStorage.setItem(CLE_STOCKAGE + "-sha", sha);
       if (nouveaux) { donnees.modifie = new Date().toISOString(); setTimeout(envoyerGithub, 500); }  // identifiants ajoutés : on les partage
       etatSync("", "À jour avec GitHub · " + heure());
-      if (!silencieux) informer(`${dossiers.length} dossiers chargés depuis GitHub.`);
+      if (silencieux === false) informer(`${dossiers.length} dossiers chargés depuis GitHub.`);
       const position = window.scrollY;
       afficherTout();
       if (silencieux === "auto") window.scrollTo(0, position); else montrerVue();
@@ -1925,8 +1991,9 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     const ouverte = recherche ? (ids.length > 0) !== bascules.has(t) : !repliees.has(t);
     const pt = ids.reduce((s, i) => s + prevu(donnees.dossiers[i]), 0);
     const ct = ids.reduce((s, i) => s + (Number(donnees.dossiers[i].ca) || 0), 0);
-    const section = el("div", { class: "section" + (ouverte ? " ouverte" : "") + (ids.length ? " trouvee" : ""), "data-type": t },
-      el("button", { class: "section-titre", type: "button", "aria-expanded": String(ouverte), onclick: () => {
+    const section = el("div", { class: "section" + (ouverte ? " ouverte" : "") + (ids.length ? " trouvee" : "") + (ids.length ? "" : " vide"), "data-type": t },
+      el("button", { class: "section-titre", type: "button", "aria-expanded": String(ouverte),
+        title: (pt || ct) ? `prévu ${euros(pt)} · encaissé ${euros(ct)} · reste ${euros(pt - ct)}` : null, onclick: () => {
         if (recherche) { bascules.has(t) ? bascules.delete(t) : bascules.add(t); }
         else { repliees.has(t) ? repliees.delete(t) : repliees.add(t); memoriserAffichage(); }
         section.classList.toggle("ouverte");
@@ -3013,6 +3080,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
   function demarrer() {
     if (!glisse || glisse.parti) return;
     glisse.parti = true;
+    document.body.classList.add("glisser");  // les sections vides se montrent, pour pouvoir y déposer
     const f = glisse.carte.cloneNode(true);
     f.classList.add("fantome");
     if (selectionMulti.has(glisse.i) && selectionMulti.size > 1) f.append(el("span", { class: "fantome-nombre" }, selectionMulti.size));
@@ -3056,6 +3124,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     setTimeout(() => delete g.carte.dataset.bloque, 400);
     g.fantome.remove();
     g.carte.classList.remove("souleve");
+    document.body.classList.remove("glisser");
     if (g.cible) g.cible.classList.remove("cible");
     if (!annule && g.cible) {
       if (selectionMulti.has(g.i) && selectionMulti.size > 1) deplacerSelection(g.cible.dataset.type);
@@ -3448,7 +3517,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
     if (!t.pour) return ["", ""];
     const j = Math.round((versDate(t.pour) - aujourdhui()) / 86400000);
     const h = t.heure ? ` à ${t.heure}` : "";
-    const texte = j < 0 ? `en retard (${fmtDate(t.pour)}${h})` : j === 0 ? (tacheEnRetard(t) ? `en retard (${t.heure})` : `aujourd’hui${h}`) : j === 1 ? `demain${h}` : `pour le ${fmtDate(t.pour)}${h}`;
+    const texte = j < 0 ? `en retard (${fmtDate(t.pour).slice(0, 5)}${h})` : j === 0 ? (tacheEnRetard(t) ? `en retard (${t.heure})` : `aujourd’hui${h}`) : j === 1 ? `demain${h}` : `pour le ${fmtDate(t.pour)}${h}`;
     return [texte, tacheEnRetard(t) ? "retard" : j <= 3 ? "proche" : ""];
   }
   const triTaches = (a, b) => (a.pour || "9999").localeCompare(b.pour || "9999") || (a.heure || "99").localeCompare(b.heure || "99") || (a.cree || "").localeCompare(b.cree || "");
