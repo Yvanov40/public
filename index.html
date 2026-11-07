@@ -971,6 +971,39 @@ body.glisser .section.vide { display: block; }
 .roue-choix span { font-size: 11.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; }
 .roue-choix.vise i, .roue-choix:hover i { background: var(--or); color: #fff; transform: scale(1.15); }
 .cal-element .ouvrir { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+
+/* ---------- calendrier : vue Semaine (ordinateur) ---------- */
+.cal-modes { display: inline-flex; background: var(--section); border-radius: 9px; padding: 3px; gap: 2px; margin-left: 10px; }
+.cal-modes button { border: 0 !important; background: none !important; padding: 5px 12px !important; border-radius: 7px !important; font-size: 13.5px; color: var(--bleu); }
+.cal-modes button[aria-pressed="true"] { background: var(--bleu) !important; color: var(--carte); font-weight: 600; }
+.cal-entete h2.titre-semaine { font-size: 21px; min-width: 300px; text-transform: none; }
+#calSemaine { display: none; }
+.cal.mode-semaine { grid-template-columns: 1fr; }
+.cal.mode-semaine #calGrille, .cal.mode-semaine .cal-panneau { display: none; }
+.cal.mode-semaine #calSemaine { display: block; }
+.semaine { display: grid; grid-template-columns: 46px repeat(4, minmax(0, 1fr)) repeat(3, minmax(0, .5fr)); border-top: 1px solid var(--bordure); }
+.semaine-col { border-left: 1px solid var(--bordure); min-width: 0; }
+.semaine-col.repos { background: rgba(12,45,57,.02); }
+.semaine-col.aujourdhui .semaine-tete b { background: var(--bleu); color: var(--carte); }
+.semaine-col.choisi .semaine-tete { box-shadow: inset 0 -2px 0 var(--or); }
+.semaine-tete { width: 100%; border: 0; background: none; padding: 8px 4px 6px; display: flex; gap: 6px; align-items: center; justify-content: center; cursor: pointer;
+  border-bottom: 1px solid var(--bordure); height: 44px; }
+.semaine-tete.vide { cursor: default; }
+.semaine-tete span { font-size: 12.5px; color: var(--discret); text-transform: capitalize; }
+.semaine-tete b { font-size: 15px; color: var(--texte); border-radius: 13px; min-width: 26px; padding: 2px 6px; }
+.semaine-sans-heure { display: grid; gap: 3px; padding: 4px 3px; border-bottom: 1px solid var(--bordure); align-content: start; }
+.semaine-sans-heure .ev { display: block; text-align: left; cursor: pointer; font-size: 11px; }
+.semaine-axe-col .semaine-sans-heure.vide { border-bottom: 1px solid var(--bordure); }
+.semaine-axe { position: relative; }
+.semaine-axe span { position: absolute; right: 6px; transform: translateY(-50%); font-size: 10.5px; color: var(--discret); font-variant-numeric: tabular-nums; }
+.semaine .frise { margin: 0; border-top: 0; }
+.frise.compacte .frise-heure span { display: none; }
+.frise.compacte .frise-repos, .frise.compacte .frise-maintenant { left: 0; }
+.frise.compacte .frise-maintenant::before { left: -4px; }
+.frise.compacte .frise-bloc { padding: 2px 5px; }
+.frise.compacte .frise-bloc b { font-size: 11.5px; }
+.frise.compacte .frise-bloc small { font-size: 10px; }
+.frise.cible { background: rgba(167,125,47,.08); }
 </style>
 </head>
 <body>
@@ -1077,6 +1110,7 @@ body.glisser .section.vide { display: block; }
         <div>
           <div class="cal-entete" id="calEntete"></div>
           <div class="cal-grille" id="calGrille"></div>
+          <div id="calSemaine"></div>
         </div>
         <aside class="cal-panneau" id="calPanneau"></aside>
       </div>
@@ -2828,7 +2862,7 @@ body.glisser .section.vide { display: block; }
     try {
       localStorage.setItem(CLE_FILTRES, JSON.stringify({
         selections: Object.fromEntries(Object.entries(selections).map(([k, v]) => [k, [...v]])),
-        archives: $("masquerArchives").checked, etapeActive, typesCalendrier: [...typesCalendrier],
+        archives: $("masquerArchives").checked, etapeActive, typesCalendrier: [...typesCalendrier], modeCalendrier,
         etatDutreil: $("etatDutreil").value, prochesDutreil: $("prochesDutreil").checked, etatDutreilTel
       }));
     } catch (e) {}
@@ -2844,6 +2878,7 @@ body.glisser .section.vide { display: block; }
         $("prochesDutreil").checked = !!f.prochesDutreil;
         etatDutreilTel = f.etatDutreilTel || "";
         if (Array.isArray(f.typesCalendrier)) typesCalendrier = new Set(f.typesCalendrier);
+        if (f.modeCalendrier) modeCalendrier = f.modeCalendrier;
       }
     } catch (e) {}
     filtresRestaures = true;
@@ -3103,20 +3138,21 @@ body.glisser .section.vide { display: block; }
 
   // ---- la journée en frise : chaque élément à sa place ; glisser pour déplacer, tirer le bas pour allonger ----
   const DEBUT_FRISE = 8 * 60, FIN_FRISE = 20 * 60;
-  function friseJour(elements) {
-    const pxMin = 1.1;  // 1 h = 66 px : un créneau de 15 min reste lisible
-    const frise = el("div", { class: "frise", style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` });
+  function friseJour(elements, iso = jourCalendrier, compacte = false) {
+    const pxMin = compacte ? 0.95 : 1.1;  // 1 h = 66 px : un créneau de 15 min reste lisible
+    const marge = compacte ? 2 : 44;      // place laissée aux heures à gauche
+    const frise = el("div", { class: "frise" + (compacte ? " compacte" : ""), "data-jour": iso, style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` });
     for (let h = DEBUT_FRISE / 60; h <= FIN_FRISE / 60; h++) {
       frise.append(el("div", { class: "frise-heure", style: `top:${(h * 60 - DEBUT_FRISE) * pxMin}px` }, el("span", null, `${h} h`)));
     }
     // les heures non travaillées (avant, pause de midi, après, et jours non travaillés) en grisé
-    const travail = plagesDu(jourCalendrier);
+    const travail = plagesDu(iso);
     let c = DEBUT_FRISE;
     for (const [a, b] of [...travail, [FIN_FRISE, FIN_FRISE]]) {
       if (a > c) frise.append(el("div", { class: "frise-repos", style: `top:${(c - DEBUT_FRISE) * pxMin}px;height:${(a - c) * pxMin}px` }));
       c = Math.max(c, b);
     }
-    if (jourCalendrier === enIso(aujourdhui())) {
+    if (iso === enIso(aujourdhui())) {
       const n = new Date(), m = n.getHours() * 60 + n.getMinutes();
       if (m > DEBUT_FRISE && m < FIN_FRISE) frise.append(el("div", { class: "frise-maintenant", style: `top:${(m - DEBUT_FRISE) * pxMin}px` }));
     }
@@ -3138,7 +3174,7 @@ body.glisser .section.vide { display: block; }
     for (const p of places) {
       const largeur = 100 / Math.max(1, p.nbCol);
       const bloc = el("div", { class: `frise-bloc f-${p.e.type}${p.e.retard ? " retard" : ""}${p.e.fixe ? " fixe" : ""}`,
-        style: `top:${(p.a - DEBUT_FRISE) * pxMin}px;height:${Math.max(16, (p.b - p.a) * pxMin - 2)}px;left:calc(44px + (100% - 48px) * ${p.col * largeur / 100});width:calc((100% - 48px) * ${largeur / 100} - 3px)` },
+        style: `top:${(p.a - DEBUT_FRISE) * pxMin}px;height:${Math.max(16, (p.b - p.a) * pxMin - 2)}px;left:calc(${marge}px + (100% - ${marge + 4}px) * ${p.col * largeur / 100});width:calc((100% - ${marge + 4}px) * ${largeur / 100} - 3px)` },
         el("b", null, `${p.e.fixe ? "📌 " : ""}${p.e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "")}`),
         el("small", null, `${plage(p.e.heure, p.b - p.a)} · ${p.e.type === "tache" ? p.e.client || "" : p.e.sous}`),
         el("i", { class: "poignee", title: "Tirer pour changer la durée" }));
@@ -3174,6 +3210,17 @@ body.glisser .section.vide { display: block; }
         g.na = Math.min(FIN_FRISE - (g.b - g.a), Math.max(DEBUT_FRISE, g.a + pas));
         bloc.style.top = `${(g.na - DEBUT_FRISE) * pxMin}px`;
         bloc.querySelector("small").textContent = plage(enHeure(g.na), g.b - g.a);
+        // vue Semaine : on peut aussi changer de jour en glissant de côté
+        if (bloc.closest(".semaine")) {
+          bloc.style.pointerEvents = "none";
+          const sous = document.elementFromPoint(ev.clientX, ev.clientY);
+          bloc.style.pointerEvents = "";
+          const col = sous && sous.closest(".frise[data-jour]");
+          if (g.x === undefined) g.x = ev.clientX;
+          bloc.style.transform = `translateX(${ev.clientX - g.x}px)`;
+          document.querySelectorAll(".semaine .frise.cible").forEach((f) => f.classList.toggle("cible", f === col));
+          if (col) { col.classList.add("cible"); g.jour = col.dataset.jour; }
+        }
       }
     });
     const fin = () => {
@@ -3186,7 +3233,9 @@ body.glisser .section.vide { display: block; }
         if (x.tactile && x.pret) { const r = bloc.getBoundingClientRect(); ouvrirRoue(r.left + r.width / 2, r.top + Math.min(r.height / 2, 30), p.e, false); return; }
         p.e.ouvrir(); return;
       }
+      document.querySelectorAll(".semaine .frise.cible").forEach((f) => f.classList.remove("cible"));
       if (x.redim && x.nb) changerDureeEvenement(p.e, x.nb - x.a);
+      else if (!x.redim && x.jour && x.jour !== p.e.date) deplacerVers(p.e, x.jour, enHeure(x.na ?? x.a));
       else if (!x.redim && x.na !== undefined && x.na !== x.a) changerHeureEvenement(p.e, enHeure(x.na));
       else afficherCalendrier();
     };
@@ -3275,6 +3324,27 @@ body.glisser .section.vide { display: block; }
     cible.addEventListener("pointercancel", annuler);
   }
 
+  // un rendez-vous ou une tâche posé à un autre jour et une autre heure (vue Semaine)
+  function deplacerVers(e, iso, heure) {
+    const r = e.ref || {};
+    let resume = "";
+    if (e.type === "rdv") {
+      const i = donnees.dossiers.findIndex((d, k) => (d.id || k) === r.dossier);
+      if (i < 0) return;
+      const d = donnees.dossiers[i], avant = { ...d };
+      d.rdv = iso; d.rdv_heure = heure;
+      noterHistorique(d, avant);
+      sauver();
+      resume = apresAgenda([avant.rdv, iso]);
+    } else if (e.type === "tache") {
+      majTaches(r.client, (l) => l.map((t) => (t.id === r.tache ? { ...t, pour: iso, heure } : t)));
+      resume = apresAgenda([e.date, iso], r.tache);
+    } else return;
+    afficherTout();
+    const nom = e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "");
+    informer(`« ${nom} » : ${versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} à ${heure}.${resume}`);
+  }
+
   function changerDureeEvenement(e, duree) {
     const r = e.ref || {};
     let resume = "";
@@ -3307,6 +3377,42 @@ body.glisser .section.vide { display: block; }
     afficherCalendrier();
   }
 
+  // ---- vue Semaine (ordinateur) : sept colonnes comme la frise du jour ----
+  let modeCalendrier = "mois";
+  const lundiDe = (iso) => { const d = versDate(iso); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
+  function afficherSemaine(ev) {
+    const lundi = lundiDe(jourCalendrier);
+    const jours = [...Array(7).keys()].map((k) => { const d = new Date(lundi); d.setDate(d.getDate() + k); return d; });
+    const auj = enIso(aujourdhui());
+    const pxMin = 0.95;
+    const axe = el("div", { class: "semaine-axe", style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` },
+      ...[...Array((FIN_FRISE - DEBUT_FRISE) / 60 + 1).keys()].map((k) => el("span", { style: `top:${k * 60 * pxMin}px` }, `${DEBUT_FRISE / 60 + k} h`)));
+    const colonnes = jours.map((d) => {
+      const iso = enIso(d);
+      const liste = ev[iso] || [];
+      const avecHeure = liste.filter((e) => e.heure && e.type !== "dutreil");
+      const sansHeure = liste.filter((e) => !e.heure || e.type === "dutreil");
+      const repos = !jourTravaille(iso);
+      return el("div", { class: "semaine-col" + (iso === auj ? " aujourdhui" : "") + (repos ? " repos" : "") + (iso === jourCalendrier ? " choisi" : "") },
+        el("button", { type: "button", class: "semaine-tete", onclick: () => { jourCalendrier = iso; afficherCalendrier(); } },
+          el("span", null, d.toLocaleDateString("fr-FR", { weekday: "short" })), el("b", null, d.getDate())),
+        el("div", { class: "semaine-sans-heure" }, sansHeure.map((e) => {
+          const puce = el("button", { type: "button", class: `ev ${e.type}${e.retard ? " retard" : ""}`, title: e.sous, onclick: e.ouvrir }, e.titre);
+          puce.addEventListener("contextmenu", (x) => { x.preventDefault(); ouvrirRoue(x.clientX, x.clientY, e, false); });
+          return puce;
+        })),
+        friseJour(avecHeure, iso, true));
+    });
+    $("calSemaine").replaceChildren(el("div", { class: "semaine" }, el("div", { class: "semaine-axe-col" }, el("div", { class: "semaine-tete vide" }), el("div", { class: "semaine-sans-heure vide" }), axe), ...colonnes));
+    // les zones « sans heure » ont la même hauteur dans toutes les colonnes, pour aligner les heures
+    requestAnimationFrame(() => {
+      const zones = [...document.querySelectorAll(".semaine .semaine-sans-heure")];
+      zones.forEach((z) => (z.style.minHeight = ""));
+      const h = Math.max(...zones.map((z) => z.offsetHeight));
+      zones.forEach((z) => (z.style.minHeight = h + "px"));
+    });
+  }
+
   function afficherCalendrier() {
     if (!$("calGrille")) return;
     const ev = evenementsCalendrier();
@@ -3314,11 +3420,17 @@ body.glisser .section.vide { display: block; }
     const auj = enIso(aujourdhui());
     const titreMois = moisCalendrier.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
     const changerMois = (n) => { moisCalendrier = new Date(moisCalendrier.getFullYear(), moisCalendrier.getMonth() + n, 1); afficherCalendrier(); };
+    const semaine = modeCalendrier === "semaine" && !estTel();
+    const changerSemaine = (n) => { const d = versDate(jourCalendrier); d.setDate(d.getDate() + 7 * n); jourCalendrier = enIso(d); moisCalendrier = new Date(d.getFullYear(), d.getMonth(), 1); afficherCalendrier(); };
+    const lundi = lundiDe(jourCalendrier), dimanche = new Date(lundi); dimanche.setDate(dimanche.getDate() + 6);
+    const titreSemaine = `Semaine du ${lundi.getDate()}${lundi.getMonth() !== dimanche.getMonth() ? " " + lundi.toLocaleDateString("fr-FR", { month: "long" }) : ""} au ${dimanche.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`;
     $("calEntete").replaceChildren(
-      el("h2", null, titreMois),
-      el("button", { type: "button", "aria-label": "Mois précédent", onclick: () => changerMois(-1) }, "‹"),
+      el("h2", { class: semaine ? "titre-semaine" : null }, semaine ? titreSemaine : titreMois),
+      el("button", { type: "button", "aria-label": semaine ? "Semaine précédente" : "Mois précédent", onclick: () => (semaine ? changerSemaine(-1) : changerMois(-1)) }, "‹"),
       el("button", { type: "button", onclick: () => { const d = aujourdhui(); d.setDate(1); moisCalendrier = d; jourCalendrier = auj; afficherCalendrier(); } }, "Aujourd’hui"),
-      el("button", { type: "button", "aria-label": "Mois suivant", onclick: () => changerMois(1) }, "›"),
+      el("button", { type: "button", "aria-label": semaine ? "Semaine suivante" : "Mois suivant", onclick: () => (semaine ? changerSemaine(1) : changerMois(1)) }, "›"),
+      el("div", { class: "cal-modes ordi" }, [["mois", "Mois"], ["semaine", "Semaine"]].map(([m, lib]) =>
+        el("button", { type: "button", "aria-pressed": String(modeCalendrier === m), onclick: () => { modeCalendrier = m; memoriserFiltres(); afficherCalendrier(); } }, lib))),
       el("div", { class: "cal-types" }, ["rdv", "tache", "dutreil"].map((t) => el("button", { type: "button", "aria-pressed": String(typesCalendrier.has(t)),
         onclick: () => { typesCalendrier.has(t) ? typesCalendrier.delete(t) : typesCalendrier.add(t); memoriserFiltres(); afficherCalendrier(); } },
         el("i", { style: `background:${COULEURS_CAL[t]}` }), NOMS_CAL[t]))));
@@ -3352,6 +3464,9 @@ body.glisser .section.vide { display: block; }
         liste.length ? el("span", { class: "points" }, liste.slice(0, 4).map((e) => el("i", { style: `background:${COULEURS_CAL[e.type]}` }))) : ""));
     }
     $("calGrille").replaceChildren(...cellules);
+    // vue Semaine : la grille du mois et le détail du jour laissent la place aux sept colonnes
+    document.querySelector(".cal").classList.toggle("mode-semaine", semaine);
+    if (semaine) { afficherSemaine(ev); return; }
 
     // panneau du jour choisi + ajout d'une tâche + jours suivants
     const jourChoisi = versDate(jourCalendrier);
