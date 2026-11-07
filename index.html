@@ -958,6 +958,19 @@ body.glisser .section.vide { display: block; }
 .frise-repos { position: absolute; left: 40px; right: 0; background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(12,45,57,.035) 6px 12px); background-color: rgba(12,45,57,.03); }
 .cal-panneau.glisse-g { animation: arrive-droite .2s ease-out; }
 .cal-panneau.glisse-d { animation: arrive-gauche .2s ease-out; }
+
+/* ---------- roue d'actions (appui long, clic droit) ---------- */
+.roue-voile { position: fixed; inset: 0; z-index: 85; background: rgba(8, 20, 25, .35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); touch-action: none; }
+.roue-centre { position: absolute; transform: translate(-50%, -50%); max-width: 120px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--bleu);
+  background: var(--carte); border-radius: 12px; padding: 6px 9px; box-shadow: 0 4px 14px rgba(0,0,0,.2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.roue-choix { position: absolute; transform: translate(-50%, -50%) scale(.4); opacity: 0; border: 0; background: none; padding: 0; display: grid; justify-items: center; gap: 4px;
+  animation: roue-ouvre .2s cubic-bezier(.2, .9, .3, 1.2) forwards; animation-delay: var(--d); cursor: pointer; }
+@keyframes roue-ouvre { to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+.roue-choix i { font-style: normal; width: 54px; height: 54px; border-radius: 27px; background: var(--carte); display: flex; align-items: center; justify-content: center;
+  font-size: 21px; color: var(--bleu); box-shadow: 0 4px 14px rgba(0,0,0,.22); transition: transform .12s, background .12s; }
+.roue-choix span { font-size: 11.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; }
+.roue-choix.vise i, .roue-choix:hover i { background: var(--or); color: #fff; transform: scale(1.15); }
+.cal-element .ouvrir { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 </style>
 </head>
 <body>
@@ -2927,7 +2940,7 @@ body.glisser .section.vide { display: block; }
       sauverDutreil();
     }
     e.date = iso;
-    if (jourCalendrier === ancienne) jourCalendrier = iso;
+    // le détail reste sur le jour affiché (on organise ce jour-là)
     afficherTout();
     const quoi = { rdv: `Rendez-vous de ${e.titre}`, tache: `« ${e.titre} »`, dutreil: `Échéance ${e.titre}` }[e.type];
     informer(`${quoi} déplacé au ${fmtDate(iso)}.`, annulable ? { texte: "Annuler", faire: () => deplacerEvenement(e, ancienne, false) } : null);
@@ -3137,6 +3150,7 @@ body.glisser .section.vide { display: block; }
   }
   function activerFrise(bloc, p, pxMin) {
     let g = null;
+    bloc.addEventListener("contextmenu", (ev) => { ev.preventDefault(); if (!estTel()) ouvrirRoue(ev.clientX, ev.clientY, p.e, false); });
     bloc.addEventListener("pointerdown", (ev) => {
       if (ev.button !== 0) return;
       const redim = ev.target.classList.contains("poignee");
@@ -3167,7 +3181,11 @@ body.glisser .section.vide { display: block; }
       clearTimeout(g.minuteur);
       const x = g; g = null;
       bloc.classList.remove("saisi");
-      if (!x.parti) { if (!x.redim) p.e.ouvrir(); return; }
+      if (!x.parti) {
+        if (x.redim) return;
+        if (x.tactile && x.pret) { const r = bloc.getBoundingClientRect(); ouvrirRoue(r.left + r.width / 2, r.top + Math.min(r.height / 2, 30), p.e, false); return; }
+        p.e.ouvrir(); return;
+      }
       if (x.redim && x.nb) changerDureeEvenement(p.e, x.nb - x.a);
       else if (!x.redim && x.na !== undefined && x.na !== x.a) changerHeureEvenement(p.e, enHeure(x.na));
       else afficherCalendrier();
@@ -3176,6 +3194,87 @@ body.glisser .section.vide { display: block; }
     bloc.addEventListener("pointercancel", () => { if (g) clearTimeout(g.minuteur); g = null; afficherCalendrier(); });
     bloc.addEventListener("touchmove", (ev) => { if (g && g.pret) ev.preventDefault(); }, { passive: false });
   }
+  // ---- roue d'actions : décaler d'un jour, avancer d'un jour, heure fixe, faite ----
+  function jourOuvrePrecedent(iso) {
+    const d = versDate(iso);
+    do { d.setDate(d.getDate() - 1); } while (!JOURS_TRAVAILLES.includes(d.getDay()));
+    return enIso(d);
+  }
+  function actionsRoue(e) {
+    const t = e.type === "tache" && e.ref ? trouverTache(e.ref.tache) : null;
+    const actions = [
+      { ic: "⏪", lib: "Avancer d’un jour", angle: 180, faire: () => deplacerEvenement(e, jourOuvrePrecedent(e.date)) },
+      { ic: "⏩", lib: "Décaler d’un jour", angle: 0, faire: () => deplacerEvenement(e, jourOuvreSuivant(e.date)) }
+    ];
+    if (t) {
+      actions.splice(1, 0, { ic: "📌", lib: t.fixe ? "Libérer l’heure" : "Heure fixe", angle: -90, faire: () => {
+        majTaches(e.ref.client, (l) => l.map((x) => (x.id === t.id ? { ...x, fixe: !t.fixe } : x)));
+        const resume = !t.fixe ? "" : apresAgenda([e.date]);
+        afficherTout(); informer((t.fixe ? `« ${t.texte} » : heure libérée.` : `« ${t.texte} » : heure fixe 📌.`) + resume);
+      } });
+      actions.push({ ic: "✓", lib: "Faite", angle: 90, faire: () => { cocherTache(e.ref.client, t.id, true); afficherTout(); informer(`« ${t.texte} » est faite.`); } });
+    }
+    actions.push({ ic: "↗", lib: "Ouvrir", angle: t ? 135 : -90, faire: () => e.ouvrir() });
+    return actions;
+  }
+  // ouvre la roue autour du point (x, y) ; avec un doigt encore posé, on glisse vers le choix et on lâche
+  function ouvrirRoue(x, y, e, pointeur) {
+    fermerRoue();
+    const actions = actionsRoue(e);
+    const R = 92, marge = R + 40;
+    const cx = Math.min(window.innerWidth - marge, Math.max(marge, x)), cy = Math.min(window.innerHeight - marge, Math.max(marge, y));
+    const voile = el("div", { class: "roue-voile" });
+    const centre = el("div", { class: "roue-centre", style: `left:${cx}px;top:${cy}px` }, e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, ""));
+    voile.append(centre);
+    const boutons = actions.map((a, k) => {
+      const angle = a.angle ?? (-90 + k * (360 / actions.length));  // ⏪ à gauche, ⏩ à droite, 📌 en haut, ✓ en bas
+      const bx = cx + R * Math.cos(angle * Math.PI / 180), by = cy + R * Math.sin(angle * Math.PI / 180);
+      const b = el("button", { type: "button", class: "roue-choix", style: `left:${bx}px;top:${by}px;--d:${k * 25}ms`, onclick: () => { fermerRoue(); a.faire(); } },
+        el("i", null, a.ic), el("span", null, a.lib));
+      b._angle = angle;
+      voile.append(b);
+      return b;
+    });
+    voile.addEventListener("pointerdown", (ev) => { if (ev.target === voile) fermerRoue(); });
+    document.body.append(voile);
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch (err) {}
+    if (!pointeur) return;
+    // le doigt est encore posé : la direction du geste désigne le choix
+    let vise = null;
+    const viser = (ev) => {
+      const dx = ev.clientX - cx, dy = ev.clientY - cy;
+      vise = null;
+      if (Math.hypot(dx, dy) > 34) {
+        const a = Math.atan2(dy, dx) * 180 / Math.PI;
+        let mieux = 999;
+        for (const b of boutons) { const d = Math.abs(((a - b._angle) % 360 + 540) % 360 - 180); if (d < mieux) { mieux = d; vise = b; } }
+      }
+      boutons.forEach((b) => b.classList.toggle("vise", b === vise));
+    };
+    const lacher = () => {
+      document.removeEventListener("pointermove", viser, true);
+      document.removeEventListener("pointerup", lacher, true);
+      if (vise) vise.click();
+    };
+    document.addEventListener("pointermove", viser, true);
+    document.addEventListener("pointerup", lacher, true);
+  }
+  function fermerRoue() { document.querySelectorAll(".roue-voile").forEach((v) => v.remove()); }
+  // appui long (téléphone) ou clic droit (ordinateur) sur un élément
+  function activerRoue(cible, e) {
+    let minuteur = null, depart = null;
+    cible.addEventListener("contextmenu", (ev) => { ev.preventDefault(); if (!estTel()) ouvrirRoue(ev.clientX, ev.clientY, e, false); });
+    cible.addEventListener("pointerdown", (ev) => {
+      if (ev.pointerType === "mouse") return;
+      depart = { x: ev.clientX, y: ev.clientY };
+      minuteur = setTimeout(() => { cible.dataset.bloque = "1"; ouvrirRoue(depart.x, depart.y, e, true); }, 450);
+    });
+    const annuler = () => clearTimeout(minuteur);
+    cible.addEventListener("pointermove", (ev) => { if (depart && Math.hypot(ev.clientX - depart.x, ev.clientY - depart.y) > 10) annuler(); });
+    cible.addEventListener("pointerup", annuler);
+    cible.addEventListener("pointercancel", annuler);
+  }
+
   function changerDureeEvenement(e, duree) {
     const r = e.ref || {};
     let resume = "";
@@ -3247,6 +3346,7 @@ body.glisser .section.vide { display: block; }
             e.titre, e.type === "tache" && e.client ? el("small", null, e.client) : null);
           activerGlisserEvenement(puce, e);
           puce.addEventListener("click", (ev) => { ev.stopPropagation(); e.ouvrir(); });  // ouvre la tâche, le rendez-vous ou le pacte
+          puce.addEventListener("contextmenu", (ev) => { ev.preventDefault(); ev.stopPropagation(); ouvrirRoue(ev.clientX, ev.clientY, e, false); });
           return puce;
         }),
         liste.length ? el("span", { class: "points" }, liste.slice(0, 4).map((e) => el("i", { style: `background:${COULEURS_CAL[e.type]}` }))) : ""));
@@ -3257,27 +3357,12 @@ body.glisser .section.vide { display: block; }
     const jourChoisi = versDate(jourCalendrier);
     const elements = ev[jourCalendrier] || [];
     const ligne = (e) => {
-      let date;
-      if (estTel()) {
-        date = el("button", { type: "button", class: "cal-date-tel", "aria-label": `Changer la date de ${e.titre}`,
-          onclick: () => choisirDate(e.date, `Nouvelle date pour « ${e.titre} »`, (iso) => deplacerEvenement(e, iso)) }, "📆 " + fmtDate(e.date).slice(0, 5));
-      } else {
-        date = el("input", { type: "date", class: "cal-date", value: e.date || "", title: "Changer la date", "aria-label": `Changer la date de ${e.titre}` });
-        date.addEventListener("change", () => deplacerEvenement(e, date.value));
-      }
-      let heure = null;
-      if (e.type !== "dutreil") {
-        heure = el("input", { type: "time", class: "cal-heure", value: e.heure || "", title: "Changer l’heure", "aria-label": `Changer l’heure de ${e.titre}` });
-        heure.addEventListener("change", () => changerHeureEvenement(e, heure.value));
-      }
-      // le texte sur toute la largeur, la date et l'heure en dessous
-      return el("div", { class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}` },
-        el("span"),
-        el("div", { class: "cal-contenu" },
-          el("button", { type: "button", class: "ouvrir", onclick: e.ouvrir },
-            el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre),
-            el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`)),
-          el("div", { class: "reglages" }, date, heure)));
+      // appui long (ou clic droit) : la roue d'actions ; toucher : la fiche
+      const ouvrir = el("button", { type: "button", class: "ouvrir", onclick: (ev) => { if (ev.currentTarget.dataset.bloque) { delete ev.currentTarget.dataset.bloque; return; } e.ouvrir(); } },
+        el("b", null, (e.type === "tache" ? "☐ " : e.type === "rdv" ? "📅 " : "⚖ ") + e.titre),
+        el("span", null, `${{ rdv: "Rendez-vous", tache: "Tâche", dutreil: "Échéance Dutreil" }[e.type]}${e.retard ? " en retard" : ""} · ${e.sous}`));
+      activerRoue(ouvrir, e);
+      return el("div", { class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}` }, el("span"), el("div", { class: "cal-contenu" }, ouvrir));
     };
     const client = el("input", { type: "text", list: "liste-clients-cal", placeholder: "Client" });
     const texte = el("input", { type: "text", placeholder: "Tâche à faire ce jour-là" });
@@ -4808,6 +4893,7 @@ body.glisser .section.vide { display: block; }
     if (e.key !== "Escape") return;
     const choix = document.querySelector(".choix-date");
     if (choix) { choix.remove(); return; }
+    if (document.querySelector(".roue-voile")) { fermerRoue(); return; }
     if (document.querySelector(".eclair")) { fermerEclair(); return; }
     if (fabOuvert) { fermerFab(); return; }
     if (document.querySelector(".menu-contextuel")) { fermerMenuSelection(); return; }
