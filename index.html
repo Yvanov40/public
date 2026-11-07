@@ -3110,14 +3110,20 @@ body.glisser .section.vide { display: block; }
     // éléments qui se chevauchent (rendez-vous sur rendez-vous…) : côte à côte
     const places = elements.map((e) => ({ e, a: enMinutes(e.heure), b: enMinutes(e.heure) + (Number(e.duree) || (e.type === "rdv" ? DUREE_RDV : DUREE_TACHE)) }))
       .sort((x, y) => x.a - y.a);
-    const colonnes = [];
+    // côte à côte seulement là où ça se chevauche : on travaille par groupe d'éléments qui se recouvrent
+    let groupe = [], finGroupe = -1, colonnes = [];
+    const fermerGroupe = () => { for (const q of groupe) q.nbCol = colonnes.length; groupe = []; colonnes = []; };
     for (const p of places) {
+      if (p.a >= finGroupe) fermerGroupe();
       let c = colonnes.findIndex((fin) => fin <= p.a);
       if (c < 0) { c = colonnes.length; colonnes.push(0); }
       colonnes[c] = p.b; p.col = c;
+      groupe.push(p);
+      finGroupe = Math.max(finGroupe, p.b);
     }
+    fermerGroupe();
     for (const p of places) {
-      const largeur = 100 / Math.max(1, colonnes.length);
+      const largeur = 100 / Math.max(1, p.nbCol);
       const bloc = el("div", { class: `frise-bloc f-${p.e.type}${p.e.retard ? " retard" : ""}${p.e.fixe ? " fixe" : ""}`,
         style: `top:${(p.a - DEBUT_FRISE) * pxMin}px;height:${Math.max(16, (p.b - p.a) * pxMin - 2)}px;left:calc(44px + (100% - 48px) * ${p.col * largeur / 100});width:calc((100% - 48px) * ${largeur / 100} - 3px)` },
         el("b", null, `${p.e.fixe ? "📌 " : ""}${p.e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "")}`),
