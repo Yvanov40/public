@@ -1038,6 +1038,12 @@ input[type="date"] { cursor: pointer; }
   .choix-date-boite { width: 340px; border-radius: 16px; padding: 14px 14px 14px !important; box-shadow: 0 20px 50px rgba(0,0,0,.3); animation: eclair .14s ease-out; }
   .choix-date-grille button { padding: 8px 0; font-size: 14px; }
 }
+
+/* ---------- agenda : seule la recherche reste visible dans la barre de filtres ---------- */
+body.vue-calendrier .filtres .filtre:not(.recherche), body.vue-calendrier .filtres .option-archives,
+body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinitialiser, body.vue-calendrier .filtres .nb-affiches { display: none !important; }
+@media (min-width: 901px) { body.vue-calendrier .filtres .filtre.recherche { flex: 0 1 380px; } }
+@media (max-width: 900px) { body.vue-calendrier #btnFiltres { display: none; } }
 </style>
 </head>
 <body>
@@ -3017,11 +3023,12 @@ input[type="date"] { cursor: pointer; }
   function evenementsCalendrier() {
     const parJour = {};
     const ajouter = (iso, ev) => { if (estIso(iso) && typesCalendrier.has(ev.type)) (parJour[iso] ||= []).push(ev); };
-    const retenus = clientsFiltres();
+    // l'agenda ignore les filtres (ils restent actifs pour les autres onglets) : seule la recherche compte
     const recherche = texteRecherche();
+    const retenus = recherche && donnees ? new Set(donnees.dossiers.filter(correspondRecherche).map((d) => cleClient(d.client))) : null;
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
-        if (retenus && !correspond(d)) return;
+        if (retenus && !correspondRecherche(d)) return;
         if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
@@ -3779,7 +3786,7 @@ input[type="date"] { cursor: pointer; }
     const v = vueCourante();
     $("filtrePortee").textContent = {
       dutreil: "Sur l’onglet Dutreil, seule la recherche s’applique (sur le nom de la société, l’objet ou les notes).",
-      calendrier: "Le calendrier montre les rendez-vous des dossiers filtrés, les tâches de leurs clients et les échéances Dutreil trouvées par la recherche.",
+      calendrier: "L’agenda montre tout : les filtres ne s’y appliquent pas, seule la recherche (client, tâche…) le restreint.",
       accueil: "L’accueil se calcule sur les dossiers filtrés."
     }[v] || "";
     $("filtrePortee").hidden = !filtreActif() || !$("filtrePortee").textContent;
