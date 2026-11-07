@@ -3433,11 +3433,13 @@ body.glisser .section.vide { display: block; }
   const ORDRE_VUES = ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"];
   let sensVue = null;
   let doigt = null;
-  document.querySelector("main").addEventListener("touchstart", (e) => {
+  document.addEventListener("touchstart", (e) => {
     doigt = null;
     if (!estTel() || e.touches.length !== 1) return;
     // zones qui défilent déjà horizontalement : on les laisse tranquilles
-    if (e.target.closest(".m-onglets, .rdv, .indicateurs, .d-indic, .d-etats, input, textarea, select, .fen-segment, .filtres")) return;
+    if (e.target.closest(".m-onglets, .rdv, .indicateurs, .d-indic, .d-etats, input, textarea, select, .fen-segment, .filtres, " +
+      ".entete, nav.bas, .fab, .fab-voile, .feuille, .menu, .eclair, .choix-date, .horloge-voile, .voile-filtres, .menu-contextuel")) return;
+    if (document.querySelector(".eclair, .choix-date, .horloge-voile") || fabOuvert) return;
     // et, de façon générale, tout bandeau qui défile de côté (indicateurs, pastilles…)
     for (let n = e.target; n && n !== document.body; n = n.parentElement) {
       const ox = getComputedStyle(n).overflowX;
@@ -3445,7 +3447,7 @@ body.glisser .section.vide { display: block; }
     }
     doigt = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
   }, { passive: true });
-  document.querySelector("main").addEventListener("touchend", (e) => {
+  document.addEventListener("touchend", (e) => {
     if (!doigt) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - doigt.x, dy = t.clientY - doigt.y, duree = Date.now() - doigt.t;
