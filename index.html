@@ -932,6 +932,28 @@ body.glisser .section.vide { display: block; }
 .rdv-champs { grid-template-columns: minmax(0, 1fr) 96px 88px !important; }
 .rdv-champs select, .champ select[name="duree"] { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 9px 6px; }
 @media (max-width: 900px) { .rdv-champs { grid-template-columns: 1fr 1fr !important; } .rdv-champs input[type="date"] { grid-column: 1 / -1; } }
+
+/* ---------- journée en frise (agenda) ---------- */
+.frise { position: relative; margin: 8px 0 12px; border-top: 1px solid var(--bordure); }
+.frise-heure { position: absolute; left: 0; right: 0; border-top: 1px solid var(--bordure); }
+.frise-heure span { position: absolute; left: 0; top: -8px; font-size: 10.5px; color: var(--discret); background: var(--carte); padding-right: 4px; font-variant-numeric: tabular-nums; }
+.frise-maintenant { position: absolute; left: 40px; right: 0; border-top: 2px solid var(--rouge); z-index: 2; }
+.frise-maintenant::before { content: ""; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 4px; background: var(--rouge); }
+.frise-bloc { position: absolute; border-radius: 7px; padding: 3px 7px; overflow: hidden; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  border: 1px solid transparent; box-shadow: 0 1px 2px rgba(12,45,57,.08); z-index: 1; }
+.frise-bloc b { display: block; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frise-bloc.court { padding-top: 1px; }
+.frise-bloc.court b { display: inline; margin-right: 6px; }
+.frise-bloc.court small { display: inline; }
+.frise-bloc.court .poignee::after { display: none; }
+.frise-bloc small { display: block; font-size: 10.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frise-bloc.f-rdv { background: #e4efe3; border-color: #a9c6a8; color: #2f4a2e; }
+.frise-bloc.f-tache { background: #fbf3e2; border-color: #d9c48f; color: #6e5220; }
+.frise-bloc.f-tache.retard { background: #f7d4d4; border-color: #d99a9a; color: #7a1f1f; }
+.frise-bloc.fixe { border-width: 2px; }
+.frise-bloc.saisi { box-shadow: 0 6px 16px rgba(12,45,57,.25); z-index: 3; opacity: .92; }
+.frise-bloc .poignee { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; cursor: ns-resize; touch-action: none; }
+.frise-bloc .poignee::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 22px; height: 3px; margin-left: -11px; border-radius: 2px; background: currentColor; opacity: .35; }
 </style>
 </head>
 <body>
@@ -2826,13 +2848,13 @@ body.glisser .section.vide { display: block; }
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
         if (retenus && !correspond(d)) return;
-        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, heure: d.rdv_heure || "", sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
+        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
         for (const t of f.taches || []) {
           if (t.fait || !t.pour || !tacheRetenue(f.nom, t, retenus)) continue;
-          ajouter(t.pour, { type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + t.texte, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
+          ajouter(t.pour, { type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
             retard: tacheEnRetard(t), id: t.id, client: f.nom, date: t.pour, ref: { client: f.nom, tache: t.id } });
         }
       }
@@ -2859,6 +2881,7 @@ body.glisser .section.vide { display: block; }
   const indexEvenements = new Map();  // clé -> événement, pour retrouver ce qu'on glisse
   function changerHeureEvenement(e, heure) {
     const r = e.ref || {};
+    let resume = "";
     if (e.type === "rdv") {
       const i = donnees.dossiers.findIndex((d, k) => (d.id || k) === r.dossier);
       if (i < 0) return;
@@ -2866,11 +2889,14 @@ body.glisser .section.vide { display: block; }
       d.rdv_heure = heure || "";
       noterHistorique(d, avant);
       sauver();
+      resume = apresAgenda([d.rdv]);
     } else if (e.type === "tache") {
       majTaches(r.client, (l) => l.map((t) => (t.id === r.tache ? { ...t, heure: heure || "" } : t)));
+      resume = apresAgenda([e.date], r.tache);
     } else return;
     afficherTout();
-    informer(heure ? `« ${e.titre.replace(/^\d\d:\d\d /, "")} » : ${heure}.` : "Heure retirée.");
+    const nom = e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "");
+    informer((heure ? `« ${nom} » : ${plage(heure, e.duree)}.` : "Heure retirée.") + resume);
   }
 
   function deplacerEvenement(e, iso, annulable = true) {
@@ -2884,8 +2910,10 @@ body.glisser .section.vide { display: block; }
       d.rdv = iso;
       noterHistorique(d, avant);
       sauver();
+      apresAgenda([ancienne, iso]);
     } else if (e.type === "tache") {
       majTaches(r.client, (l) => l.map((t) => (t.id === r.tache ? { ...t, pour: iso } : t)));
+      apresAgenda([ancienne, iso], r.tache);
     } else if (e.type === "dutreil") {
       const pacte = dutreil.pactes[r.pacte];
       if (!pacte) return;
@@ -3056,6 +3084,100 @@ body.glisser .section.vide { display: block; }
     }
   });
 
+  // ---- la journée en frise : chaque élément à sa place ; glisser pour déplacer, tirer le bas pour allonger ----
+  const DEBUT_FRISE = 8 * 60, FIN_FRISE = 20 * 60;
+  function friseJour(elements) {
+    const pxMin = 1.1;  // 1 h = 66 px : un créneau de 15 min reste lisible
+    const frise = el("div", { class: "frise", style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` });
+    for (let h = DEBUT_FRISE / 60; h <= FIN_FRISE / 60; h++) {
+      frise.append(el("div", { class: "frise-heure", style: `top:${(h * 60 - DEBUT_FRISE) * pxMin}px` }, el("span", null, `${h} h`)));
+    }
+    if (jourCalendrier === enIso(aujourdhui())) {
+      const n = new Date(), m = n.getHours() * 60 + n.getMinutes();
+      if (m > DEBUT_FRISE && m < FIN_FRISE) frise.append(el("div", { class: "frise-maintenant", style: `top:${(m - DEBUT_FRISE) * pxMin}px` }));
+    }
+    // éléments qui se chevauchent (rendez-vous sur rendez-vous…) : côte à côte
+    const places = elements.map((e) => ({ e, a: enMinutes(e.heure), b: enMinutes(e.heure) + (Number(e.duree) || (e.type === "rdv" ? DUREE_RDV : DUREE_TACHE)) }))
+      .sort((x, y) => x.a - y.a);
+    const colonnes = [];
+    for (const p of places) {
+      let c = colonnes.findIndex((fin) => fin <= p.a);
+      if (c < 0) { c = colonnes.length; colonnes.push(0); }
+      colonnes[c] = p.b; p.col = c;
+    }
+    for (const p of places) {
+      const largeur = 100 / Math.max(1, colonnes.length);
+      const bloc = el("div", { class: `frise-bloc f-${p.e.type}${p.e.retard ? " retard" : ""}${p.e.fixe ? " fixe" : ""}`,
+        style: `top:${(p.a - DEBUT_FRISE) * pxMin}px;height:${Math.max(16, (p.b - p.a) * pxMin - 2)}px;left:calc(44px + (100% - 48px) * ${p.col * largeur / 100});width:calc((100% - 48px) * ${largeur / 100} - 3px)` },
+        el("b", null, `${p.e.fixe ? "📌 " : ""}${p.e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "")}`),
+        el("small", null, `${plage(p.e.heure, p.b - p.a)} · ${p.e.type === "tache" ? p.e.client || "" : p.e.sous}`),
+        el("i", { class: "poignee", title: "Tirer pour changer la durée" }));
+      if ((p.b - p.a) < 40) bloc.classList.add("court");  // bloc court : tout sur une ligne
+      activerFrise(bloc, p, pxMin);
+      frise.append(bloc);
+    }
+    return frise;
+  }
+  function activerFrise(bloc, p, pxMin) {
+    let g = null;
+    bloc.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0) return;
+      const redim = ev.target.classList.contains("poignee");
+      g = { y: ev.clientY, redim, parti: false, a: p.a, b: p.b, tactile: ev.pointerType !== "mouse", pret: ev.pointerType === "mouse" || redim };
+      if (g.tactile && !g.pret) g.minuteur = setTimeout(() => { if (g) { g.pret = true; bloc.classList.add("saisi"); if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {} } }, 260);
+      try { bloc.setPointerCapture(ev.pointerId); } catch (e) {}
+    });
+    bloc.addEventListener("pointermove", (ev) => {
+      if (!g) return;
+      const dy = ev.clientY - g.y;
+      if (!g.pret) { if (Math.abs(dy) > 8) { clearTimeout(g.minuteur); g = null; } return; }  // c'est un défilement
+      if (!g.parti && Math.abs(dy) < 4) return;
+      g.parti = true;
+      ev.preventDefault();
+      const pas = Math.round(dy / pxMin / 15) * 15;
+      if (g.redim) {
+        g.nb = Math.max(g.a + 15, g.b + pas);
+        bloc.style.height = `${(g.nb - g.a) * pxMin - 2}px`;
+        bloc.querySelector("small").textContent = plage(enHeure(g.a), g.nb - g.a);
+      } else {
+        g.na = Math.min(FIN_FRISE - (g.b - g.a), Math.max(DEBUT_FRISE, g.a + pas));
+        bloc.style.top = `${(g.na - DEBUT_FRISE) * pxMin}px`;
+        bloc.querySelector("small").textContent = plage(enHeure(g.na), g.b - g.a);
+      }
+    });
+    const fin = () => {
+      if (!g) return;
+      clearTimeout(g.minuteur);
+      const x = g; g = null;
+      bloc.classList.remove("saisi");
+      if (!x.parti) { if (!x.redim) p.e.ouvrir(); return; }
+      if (x.redim && x.nb) changerDureeEvenement(p.e, x.nb - x.a);
+      else if (!x.redim && x.na !== undefined && x.na !== x.a) changerHeureEvenement(p.e, enHeure(x.na));
+      else afficherCalendrier();
+    };
+    bloc.addEventListener("pointerup", fin);
+    bloc.addEventListener("pointercancel", () => { if (g) clearTimeout(g.minuteur); g = null; afficherCalendrier(); });
+    bloc.addEventListener("touchmove", (ev) => { if (g && g.pret) ev.preventDefault(); }, { passive: false });
+  }
+  function changerDureeEvenement(e, duree) {
+    const r = e.ref || {};
+    let resume = "";
+    if (e.type === "rdv") {
+      const i = donnees.dossiers.findIndex((d, k) => (d.id || k) === r.dossier);
+      if (i < 0) return;
+      const d = donnees.dossiers[i], avant = { ...d };
+      d.rdv_duree = String(duree);
+      noterHistorique(d, avant);
+      sauver();
+      resume = apresAgenda([d.rdv]);
+    } else if (e.type === "tache") {
+      majTaches(r.client, (l) => l.map((t) => (t.id === r.tache ? { ...t, duree: String(duree) } : t)));
+      resume = apresAgenda([e.date], r.tache);
+    } else return;
+    afficherTout();
+    informer(`Durée : ${DUREES.find(([v]) => v === String(duree)) ? DUREES.find(([v]) => v === String(duree))[1] : duree + " min"}.${resume}`);
+  }
+
   function afficherCalendrier() {
     if (!$("calGrille")) return;
     const ev = evenementsCalendrier();
@@ -3148,7 +3270,8 @@ body.glisser .section.vide { display: block; }
     $("calPanneau").replaceChildren(
       el("h3", null, jourChoisi.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })),
       el("div", { class: "sous" }, elements.length ? `${elements.length} élément(s)` : "Rien de prévu ce jour-là."),
-      ...elements.map(ligne),
+      elements.some((e) => e.heure && e.type !== "dutreil") ? friseJour(elements.filter((e) => e.heure && e.type !== "dutreil")) : "",
+      ...elements.filter((e) => !e.heure || e.type === "dutreil").map(ligne),
       el("p", { class: "aide", style: "margin:10px 0 0" }, "Pour ajouter une tâche ce jour-là : bouton +, puis Tâche."),
       suite.length ? el("div", { class: "cal-avenir" }, ...suite.map(([iso, l]) => el("div", null,
         el("h4", null, versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })), ...l.map(ligne)))) : "");
@@ -3754,6 +3877,8 @@ body.glisser .section.vide { display: block; }
   }
   function cocherTache(nom, id, fait) {
     majTaches(nom, (l) => l.map((t) => (t.id === id ? { ...t, fait: fait ? new Date().toISOString() : null } : t)));
+    const t = trouverTache(id);
+    if (t && t.pour) apresAgenda([t.pour]);
   }
 
   // dossier : { id, libelle } quand le bloc est affiché dans la fiche d'un dossier (la tâche y est rattachée)
@@ -3770,10 +3895,14 @@ body.glisser .section.vide { display: block; }
       const ajouter = () => {
         const t = texte.value.trim();
         if (!t) { texte.focus(); return; }
-        const tache = placerTache({ id: nouvelId(), texte: t, pour: date.value || "", heure: date.value ? (heure.value || "") : "", fait: null, cree: new Date().toISOString(),
-          ...(dossier ? { dossier: dossier.id, dossier_libelle: dossier.libelle } : {}) });
-        majTaches(nom, (l) => [...l, tache]);
-        if (tache.place_auto) informer(`« ${t} » placée à ${plage(tache.heure, DUREE_TACHE)}, premier créneau libre.`);
+        const id = nouvelId();
+        majTaches(nom, (l) => [...l, { id, texte: t, pour: date.value || "", heure: date.value ? (heure.value || "") : "", fait: null, cree: new Date().toISOString(),
+          ...(dossier ? { dossier: dossier.id, dossier_libelle: dossier.libelle } : {}) }]);
+        if (date.value) {
+          const resume = apresAgenda([date.value], heure.value ? id : null, heure.value ? [] : [id]);
+          const placee = trouverTache(id);
+          if (placee && placee.heure) informer(`« ${t} » : ${fmtDate(placee.pour)} ${plage(placee.heure, dureeTache(placee))}${resume}`);
+        }
         dessiner();
         bloc.querySelector("input[type=text]").focus();
         afficherTout();
@@ -3857,12 +3986,109 @@ body.glisser .section.vide { display: block; }
     return h ? { ...t, heure: h, place_auto: true } : t;
   }
 
+  // ================================================================ agenda dynamique
+  // Les rendez-vous ne bougent jamais. Les tâches avec une heure se recalent toutes seules pour remplir
+  // la journée sans chevauchement : la tâche qu'on vient de poser (ou une tâche « 📌 heure fixe ») garde sa place,
+  // les autres se décalent ; une tâche courte peut passer devant pour boucher un trou trop petit pour la suivante.
+  // Ce qui ne tient plus dans la journée part au jour ouvré suivant.
+  const dureeTache = (t) => Number(t.duree) || DUREE_TACHE;
+  function jourOuvreSuivant(iso) {
+    const d = versDate(iso);
+    do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+    return enIso(d);
+  }
+  function tachesDuJour(iso) {
+    const l = [];
+    for (const f of Object.values(donnees ? donnees.clients : {})) for (const t of f.taches || []) if (!t.fait && t.pour === iso) l.push(t);
+    return l;
+  }
+  // replanifie une journée ; renvoie { deplacees, reportees: [ { t, vers } ] }
+  function replanifier(iso, ancre, aCaser = [], profondeur = 0) {
+    const bilan = { deplacees: 0, reportees: [] };
+    if (!iso || !donnees || iso < enIso(aujourdhui())) return bilan;   // on ne réécrit pas le passé
+    const maintenant = iso === enIso(aujourdhui()) ? Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / 15) * 15 : -1;
+    const fixes = [];
+    for (const d of donnees.dossiers) {
+      if (d.rdv !== iso || d.archives) continue;
+      const m = enMinutes(d.rdv_heure);
+      if (m !== null) fixes.push([m, m + (Number(d.rdv_duree) || DUREE_RDV)]);
+    }
+    const mobiles = [];
+    for (const t of tachesDuJour(iso)) {
+      const m = enMinutes(t.heure);
+      if (m === null) { if (aCaser.includes(t.id)) mobiles.push([Infinity, t]); continue; }
+      if (t.fixe || t.id === ancre || m < maintenant) fixes.push([m, m + dureeTache(t)]);
+      else mobiles.push([m, t]);
+    }
+    fixes.sort((a, b) => a[0] - b[0]);
+    // créneaux libres de la journée
+    const libres = [];
+    let curseur = Math.max(JOURNEE[0], maintenant);
+    for (const [a, b] of fixes) {
+      if (a > curseur) libres.push([curseur, Math.min(a, JOURNEE[1])]);
+      curseur = Math.max(curseur, b);
+    }
+    if (curseur < JOURNEE[1]) libres.push([curseur, JOURNEE[1]]);
+    // on garde l'ordre actuel des tâches, mais une plus courte peut passer devant pour boucher un trou
+    const file = mobiles.sort((a, b) => a[0] - b[0] || String(a[1].cree || "").localeCompare(String(b[1].cree || ""))).map(([, t]) => t);
+    for (const [a, b] of libres) {
+      let c = a;
+      for (;;) {
+        const k = file.findIndex((t) => dureeTache(t) <= b - c);
+        if (k < 0) break;
+        const t = file.splice(k, 1)[0];
+        const h = enHeure(c);
+        if (t.heure !== h) { t.heure = h; bilan.deplacees++; }
+        c += dureeTache(t);
+      }
+    }
+    // ce qui ne tient pas : jour ouvré suivant
+    if (file.length && profondeur < 10) {
+      const suivant = jourOuvreSuivant(iso);
+      for (const t of file) { t.pour = suivant; t.heure = ""; bilan.reportees.push({ t, vers: suivant }); }
+      const suite = replanifier(suivant, null, file.map((t) => t.id), profondeur + 1);
+      bilan.deplacees += suite.deplacees;
+    } else if (file.length) {
+      for (const t of file) t.heure = "";
+    }
+    return bilan;
+  }
+  // après toute modification de l'agenda : on replanifie les jours concernés, on enregistre, on résume
+  function apresAgenda(jours, ancre, aCaser = []) {
+    let deplacees = 0;
+    const reportees = [];
+    for (const iso of [...new Set(jours.filter(Boolean))]) {
+      const b = replanifier(iso, ancre, aCaser);
+      deplacees += b.deplacees; reportees.push(...b.reportees);
+    }
+    if (deplacees || reportees.length) sauver();
+    const morceaux = [];
+    const autres = deplacees - (aCaser.length ? 1 : 0);
+    if (autres > 0) morceaux.push(`${autres} tâche${autres > 1 ? "s" : ""} décalée${autres > 1 ? "s" : ""}`);
+    if (reportees.length) morceaux.push(`${reportees.length} reportée${reportees.length > 1 ? "s" : ""} au ${fmtDate(reportees[0].vers)}`);
+    // la tâche qu'on vient de poser empiète sur un rendez-vous ou une tâche 📌 : on le signale
+    const t = ancre && trouverTache(ancre);
+    const debut = t && enMinutes(t.heure);
+    if (debut !== null && debut !== undefined && t) {
+      const fin = debut + dureeTache(t);
+      const rdv = donnees.dossiers.find((d) => d.rdv === t.pour && !d.archives && enMinutes(d.rdv_heure) !== null
+        && enMinutes(d.rdv_heure) < fin && enMinutes(d.rdv_heure) + (Number(d.rdv_duree) || DUREE_RDV) > debut);
+      const fixe = !rdv && tachesDuJour(t.pour).find((x) => x !== t && x.fixe && enMinutes(x.heure) !== null
+        && enMinutes(x.heure) < fin && enMinutes(x.heure) + dureeTache(x) > debut);
+      if (rdv) morceaux.push(`⚠ empiète sur le rendez-vous ${rdv.client} (${plage(rdv.rdv_heure, rdv.rdv_duree || DUREE_RDV)})`);
+      else if (fixe) morceaux.push(`⚠ empiète sur « ${fixe.texte} » 📌`);
+    }
+    return morceaux.length ? " · " + morceaux.join(" · ") : "";
+  }
+  const trouverTache = (id) => { for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (t.id === id) return t; return null; };
+
   // ---- modifier la date et l'heure d'une tâche sur place : la pastille devient deux champs et OK ----
   function editerEcheanceTache(pastille, nom, t, apres) {
     const date = el("input", { type: "date", value: t.pour || "", "aria-label": "Date" });
     const heure = el("input", { type: "time", value: t.heure || "", "aria-label": "Heure" });
     const valider = () => {
       majTaches(nom, (l) => l.map((x) => (x.id === t.id ? { ...x, pour: date.value || "", heure: date.value ? (heure.value || "") : "" } : x)));
+      apresAgenda([t.pour, date.value], heure.value ? t.id : null, date.value && !heure.value ? [t.id] : []);
       informer(date.value ? `« ${t.texte} » : ${fmtDate(date.value)}${heure.value ? " à " + heure.value : ""}.` : `« ${t.texte} » : sans date.`);
       apres();
     };
@@ -3888,7 +4114,8 @@ body.glisser .section.vide { display: block; }
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: t.pour || "" })),
         champ("À", el("input", { name: "heure", type: "time", value: t.heure || "" }))),
-      champ("Durée", choixDuree("duree", t.duree)),
+      el("div", { class: "deux" }, champ("Durée", choixDuree("duree", t.duree)),
+        el("label", { class: "case", style: "margin-top:22px" }, el("input", { type: "checkbox", name: "fixe", checked: !!t.fixe }), "📌 Heure fixe")),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:90px", placeholder: "Détails, numéro à appeler, lien…" }, t.note || ""))),
       el("label", { class: "tache-fait" }, el("input", { type: "checkbox", name: "fait", checked: !!t.fait }), t.fait ? `Faite le ${new Date(t.fait).toLocaleDateString("fr-FR")}` : "Faite"),
       el("div", { class: "actions-fiche" },
@@ -3896,6 +4123,7 @@ body.glisser .section.vide { display: block; }
         el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
           if (!confirm(`Supprimer la tâche « ${t.texte} » ?`)) return;
           majTaches(nom, (l) => l.filter((x) => x.id !== id));
+          apresAgenda([t.pour]);
           terminerFeuille(); afficherTout(); informer("Tâche supprimée.");
         } }, "Supprimer")));
     ouvrirFeuille("feuilleTache", () => ouvrirTache(nom, id));
@@ -3912,8 +4140,9 @@ body.glisser .section.vide { display: block; }
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: jourPropose })),
         champ("À", el("input", { name: "heure", type: "time", value: "" }))),
-      champ("Durée", choixDuree("duree", "")),
-      el("p", { class: "aide" }, "Sans heure, la tâche se place d’elle-même au prochain créneau libre de la journée (30 min si aucune durée)."),
+      el("div", { class: "deux" }, champ("Durée", choixDuree("duree", "")),
+        el("label", { class: "case", style: "margin-top:22px" }, el("input", { type: "checkbox", name: "fixe" }), "📌 Heure fixe")),
+      el("p", { class: "aide" }, "Sans heure, la tâche prend le premier créneau libre. Les autres tâches se décalent si besoin ; les rendez-vous et les tâches 📌 ne bougent pas."),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Détails, numéro à appeler, lien…" }, ""))));
     ouvrirFeuille("feuilleTache", nouvelleTache);
     setTimeout(() => $("corpsTache").querySelector("[name=client]").focus(), 60);
@@ -3927,20 +4156,27 @@ body.glisser .section.vide { display: block; }
       if (!saisi) { informer("Indiquez le client."); return; }
       const nom = nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi;
       const existe = nomsClients().some((n) => cleClient(n) === cleClient(saisi));
-      const tache = placerTache({ id: nouvelId(), texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "",
-        note: v.note || "", fait: null, cree: new Date().toISOString() });
-      majTaches(nom, (l) => [...l, tache]);
+      const id = nouvelId();
+      majTaches(nom, (l) => [...l, { id, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", fixe: !!v.fixe,
+        note: v.note || "", fait: null, cree: new Date().toISOString() }]);
+      const resume = apresAgenda([v.pour], v.heure ? id : null, v.heure ? [] : [id]);
+      const t = trouverTache(id);
       terminerFeuille(); afficherTout();
-      const ou = tache.place_auto ? ` Placée à ${plage(tache.heure, tache.duree || DUREE_TACHE)}, premier créneau libre.` : "";
-      informer((existe ? `Tâche ajoutée pour ${nom}.` : `Tâche ajoutée, et nouveau client « ${nom} » créé.`) + ou);
+      const ou = t && t.heure ? ` ${t.pour !== v.pour ? "Reportée au " + fmtDate(t.pour) + ", " : "Placée "}${plage(t.heure, dureeTache(t))}.` : "";
+      informer((existe ? `Tâche ajoutée pour ${nom}.` : `Tâche ajoutée, et nouveau client « ${nom} » créé.`) + ou + resume);
       return;
     }
     const { nom, id } = tacheEnCours;
+    const avant = { ...(trouverTache(id) || {}) };
     majTaches(nom, (l) => l.map((t) => t.id !== id ? t : {
       ...t, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", note: v.note || "",
-      fait: v.fait ? (t.fait || new Date().toISOString()) : null
+      fait: v.fait ? (t.fait || new Date().toISOString()) : null, fixe: !!v.fixe
     }));
-    terminerFeuille(); afficherTout(); informer("Tâche enregistrée.");
+    let resume = "";
+    if (avant.pour !== (v.pour || "") || (avant.heure || "") !== (v.heure || "") || String(avant.duree || "") !== String(v.duree || "") || !!avant.fait !== !!v.fait) {
+      resume = apresAgenda([avant.pour, v.pour], v.heure ? id : null, v.pour && !v.heure ? [id] : []);
+    }
+    terminerFeuille(); afficherTout(); informer("Tâche enregistrée." + resume);
   }
 
   // ---- fiche client imprimable (ou enregistrable en PDF) ----
@@ -3986,6 +4222,7 @@ body.glisser .section.vide { display: block; }
       archives: v.archives, commentaire: v.commentaire
     });
     if (!d.id) d.id = nouvelId();
+    const rdvChange = !avant || avant.rdv !== d.rdv || (avant.rdv_heure || "") !== (d.rdv_heure || "") || String(avant.rdv_duree || "") !== String(d.rdv_duree || "");
     noterHistorique(d, avant);
     if (enCours >= 0) donnees.dossiers[enCours] = d; else donnees.dossiers.push(d);
     const cle = cleClient(d.client);
@@ -3999,9 +4236,10 @@ body.glisser .section.vide { display: block; }
     f.notes = v.notes_client;
     donnees.clients[cle] = f;
     sauver();
+    const resumeAgenda = rdvChange && d.rdv_heure ? apresAgenda([avant && avant.rdv, d.rdv]) : "";
     terminerFeuille();
     afficherTout();
-    informer(enCours >= 0 ? "Dossier enregistré." : "Dossier ajouté.");
+    informer((enCours >= 0 ? "Dossier enregistré." : "Dossier ajouté.") + resumeAgenda);
   }
   function supprimerDossier() {
     const d = donnees.dossiers[enCours];
