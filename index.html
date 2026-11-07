@@ -847,6 +847,22 @@ body.glisser .section.vide { display: block; }
   .m-sections .section-titre .montants { display: block; }
 }
 
+
+/* ---------- épuré : sans bandeau ni ligne d'indicateurs ; filtres secondaires repliés ---------- */
+#rdv, #indicateurs { display: none !important; }
+@media (min-width: 901px) {
+  .filtres { display: flex !important; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px; }
+  .filtres .filtre { flex: 1 1 140px; min-width: 0; }
+  .filtres .filtre.recherche { flex: 1.6 1 220px; }
+  .filtres:not(.etendus) .secondaire { display: none; }
+  .filtres .option-archives { flex: none; }
+  .filtres-fin { display: flex; align-items: center; gap: 8px; margin-left: auto; padding-bottom: 1px; }
+  .plus-filtres.actif { border-color: var(--or); color: #6e5220; background: var(--or-doux); }
+  .plus-filtres i { font-style: normal; font-weight: 600; }
+  .filtres.etendus .plus-filtres { background: var(--section); }
+  .nb-affiches { font-size: 12.5px; color: var(--discret); white-space: nowrap; font-variant-numeric: tabular-nums; }
+}
+@media (max-width: 900px) { .plus-filtres, .nb-affiches { display: none; } .filtres-fin { display: contents; } }
 </style>
 </head>
 <body>
@@ -893,10 +909,14 @@ body.glisser .section.vide { display: block; }
       <div class="filtre"><span class="lib">Nature</span><button class="segment" data-cle="type"><span data-titre="Nature">Tous</span></button></div>
       <div class="filtre"><span class="lib">Notaire</span><button class="segment" data-cle="notaire"><span data-titre="Notaire">Tous</span></button></div>
       <div class="filtre"><span class="lib">Exercice</span><button class="segment" data-cle="exercice"><span data-titre="Exercice">Tous</span></button></div>
-      <div class="filtre"><span class="lib">Partenaire</span><button class="segment" data-cle="partenaire"><span data-titre="Partenaire">Tous</span></button></div>
-      <div class="filtre"><span class="lib">Ancienneté</span><button class="segment" data-cle="anciennete"><span data-titre="Ancienneté">Tous</span></button></div>
-      <label class="option-archives"><input type="checkbox" id="masquerArchives"> Masquer les archives</label>
-      <button class="bouton-discret" id="reinitialiser">Réinitialiser</button>
+      <div class="filtre secondaire"><span class="lib">Partenaire</span><button class="segment" data-cle="partenaire"><span data-titre="Partenaire">Tous</span></button></div>
+      <div class="filtre secondaire"><span class="lib">Ancienneté</span><button class="segment" data-cle="anciennete"><span data-titre="Ancienneté">Tous</span></button></div>
+      <label class="option-archives secondaire"><input type="checkbox" id="masquerArchives"> Masquer les archives</label>
+      <div class="filtres-fin">
+        <button class="bouton-discret plus-filtres" id="plusFiltres" type="button" aria-expanded="false">Plus de filtres<i id="nbSecondaires"></i></button>
+        <button class="bouton-discret" id="reinitialiser">Réinitialiser</button>
+        <span class="nb-affiches" id="nbAffiches"></span>
+      </div>
       <p class="filtre-portee" id="filtrePortee"></p>
       <button class="bouton large filtres-fermer" id="fermerFiltres" type="button">Voir les dossiers</button>
     </section>
@@ -2973,6 +2993,10 @@ body.glisser .section.vide { display: block; }
     const liste = visibles();
     majSegments();
     const nbFiltres = Object.values(selections).reduce((s, x) => s + (x.size ? 1 : 0), 0) + ($("masquerArchives").checked ? 1 : 0);
+    const nbSec = (selections.partenaire.size ? 1 : 0) + (selections.anciennete.size ? 1 : 0) + ($("masquerArchives").checked ? 1 : 0);
+    $("nbSecondaires").textContent = nbSec ? ` · ${nbSec}` : "";
+    $("plusFiltres").classList.toggle("actif", nbSec > 0);
+    $("nbAffiches").textContent = liste.length === donnees.dossiers.length ? `${liste.length} dossiers` : `${liste.length} / ${donnees.dossiers.length} dossiers`;
     $("btnFiltres").classList.toggle("actif", nbFiltres > 0);
     $("nbFiltres").textContent = nbFiltres ? ` · ${nbFiltres}` : "";
     if (estTel()) {
@@ -4129,6 +4153,11 @@ body.glisser .section.vide { display: block; }
   $("voileFiltres").addEventListener("click", fermerFiltres);
   requeteTel.addEventListener("change", () => { fermerFiltres(); montrerVue(); afficherTout(); });
   $("masquerArchives").addEventListener("change", afficherTout);
+  $("plusFiltres").addEventListener("click", () => {
+    const f = document.querySelector(".filtres");
+    f.classList.toggle("etendus");
+    $("plusFiltres").setAttribute("aria-expanded", String(f.classList.contains("etendus")));
+  });
   $("reinitialiser").addEventListener("click", () => {
     $("recherche").value = ""; $("rechercheTel").value = ""; $("masquerArchives").checked = false;
     Object.values(selections).forEach((s) => s.clear());
