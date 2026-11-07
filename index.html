@@ -4168,6 +4168,7 @@ body.glisser .section.vide { display: block; }
       b.style.setProperty("--lx", `${Math.round(Math.cos(angle) * 30)}px`);
       b.style.setProperty("--ly", `${Math.round(-Math.sin(angle) * 40)}px`);
       b.style.transitionDelay = `${k * 25}ms`;
+      b.dataset.angle = String(angle * 180 / Math.PI);  // direction du choix vu depuis le + (180 = gauche, 90 = haut)
     });
     if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {}
   }
@@ -4183,6 +4184,20 @@ body.glisser .section.vide { display: block; }
     if (ACTIONS_FAB[action]) setTimeout(ACTIONS_FAB[action], 60);
   }
   const optionSous = (x, y) => { const e = document.elementFromPoint(x, y); return e && e.closest("#fabOptions button:not([hidden])"); };
+  function optionDansDirection(x, y) {
+    const b = $("btnNouveau").getBoundingClientRect();
+    const dx = x - (b.left + b.width / 2), dy = y - (b.top + b.height / 2);
+    if (Math.hypot(dx, dy) < 30) return null;                      // encore sur le + : rien de choisi
+    const angle = Math.atan2(-dy, dx) * 180 / Math.PI;               // 0 = droite, 90 = haut, 180 = gauche
+    const choix = [...$("fabOptions").querySelectorAll("button:not([hidden])")];
+    const ecart = 90 / Math.max(1, choix.length - 1);
+    let meilleur = null, mieux = Infinity;
+    for (const c of choix) {
+      let d = Math.abs(((angle - Number(c.dataset.angle)) % 360 + 540) % 360 - 180);
+      if (d < mieux) { mieux = d; meilleur = c; }
+    }
+    return mieux <= ecart / 2 + 25 ? meilleur : null;               // un peu de marge au-delà de l'arc
+  }
   $("btnNouveau").addEventListener("contextmenu", (e) => e.preventDefault());
   $("btnNouveau").addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
@@ -4193,7 +4208,7 @@ body.glisser .section.vide { display: block; }
   });
   $("btnNouveau").addEventListener("pointermove", (e) => {
     if (!fabAppui || !fabOuvert) return;
-    const vise = optionSous(e.clientX, e.clientY);
+    const vise = optionSous(e.clientX, e.clientY) || optionDansDirection(e.clientX, e.clientY);
     $("fabOptions").querySelectorAll("button").forEach((b) => b.classList.toggle("vise", b === vise));
   });
   $("btnNouveau").addEventListener("pointerup", (e) => {
@@ -4201,8 +4216,8 @@ body.glisser .section.vide { display: block; }
     clearTimeout(fabAppui.minuteur);
     const a = fabAppui;
     fabAppui = null;
-    const vise = optionSous(e.clientX, e.clientY);
-    if (vise) { lancerFab(vise.dataset.action); return; }       // glissé jusqu'à un choix, puis lâché
+    const vise = optionSous(e.clientX, e.clientY) || (fabOuvert ? optionDansDirection(e.clientX, e.clientY) : null);
+    if (vise) { lancerFab(vise.dataset.action); return; }       // glissé vers un choix (même au-delà), puis lâché
     if (a.maintenu) { if (!a.dejaOuvert) return fermerFab(); }  // appui long lâché ailleurs : on referme
     else if (a.dejaOuvert) fermerFab(); else ouvrirFab();         // simple toucher : ouvre ou referme
   });
