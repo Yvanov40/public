@@ -1358,13 +1358,18 @@ body.glisser .section.vide { display: block; }
   const survolPossible = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   // ---- études notariales : chaque notaire est rattaché à son étude (ville) ----
   const ETUDES = [
-    ["Bordeaux", ["Jean-Charles Bouzonie", "Charlotte Hottin", "Nicolas Inguere", "Elwood Alvarez", "Paul Letierce"]],
+    ["Bordeaux", ["Jean-Charles Bouzonie", "Charlotte Hottin", "Nicolas Inguere", "Elwood Alvarez", "Paul Letierce", "Nathalie Festal"]],
+    ["Auros", ["Alexie Sage"]],
     ["Bègles", ["Emmanuelle Bouzonie"]],
     ["Cabourg", ["Nicolas Clouet"]],
     ["Genissac", ["Marie-Pierre Becuwe"]],
     ["Lesparre", ["Stéphane Aiello"]],
+    ["Lille", ["Gautier Walkowiak"]],
+    ["Paris", ["Anne Bernhart"]],
     ["Poitiers", ["Xavier Godin"]],
-    ["Saint-Michel-sur-Orge", ["Chaimaa Talbi"]]
+    ["Saint-Michel-sur-Orge", ["Chaimaa Talbi"]],
+    ["Toulouse", ["Béatrice Carmeret"]],
+    ["Valence", ["Thomas Leroy"]]
   ];
   const AUTRES_ETUDES = "Autres études";
   const normerNom = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
