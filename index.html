@@ -927,6 +927,11 @@ body.glisser .section.vide { display: block; }
 .fen-segment label.etude-titre { font-weight: 600; color: var(--bleu); border-top: 1px solid var(--bordure); margin-top: 4px; padding-top: 8px; }
 .fen-segment label.etude-titre:first-child { border-top: 0; margin-top: 0; }
 .fen-segment .etude-notaires label { padding-left: 24px; font-size: 13.5px; }
+
+/* ---------- durées ---------- */
+.rdv-champs { grid-template-columns: minmax(0, 1fr) 96px 88px !important; }
+.rdv-champs select, .champ select[name="duree"] { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 9px 6px; }
+@media (max-width: 900px) { .rdv-champs { grid-template-columns: 1fr 1fr !important; } .rdv-champs input[type="date"] { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>
@@ -2821,13 +2826,13 @@ body.glisser .section.vide { display: block; }
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
         if (retenus && !correspond(d)) return;
-        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? d.rdv_heure + " " : "") + d.client, heure: d.rdv_heure || "", sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
+        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, heure: d.rdv_heure || "", sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
         for (const t of f.taches || []) {
           if (t.fait || !t.pour || !tacheRetenue(f.nom, t, retenus)) continue;
-          ajouter(t.pour, { type: "tache", titre: (t.heure ? t.heure + " " : "") + t.texte, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
+          ajouter(t.pour, { type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + t.texte, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
             retard: tacheEnRetard(t), id: t.id, client: f.nom, date: t.pour, ref: { client: f.nom, tache: t.id } });
         }
       }
@@ -2844,8 +2849,9 @@ body.glisser .section.vide { display: block; }
         }
       }
     });
-    for (const l of Object.values(parJour)) l.sort((a, b) => "rdv tache dutreil".indexOf(a.type) - "rdv tache dutreil".indexOf(b.type)
-      || (a.heure || "99").localeCompare(b.heure || "99"));
+    // dans la journée : dans l'ordre des heures (rendez-vous et tâches mêlés), puis ce qui n'a pas d'heure
+    for (const l of Object.values(parJour)) l.sort((a, b) => (a.heure || "99").localeCompare(b.heure || "99")
+      || "rdv tache dutreil".indexOf(a.type) - "rdv tache dutreil".indexOf(b.type));
     return parJour;
   }
 
@@ -3143,9 +3149,7 @@ body.glisser .section.vide { display: block; }
       el("h3", null, jourChoisi.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })),
       el("div", { class: "sous" }, elements.length ? `${elements.length} élément(s)` : "Rien de prévu ce jour-là."),
       ...elements.map(ligne),
-      donnees ? el("div", { class: "cal-ajout" }, el("b", { style: "font-size:13px;color:var(--bleu)" }, "Ajouter une tâche ce jour-là"), client,
-        el("datalist", { id: "liste-clients-cal" }, nomsClients().map((v) => el("option", { value: v }))),
-        texte, heureTache, el("button", { type: "button", onclick: ajouterTache }, "＋ Ajouter")) : "",
+      el("p", { class: "aide", style: "margin:10px 0 0" }, "Pour ajouter une tâche ce jour-là : bouton +, puis Tâche."),
       suite.length ? el("div", { class: "cal-avenir" }, ...suite.map(([iso, l]) => el("div", null,
         el("h4", null, versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })), ...l.map(ligne)))) : "");
   }
@@ -3579,7 +3583,7 @@ body.glisser .section.vide { display: block; }
         champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
         champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
       el("h4", { class: "rubrique" }, "Dates"),
-      el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV (date et heure)", el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" })))),
+      el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV (date, heure, durée)", el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)))),
       el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date")), champ("A-vie", saisie("a_vie", d.a_vie), true), champ("Millionnaire", avecListe("millionnaire", d.millionnaire, "millionnaire"), true)),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       el("h4", { class: "rubrique" }, "Client"),
@@ -3587,7 +3591,7 @@ body.glisser .section.vide { display: block; }
       el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", avecLiens(zoneComm)), champ("Notes client", avecLiens(zoneNotes))),
       champ("Commentaire propre à ce dossier", avecLiens(el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || ""))),
       i >= 0 ? el("div", { class: "actions-fiche" },
-        d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure) }, "📅 Ajouter le RDV à l’agenda") : null,
+        d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure, d.rdv_duree || DUREE_RDV) }, "📅 Ajouter le RDV à l’agenda") : null,
         el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
         el("button", { type: "button", onclick: () => ouvrirClient(d.client) }, "👤 Fiche client",
           tachesOuvertes(d.client).length ? ` · ☐ ${tachesOuvertes(d.client).length} tâche(s)` : "")) : "",
@@ -3665,13 +3669,13 @@ body.glisser .section.vide { display: block; }
   }
 
   // ---- agenda : Google Agenda ou fichier .ics (Outlook, Apple, Samsung…) ----
-  function menuAgenda(titre, iso, description, heure) {
+  function menuAgenda(titre, iso, description, heure, duree) {
     // avec une heure : rendez-vous d'une heure, rappel une heure avant ; sans heure : journée entière, rappel la veille
     let debut, fin;
     if (heure) {
       const [h, m] = heure.split(":").map(Number);
       const d0 = versDate(iso); d0.setHours(h, m, 0, 0);
-      const d1 = new Date(d0.getTime() + 3600000);
+      const d1 = new Date(d0.getTime() + (Number(duree) || 60) * 60000);
       const f = (d) => `${enIso(d).replace(/-/g, "")}T${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}00`;
       debut = f(d0); fin = f(d1);
     } else {
@@ -3766,8 +3770,10 @@ body.glisser .section.vide { display: block; }
       const ajouter = () => {
         const t = texte.value.trim();
         if (!t) { texte.focus(); return; }
-        majTaches(nom, (l) => [...l, { id: nouvelId(), texte: t, pour: date.value || "", heure: date.value ? (heure.value || "") : "", fait: null, cree: new Date().toISOString(),
-          ...(dossier ? { dossier: dossier.id, dossier_libelle: dossier.libelle } : {}) }]);
+        const tache = placerTache({ id: nouvelId(), texte: t, pour: date.value || "", heure: date.value ? (heure.value || "") : "", fait: null, cree: new Date().toISOString(),
+          ...(dossier ? { dossier: dossier.id, dossier_libelle: dossier.libelle } : {}) });
+        majTaches(nom, (l) => [...l, tache]);
+        if (tache.place_auto) informer(`« ${t} » placée à ${plage(tache.heure, DUREE_TACHE)}, premier créneau libre.`);
         dessiner();
         bloc.querySelector("input[type=text]").focus();
         afficherTout();
@@ -3802,6 +3808,55 @@ body.glisser .section.vide { display: block; }
     return bloc;
   }
 
+  // ---- durées et créneaux : une tâche sans heure se place au prochain créneau libre de sa journée ----
+  const DUREES = [["", "—"], ["15", "15 min"], ["30", "30 min"], ["45", "45 min"], ["60", "1 h"], ["90", "1 h 30"], ["120", "2 h"], ["180", "3 h"], ["240", "4 h"]];
+  const DUREE_TACHE = 30, DUREE_RDV = 60;          // valeurs par défaut quand rien n'est indiqué
+  const JOURNEE = [9 * 60, 19 * 60];              // créneaux cherchés entre 9 h et 19 h
+  const enMinutes = (h) => { const m = /^(\d{1,2}):(\d{2})$/.exec(h || ""); return m ? +m[1] * 60 + +m[2] : null; };
+  const enHeure = (min) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+  function plage(heure, duree) {
+    const d = enMinutes(heure);
+    if (d === null) return "";
+    return duree ? `${heure}–${enHeure(d + Number(duree))}` : heure;
+  }
+  const choixDuree = (nom, valeur) => el("select", { name: nom, "aria-label": "Durée" },
+    DUREES.map(([v, lib]) => el("option", { value: v, selected: String(valeur || "") === v }, lib)));
+  // tout ce qui occupe déjà une journée : rendez-vous et tâches avec une heure
+  function occupations(iso, sauf) {
+    const liste = [];
+    for (const d of donnees ? donnees.dossiers : []) {
+      if (d.rdv !== iso || d.archives) continue;
+      const m = enMinutes(d.rdv_heure);
+      if (m !== null) liste.push([m, m + (Number(d.rdv_duree) || DUREE_RDV)]);
+    }
+    for (const f of Object.values(donnees ? donnees.clients : {})) for (const t of f.taches || []) {
+      if (t.fait || t.pour !== iso || t.id === sauf) continue;
+      const m = enMinutes(t.heure);
+      if (m !== null) liste.push([m, m + (Number(t.duree) || DUREE_TACHE)]);
+    }
+    return liste.sort((a, b) => a[0] - b[0]);
+  }
+  // premier créneau libre assez long (aujourd'hui : pas avant l'heure qu'il est)
+  function prochainCreneau(iso, duree, sauf) {
+    const besoin = Number(duree) || DUREE_TACHE;
+    let debut = JOURNEE[0];
+    if (iso === enIso(aujourdhui())) {
+      const n = new Date();
+      debut = Math.max(debut, Math.ceil((n.getHours() * 60 + n.getMinutes()) / 15) * 15);
+    }
+    for (const [a, b] of occupations(iso, sauf)) {
+      if (a - debut >= besoin) break;
+      debut = Math.max(debut, b);
+    }
+    return debut + besoin <= JOURNEE[1] ? enHeure(debut) : "";
+  }
+  // tâche datée sans heure : on lui trouve sa place
+  function placerTache(t) {
+    if (!t.pour || t.heure) return t;
+    const h = prochainCreneau(t.pour, t.duree, t.id);
+    return h ? { ...t, heure: h, place_auto: true } : t;
+  }
+
   // ---- modifier la date et l'heure d'une tâche sur place : la pastille devient deux champs et OK ----
   function editerEcheanceTache(pastille, nom, t, apres) {
     const date = el("input", { type: "date", value: t.pour || "", "aria-label": "Date" });
@@ -3833,10 +3888,11 @@ body.glisser .section.vide { display: block; }
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: t.pour || "" })),
         champ("À", el("input", { name: "heure", type: "time", value: t.heure || "" }))),
+      champ("Durée", choixDuree("duree", t.duree)),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:90px", placeholder: "Détails, numéro à appeler, lien…" }, t.note || ""))),
       el("label", { class: "tache-fait" }, el("input", { type: "checkbox", name: "fait", checked: !!t.fait }), t.fait ? `Faite le ${new Date(t.fait).toLocaleDateString("fr-FR")}` : "Faite"),
       el("div", { class: "actions-fiche" },
-        t.pour ? el("button", { type: "button", onclick: () => menuAgenda(`${t.texte} (${nom})`, t.pour, t.note || "", t.heure) }, "📅 Ajouter à l’agenda") : null,
+        t.pour ? el("button", { type: "button", onclick: () => menuAgenda(`${t.texte} (${nom})`, t.pour, t.note || "", t.heure, t.duree || DUREE_TACHE) }, "📅 Ajouter à l’agenda") : null,
         el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
           if (!confirm(`Supprimer la tâche « ${t.texte} » ?`)) return;
           majTaches(nom, (l) => l.filter((x) => x.id !== id));
@@ -3848,13 +3904,16 @@ body.glisser .section.vide { display: block; }
     tacheEnCours = { nouveau: true };
     $("titreTache").textContent = "Nouvelle tâche";
     const demain = new Date(); demain.setDate(demain.getDate() + 1);
+    const jourPropose = vueCourante() === "calendrier" && jourCalendrier ? jourCalendrier : enIso(demain);
     $("corpsTache").replaceChildren(
       champ("Client", [el("input", { name: "client", type: "text", list: "liste-clients-tache", autocomplete: "off", placeholder: "Nom du client" }),
         el("datalist", { id: "liste-clients-tache" }, nomsClients().map((n) => el("option", { value: n })))]),
       champ("Tâche", el("input", { name: "texte", type: "text", autocomplete: "off", placeholder: "Appeler, relancer, envoyer…" })),
       el("div", { class: "deux" },
-        champ("Pour le", el("input", { name: "pour", type: "date", value: enIso(demain) })),
+        champ("Pour le", el("input", { name: "pour", type: "date", value: jourPropose })),
         champ("À", el("input", { name: "heure", type: "time", value: "" }))),
+      champ("Durée", choixDuree("duree", "")),
+      el("p", { class: "aide" }, "Sans heure, la tâche se place d’elle-même au prochain créneau libre de la journée (30 min si aucune durée)."),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Détails, numéro à appeler, lien…" }, ""))));
     ouvrirFeuille("feuilleTache", nouvelleTache);
     setTimeout(() => $("corpsTache").querySelector("[name=client]").focus(), 60);
@@ -3868,14 +3927,17 @@ body.glisser .section.vide { display: block; }
       if (!saisi) { informer("Indiquez le client."); return; }
       const nom = nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi;
       const existe = nomsClients().some((n) => cleClient(n) === cleClient(saisi));
-      majTaches(nom, (l) => [...l, { id: nouvelId(), texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", note: v.note || "", fait: null, cree: new Date().toISOString() }]);
+      const tache = placerTache({ id: nouvelId(), texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "",
+        note: v.note || "", fait: null, cree: new Date().toISOString() });
+      majTaches(nom, (l) => [...l, tache]);
       terminerFeuille(); afficherTout();
-      informer(existe ? `Tâche ajoutée pour ${nom}.` : `Tâche ajoutée, et nouveau client « ${nom} » créé.`);
+      const ou = tache.place_auto ? ` Placée à ${plage(tache.heure, tache.duree || DUREE_TACHE)}, premier créneau libre.` : "";
+      informer((existe ? `Tâche ajoutée pour ${nom}.` : `Tâche ajoutée, et nouveau client « ${nom} » créé.`) + ou);
       return;
     }
     const { nom, id } = tacheEnCours;
     majTaches(nom, (l) => l.map((t) => t.id !== id ? t : {
-      ...t, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", note: v.note || "",
+      ...t, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", note: v.note || "",
       fait: v.fait ? (t.fait || new Date().toISOString()) : null
     }));
     terminerFeuille(); afficherTout(); informer("Tâche enregistrée.");
@@ -3920,7 +3982,7 @@ body.glisser .section.vide { display: block; }
     Object.assign(d, {
       client: v.client, tache: v.tache, type: `${v.statut || "2"}. ${natureNormale(v.nature)}`, precision: v.precision || "", notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
-      exercice: exerciceNormal(v.exercice || (v.debut ? v.debut.slice(0, 4) : "")), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
+      exercice: exerciceNormal(v.exercice || (v.debut ? v.debut.slice(0, 4) : "")), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", rdv_duree: v.rdv ? (v.rdv_duree || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
       archives: v.archives, commentaire: v.commentaire
     });
     if (!d.id) d.id = nouvelId();
