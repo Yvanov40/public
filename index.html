@@ -2862,7 +2862,7 @@ body.glisser .section.vide { display: block; }
     try {
       localStorage.setItem(CLE_FILTRES, JSON.stringify({
         selections: Object.fromEntries(Object.entries(selections).map(([k, v]) => [k, [...v]])),
-        archives: $("masquerArchives").checked, etapeActive, typesCalendrier: [...typesCalendrier], modeCalendrier,
+        archives: $("masquerArchives").checked, etapeActive, typesCalendrier: [...typesCalendrier], modeCalendrier2: modeCalendrier,
         etatDutreil: $("etatDutreil").value, prochesDutreil: $("prochesDutreil").checked, etatDutreilTel
       }));
     } catch (e) {}
@@ -2878,7 +2878,7 @@ body.glisser .section.vide { display: block; }
         $("prochesDutreil").checked = !!f.prochesDutreil;
         etatDutreilTel = f.etatDutreilTel || "";
         if (Array.isArray(f.typesCalendrier)) typesCalendrier = new Set(f.typesCalendrier);
-        if (f.modeCalendrier) modeCalendrier = f.modeCalendrier;
+        if (f.modeCalendrier2) modeCalendrier = f.modeCalendrier2;  // (l'ancien réglage est ignoré : la semaine devient la vue par défaut)
       }
     } catch (e) {}
     filtresRestaures = true;
@@ -3378,7 +3378,7 @@ body.glisser .section.vide { display: block; }
   }
 
   // ---- vue Semaine (ordinateur) : sept colonnes comme la frise du jour ----
-  let modeCalendrier = "mois";
+  let modeCalendrier = "semaine";  // vue par défaut sur ordinateur
   const lundiDe = (iso) => { const d = versDate(iso); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
   function afficherSemaine(ev) {
     const lundi = lundiDe(jourCalendrier);
