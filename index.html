@@ -1060,6 +1060,10 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
 .lot-actuel { display: block; font-size: 11.5px; color: var(--discret); margin-top: 3px; }
 #corpsLot input, #corpsLot select { width: 100%; }
 #corpsLot .deux { align-items: start; }
+
+.lot-demandeurs { background: var(--section); border-radius: 10px; padding: 8px 12px; margin: 4px 0 8px; display: grid; gap: 4px; font-size: 13.5px; }
+.lot-demandeurs p { margin: 0 0 2px; font-weight: 600; color: var(--bleu); }
+.lot-demandeurs small { color: var(--discret); }
 </style>
 </head>
 <body>
@@ -2786,12 +2790,32 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
         champ("Société", [...liste("societe", "societe", listeSocietes()), indic(commune((d) => d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : ""))])),
       el("div", { class: "deux" }, champ("Partenaire", [...liste("partenaire", "partenaire", listeValeurs("partenaire")), indic(commune((d) => d.partenaire))]),
         champ("Millionnaire", [...liste("millionnaire", "millionnaire", listeValeurs("millionnaire")), indic(commune((d) => d.millionnaire))])),
+      el("div", { id: "lotDemandeurs", class: "lot-demandeurs", hidden: true }),
       el("h4", { class: "rubrique" }, indices.length > 1 ? `Les ${indices.length} dossiers` : "Le dossier"),
       el("div", { class: "deux" },
         champ("Statut", el("select", { name: "statut" }, el("option", { value: "" }, "(inchangé)"), ETAPES.map(([n, nom]) => el("option", { value: n }, nom)))),
         champ("Nature", [...liste("nature", "nature", naturesConnues()), indic(commune((d) => sansNumero(d.type)))])),
       el("div", { class: "deux" }, champ("Exercice", [...liste("exercice", "exercice", [...new Set(donnees.dossiers.map((d) => String(d.exercice || "")).filter(Boolean))].sort().reverse()), indic(commune((d) => d.exercice))]),
         champ("Précision", [...liste("precision", "precision", PRECISIONS), indic(commune((d) => d.precision))])));
+    // une société change de demandeur, pas de dossier : on montre quels demandeurs seront rattachés, chacun avec sa case.
+    // Cochés d'office : ceux dont la sélection couvre au moins la moitié des dossiers (pas un demandeur présent par hasard).
+    const zone = $("lotDemandeurs"), champSoc = $("corpsLot").querySelector("[name=societe]"), champDem = $("corpsLot").querySelector("[name=notaire]");
+    const majDemandeurs = () => {
+      const soc = champSoc.value.trim();
+      if (!soc || champDem.value.trim()) { zone.hidden = true; zone.replaceChildren(); return; }
+      const presents = new Map();
+      for (const i of indices) { const n = String(donnees.dossiers[i].notaire || "").trim(); if (n) presents.set(n, (presents.get(n) || 0) + 1); }
+      if (!presents.size) { zone.hidden = true; return; }
+      const total = (n) => donnees.dossiers.filter((d) => normerNom(d.notaire) === normerNom(n)).length;
+      zone.hidden = false;
+      zone.replaceChildren(el("p", null, `Rattacher à « ${soc} » :`),
+        ...[...presents.entries()].sort((a, b) => b[1] - a[1]).map(([n, k]) => el("label", { class: "case" },
+          el("input", { type: "checkbox", name: "rattacher", value: n, checked: k * 2 >= total(n) }),
+          el("span", null, el("b", null, n), ` · ${k} dossier${k > 1 ? "s" : ""} sélectionné${k > 1 ? "s" : ""} sur ${total(n)}`,
+            etudeDe(n) !== AUTRES_ETUDES ? el("small", null, ` (actuellement ${etudeDe(n)})`) : null))));
+    };
+    champSoc.addEventListener("input", majDemandeurs);
+    champDem.addEventListener("input", majDemandeurs);
     ouvrirFeuille("feuilleLot", () => modifierEnLot(indices, noms));
   }
   function enregistrerLot() {
@@ -2822,13 +2846,15 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       if (change) { avant.push([i, copie]); noterHistorique(d, copie); nb++; }
     }
     // société : rattache le demandeur choisi, ou chacun des demandeurs actuels
+    let rattaches = [];
     if (val("societe")) {
-      const demandeurs = val("notaire") ? [val("notaire")] : [...new Set(indices.map((i) => donnees.dossiers[i].notaire).filter(Boolean))];
-      demandeurs.forEach((n) => rattacherDemandeur(n, val("societe")));
+      rattaches = val("notaire") ? [val("notaire")] : [...$("corpsLot").querySelectorAll("input[name=rattacher]:checked")].map((c) => c.value);
+      rattaches.forEach((n) => rattacherDemandeur(n, val("societe")));
     }
     sauver();
     terminerFeuille(); afficherTout();
-    informer(nb ? `${nb} dossier${nb > 1 ? "s" : ""} modifié${nb > 1 ? "s" : ""}.` : (val("societe") ? "Société mise à jour." : "Rien à changer."), nb ? { texte: "Annuler", faire: () => {
+    const socTxt = rattaches.length ? ` ${rattaches.join(", ")} → ${val("societe")}.` : "";
+    informer((nb ? `${nb} dossier${nb > 1 ? "s" : ""} modifié${nb > 1 ? "s" : ""}.` : (rattaches.length ? "Société mise à jour." : "Rien à changer.")) + socTxt, nb ? { texte: "Annuler", faire: () => {
       for (const [i, copie] of avant) donnees.dossiers[i] = copie;
       for (const [n, f] of avantFiches) donnees.clients[cleClient(n)] = f;
       sauver(); afficherTout(); informer("Modification annulée.");
