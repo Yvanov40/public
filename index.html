@@ -1051,6 +1051,15 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
 .demandeur-ligne { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--bordure); font-size: 14px; }
 .demandeur-ligne small { color: var(--discret); }
 .demandeur-ligne input, #corpsDemandeurs .agenda-ajout input { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 7px 8px; min-width: 0; }
+
+/* ---------- sélection multiple des clients, modification groupée ---------- */
+#clientsListe tr.multi td { background: var(--or-doux) !important; }
+#clientsListe tr.multi td:first-child { box-shadow: inset 3px 0 0 var(--or); }
+#clientsListe tr { user-select: none; -webkit-user-select: none; }
+#aideClients[data-choix]::after { content: " — " attr(data-choix); color: #6e5220; font-weight: 600; }
+.lot-actuel { display: block; font-size: 11.5px; color: var(--discret); margin-top: 3px; }
+#corpsLot input, #corpsLot select { width: 100%; }
+#corpsLot .deux { align-items: start; }
 </style>
 </head>
 <body>
@@ -1268,6 +1277,18 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       <button class="valider" id="enregistrerTache">Enregistrer</button>
     </div>
     <div class="feuille-corps" id="corpsTache"></div>
+  </div>
+</div>
+
+<!-- modification groupée -->
+<div class="feuille feuille-petite" id="feuilleLot" role="dialog" aria-modal="true" aria-labelledby="titreLot">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreLot">Modifier</h3>
+      <button class="valider" id="enregistrerLot">Appliquer</button>
+    </div>
+    <div class="feuille-corps" id="corpsLot"></div>
   </div>
 </div>
 
@@ -2697,6 +2718,123 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     try { localStorage.setItem(CLE_AFFICHAGE, JSON.stringify({ repliees: [...repliees], dejaVues: [...dejaVues] })); } catch (e) {}
   }
 
+  // ---- sélection de clients : Ctrl/⌘+clic (un par un), Maj+clic (intervalle), clic droit (modifier) ----
+  const clientsChoisis = new Set();
+  let ancreClient = null;
+  function clicClient(e, nom) {
+    if (e.target.closest("button")) return;
+    if (e.shiftKey && !estTel()) {
+      e.preventDefault();
+      const ordre = [...document.querySelectorAll("#clientsListe tr[data-nom]")].map((tr) => tr.dataset.nom);
+      const a = ordre.indexOf(ancreClient ?? nom), b = ordre.indexOf(nom);
+      if (a < 0 || b < 0) clientsChoisis.add(nom);
+      else for (const n of ordre.slice(Math.min(a, b), Math.max(a, b) + 1)) clientsChoisis.add(n);
+      window.getSelection && window.getSelection().removeAllRanges();
+      majChoixClients();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && !estTel()) {
+      clientsChoisis.has(nom) ? clientsChoisis.delete(nom) : clientsChoisis.add(nom);
+      ancreClient = nom;
+      majChoixClients();
+      return;
+    }
+    clientsChoisis.clear(); majChoixClients();
+    ancreClient = nom;
+    ouvrirClient(nom);
+  }
+  function majChoixClients() {
+    document.querySelectorAll("#clientsListe tr[data-nom]").forEach((tr) => tr.classList.toggle("multi", clientsChoisis.has(tr.dataset.nom)));
+    const n = clientsChoisis.size;
+    const aide = $("aideClients");
+    if (aide && n > 1) aide.dataset.choix = `${n} clients sélectionnés · clic droit pour les modifier · Échap pour désélectionner`;
+    else if (aide) delete aide.dataset.choix;
+  }
+  function menuClients(x, y) {
+    fermerMenuSelection();
+    const noms = [...clientsChoisis];
+    const indices = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => noms.some((n) => cleClient(n) === cleClient(d.client))).map(([, i]) => i);
+    const action = (texte, faire) => el("button", { type: "button", onclick: () => { fermerMenuSelection(); faire(); } }, texte);
+    const menu = el("div", { class: "menu-contextuel", role: "menu" },
+      el("div", { class: "titre" }, noms.length > 1 ? `${noms.length} clients · ${indices.length} dossiers` : `${noms[0]} · ${indices.length} dossier${indices.length > 1 ? "s" : ""}`),
+      action("✎  Modifier demandeur, société, partenaire…", () => modifierEnLot(indices, noms)),
+      indices.length ? action("🗄  Archiver leurs dossiers", () => { selectionMulti.clear(); indices.forEach((i) => selectionMulti.add(i)); archiverSelection(true); selectionMulti.clear(); }) : null,
+      noms.length === 1 ? action("👤  Ouvrir la fiche", () => ouvrirClient(noms[0])) : null,
+      noms.length > 1 ? [el("div", { class: "sep" }), action("✕  Tout désélectionner", () => { clientsChoisis.clear(); majChoixClients(); })] : null);
+    document.body.append(menu);
+    const b = menu.getBoundingClientRect();
+    menu.style.left = Math.min(x, window.innerWidth - b.width - 8) + "px";
+    menu.style.top = Math.min(y, window.innerHeight - b.height - 8) + "px";
+    setTimeout(() => document.addEventListener("pointerdown", fermerSiDehors, true), 0);
+  }
+
+  // ---- modification groupée : demandeur, société, partenaire, millionnaire (fiche client) et exercice, statut, nature, précision (dossiers) ----
+  let lotEnCours = null;
+  function modifierEnLot(indices, noms) {
+    const clientsDuLot = noms && noms.length ? noms : [...new Set(indices.map((i) => donnees.dossiers[i].client))];
+    lotEnCours = { indices, clients: clientsDuLot };
+    const liste = (nom, cle, valeurs) => [el("input", { name: nom, type: "text", list: "lot-" + nom, placeholder: "(inchangé)", autocomplete: "off" }),
+      el("datalist", { id: "lot-" + nom }, valeurs.map((v) => el("option", { value: v })))];
+    // valeur commune actuelle, s'il y en a une, en indication
+    const commune = (f) => { const v = [...new Set(indices.map((i) => String(f(donnees.dossiers[i]) || "")))]; return v.length === 1 && v[0] ? v[0] : ""; };
+    const indic = (txt) => (txt ? el("small", { class: "lot-actuel" }, "actuellement : " + txt) : null);
+    $("titreLot").textContent = clientsDuLot.length > 1 ? `${clientsDuLot.length} clients · ${indices.length} dossiers` : `${clientsDuLot[0]} · ${indices.length} dossier${indices.length > 1 ? "s" : ""}`;
+    $("corpsLot").replaceChildren(
+      el("p", { class: "aide" }, "Seuls les champs remplis sont modifiés ; laissez vide pour ne rien changer. Choisissez dans la liste ou tapez une nouvelle valeur."),
+      el("h4", { class: "rubrique" }, "Fiche client"),
+      el("div", { class: "deux" }, champ("Demandeur", [...liste("notaire", "notaire", listeValeurs("notaire")), indic(commune((d) => d.notaire))]),
+        champ("Société", [...liste("societe", "societe", listeSocietes()), indic(commune((d) => d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : ""))])),
+      el("div", { class: "deux" }, champ("Partenaire", [...liste("partenaire", "partenaire", listeValeurs("partenaire")), indic(commune((d) => d.partenaire))]),
+        champ("Millionnaire", [...liste("millionnaire", "millionnaire", listeValeurs("millionnaire")), indic(commune((d) => d.millionnaire))])),
+      el("h4", { class: "rubrique" }, indices.length > 1 ? `Les ${indices.length} dossiers` : "Le dossier"),
+      el("div", { class: "deux" },
+        champ("Statut", el("select", { name: "statut" }, el("option", { value: "" }, "(inchangé)"), ETAPES.map(([n, nom]) => el("option", { value: n }, nom)))),
+        champ("Nature", [...liste("nature", "nature", naturesConnues()), indic(commune((d) => sansNumero(d.type)))])),
+      el("div", { class: "deux" }, champ("Exercice", [...liste("exercice", "exercice", [...new Set(donnees.dossiers.map((d) => String(d.exercice || "")).filter(Boolean))].sort().reverse()), indic(commune((d) => d.exercice))]),
+        champ("Précision", [...liste("precision", "precision", PRECISIONS), indic(commune((d) => d.precision))])));
+    ouvrirFeuille("feuilleLot", () => modifierEnLot(indices, noms));
+  }
+  function enregistrerLot() {
+    if (!lotEnCours) return;
+    const v = lireFormulaire($("corpsLot"));
+    const val = (k) => String(v[k] || "").trim();
+    const { indices, clients } = lotEnCours;
+    const avant = [];
+    const avantFiches = clients.map((n) => [n, { ...fiche(n) }]);
+    let nb = 0;
+    // fiche client (commune à tous les dossiers du client)
+    for (const nom of clients) {
+      const f = fiche(nom);
+      for (const k of ["notaire", "partenaire", "millionnaire"]) if (val(k)) f[k] = val(k);
+    }
+    const tousDesClients = donnees.dossiers.map((d, i) => i).filter((i) => clients.some((n) => cleClient(n) === cleClient(donnees.dossiers[i].client)));
+    for (const i of new Set([...indices, ...tousDesClients])) {
+      const d = donnees.dossiers[i], copie = { ...d };
+      let change = false;
+      for (const k of ["notaire", "partenaire", "millionnaire"]) if (val(k) && d[k] !== val(k)) { d[k] = val(k); change = true; }
+      if (indices.includes(i)) {
+        if (val("exercice") && d.exercice !== exerciceNormal(val("exercice"))) { d.exercice = exerciceNormal(val("exercice")); change = true; }
+        if (val("precision") && d.precision !== val("precision")) { d.precision = val("precision"); change = true; }
+        const statut = val("statut") || etapeDe(d), nature = val("nature") ? natureNormale(val("nature")) : sansNumero(d.type);
+        const type = `${statut}. ${nature}`;
+        if ((val("statut") || val("nature")) && d.type !== type) { if (statut !== etapeDe(d) && !val("precision")) d.precision = ""; d.type = type; change = true; }
+      }
+      if (change) { avant.push([i, copie]); noterHistorique(d, copie); nb++; }
+    }
+    // société : rattache le demandeur choisi, ou chacun des demandeurs actuels
+    if (val("societe")) {
+      const demandeurs = val("notaire") ? [val("notaire")] : [...new Set(indices.map((i) => donnees.dossiers[i].notaire).filter(Boolean))];
+      demandeurs.forEach((n) => rattacherDemandeur(n, val("societe")));
+    }
+    sauver();
+    terminerFeuille(); afficherTout();
+    informer(nb ? `${nb} dossier${nb > 1 ? "s" : ""} modifié${nb > 1 ? "s" : ""}.` : (val("societe") ? "Société mise à jour." : "Rien à changer."), nb ? { texte: "Annuler", faire: () => {
+      for (const [i, copie] of avant) donnees.dossiers[i] = copie;
+      for (const [n, f] of avantFiches) donnees.clients[cleClient(n)] = f;
+      sauver(); afficherTout(); informer("Modification annulée.");
+    } } : null);
+  }
+
   function afficherClients(liste) {
     const groupes = new Map();
     for (const [d] of liste) {
@@ -2707,23 +2845,26 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     for (const nom of clientsSansDossier()) groupes.set(cleClient(nom), { nom, liste: [] });
     const tries = [...groupes.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
     const max = 300;
-    $("aideClients").textContent = `${tries.length} client(s) pour ${liste.length} dossier(s) affiché(s). Cliquez sur un client pour ouvrir sa fiche.`;
+    $("aideClients").textContent = `${tries.length} client(s) pour ${liste.length} dossier(s) affiché(s). Cliquez sur un client pour ouvrir sa fiche${estTel() ? "" : " · Ctrl+clic ou Maj+clic pour en sélectionner plusieurs, puis clic droit"}.`;
     document.querySelectorAll(".nb-clients").forEach((n) => { n.textContent = tries.length; });
     $("clientsListe").replaceChildren(...tries.slice(0, max).map(({ nom, liste: ds }) => {
       const p = ds.reduce((s, d) => s + prevu(d), 0);
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       const notaires = [...new Set(ds.map((d) => d.notaire).filter(Boolean))];
-      return el("tr", { class: "ligne", onclick: () => ouvrirClient(nom) },
+      const tr = el("tr", { class: "ligne" + (clientsChoisis.has(nom) ? " multi" : ""), "data-nom": nom, onclick: (e) => clicClient(e, nom),
+        oncontextmenu: (e) => { if (estTel()) return; e.preventDefault(); if (!clientsChoisis.has(nom)) { clientsChoisis.clear(); clientsChoisis.add(nom); majChoixClients(); } menuClients(e.clientX, e.clientY); } },
         el("td", null, el("b", null, nom), badgeTaches(nom),
           el("button", { type: "button", class: "renommer", title: "Renommer ce client", "aria-label": `Renommer ${nom}`,
             onclick: (e) => { e.stopPropagation(); renommerClient(nom); } }, "✎"), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
         el("td", { class: "types" }, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""}` : "Sans dossier", el("small", null, etapes)),
-        el("td", { class: "cache-tel" }, notaires.length === 1 ? notaires[0] : notaires.length ? `${notaires.length} notaires` : ""),
+        el("td", { class: "cache-tel" }, notaires.length === 1 ? notaires[0] : notaires.length ? `${notaires.length} demandeurs` : ""),
         el("td", { class: "n cache-tel" }, p ? euros(p) : ""),
         el("td", { class: "n or" }, ca ? euros(ca) : ""),
         el("td", { class: "n" }, p ? euros(p - ca) : ""));
+      return tr;
     }));
+    majChoixClients();
     $("plusDe").hidden = tries.length <= max;
     $("plusDe").textContent = `${tries.length - max} autres clients : affinez avec la recherche ou les filtres.`;
   }
@@ -4039,6 +4180,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     const action = (texte, faire) => el("button", { type: "button", onclick: () => { fermerMenuSelection(); faire(); } }, texte);
     const menu = el("div", { class: "menu-contextuel", role: "menu" },
       el("div", { class: "titre" }, n > 1 ? `${n} dossiers sélectionnés` : (tous[0] ? tous[0].client : "")),
+      action(`✎  Modifier${n > 1 ? ` les ${n}` : ""} (demandeur, société…)`, () => modifierEnLot([...selectionMulti])),
       tous.some((d) => !d.archives) ? action(`🗄  Archiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(true)) : null,
       tous.some((d) => d.archives) ? action(`↩  Désarchiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(false)) : null,
       el("div", { class: "sep" }),
@@ -5081,6 +5223,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   $("btnNouveauClient").addEventListener("click", nouveauClient);
   $("enregistrerPacte").addEventListener("click", enregistrerPacte);
   $("enregistrerAgenda").addEventListener("click", validerReglagesAgenda);
+  $("enregistrerLot").addEventListener("click", enregistrerLot);
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
   $("enregistrerTache").addEventListener("click", enregistrerTache);
@@ -5326,6 +5469,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     if (document.querySelector(".eclair")) { fermerEclair(); return; }
     if (fabOuvert) { fermerFab(); return; }
     if (document.querySelector(".menu-contextuel")) { fermerMenuSelection(); return; }
+    if (clientsChoisis.size && vueCourante() === "clients" && !document.querySelector(".feuille.ouverte")) { clientsChoisis.clear(); majChoixClients(); return; }
     if (selectionMulti.size && !document.querySelector(".feuille.ouverte")) { viderSelection(); return; }
     fermerSegment(); fermerMenu(); fermerFeuilles();
   });
