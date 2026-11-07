@@ -909,6 +909,19 @@ body.glisser .section.vide { display: block; }
 .fab-options button.vise span, .fab-options button:hover span { background: var(--bleu); color: var(--carte); }
 .fab-voile { position: fixed; inset: 0; z-index: 7; background: rgba(8, 20, 25, .3); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
 @media (max-width: 900px) { .fab { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } }
+
+/* ---------- bouton + : déploiement en quart de cercle ---------- */
+.fab { display: block; width: 54px; height: 54px; }
+.fab-options { position: absolute; left: 0; top: 0; width: 54px; height: 54px; display: block; }
+.fab-options button { position: absolute; left: 3px; top: 3px; width: 48px; height: 48px; display: block; padding: 0;
+  transform: translate(0, 0) scale(.3); opacity: 0; transition: transform .22s cubic-bezier(.2, .9, .3, 1.2), opacity .15s; }
+.fab.ouvert .fab-options button { transform: translate(var(--x), var(--y)) scale(1); opacity: 1; }
+.fab-options button i { width: 48px; height: 48px; margin: 0; }
+.fab-options button span { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); font-size: 11.5px; padding: 3px 8px; border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(12,45,57,.16); pointer-events: none; }
+.fab-options button.vise i, .fab-options button:hover i { transform: scale(1.15); }
+
+.fab-options button span { top: 50%; left: 50%; transform: translate(calc(-50% + var(--lx, 0px) * 2.3), calc(-50% + var(--ly, 0px))); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -1051,11 +1064,11 @@ body.glisser .section.vide { display: block; }
 <div class="fab-voile" id="fabVoile" hidden></div>
 <div class="fab" id="fab">
   <div class="fab-options" id="fabOptions" role="menu" aria-label="Créer ou chercher">
-    <button type="button" role="menuitem" data-action="eclair"><span>Recherche éclair</span><i>🔍</i></button>
-    <button type="button" role="menuitem" data-action="pacte"><span>Nouveau pacte Dutreil</span><i>⚖</i></button>
-    <button type="button" role="menuitem" data-action="client"><span>Nouveau client</span><i>👤</i></button>
-    <button type="button" role="menuitem" data-action="dossier"><span>Nouveau dossier</span><i>📄</i></button>
-    <button type="button" role="menuitem" data-action="tache"><span>Nouvelle tâche</span><i>☐</i></button>
+    <button type="button" role="menuitem" data-action="eclair" aria-label="Recherche éclair"><span>Recherche</span><i>🔍</i></button>
+    <button type="button" role="menuitem" data-action="pacte" aria-label="Nouveau pacte Dutreil"><span>Pacte</span><i>⚖</i></button>
+    <button type="button" role="menuitem" data-action="client" aria-label="Nouveau client"><span>Client</span><i>👤</i></button>
+    <button type="button" role="menuitem" data-action="dossier" aria-label="Nouveau dossier"><span>Dossier</span><i>📄</i></button>
+    <button type="button" role="menuitem" data-action="tache" aria-label="Nouvelle tâche"><span>Tâche</span><i>☐</i></button>
   </div>
   <button class="flottant" id="btnNouveau" aria-label="Créer ou chercher" aria-haspopup="menu" aria-expanded="false">+</button>
 </div>
@@ -4025,6 +4038,18 @@ body.glisser .section.vide { display: block; }
     $("fabVoile").hidden = false;
     $("btnNouveau").setAttribute("aria-expanded", "true");
     $("fabOptions").querySelector('[data-action="pacte"]').hidden = vueCourante() !== "dutreil";
+    // quart de cercle : du premier choix à gauche (180°) au dernier en haut (90°)
+    const choix = [...$("fabOptions").querySelectorAll("button:not([hidden])")].reverse();  // « Nouvelle tâche » à gauche
+    const rayon = choix.length > 4 ? 124 : 108;
+    choix.forEach((b, k) => {
+      const angle = Math.PI - (k * (Math.PI / 2)) / Math.max(1, choix.length - 1);
+      b.style.setProperty("--x", `${Math.round(Math.cos(angle) * rayon)}px`);
+      b.style.setProperty("--y", `${Math.round(-Math.sin(angle) * rayon)}px`);
+      // l'étiquette se place vers l'extérieur de l'arc
+      b.style.setProperty("--lx", `${Math.round(Math.cos(angle) * 30)}px`);
+      b.style.setProperty("--ly", `${Math.round(-Math.sin(angle) * 40)}px`);
+      b.style.transitionDelay = `${k * 25}ms`;
+    });
     if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {}
   }
   function fermerFab() {
