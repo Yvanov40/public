@@ -1022,6 +1022,22 @@ body.glisser .section.vide { display: block; }
 .semaine-tete em.conge { font-style: normal; font-size: 10.5px; background: #e3e6f2; color: #2f3a6b; border-radius: 6px; padding: 1px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; }
 .conge-jour { margin: 0 0 6px; font-size: 13px; color: #2f3a6b; }
 .cal-jour.conge { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(107,119,176,.08) 6px 12px), var(--fond) !important; }
+
+/* ---------- sélecteur de date : bandeau, ordinateur en fenêtre centrée ---------- */
+.choix-date-bandeau { background: var(--barre); color: #fff; margin: -14px -14px 12px; padding: 12px 18px; display: grid; gap: 2px; border-radius: 16px 16px 0 0; }
+.choix-date-bandeau span { font-size: 12.5px; color: var(--barre-discret); }
+.choix-date-bandeau b { font: 600 24px var(--titre); text-transform: capitalize; }
+.choix-date-titre { display: none; }
+.choix-date-grille button.repos { color: var(--discret); background: none; }
+.choix-date-grille button.conge { background: #e3e6f2; color: #2f3a6b; }
+.choix-date-grille button:hover:not(.actuel) { background: var(--or-doux); }
+.choix-date-rapides button.effacer { color: var(--rouge); }
+input[type="date"] { cursor: pointer; }
+@media (min-width: 901px) {
+  .choix-date { align-items: center; justify-content: center; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+  .choix-date-boite { width: 340px; border-radius: 16px; padding: 14px 14px 14px !important; box-shadow: 0 20px 50px rgba(0,0,0,.3); animation: eclair .14s ease-out; }
+  .choix-date-grille button { padding: 8px 0; font-size: 14px; }
+}
 </style>
 </head>
 <body>
@@ -3088,7 +3104,7 @@ body.glisser .section.vide { display: block; }
   }
 
   // sur téléphone : un calendrier simple et grand, à la place du sélecteur natif
-  function choisirDate(iso, titre, choisi) {
+  function choisirDate(iso, titre, choisi, options = {}) {
     let mois = versDate(estIso(iso) ? iso : enIso(aujourdhui()));
     mois = new Date(mois.getFullYear(), mois.getMonth(), 1);
     const voile = el("div", { class: "choix-date", role: "dialog", "aria-label": "Choisir une date" });
@@ -3102,12 +3118,15 @@ body.glisser .section.vide { display: block; }
       for (let k = 0; k < 42; k++) {
         const j = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate() + k);
         const v = enIso(j);
-        jours.push(el("button", { type: "button", class: [j.getMonth() !== mois.getMonth() ? "autre" : "", v === enIso(aujourdhui()) ? "auj" : "", v === iso ? "actuel" : ""].join(" "),
+        jours.push(el("button", { type: "button", class: [j.getMonth() !== mois.getMonth() ? "autre" : "", v === enIso(aujourdhui()) ? "auj" : "", v === iso ? "actuel" : "",
+          !jourTravaille(v) ? "repos" : "", congeDu(v) ? "conge" : ""].join(" "), title: congeDu(v) ? (congeDu(v).libelle || "Congé") : null,
           onclick: () => valider(v) }, j.getDate()));
       }
       const plus = (n) => { const d = aujourdhui(); d.setDate(d.getDate() + n); return enIso(d); };
       voile.replaceChildren(el("div", { class: "choix-date-boite" },
-        el("div", { class: "choix-date-titre" }, titre),
+        el("div", { class: "choix-date-bandeau" },
+          el("span", null, titre || "Date"),
+          el("b", null, estIso(iso) ? versDate(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long" }) : "Aucune date")),
         el("div", { class: "choix-date-entete" },
           el("button", { type: "button", "aria-label": "Mois précédent", onclick: () => { mois = new Date(mois.getFullYear(), mois.getMonth() - 1, 1); dessiner(); } }, "‹"),
           el("b", null, mois.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })),
@@ -3117,11 +3136,26 @@ body.glisser .section.vide { display: block; }
           el("button", { type: "button", onclick: () => valider(plus(0)) }, "Aujourd’hui"),
           el("button", { type: "button", onclick: () => valider(plus(1)) }, "Demain"),
           el("button", { type: "button", onclick: () => valider(plus(7)) }, "Dans une semaine"),
+          options.effacer ? el("button", { type: "button", class: "effacer", onclick: () => valider("") }, "Effacer") : null,
           el("button", { type: "button", onclick: fermer }, "Annuler"))));
     };
     dessiner();
     document.body.append(voile);
+    const clavier = (e) => { if (e.key === "Escape") { e.stopPropagation(); fermer(); document.removeEventListener("keydown", clavier, true); } };
+    document.addEventListener("keydown", clavier, true);
   }
+  // sur ordinateur, un clic dans un champ de date ouvre ce calendrier (Tab + clavier reste possible)
+  document.addEventListener("mousedown", (e) => {
+    const champ = e.target.closest && e.target.closest('input[type="date"]');
+    if (!champ || estTel() || e.button !== 0) return;
+    e.preventDefault();
+    const etiquette = champ.getAttribute("aria-label") || (champ.closest(".champ, label") && champ.closest(".champ, label").querySelector("label") ? champ.closest(".champ").querySelector("label").textContent : "") || "Date";
+    choisirDate(champ.value, etiquette.replace(/\s*\(.*\)$/, ""), (v) => {
+      champ.value = v;
+      champ.dispatchEvent(new Event("input", { bubbles: true }));
+      champ.dispatchEvent(new Event("change", { bubbles: true }));
+    }, { effacer: true });
+  }, true);
 
   function choisirHeureHorloge(valeur, choisi) {
     const m0 = /^(\d{1,2}):(\d{2})$/.exec(valeur || "");
