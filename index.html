@@ -863,6 +863,29 @@ body.glisser .section.vide { display: block; }
   .nb-affiches { font-size: 12.5px; color: var(--discret); white-space: nowrap; font-variant-numeric: tabular-nums; }
 }
 @media (max-width: 900px) { .plus-filtres, .nb-affiches { display: none; } .filtres-fin { display: contents; } }
+
+/* ---------- panneau des filtres du téléphone : une vraie feuille, fond flouté derrière ---------- */
+.filtres-entete { display: none; }
+@media (max-width: 900px) {
+  .filtres { background: var(--carte) !important; border: 0 !important; border-radius: 20px 20px 0 0 !important;
+    padding: 6px 18px calc(16px + env(safe-area-inset-bottom, 0px)) !important; gap: 12px !important;
+    box-shadow: 0 -14px 40px rgba(8,20,25,.28) !important; max-height: 86vh; overflow-y: auto; }
+  .filtres-entete { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--carte);
+    padding: 12px 0 6px; margin-bottom: 2px; z-index: 1; }
+  .filtres-entete::before { content: ""; position: absolute; left: 50%; top: 2px; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--bordure); }
+  .filtres-entete b { font: 600 21px var(--titre); color: var(--bleu); }
+  .filtres-entete button { border: 0; background: var(--section); color: var(--bleu); width: 34px; height: 34px; border-radius: 17px; font-size: 15px; }
+  .voile-filtres { background: rgba(8, 20, 25, .35) !important; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+  .filtres .filtre .lib { font-size: 12.5px; color: var(--discret); font-weight: 500; margin-bottom: 4px; }
+  .filtres .segment { background: var(--fond) !important; border: 1px solid var(--bordure); padding: 11px 14px !important; font-size: 15px !important; border-radius: 12px !important; }
+  .filtres .segment.actif { background: var(--or-doux) !important; border-color: var(--or); }
+  .filtres .option-archives { padding: 4px 2px; font-size: 15px; }
+  .filtres .filtre-portee { font-size: 12.5px; margin: 0; }
+  .filtres #reinitialiser { width: 100%; padding: 11px; font-size: 14.5px; border-radius: 12px; }
+  .filtres .filtres-fin { display: block; }
+  .filtres-fermer { border-radius: 12px !important; padding: 13px !important; }
+  .fen-segment { backdrop-filter: none; }
+}
 </style>
 </head>
 <body>
@@ -901,6 +924,7 @@ body.glisser .section.vide { display: block; }
 
   <div id="contenu">
     <section class="filtres" aria-label="Filtres">
+      <div class="filtres-entete"><b>Filtres</b><button type="button" id="fermerFiltresHaut" aria-label="Fermer">✕</button></div>
       <div class="filtre recherche">
         <label for="recherche">Rechercher</label>
         <input id="recherche" type="search" placeholder="Client, tâche, commentaire, société…" autocomplete="off" enterkeyhint="search">
@@ -2996,6 +3020,7 @@ body.glisser .section.vide { display: block; }
     const nbSec = (selections.partenaire.size ? 1 : 0) + (selections.anciennete.size ? 1 : 0) + ($("masquerArchives").checked ? 1 : 0);
     $("nbSecondaires").textContent = nbSec ? ` · ${nbSec}` : "";
     $("plusFiltres").classList.toggle("actif", nbSec > 0);
+    $("fermerFiltres").textContent = `Voir ${liste.length === donnees.dossiers.length ? "les" : "ces"} ${liste.length} dossier${liste.length > 1 ? "s" : ""}`;
     $("nbAffiches").textContent = liste.length === donnees.dossiers.length ? `${liste.length} dossiers` : `${liste.length} / ${donnees.dossiers.length} dossiers`;
     $("btnFiltres").classList.toggle("actif", nbFiltres > 0);
     $("nbFiltres").textContent = nbFiltres ? ` · ${nbFiltres}` : "";
@@ -4150,6 +4175,7 @@ body.glisser .section.vide { display: block; }
   const fermerFiltres = () => { fermerSegment(); document.body.classList.remove("filtres-ouverts"); };
   $("btnFiltres").addEventListener("click", ouvrirFiltres);
   $("fermerFiltres").addEventListener("click", fermerFiltres);
+  $("fermerFiltresHaut").addEventListener("click", fermerFiltres);
   $("voileFiltres").addEventListener("click", fermerFiltres);
   requeteTel.addEventListener("change", () => { fermerFiltres(); montrerVue(); afficherTout(); });
   $("masquerArchives").addEventListener("change", afficherTout);
