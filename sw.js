@@ -1,7 +1,7 @@
 // Service de l'appli « Suivi des dossiers » : permet l'installation et l'ouverture hors connexion.
 // La page est toujours prise sur Internet en priorité (pour recevoir les mises à jour) ;
 // la copie gardée ne sert que sans réseau. Les échanges avec GitHub ne sont jamais mis en cache.
-const CACHE = "suivi-v3";
+const CACHE = "suivi-v4";
 const FICHIERS = ["./", "./index.html", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png"];
 
 self.addEventListener("install", (e) => {
