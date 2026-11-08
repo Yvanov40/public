@@ -125,6 +125,7 @@ function route() {
   const h = location.hash.slice(1) || 'accueil';
   window.scrollTo(0, 0);
   if (h === 'claude' && S.cs) return viewClaudeQ();
+  if (h === 'programme') return viewProgramme();
   if (!S.docs.length && h !== 'base') return viewEmpty();
   if (h === 'session' && S.session) return viewCard();
   if (h === 'lire') return viewLibrary();
@@ -452,8 +453,8 @@ function viewEmpty() {
   setHeader(null, false);
   $('#btnRead').classList.add('hidden');
   app.innerHTML = claudeBlock() + `<section class="today"><div class="stack"><div class="under"></div><div class="sheet">
-    <h2>Chargez votre base pour commencer</h2>
-    <p>L’application transforme vos fiches Word en questions sur les seuils, taux, délais et articles, en vrai ou faux et en sections à restituer. Les fiches restent sur cet appareil : rien n’est envoyé en ligne.</p>
+    <h2 style="font-size:22px">Cartes automatiques, en plus</h2>
+    <p>Facultatif : importez vos fiches Word pour réviser aussi en cartes automatiques (chiffres clés, vrai ou faux, sections) et lire la base hors connexion. Les fiches restent sur cet appareil.</p>
     ${importBlock()}
   </div></div></section>
   <h3 class="sec">Depuis OneDrive</h3>
@@ -485,10 +486,11 @@ function viewBase() {
   <div class="seg" id="newp">${[5, 10, 20, 30].map(n => `<button aria-pressed="${S.meta.newPerSession === n}" data-n="${n}">${n}</button>`).join('')}</div>
 
   <h3 class="sec">Sessions préparées par Claude</h3>
-  <p class="note">Vos résultats sont envoyés dans le dépôt GitHub à la fin de chaque session. Une tâche planifiée Cowork les lit et prépare la session suivante. Le token reste sur cet appareil.</p>
+  <p class="note">À la fin de chaque session, l’état (terminée, score, erreurs, programme) est publié sur le site. La tâche Cowork le consulte toutes les heures et prépare la session suivante. Le token reste sur cet appareil.</p>
   <input class="search" id="tok" type="password" placeholder="Token GitHub (github_pat_…)" autocomplete="off" value="${ghToken() ? '••••••••' : ''}">
   <div class="row"><button class="btn" id="saveTok">Enregistrer le token</button>${ghToken() ? '<button class="btn" id="delTok">Oublier le token</button>' : ''}</div>
-  <p class="note" id="tokState">${ghToken() ? (S.meta.pending && S.meta.pending.length ? S.meta.pending.length + ' réponses en attente d’envoi.' : 'Synchronisation active.') : 'Aucun token : les résultats restent en attente sur cet appareil.'}</p>
+  <p class="note" id="tokState">${ghToken() ? 'Connecté à GitHub.' : 'Non connecté : Claude ne voit ni vos résultats ni votre programme.'}</p>
+  <button class="btn" id="progBtn">Régler le programme de révision</button>
 
   <h3 class="sec">Sauvegarde</h3>
   <p class="note">La sauvegarde contient les fiches et la progression. Elle permet de passer de l’ordinateur au téléphone sans réimporter le dossier BASE.</p>
@@ -501,6 +503,7 @@ function viewBase() {
   const seg = (id, key) => app.querySelectorAll('#' + id + ' button').forEach(b => b.onclick = () => { S.meta[key] = +b.dataset.n; saveMeta(); viewBase(); });
   seg('size', 'size'); seg('newp', 'newPerSession');
   $('#backup').onclick = backup;
+  $('#progBtn').onclick = () => go('#programme');
   $('#saveTok').onclick = async () => {
     const v = $('#tok').value.trim();
     if (!v || v.startsWith('••')) { $('#tokState').textContent = 'Collez un token qui commence par github_pat_.'; return; }
@@ -508,7 +511,7 @@ function viewBase() {
     const r = await fetch('https://api.github.com/repos/' + GH.repo, { headers: { Authorization: 'Bearer ' + v } }).catch(() => null);
     if (!r || !r.ok) { $('#tokState').textContent = 'Ce token n’a pas accès au dépôt ' + GH.repo + '. Vérifiez-le puis réessayez.'; return; }
     try { localStorage.setItem('rev-gh-token', v); } catch (e) {}
-    await flushResults(); viewBase(); toast('Token enregistré.');
+    await flushResults(true); viewBase(); toast('Token enregistré.');
   };
   if ($('#delTok')) $('#delTok').onclick = () => { try { localStorage.removeItem('rev-gh-token'); } catch (e) {} viewBase(); };
   $('#restore').onclick = () => $('#restoreInput').click();
@@ -555,77 +558,131 @@ $('#restoreInput').onchange = async e => {
   } catch (err) { toast('Ce fichier n’est pas une sauvegarde de cette application.'); }
 };
 
-/* ====== sessions préparées par Claude + synchronisation GitHub ====== */
+/* ====== sessions préparées par Claude + état partagé (data/etat.json) ====== */
 const GH = { repo: 'Yvanov40/public', dir: 'revision/data' };
+const PROG_DEFAUT = { nb_questions: 40, fiches: [], consignes: '' };
 function ghToken() { try { return localStorage.getItem('rev-gh-token') || ''; } catch (e) { return ''; } }
 function toB64(str) { const u = new TextEncoder().encode(str); let b = ''; for (let i = 0; i < u.length; i += 0x8000) b += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(b); }
 function fromB64(b) { return new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g, '')), c => c.charCodeAt(0))); }
+function programme() { return Object.assign({}, PROG_DEFAUT, S.meta.programme || {}); }
+
+/* Chaque réponse alimente les statistiques par fiche et la liste des erreurs récentes */
 function queueResult(e) {
-  e.t = new Date().toISOString();
-  e.appareil = /Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? 'mobile' : 'ordinateur';
-  S.meta.pending = (S.meta.pending || []).concat(e).slice(-3000);
+  if (e.fin) return;
+  const st = S.meta.ficheStats = S.meta.ficheStats || {};
+  const ok = e.src === 'claude' ? !!e.ok : e.note > 0;
+  if (e.fiche) {
+    const f = st[e.fiche] = st[e.fiche] || { vues: 0, reussies: 0 };
+    f.vues++; if (ok) f.reussies++; f.derniere = new Date().toISOString().slice(0, 10);
+  }
+  if (!ok) {
+    const err = { le: new Date().toISOString().slice(0, 16), fiche: e.fiche || '', source: e.src };
+    if (e.question) { err.question = e.question; err.repondu = e.choisi; err.bonne_reponse = e.bonne; }
+    else { err.section = e.section || ''; err.attendu = e.attendu || ''; }
+    S.meta.erreurs = (S.meta.erreurs || []).concat(err).slice(-80);
+  }
+  S.meta.dirty = true;
   saveMeta();
 }
-let flushing = null;
-function flushResults() {
-  if (flushing) return flushing;
+function etatJSON() {
+  const c = S.claude, done = c && (S.meta.claudeDone || []).includes(c.id);
+  const last = S.meta.claudeLast || {};
+  return {
+    app: 'revision-base',
+    mis_a_jour: new Date().toISOString(),
+    session_id: c ? c.id : null,
+    statut: !c ? 'aucune' : done ? 'terminee' : 'en_cours',
+    termine_le: done && last.id === c.id ? last.le : null,
+    score: done && last.id === c.id ? last.score : null,
+    total: done && last.id === c.id ? last.total : null,
+    programme: programme(),
+    erreurs_recentes: (S.meta.erreurs || []).slice(-40),
+    stats_par_fiche: S.meta.ficheStats || {}
+  };
+}
+let pushing = null;
+function flushResults(force) {
+  if (pushing) return pushing;
   const tok = ghToken();
-  if (!tok || !(S.meta.pending || []).length) return Promise.resolve();
-  flushing = (async () => {
-    const url = `https://api.github.com/repos/${GH.repo}/contents/${GH.dir}/resultats.json`;
+  if (!tok || (!S.meta.dirty && !force)) return Promise.resolve(false);
+  pushing = (async () => {
+    const url = `https://api.github.com/repos/${GH.repo}/contents/${GH.dir}/etat.json`;
     const h = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' };
     for (let attempt = 0; attempt < 3; attempt++) {
-      const batch = S.meta.pending.slice();
-      let data = { reponses: [] }, sha;
+      let sha;
       const g = await fetch(url + '?ref=main&t=' + Date.now(), { headers: h, cache: 'no-store' });
-      if (g.ok) { const j = await g.json(); sha = j.sha; try { data = JSON.parse(fromB64(j.content)); } catch (e) {} }
-      else if (g.status !== 404) throw new Error('lecture ' + g.status);
-      data.reponses = (data.reponses || []).concat(batch).slice(-2000);
-      data.mis_a_jour = new Date().toISOString();
-      const body = { message: 'Révision : ' + batch.length + ' réponses', content: toB64(JSON.stringify(data, null, 1)), branch: 'main' };
+      if (g.ok) sha = (await g.json()).sha; else if (g.status !== 404) throw new Error('lecture ' + g.status);
+      const et = etatJSON();
+      const body = { message: `Révision : état ${et.statut}${et.score !== null ? ' ' + et.score + '/' + et.total : ''}`, content: toB64(JSON.stringify(et, null, 1)), branch: 'main' };
       if (sha) body.sha = sha;
       const p = await fetch(url, { method: 'PUT', headers: h, body: JSON.stringify(body) });
-      if (p.ok) { S.meta.pending = S.meta.pending.slice(batch.length); await saveMeta(); return; }
+      if (p.ok) { S.meta.dirty = false; await saveMeta(); return true; }
       if (p.status !== 409 && p.status !== 422) throw new Error('écriture ' + p.status);
     }
-  })().catch(e => console.warn('Synchronisation', e)).finally(() => { flushing = null; });
-  return flushing;
+    return false;
+  })().catch(e => { console.warn('Synchronisation', e); return false; }).finally(() => { pushing = null; });
+  return pushing;
 }
 async function loadClaude() {
   try {
-    const r = await fetch('data/session-claude.json?t=' + Date.now(), { cache: 'no-store' });
+    const [r, k] = await Promise.all([
+      fetch('data/session-claude.json?t=' + Date.now(), { cache: 'no-store' }),
+      fetch('data/catalogue.json?t=' + Date.now(), { cache: 'no-store' }).catch(() => null)
+    ]);
+    if (k && k.ok) { try { S.catalogue = (await k.json()).fiches || null; } catch (e) {} }
     if (!r.ok) return;
     const c = await r.json();
     if (!c || !c.id || !Array.isArray(c.questions) || !c.questions.length) return;
     const changed = !S.claude || S.claude.id !== c.id;
     S.claude = c;
-    if (changed && /^#?(accueil)?$/.test(location.hash.replace('#', '')) && !S.session) route();
+    if (changed) {
+      if (!S.meta.claudeSeen || S.meta.claudeSeen !== c.id) { S.meta.claudeSeen = c.id; S.meta.dirty = true; saveMeta(); flushResults(); }
+      if (/^#?(accueil)?$/.test(location.hash) && !S.session && !S.cs) route();
+    }
   } catch (e) {}
 }
 function claudeBlock() {
   const c = S.claude;
   if (!c) return '';
   const done = (S.meta.claudeDone || []).includes(c.id);
-  if (done) return `<p class="note" style="margin:14px 0 0">Session préparée par Claude terminée. La suivante arrive au prochain passage de la tâche Cowork, toutes les 2 heures en journée.</p>`;
+  const pr = S.meta.claudeProgress && S.meta.claudeProgress.id === c.id && !S.meta.claudeProgress.replay ? S.meta.claudeProgress : null;
+  const last = S.meta.claudeLast && S.meta.claudeLast.id === c.id ? S.meta.claudeLast : null;
+  let line, actions;
+  if (done) {
+    line = `Terminée${last ? ' avec ' + last.score + ' / ' + last.total : ''}. Claude prépare la suivante : elle apparaîtra ici dans l’heure, entre 8 h et 20 h. En attendant, vous pouvez la refaire.`;
+    actions = `<button class="btn primary block" id="startClaude">Refaire la session</button>`;
+  } else {
+    line = `${plural(c.questions.length, 'question')}. ${esc(c.pourquoi || '')}`;
+    actions = pr ? `<button class="btn primary block" id="startClaude">Reprendre à la question ${pr.i + 1}</button>` : `<button class="btn primary block" id="startClaude">Commencer</button>`;
+  }
   return `<article class="card" style="margin:34px 0 8px"><div class="tab">Préparée par Claude</div><div class="face">
     <h2 style="font:600 22px/1.25 var(--serif);margin:0 0 6px">${esc(c.titre || 'Session du moment')}</h2>
-    <p class="note" style="margin:0 0 16px">${plural(c.questions.length, 'question')}. ${esc(c.pourquoi || '')}</p>
-    <button class="btn primary block" id="startClaude">Commencer</button></div></article>`;
+    <p class="note" style="margin:0 0 16px">${done ? esc(line) : line}</p>
+    ${actions}
+    <div class="small-actions"><button class="linkbtn" id="toProg">Régler le programme</button>${ghToken() ? '' : '<button class="linkbtn" id="toTok">Connecter GitHub</button>'}</div></div></article>`;
 }
-function bindClaudeBlock() { const b = $('#startClaude'); if (b) b.onclick = () => startClaude(); }
+function bindClaudeBlock() {
+  const b = $('#startClaude'); if (b) b.onclick = () => startClaude();
+  const p = $('#toProg'); if (p) p.onclick = () => go('#programme');
+  const t = $('#toTok'); if (t) t.onclick = () => go('#base');
+}
 function startClaude(only) {
   const c = S.claude;
-  const idx = only || c.questions.map((_, i) => i);
-  S.cs = { id: c.id, idx, i: 0, good: 0, miss: [], replay: !!only };
+  const done = (S.meta.claudeDone || []).includes(c.id);
+  const pr = S.meta.claudeProgress;
+  if (!only && pr && pr.id === c.id && !pr.replay && !done) { S.cs = pr; return go('#claude'); }
+  S.cs = { id: c.id, idx: only || c.questions.map((_, i) => i), i: 0, good: 0, miss: [], replay: done || !!only };
+  S.meta.claudeProgress = S.cs; saveMeta();
   go('#claude');
 }
 function viewClaudeQ() {
   const cs = S.cs, c = S.claude;
-  setHeader('Préparée par Claude', true);
+  if (!c || c.id !== cs.id) { S.cs = null; return go('#accueil'); }
+  setHeader(cs.replay ? 'Session refaite' : 'Préparée par Claude', true);
   if (cs.i >= cs.idx.length) return viewClaudeEnd();
   const k = cs.idx[cs.i], q = c.questions[k];
   app.innerHTML = `<div class="session-top"><div class="progress"><i style="width:${100 * cs.i / cs.idx.length}%"></i></div><span class="n">${cs.i + 1} / ${cs.idx.length}</span></div>
-  <article class="card"><div class="tab">${esc(q.theme || 'Claude')}</div><div class="face">
+  <article class="card"><div class="tab">${esc(q.theme || Engine.themeOf(q.fiche || ''))}</div><div class="face">
     <p class="src">${esc(q.fiche || '')}</p>
     <p class="prompt">${esc(q.question)}</p>
     <div class="choices">${q.choix.map((o, j) => `<button class="choice" data-j="${j}"><kbd>${j + 1}</kbd>${esc(o)}</button>`).join('')}</div>
@@ -635,30 +692,73 @@ function viewClaudeQ() {
     const j = +b.dataset.j, ok = j === q.reponse;
     btns.forEach(x => { x.disabled = true; if (+x.dataset.j === q.reponse) x.classList.add('ok'); });
     if (!ok) { b.classList.add('ko'); cs.miss.push(k); } else cs.good++;
-    if (!cs.replay) queueResult({ src: 'claude', session: c.id, q: k, fiche: q.fiche || '', question: q.question, choisi: q.choix[j], ok });
+    if (!cs.replay) queueResult({ src: 'claude', fiche: q.fiche || '', question: q.question, choisi: q.choix[j], bonne: q.choix[q.reponse], ok });
+    cs.i++; S.meta.claudeProgress = cs; saveMeta();
     $('#after').innerHTML = `<div class="reveal"><p class="verdict ${ok ? 'ok' : 'ko'}">${ok ? 'Exact.' : 'La bonne réponse est : ' + esc(q.choix[q.reponse]) + '.'}</p>
       ${q.explication ? `<p class="doc" style="margin:8px 0 0">${esc(q.explication)}</p>` : ''}
-      <button class="btn primary block next" id="nxt">${cs.i + 1 < cs.idx.length ? 'Question suivante' : 'Voir le résultat'}</button></div>`;
+      <button class="btn primary block next" id="nxt">${cs.i < cs.idx.length ? 'Question suivante' : 'Voir le résultat'}</button></div>`;
     $('#nxt').focus({ preventScroll: true });
-    $('#nxt').onclick = () => { cs.i++; viewClaudeQ(); };
+    $('#nxt').onclick = () => viewClaudeQ();
   });
 }
 function viewClaudeEnd() {
   const cs = S.cs, c = S.claude;
   if (!cs.replay && !(S.meta.claudeDone || []).includes(c.id)) {
     S.meta.claudeDone = (S.meta.claudeDone || []).concat(c.id).slice(-200);
-    queueResult({ src: 'claude', session: c.id, fin: true, score: cs.good, total: cs.idx.length });
+    S.meta.claudeLast = { id: c.id, score: cs.good, total: cs.idx.length, le: new Date().toISOString() };
     if (!S.meta.days.includes(today())) S.meta.days = S.meta.days.concat(today());
-    saveMeta();
+    S.meta.dirty = true;
   }
-  flushResults();
+  S.meta.claudeProgress = null; saveMeta();
+  const tok = ghToken();
   app.innerHTML = `<section class="today"><div class="stack"><div class="under"></div><div class="sheet">
     <p class="score">${cs.good} / ${cs.idx.length}</p>
-    <p>${cs.miss.length ? plural(cs.miss.length, 'question') + ' à revoir. Claude en tiendra compte pour la prochaine session.' : 'Sans faute.'}${ghToken() ? '' : ' Ajoutez votre token GitHub dans Base et réglages pour que Claude reçoive vos résultats.'}</p>
-    <div class="row">${cs.miss.length ? '<button class="btn primary" id="rv">Rejouer mes erreurs</button>' : ''}<button class="btn" id="home">Accueil</button></div>
+    <p>${cs.miss.length ? plural(cs.miss.length, 'question') + ' à revoir.' : 'Sans faute.'} <span id="syncMsg">${cs.replay ? 'Session refaite : la prochaine session de Claude n’est pas affectée.' : tok ? 'Envoi du résultat à Claude…' : 'Connectez GitHub dans Base et réglages pour que Claude prépare la session suivante.'}</span></p>
+    <div class="row">${cs.miss.length ? '<button class="btn primary" id="rv">Rejouer mes erreurs</button>' : ''}<button class="btn" id="redo">Refaire toute la session</button><button class="btn" id="home">Accueil</button></div>
   </div></div></section>`;
   if ($('#rv')) $('#rv').onclick = () => startClaude(cs.miss.slice());
+  $('#redo').onclick = () => startClaude(c.questions.map((_, i) => i));
   $('#home').onclick = () => { S.cs = null; go('#accueil'); };
+  if (!cs.replay && tok) flushResults().then(ok => { const m = $('#syncMsg'); if (m) m.textContent = ok ? 'Résultat envoyé : Claude prépare la session suivante, elle apparaîtra dans l’heure (entre 8 h et 20 h).' : 'Envoi impossible pour l’instant, nouvel essai à la prochaine ouverture.'; });
+}
+
+/* ====== programme de révision (modulable) ====== */
+function viewProgramme() {
+  setHeader('Programme de révision', true);
+  const pr = programme();
+  const titles = (S.catalogue && S.catalogue.length ? S.catalogue : S.docs.map(d => d.title)).slice().sort((a, b) => a.localeCompare(b, 'fr'));
+  const sel = new Set(pr.fiches.length ? pr.fiches : titles);
+  const groups = {};
+  titles.forEach(t => (groups[Engine.themeOf(t)] = groups[Engine.themeOf(t)] || []).push(t));
+  app.innerHTML = `<p class="note" style="margin-top:8px">Claude construit chaque session à partir de ce programme. Les changements comptent dès la prochaine session.</p>
+  <h3 class="sec">Questions par session</h3>
+  <div class="seg" id="nb">${[20, 40, 60, 80].map(n => `<button aria-pressed="${pr.nb_questions === n}" data-n="${n}">${n}</button>`).join('')}</div>
+  <h3 class="sec">Consignes pour Claude</h3>
+  <textarea class="search" id="cons" rows="4" style="resize:vertical;font:inherit" placeholder="Exemples : insiste sur les cas pratiques chiffrés ; plus de questions sur le Dutreil ; évite l’historique des anciens régimes.">${esc(pr.consignes)}</textarea>
+  <h3 class="sec">Fiches à réviser</h3>
+  ${titles.length ? `<div class="row" style="margin-bottom:8px"><button class="btn" id="all">Tout cocher</button><button class="btn" id="none">Tout décocher</button></div>
+  ${Engine.THEMES.filter(t => groups[t]).map(t => `<h4 style="margin:18px 0 4px;font:600 14px var(--sans);color:var(--muted)"><label><input type="checkbox" data-th="${esc(t)}" style="accent-color:var(--teal)"> ${esc(t)}</label></h4>
+    ${groups[t].map(f => `<label class="theme" style="grid-template-columns:auto 1fr;padding:8px 4px"><input type="checkbox" data-f="${esc(f)}" ${sel.has(f) ? 'checked' : ''}><span style="font-size:15px">${esc(f)}</span></label>`).join('')}`).join('')}`
+    : '<p class="note">La liste des fiches apparaîtra après le premier passage de Claude, ou après un import du dossier BASE.</p>'}
+  <div class="foot"><button class="btn primary block" id="saveProg">Enregistrer le programme</button><p class="note" id="progState">${ghToken() ? '' : 'Connectez GitHub dans Base et réglages : sans cela, Claude ne voit pas votre programme.'}</p></div>`;
+  let nb = pr.nb_questions;
+  app.querySelectorAll('#nb button').forEach(b => b.onclick = () => { nb = +b.dataset.n; app.querySelectorAll('#nb button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  const boxes = () => [...app.querySelectorAll('[data-f]')];
+  const syncTh = () => app.querySelectorAll('[data-th]').forEach(cb => { const fs = groups[cb.dataset.th].map(f => boxes().find(x => x.dataset.f === f)); cb.checked = fs.every(x => x.checked); cb.indeterminate = !cb.checked && fs.some(x => x.checked); });
+  syncTh();
+  boxes().forEach(b => b.onchange = syncTh);
+  app.querySelectorAll('[data-th]').forEach(cb => cb.onchange = () => { groups[cb.dataset.th].forEach(f => { boxes().find(x => x.dataset.f === f).checked = cb.checked; }); syncTh(); });
+  if ($('#all')) { $('#all').onclick = () => { boxes().forEach(b => b.checked = true); syncTh(); }; $('#none').onclick = () => { boxes().forEach(b => b.checked = false); syncTh(); }; }
+  $('#saveProg').onclick = async () => {
+    const chosen = boxes().filter(b => b.checked).map(b => b.dataset.f);
+    if (titles.length && !chosen.length) { $('#progState').textContent = 'Cochez au moins une fiche.'; return; }
+    S.meta.programme = { nb_questions: nb, fiches: chosen.length === titles.length ? [] : chosen, consignes: $('#cons').value.trim().slice(0, 1500) };
+    S.meta.dirty = true; await saveMeta();
+    if (!ghToken()) { $('#progState').textContent = 'Programme enregistré sur cet appareil. Connectez GitHub pour que Claude le reçoive.'; return; }
+    $('#progState').textContent = 'Envoi…';
+    const ok = await flushResults(true);
+    $('#progState').textContent = ok ? 'Programme envoyé à Claude.' : 'Envoi impossible : vérifiez le token dans Base et réglages.';
+  };
 }
 
 /* ====== divers ====== */
