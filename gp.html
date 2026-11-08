@@ -100,6 +100,11 @@ legend { font-weight: 700; padding: 0 6px; font-size: 14px; }
 .btn.ghost { background: transparent; color: var(--brand-text); border-color: color-mix(in srgb, var(--brand-text) 45%, transparent); }
 .btn.ghost.danger { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
 .btn.danger-solid { background: var(--warn); border-color: var(--warn); color: #FFFFFF; }
+@keyframes glisseG { from { opacity: .3; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes glisseD { from { opacity: .3; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+main#main.glisse-g { animation: glisseG .22s ease-out; }
+main#main.glisse-d { animation: glisseD .22s ease-out; }
+@media (prefers-reduced-motion: reduce) { main#main.glisse-g, main#main.glisse-d { animation: none; } }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -2156,6 +2161,35 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     Object.keys(defs).forEach(function (k) { if (d.params[k] === undefined || d.params[k] === null) d.params[k] = defs[k]; });
     return d;
   }
+
+  /* ---------- Balayage tactile entre onglets ---------- */
+  (function () {
+    var sx = 0, sy = 0, st = 0, actif = false;
+    function bloque(el) {
+      for (var n = el; n && n !== document.body; n = n.parentElement) {
+        if (/^(INPUT|SELECT|TEXTAREA|BUTTON|LABEL)$/.test(n.tagName)) return true;
+        if (n.id === 'nav') return true;
+        if (n.scrollWidth > n.clientWidth + 2) { var ox = getComputedStyle(n).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
+      }
+      return false;
+    }
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1 || bloque(e.target)) { actif = false; return; }
+      actif = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (!actif) return; actif = false;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Date.now() - st > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      var ids = SECTIONS.map(function (s) { return s.id; }), i = ids.indexOf(courante());
+      var j = dx < 0 ? i + 1 : i - 1;
+      if (j < 0 || j >= ids.length) return;
+      var m = $('#main');
+      m.classList.remove('glisse-g', 'glisse-d'); void m.offsetWidth;
+      m.classList.add(dx < 0 ? 'glisse-g' : 'glisse-d');
+      location.hash = '#' + ids[j];
+    }, { passive: true });
+  })();
 
   /* ---------- Démarrage ---------- */
   state = normaliser(charger());
