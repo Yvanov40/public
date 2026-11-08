@@ -1,5 +1,5 @@
 /* Service worker – Audit civil et fiscal (hors ligne) */
-const VERSION = 'acf-v2';
+const VERSION = 'acf-v3';
 const LOCAL = ['./gp.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
