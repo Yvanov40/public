@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#234E5C">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Audit ACF">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Audit civil et fiscal – transmission</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -147,12 +155,16 @@ label.file { position: relative; }
   .step .bar { grid-column: 1 / -1; grid-row: 2; }
   .chk { padding-top: 4px; }
 }
+.install { margin-left: 12px; font: 600 13.5px var(--sans); background: transparent; color: var(--brand-text); border: 1px solid color-mix(in srgb, var(--brand-text) 45%, transparent); border-radius: 7px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+.install[hidden] { display: none; }
+@media (display-mode: standalone) { .install { display: none; } }
 </style>
 </head>
 <body>
 <header class="top"><div class="top-in">
   <h1 class="brand">Audit civil et fiscal<small>Transmission : démembrement, assurance-vie, levier société</small></h1>
   <div id="bandeau" aria-live="polite"></div>
+  <button class="install" id="installer" hidden>Installer l’application</button>
 </div></header>
 <div class="layout">
   <nav id="nav" aria-label="Étapes du dossier"></nav>
@@ -2138,6 +2150,22 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   idbGet('modele').then(function (m) { if (m && m.buf) chargerModele({ buf: m.buf, nom: m.nom }, true); });
 })();
 
+</script>
+<script>
+(function () {
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { }); });
+  }
+  var btn = document.getElementById('installer'), evt = null;
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evt = e; btn.hidden = false; });
+  if (ios) btn.hidden = false;
+  btn.addEventListener('click', async function () {
+    if (evt) { evt.prompt(); try { await evt.userChoice; } catch (e) { } evt = null; btn.hidden = true; return; }
+    if (ios) { var t = document.getElementById('toast'); t.textContent = 'Sur iPhone ou iPad : touchez Partager, puis « Sur l’écran d’accueil ».'; t.classList.add('on'); setTimeout(function () { t.classList.remove('on'); }, 6000); }
+  });
+  window.addEventListener('appinstalled', function () { btn.hidden = true; });
+})();
 </script>
 </body>
 </html>
