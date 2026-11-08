@@ -1078,6 +1078,8 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 26px; }
 .filtres select.choix-pacte.actif { background-color: var(--or-doux) !important; border-color: var(--or); font-weight: 600; }
 @media (min-width: 901px) { body.vue-dutreil .filtres .filtre.recherche { flex: 0 1 380px; } body.vue-dutreil .filtres .dutreil-seul { flex: 0 1 200px; } }
+
+.tache-contacts { margin: -6px 0 14px; }
 </style>
 </head>
 <body>
@@ -1475,6 +1477,10 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     for (const e of enfants.flat()) if (e != null && e !== false) n.append(e.nodeType ? e : String(e));
     return n;
   };
+
+  let avaleJusqua = 0;
+  document.addEventListener("click", (e) => { if (Date.now() < avaleJusqua) { e.stopPropagation(); e.preventDefault(); } }, true);
+  const avalerClic = () => { avaleJusqua = Date.now() + 450; };
 
   // ---------------------------------------------------------------- utilitaires
   const cleClient = (nom) => String(nom || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("fr");
@@ -3659,6 +3665,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
       clearTimeout(g.minuteur);
       const x = g; g = null;
       bloc.classList.remove("saisi");
+      avalerClic();  // le doigt vient de se lever : le clic qui suit ne doit pas toucher ce qui s'ouvre
       if (!x.parti) {
         if (x.redim) return;
         if (x.tactile && x.pret) { const r = bloc.getBoundingClientRect(); ouvrirRoue(r.left + r.width / 2, r.top + Math.min(r.height / 2, 30), p.e, false); return; }
@@ -3735,7 +3742,8 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     const lacher = () => {
       document.removeEventListener("pointermove", viser, true);
       document.removeEventListener("pointerup", lacher, true);
-      if (vise) vise.click();
+      if (vise) { const choix = vise; avalerClic(); setTimeout(() => { avaleJusqua = 0; choix.click(); avalerClic(); }, 0); }
+      else avalerClic();
     };
     document.addEventListener("pointermove", viser, true);
     document.addEventListener("pointerup", lacher, true);
@@ -4857,6 +4865,14 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
       el("div", { class: "tache-liens" },
         el("button", { type: "button", onclick: () => ouvrirClient(nom) }, "👤 ", nom),
         iDossier >= 0 ? el("button", { type: "button", onclick: () => ouvrirDossier(iDossier) }, "📄 ", t.dossier_libelle || "Dossier") : null),
+      // numéros et e-mails trouvés dans la fiche du client (et le dossier rattaché) : un toucher pour appeler ou écrire
+      (() => {
+        const f = fiche(nom), d = iDossier >= 0 ? donnees.dossiers[iDossier] : null;
+        const vus = new Set();
+        const contacts = liensDans([f.commentaire, f.notes, d && d.commentaire].filter(Boolean).join("\n"))
+          .filter((x) => (x.type === "tel" || x.type === "mail") && !vus.has(x.valeur.replace(/\s|\./g, "")) && vus.add(x.valeur.replace(/\s|\./g, "")));
+        return contacts.length ? el("div", { class: "liens tache-contacts" }, contacts.slice(0, 6).map(puceLien)) : null;
+      })(),
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: t.pour || "" })),
         champ("À", el("input", { name: "heure", type: "time", value: t.heure || "" }))),
@@ -5231,6 +5247,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     $("fabOptions").querySelectorAll("button").forEach((b) => b.classList.remove("vise"));
   }
   function lancerFab(action) {
+    avalerClic();
     fermerFab();
     if (ACTIONS_FAB[action]) setTimeout(ACTIONS_FAB[action], 60);
   }
