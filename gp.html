@@ -99,6 +99,7 @@ legend { font-weight: 700; padding: 0 6px; font-size: 14px; }
 .btn:hover:not([disabled]) { filter: brightness(1.08); }
 .btn.ghost { background: transparent; color: var(--brand-text); border-color: color-mix(in srgb, var(--brand-text) 45%, transparent); }
 .btn.ghost.danger { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.btn.danger-solid { background: var(--warn); border-color: var(--warn); color: #FFFFFF; }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -2000,6 +2001,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     html += '<h3>Livrables</h3><div class="exports"><button class="btn big" data-act="pptx"' + (modele && analyse ? '' : ' disabled') + '>Générer le PowerPoint</button><button class="btn big" data-act="xlsx"' + (analyse ? '' : ' disabled') + '>Générer l’Excel</button></div>';
     if (!modele) html += '<p class="note">Le PowerPoint nécessite le modèle ci-dessus.</p>';
     html += '<h3>Dossier client</h3><div class="exports"><button class="btn ghost" data-act="json">Enregistrer le dossier (.json)</button><label class="btn ghost file">Ouvrir un dossier<input type="file" accept=".json,application/json" data-act="ouvrir" hidden></label><button class="btn ghost" data-act="exemple">Charger l’exemple</button><button class="btn ghost danger" data-act="nouveau">Nouveau dossier</button></div>';
+    html += '<h3>Réinitialisation</h3><p class="lead">Efface le dossier en cours, le modèle PowerPoint mémorisé et toutes les saisies de ce navigateur. Les fichiers déjà enregistrés (.json, .pptx, .xlsx) ne sont pas touchés.</p><button class="btn danger-solid" data-act="reset-all">Tout réinitialiser</button>';
     return html;
   }
 
@@ -2090,6 +2092,17 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'json') return enregistrer(nomFichier('Dossier') + '.json', new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
     if (a === 'exemple') { state = clone(EXEMPLE); state.dateEtude = today(); toast('Exemple chargé.'); }
     if (a === 'nouveau') { if (!confirm('Effacer le dossier en cours ?')) return; state = clone(VIDE); state.dateEtude = today(); location.hash = '#clients'; }
+    if (a === 'reset-all') {
+      if (!confirm('Tout réinitialiser ? Le dossier en cours et le modèle PowerPoint mémorisé seront effacés de ce navigateur. Pensez à enregistrer le dossier (.json) avant.')) return;
+      try { localStorage.removeItem(STORE_KEY); } catch (e) { }
+      await idbDel('modele');
+      modele = null; modeleInfo = null; appliquerTheme(null);
+      state = normaliser(clone(VIDE)); state.dateEtude = today();
+      analyse = null; sauver();
+      location.hash = '#clients'; rendre(); window.scrollTo(0, 0);
+      toast('Tout a été réinitialisé.');
+      return;
+    }
     if (a === 'oublier-modele') { modele = null; modeleInfo = null; await idbDel('modele'); appliquerTheme(null); toast('Modèle retiré.'); }
     planifier(true);
   });
