@@ -188,6 +188,10 @@ label.file { position: relative; }
    ============================================================ */
 var FISC = {
   baremeLD: [[8072, 0.05], [12109, 0.10], [15932, 0.15], [552324, 0.20], [902838, 0.30], [1805677, 0.40], [Infinity, 0.45]],
+  baremeFS: [[24430, 0.35], [Infinity, 0.45]],   // frères et sœurs (et neveux par représentation)
+  baremeNV: [[Infinity, 0.55]],                  // neveux et nièces de leur propre chef
+  abatFrere: 15932,
+  abatNeveu: 7967,
   abatEnfant: 100000,
   abatPetitEnfant: 31865,
   abat790G: 31865,
@@ -231,11 +235,12 @@ function ageAt(naissance, date) {
 function yearsBetween(a, b) { return (b.getTime() - a.getTime()) / (365.25 * 864e5); }
 function usufruitPct(age) { for (var i = 0; i < FISC.usufruit.length; i++) if (age <= FISC.usufruit[i][0]) return FISC.usufruit[i][1]; return 0.1; }
 
-function bareme(x) {
+function bareme(x, cle) {
   if (x <= 0) return 0;
+  var B = FISC['bareme' + (cle || 'LD')] || FISC.baremeLD;
   var t = 0, prev = 0;
-  for (var i = 0; i < FISC.baremeLD.length; i++) {
-    var lim = FISC.baremeLD[i][0], r = FISC.baremeLD[i][1];
+  for (var i = 0; i < B.length; i++) {
+    var lim = B[i][0], r = B[i][1];
     if (x > prev) t += (Math.min(x, lim) - prev) * r;
     prev = lim;
     if (x <= lim) break;
@@ -243,9 +248,9 @@ function bareme(x) {
   return t;
 }
 // Droits en ligne directe avec rappel fiscal : valeur transmise, valeurs rappelées (<15 ans), abattement
-function droitsLD(valeur, rappel, abat) {
+function droitsLD(valeur, rappel, abat, cle) {
   valeur = Math.max(0, valeur); rappel = Math.max(0, rappel || 0);
-  return Math.max(0, bareme(Math.max(0, valeur + rappel - abat)) - bareme(Math.max(0, rappel - abat)));
+  return Math.max(0, bareme(Math.max(0, valeur + rappel - abat), cle) - bareme(Math.max(0, rappel - abat), cle));
 }
 function taxe990(taxable) {
   if (taxable <= 0) return 0;
@@ -290,13 +295,56 @@ function prepare(d) {
   ctx.petitsEnfants = (d.petitsEnfants || []).map(function (p) {
     return { id: p.id, label: (p.prenom || '') + (p.nom ? ' ' + p.nom : ''), prenom: p.prenom || '', naissance: p.naissance, parentId: p.parentId, age: ageAt(p.naissance, T0) };
   });
-  ctx.enfants.forEach(function (e) { ctx.persons[e.id] = e; });
-  ctx.petitsEnfants.forEach(function (p) { ctx.persons[p.id] = p; });
+  ctx.freres = (d.freres || []).map(function (f) {
+    return { id: f.id, label: (f.prenom || '') + (f.nom ? ' ' + f.nom : ''), prenom: f.prenom || '', naissance: f.naissance, de: f.de || 'c1', decede: !!f.decede, exo796: !!f.exo796, age: ageAt(f.naissance, T0), lienType: 'frere' };
+  });
+  ctx.neveux = (d.neveux || []).map(function (n) {
+    return { id: n.id, label: (n.prenom || '') + (n.nom ? ' ' + n.nom : ''), prenom: n.prenom || '', naissance: n.naissance, parentId: n.parentId, age: ageAt(n.naissance, T0), lienType: 'neveu' };
+  });
+  ctx.enfants.forEach(function (e) { e.lienType = 'enfant'; ctx.persons[e.id] = e; });
+  ctx.petitsEnfants.forEach(function (p) { p.lienType = 'pe'; ctx.persons[p.id] = p; });
+  ctx.freres.forEach(function (f) { ctx.persons[f.id] = f; });
+  ctx.neveux.forEach(function (n) { ctx.persons[n.id] = n; });
   return ctx;
 }
 function labelClient(c) { return ((c.civ || '') + ' ' + (c.prenom || '') + ' ' + (c.nom || '')).replace(/\s+/g, ' ').trim(); }
-function heritiersDe(ctx, k) { return ctx.enfants.filter(function (e) { return e.parent === 'commun' || e.parent === k; }); }
+function enfantsDe(ctx, k) { return ctx.enfants.filter(function (e) { return e.parent === 'commun' || e.parent === k; }); }
+/* Héritiers de k : descendants, à défaut frères et sœurs (neveux par représentation des prédécédés).
+   Chaque héritier porte : part, abattement et barème en succession (abat, bareme), en donation (abatDon, baremeDon). */
+function heritiersDe(ctx, k) {
+  var enf = enfantsDe(ctx, k);
+  if (enf.length) return enf.map(function (e) { var a = FISC.abatEnfant + (e.handicap ? FISC.abatHandicap : 0); return Object.assign({}, e, { lien: 'enfant', part: 1 / enf.length, abat: a, bareme: 'LD', abatDon: a, baremeDon: 'LD' }); });
+  var souches = ctx.freres.filter(function (f) { return f.de === k; }).map(function (f) {
+    if (!f.decede) return [{ p: f, lien: 'frere' }];
+    return ctx.neveux.filter(function (n) { return n.parentId === f.id; }).map(function (n) { return { p: n, lien: 'neveu' }; });
+  }).filter(function (s) { return s.length; });
+  if (!souches.length) return [];
+  var representation = souches.length > 1 || souches.some(function (s) { return s[0].lien === 'frere'; });
+  var out = [];
+  souches.forEach(function (s) {
+    s.forEach(function (m) {
+      var frere = m.lien === 'frere', rep = !frere && representation;
+      out.push(Object.assign({}, m.p, { lien: m.lien, rep: rep, part: 1 / souches.length / s.length,
+        abat: frere ? FISC.abatFrere : rep ? FISC.abatFrere / s.length : FISC.abatNeveu, bareme: frere || rep ? 'FS' : 'NV',
+        abatDon: frere ? FISC.abatFrere : FISC.abatNeveu, baremeDon: frere ? 'FS' : 'NV', exo: frere && m.p.exo796 }));
+    });
+  });
+  return out;
+}
+// génération suivante d'un héritier (petits-enfants d'un enfant, neveux d'un frère ou d'une sœur)
+function generationSuivante(ctx, h) {
+  if (h.lien === 'enfant') return ctx.petitsEnfants.filter(function (p) { return p.parentId === h.id; });
+  if (h.lien === 'frere') return ctx.neveux.filter(function (n) { return n.parentId === h.id; });
+  return [];
+}
 function petitsEnfantsDe(ctx, enfantId) { return ctx.petitsEnfants.filter(function (p) { return p.parentId === enfantId; }); }
+function regimeTiers(p) {
+  if (!p) return { abat: FISC.abatDefaut, bareme: 'LD' };
+  if (p.lienType === 'pe') return { abat: FISC.abatDefaut, bareme: 'LD' };
+  if (p.lienType === 'neveu') return { abat: FISC.abatNeveu, bareme: 'NV' };
+  if (p.lienType === 'frere') return { abat: FISC.abatFrere, bareme: 'FS' };
+  return { abat: FISC.abatDefaut, bareme: 'LD' };
+}
 function autre(k) { return k === 'c1' ? 'c2' : 'c1'; }
 function partClient(a, k, ctx) {
   if (!ctx.couple) return k === 'c1' ? 1 : 0;
@@ -305,6 +353,7 @@ function partClient(a, k, ctx) {
 }
 function usufruitTotalPossible(ctx, k) {
   if (!ctx.marie) return false;
+  if (!enfantsDe(ctx, k).length) return false;
   if (ctx.d.ddv) return true;
   return ctx.enfants.every(function (e) { return e.parent === 'commun' || e.parent === autre(k); });
 }
@@ -363,7 +412,6 @@ function simulate(d, scen) {
     return ledger.filter(function (x) { return x.donor === donor && x.donee === donee && x.bucket === bucket && x.date > lim && x.date <= date; })
       .reduce(function (s, x) { return s + x.value; }, 0);
   }
-  function abatEnfant(e) { return FISC.abatEnfant + (e && e.handicap ? FISC.abatHandicap : 0); }
 
   /* ---- PLAN : versements assurance-vie ---- */
   if (plan.av) {
@@ -386,8 +434,10 @@ function simulate(d, scen) {
     ctx.clients.forEach(function (k) {
       var age = ctx.persons[k].age;
       var dons = [];
-      if (P.don790GEnfants && age < 80) heritiersDe(ctx, k).forEach(function (e) { if (e.age >= 18) dons.push({ donee: e.id, montant: FISC.abat790G, bucket: '790G', type: 'Don familial 790 G' }); });
-      heritiersDe(ctx, k).forEach(function (e) {
+      var hk = heritiersDe(ctx, k);
+      if (P.don790GEnfants && age < 80) hk.forEach(function (e) { if (e.age >= 18 && (e.lien === 'enfant' || e.lien === 'neveu')) dons.push({ donee: e.id, montant: FISC.abat790G, bucket: '790G', type: 'Don familial 790 G' }); });
+      if (P.don790GEnfants && age < 80 && hk.length && hk[0].lien !== 'enfant') hk.forEach(function (e) { if (e.lien === 'frere') generationSuivante(ctx, e).forEach(function (n) { if (n.age >= 18) dons.push({ donee: n.id, montant: FISC.abat790G, bucket: '790G', type: 'Don familial 790 G' }); }); });
+      enfantsDe(ctx, k).forEach(function (e) {
         petitsEnfantsDe(ctx, e.id).forEach(function (p) {
           if (P.don790GPetitsEnfants && age < 80 && p.age >= 18) dons.push({ donee: p.id, montant: FISC.abat790G, bucket: '790G', type: 'Don familial 790 G' });
           if (P.don790BPetitsEnfants) dons.push({ donee: p.id, montant: FISC.abatPetitEnfant, bucket: 'PE', type: 'Don manuel (abatt. 790 B)' });
@@ -426,11 +476,11 @@ function simulate(d, scen) {
           var valNP = basePP * npPct;
           (npDonne[a.id] = npDonne[a.id] || {})[k] = { date: date, societe: viaSoc };
           heirs.forEach(function (e) {
-            var v = valNP / heirs.length;
+            var v = valNP * e.part;
             var rp = rappel(k, e.id, date, 'LD');
-            var dr = droitsLD(v, rp, abatEnfant(e));
+            var dr = droitsLD(v, rp, e.abatDon, e.baremeDon);
             ledger.push({ date: date, donor: k, donee: e.id, value: v, bucket: 'LD' });
-            res.donations.push({ vague: w, date: date, donor: k, donorAge: age, donee: e.id, actif: a.libelle, actifId: a.id, valeurPP: (viaSoc ? basePP : a.valeur * pk) / heirs.length, valeurPPBrute: a.valeur * pk / heirs.length, npPct: npPct, valeurNP: v, societe: viaSoc, rappel: rp, abattement: abatEnfant(e), droits: dr });
+            res.donations.push({ vague: w, date: date, donor: k, donorAge: age, donee: e.id, actif: a.libelle, actifId: a.id, valeurPP: (viaSoc ? basePP : a.valeur * pk) * e.part, valeurPPBrute: a.valeur * pk * e.part, npPct: npPct, valeurNP: v, societe: viaSoc, rappel: rp, abattement: e.abatDon, droits: dr });
           });
         });
       });
@@ -483,6 +533,9 @@ function simulate(d, scen) {
     if (spouse && d.regime === 'universelle') {
       D.option = 'Communauté universelle avec attribution intégrale : tout revient au conjoint';
       partEnfants = 0; extras[spouse] += Math.max(0, brut - passif);
+    } else if (spouse && ctx.marie && !enfantsDe(ctx, k).length) {
+      partEnfants = 0; extras[spouse] += Math.max(0, brut - passif);
+      D.option = 'Pas de descendant : le conjoint recueille toute la succession (parents prédécédés), en franchise de droits';
     } else if (spouse && ctx.marie) {
       if (usufruitTotalPossible(ctx, k)) {
         ageUsuf = Math.max(ageAt(ctx.persons[spouse].naissance, date), P.ageMinPremierDeces);
@@ -495,7 +548,7 @@ function simulate(d, scen) {
     } else if (spouse) {
       D.option = 'Partenaire de PACS : pas héritier sans testament (exonéré s\u2019il est légataire)';
     } else {
-      D.option = 'Enfants héritiers en pleine propriété';
+      D.option = heirs.length && heirs[0].lien !== 'enfant' ? 'Frères et sœurs héritiers' + (heirs.some(function (h) { return h.rep; }) ? ', neveux et nièces par représentation' : heirs.some(function (h) { return h.lien === 'neveu'; }) ? ' : neveux et nièces de leur propre chef' : '') : 'Enfants héritiers en pleine propriété';
     }
     D.usPct = usPct; D.ageUsufruitier = ageUsuf;
 
@@ -515,20 +568,20 @@ function simulate(d, scen) {
         var u = usufruitPct(aU);
         lines.push({ id: spouse, cap: 1, f: u, abatF: 0, exo: true, type: 'Usufruit' });
         heirs.forEach(function (e) {
-          var br = [e].concat(P.inclurePetitsEnfantsClause ? petitsEnfantsDe(ctx, e.id) : []);
-          br.forEach(function (m) { lines.push({ id: m.id, cap: 0, f: (1 - u) / heirs.length / br.length, abatF: (1 - u), exo: false, type: 'Nue-propriété' }); });
+          var br = [e].concat(P.inclurePetitsEnfantsClause ? generationSuivante(ctx, e) : []);
+          br.forEach(function (m) { lines.push({ id: m.id, cap: 0, f: (1 - u) * e.part / br.length, abatF: (1 - u), exo: false, type: 'Nue-propriété' }); });
         });
       } else {
         heirs.forEach(function (e) {
-          var pes = petitsEnfantsDe(ctx, e.id);
+          var pes = generationSuivante(ctx, e);
           if (plan.av && P.clauseDemembree && P.inclurePetitsEnfantsClause && pes.length) {
             var aE = ageAt(e.naissance, date), uE = usufruitPct(aE);
             pes.forEach(function (p) {
-              lines.push({ id: e.id, cap: 1 / heirs.length / pes.length, f: uE / heirs.length / pes.length, abatF: uE, exo: false, type: 'Usufruit' });
-              lines.push({ id: p.id, cap: 0, f: (1 - uE) / heirs.length / pes.length, abatF: 1 - uE, exo: false, type: 'Nue-propriété' });
+              lines.push({ id: e.id, cap: e.part / pes.length, f: uE * e.part / pes.length, abatF: uE, exo: false, type: 'Usufruit' });
+              lines.push({ id: p.id, cap: 0, f: (1 - uE) * e.part / pes.length, abatF: 1 - uE, exo: false, type: 'Nue-propriété' });
             });
           } else {
-            lines.push({ id: e.id, cap: 1 / heirs.length, f: 1 / heirs.length, abatF: 1, exo: false, type: 'PP' });
+            lines.push({ id: e.id, cap: e.part, f: e.part, abatF: 1, exo: false, type: 'PP' });
           }
         });
       }
@@ -537,7 +590,9 @@ function simulate(d, scen) {
         if (l.exo) benef[l.id].exo = true;
       });
       if (spouse && !demembre) recuConjointPP += c.valeur;
-      D.av.push({ contrat: c.libelle, valeur: c.valeur, clause: spouse ? (demembre ? 'Conjoint usufruitier / ' + (P.inclurePetitsEnfantsClause ? 'enfants et petits-enfants' : 'enfants') + ' nus-propriétaires' : 'Conjoint, à défaut les enfants') : (plan.av && P.clauseDemembree && P.inclurePetitsEnfantsClause ? 'Enfants usufruitiers / petits-enfants nus-propriétaires' : 'Enfants par parts égales'), lignes: lines.map(function (l) { return { id: l.id, type: l.type, part: l.f }; }) });
+      var collat = heirs.length && heirs[0].lien !== 'enfant';
+      var G1 = collat ? 'frères et sœurs' : 'enfants', G2 = collat ? 'neveux et nièces' : 'petits-enfants';
+      D.av.push({ contrat: c.libelle, valeur: c.valeur, clause: spouse ? (demembre ? 'Conjoint usufruitier / ' + G1 + (P.inclurePetitsEnfantsClause ? ' et ' + G2 : '') + ' nus-propriétaires' : 'Conjoint, à défaut les héritiers') : (plan.av && P.clauseDemembree && P.inclurePetitsEnfantsClause ? G1.charAt(0).toUpperCase() + G1.slice(1) + ' usufruitiers / ' + G2 + ' nus-propriétaires' : 'Héritiers par parts égales'), lignes: lines.map(function (l) { return { id: l.id, type: l.type, part: l.f }; }) });
     });
     // 990 I
     var tot990 = 0, avBenef = {};
@@ -563,20 +618,22 @@ function simulate(d, scen) {
     // Droits de succession par héritier
     var droitsSucc = 0;
     heirs.forEach(function (e) {
-      var base = partEnfants === 0 ? 0 : net * partEnfants * fiscalNP / heirs.length;
+      var base = partEnfants === 0 ? 0 : net * partEnfants * fiscalNP * e.part;
       var b757 = avBenef[e.id] ? avBenef[e.id].base757 : 0;
       var rp = rappel(k, e.id, date, 'LD');
-      var abat = abatEnfant(e);
-      var dr = droitsLD(base + b757, rp, abat);
+      var abat = e.abat;
+      var dr = e.exo ? 0 : droitsLD(base + b757, rp, abat, e.bareme);
       droitsSucc += dr;
-      D.heirs.push({ id: e.id, label: e.label, base: base, base757: b757, rappel: rp, abattement: abat, abatDispo: Math.max(0, abat - rp), droits: dr, av990: avBenef[e.id] ? avBenef[e.id].tax990 : 0 });
+      D.heirs.push({ id: e.id, label: e.label, lien: e.lien, rep: !!e.rep, exo: !!e.exo, base: base, base757: b757, rappel: rp, abattement: abat, abatDispo: Math.max(0, abat - rp), droits: dr, av990: avBenef[e.id] ? avBenef[e.id].tax990 : 0 });
     });
-    // Petits-enfants : part 757 B éventuelle (abattement 1 594 €)
-    ctx.petitsEnfants.forEach(function (p) {
-      var b = avBenef[p.id]; if (!b) return;
-      var dr = b.base757 > 0 ? droitsLD(b.base757, rappel(k, p.id, date, 'PE'), FISC.abatDefaut) : 0;
+    // Autres bénéficiaires d'assurance-vie (petits-enfants, neveux…) : part 757 B éventuelle
+    var heirIds = heirs.map(function (e) { return e.id; });
+    Object.keys(avBenef).forEach(function (id) {
+      if (heirIds.indexOf(id) >= 0 || avBenef[id].exo) return;
+      var b = avBenef[id], p = ctx.persons[id], rg = regimeTiers(p);
+      var dr = b.base757 > 0 ? droitsLD(b.base757, rappel(k, id, date, p && p.lienType === 'pe' ? 'PE' : 'LD'), rg.abat, rg.bareme) : 0;
       droitsSucc += dr;
-      D.heirs.push({ id: p.id, label: p.label, petitEnfant: true, base: 0, base757: b.base757, rappel: 0, abattement: FISC.abatDefaut, abatDispo: FISC.abatDefaut, droits: dr, av990: b.tax990 });
+      D.heirs.push({ id: id, label: p ? p.label : id, petitEnfant: true, base: 0, base757: b.base757, rappel: 0, abattement: rg.abat, abatDispo: rg.abat, droits: dr, av990: b.tax990 });
     });
     D.droitsSucc = droitsSucc;
     D.droits = droitsSucc + tot990;
@@ -674,21 +731,22 @@ function etatAbattements(d) {
   var ctx = prepare(d), out = [];
   ctx.clients.forEach(function (k) {
     heritiersDe(ctx, k).forEach(function (e) {
+      if (e.lien !== 'enfant' && e.lien !== 'frere' && e.lien !== 'neveu') return;
       var dons = (d.donations || []).filter(function (x) { return x.donateur === k && x.beneficiaireId === e.id && x.type !== '790G'; })
         .map(function (x) { return { date: parseDate(x.date), v: +x.montant || 0 }; }).filter(function (x) { return x.date; });
       var lim = addYears(ctx.T0, -FISC.rappelAns);
       var actifs = dons.filter(function (x) { return x.date > lim; });
       var used = actifs.reduce(function (s, x) { return s + x.v; }, 0);
-      var abat = FISC.abatEnfant + (e.handicap ? FISC.abatHandicap : 0);
+      var abat = e.abatDon;
       var prochaine = actifs.length ? addYears(new Date(Math.max.apply(null, actifs.map(function (x) { return x.date.getTime(); }))), FISC.rappelAns) : null;
-      out.push({ donor: k, donee: e.id, utilise: used, disponible: Math.max(0, abat - used), reconstitution: prochaine });
+      out.push({ donor: k, donee: e.id, lien: e.lien, abattement: abat, utilise: used, disponible: Math.max(0, abat - used), reconstitution: prochaine });
     });
   });
   return out;
 }
 
-if (typeof module !== 'undefined') module.exports = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
-var CALC = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
+if (typeof module !== 'undefined') module.exports = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
+var CALC = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
 if (typeof module !== 'undefined') module.exports = CALC;
 
 </script>
@@ -976,15 +1034,18 @@ var PPTX = (function () {
     if (ctx.clients.length === 2) {
       phr.push(nomsClients(ctx) + (d.situation === 'marie' ? ', vous êtes mariés sous le régime ' + (REGIMES[d.regime] || '') + '.' : ', vous êtes partenaires de PACS.'));
     } else phr.push(nomsClients(ctx) + ', vous êtes ' + (d.c1.sexe === 'F' ? 'seule' : 'seul') + ' à transmettre votre patrimoine.');
-    phr.push('Vous avez ' + ctx.enfants.length + ' enfant' + (ctx.enfants.length > 1 ? 's' : '') + (ctx.petitsEnfants.length ? ' et ' + ctx.petitsEnfants.length + ' petit' + (ctx.petitsEnfants.length > 1 ? 's' : '') + '-enfant' + (ctx.petitsEnfants.length > 1 ? 's' : '') : '') + '.');
+    if (ctx.enfants.length) phr.push('Vous avez ' + ctx.enfants.length + ' enfant' + (ctx.enfants.length > 1 ? 's' : '') + (ctx.petitsEnfants.length ? ' et ' + ctx.petitsEnfants.length + ' petit' + (ctx.petitsEnfants.length > 1 ? 's' : '') + '-enfant' + (ctx.petitsEnfants.length > 1 ? 's' : '') : '') + '.' + (ctx.freres.length ? ' ' + ctx.freres.length + ' frère(s) et sœur(s) recensé(s).' : ''));
+    else phr.push('Vous n’avez pas d’enfant : vos héritiers sont vos frères et sœurs' + (ctx.neveux.length ? ', et vos neveux et nièces par représentation d’un frère ou d’une sœur prédécédé(e)' : '') + '.');
     var nd = (d.donations || []).length;
     phr.push(d.situation === 'marie' ? (d.ddv ? 'Une donation entre époux a été réalisée. ' : 'Aucune donation entre époux n’a été réalisée. ') + (nd ? nd + ' donation' + (nd > 1 ? 's' : '') + ' antérieure' + (nd > 1 ? 's' : '') + ' recensée' + (nd > 1 ? 's' : '') + '.' : 'Aucune donation antérieure.') : (nd ? nd + ' donation(s) antérieure(s) recensée(s).' : 'Aucune donation antérieure.'));
     S.text(Z.x, Z.y, Z.w, Z.h * 0.2, phr.map(function (t) { return { runs: [t], spcAft: 3 }; }), { sz: 1400 });
     // Arbre
     var top = Z.y + Z.h * 0.24, rowH = Z.h * 0.21, gap = Z.h * 0.06;
     var levels = [ctx.clients.map(function (k) { return { id: k, l1: ctx.persons[k].label, l2: ctx.persons[k].age + ' ans · espérance de vie ' + Math.round(ctx.persons[k].ev) + ' ans', lvl: 0 }; }),
-      ctx.enfants.map(function (e) { return { id: e.id, l1: e.label, l2: e.age + ' ans' + (e.parent !== 'commun' ? ' · enfant de ' + nomCourt(ctx, e.parent).toLowerCase() : ''), lvl: 1 }; }),
-      ctx.petitsEnfants.map(function (p) { return { id: p.id, l1: p.prenom || p.label, l2: p.age + ' ans', lvl: 2, parentId: p.parentId }; })];
+      ctx.enfants.length ? ctx.enfants.map(function (e) { return { id: e.id, l1: e.label, l2: e.age + ' ans' + (e.parent !== 'commun' ? ' · enfant de ' + nomCourt(ctx, e.parent).toLowerCase() : ''), lvl: 1 }; })
+        : ctx.freres.map(function (f) { return { id: f.id, l1: f.label, l2: (f.decede ? 'prédécédé(e)' : f.age + ' ans') + (ctx.clients.length > 1 ? ' · fratrie de ' + nomCourt(ctx, f.de).toLowerCase() : ''), lvl: 1 }; }),
+      ctx.enfants.length ? ctx.petitsEnfants.map(function (p) { return { id: p.id, l1: p.prenom || p.label, l2: p.age + ' ans', lvl: 2, parentId: p.parentId }; })
+        : ctx.neveux.map(function (n) { return { id: n.id, l1: n.prenom || n.label, l2: n.age + ' ans', lvl: 2, parentId: n.parentId }; })];
     if (!levels[2].length) levels.pop();
     var pos = {};
     levels.forEach(function (row, li) {
@@ -1013,7 +1074,7 @@ var PPTX = (function () {
       xs.forEach(function (x) { S.line(x, midY, x, midY + gap / 2); });
     }
     if (levels[2]) {
-      ctx.enfants.forEach(function (e) {
+      (ctx.enfants.length ? ctx.enfants : ctx.freres).forEach(function (e) {
         var kids = levels[2].filter(function (p) { return p.parentId === e.id; }); if (!kids.length || !pos[e.id]) return;
         var px = pos[e.id].x + pos[e.id].w / 2, py = pos[e.id].y + rowH, midY = py + gap / 2;
         S.line(px, py, px, midY);
@@ -1075,10 +1136,10 @@ var PPTX = (function () {
       dons.slice(0, 6).forEach(function (x) { b.push([nomCourt(ctx, x.donateur), ctx.persons[x.beneficiaireId] ? ctx.persons[x.beneficiaireId].label : '', dfr(CALC.parseDate(x.date)), x.type === 'NP' ? 'Nue-propriété' : x.type === '790G' ? 'Don familial 790 G' : 'Pleine propriété', eur(+x.montant)]); });
       y += S.table(Z.x, y, Z.w, [2, 3, 1.6, 2.2, 1.8], b, { sz: 1050, rowH: Math.round(EMU * 0.3), algn: ['l', 'l', 'l', 'l', 'r'] }) + Z.h * 0.06;
     } else {
-      S.text(Z.x, y, Z.w, Z.h * 0.12, [{ runs: ['Aucune donation antérieure n’a été réalisée : les abattements de 100 000 € par parent et par enfant sont intégralement disponibles.'] }], { sz: 1400 });
+      S.text(Z.x, y, Z.w, Z.h * 0.12, [{ runs: ['Aucune donation antérieure n’a été réalisée : les abattements sont intégralement disponibles' + (ctx.enfants.length ? ' (100 000 € par parent et par enfant).' : ' (15 932 € par frère ou sœur, 7 967 € par neveu ou nièce).')] }], { sz: 1400 });
       y += Z.h * 0.16;
     }
-    var b2 = [['Parent', 'Enfant', 'Abattement utilisé (< 15 ans)', 'Disponible aujourd’hui', 'Reconstitué intégralement le']];
+    var b2 = [['Donateur', 'Bénéficiaire', 'Abattement utilisé (< 15 ans)', 'Disponible aujourd’hui', 'Reconstitué intégralement le']];
     etats.slice(0, 8).forEach(function (e) { b2.push([nomCourt(ctx, e.donor), ctx.persons[e.donee].label, eur(e.utilise), eur(e.disponible), e.reconstitution ? dfr(e.reconstitution) : 'Déjà disponible']); });
     y += S.table(Z.x, y, Z.w, [1.6, 2.6, 2.2, 2, 2.2], b2, { sz: 1050, rowH: Math.round(EMU * 0.3), algn: ['l', 'l', 'r', 'r', 'r'] });
     S.text(Z.x, Math.min(y + Z.h * 0.05, Z.y + Z.h * 0.86), Z.w, Z.h * 0.14, [{ runs: [{ t: 'Rappel fiscal (art. 784 CGI) : les donations de moins de 15 ans consomment l’abattement et les tranches du barème ; ils se reconstituent 15 ans après chaque donation.', i: true }] }], { sz: 1100 });
@@ -1092,7 +1153,7 @@ var PPTX = (function () {
     var b = [];
     b.push(['1er décès – ' + D1.date.getFullYear() + ' (' + D1.age + ' ans)', '']);
     b.push(['Actif successoral taxable', eur(D1.actifNet)]);
-    if (D1.usPct) b.push(['Valeur nue-propriété (enfants)', pct(1 - D1.usPct)]);
+    if (D1.usPct) b.push(['Valeur nue-propriété (héritiers)', pct(1 - D1.usPct)]);
     b.push(['Droits de succession', eur(D1.droitsSucc)]);
     b.push(['Fiscalité assurance-vie (990 I)', eur(D1.tax990)]);
     if (D2) {
@@ -1170,20 +1231,23 @@ var PPTX = (function () {
     var ctx = A.ctx, d = ctx.d, Z = M.zone, S = new Slide(M);
     var P = ctx.P;
     S.title('Clause démembrée', 'Appliquée à votre famille');
+    var G1 = ctx.enfants.length ? 'Enfants' : 'Frères et sœurs', G2 = ctx.enfants.length ? 'petits-enfants' : 'neveux et nièces';
     var lw = Z.w * 0.52;
     // Schéma
     var y = Z.y, bh = Z.h * 0.15;
     if (ctx.clients.length === 2) {
       S.box(Z.x, y, lw, bh, { round: 12000, fill: 'accent1', color: 'bg1', paras: [{ runs: [{ t: 'Au 1er décès : le conjoint survivant en usufruit', b: true, sz: 1200 }] }, { runs: [{ t: 'Il dispose des capitaux (quasi-usufruit)', sz: 1000 }] }] });
       y += bh + Z.h * 0.04;
-      var np = ctx.enfants.map(function (e) { return e.prenom + (P.inclurePetitsEnfantsClause && CALC.petitsEnfantsDe(ctx, e.id).length ? ' + ' + CALC.petitsEnfantsDe(ctx, e.id).map(function (p) { return p.prenom; }).join(', ') : ''); }).join(' · ');
-      S.box(Z.x, y, lw, bh * 1.2, { round: 12000, fill: { s: 'accent1', tint: 0.2 }, color: 'tx1', paras: [{ runs: [{ t: 'Enfants' + (P.inclurePetitsEnfantsClause && ctx.petitsEnfants.length ? ' et petits-enfants' : '') + ' en nue-propriété, par souche', b: true, sz: 1200 }] }, { runs: [{ t: np, sz: 1000 }] }] });
+      var hs = []; ctx.clients.forEach(function (k) { CALC.heritiersDe(ctx, k).forEach(function (e) { if (!hs.some(function (x) { return x.id === e.id; })) hs.push(e); }); });
+      var np = hs.map(function (e) { var g = P.inclurePetitsEnfantsClause ? CALC.generationSuivante(ctx, e) : []; return e.prenom + (g.length ? ' + ' + g.map(function (p) { return p.prenom; }).join(', ') : ''); }).join(' · ');
+      var aG2 = hs.some(function (e) { return CALC.generationSuivante(ctx, e).length; });
+      S.box(Z.x, y, lw, bh * 1.2, { round: 12000, fill: { s: 'accent1', tint: 0.2 }, color: 'tx1', paras: [{ runs: [{ t: G1 + (P.inclurePetitsEnfantsClause && aG2 ? ' et ' + G2 : '') + ' en nue-propriété, par souche', b: true, sz: 1200 }] }, { runs: [{ t: np, sz: 1000 }] }] });
       y += bh * 1.2 + Z.h * 0.04;
-      S.box(Z.x, y, lw, bh * 1.2, { round: 12000, fill: { s: 'accent1', tint: 0.08 }, color: 'tx1', paras: [{ runs: [{ t: 'À défaut du conjoint : enfants en usufruit, leurs enfants en nue-propriété', b: true, sz: 1100 }] }, { runs: [{ t: 'La transmission saute une génération sans nouvelle taxation.', sz: 1000 }] }] });
+      S.box(Z.x, y, lw, bh * 1.2, { round: 12000, fill: { s: 'accent1', tint: 0.08 }, color: 'tx1', paras: [{ runs: [{ t: 'À défaut du conjoint : ' + G1.toLowerCase() + ' en usufruit, leurs enfants en nue-propriété', b: true, sz: 1100 }] }, { runs: [{ t: 'La transmission saute une génération sans nouvelle taxation.', sz: 1000 }] }] });
     } else {
-      S.box(Z.x, y, lw, bh * 1.3, { round: 12000, fill: 'accent1', color: 'bg1', paras: [{ runs: [{ t: 'Enfants en usufruit', b: true, sz: 1300 }] }, { runs: [{ t: 'Ils disposent des capitaux leur vie durant', sz: 1000 }] }] });
+      S.box(Z.x, y, lw, bh * 1.3, { round: 12000, fill: 'accent1', color: 'bg1', paras: [{ runs: [{ t: G1 + ' en usufruit', b: true, sz: 1300 }] }, { runs: [{ t: 'Ils disposent des capitaux leur vie durant', sz: 1000 }] }] });
       y += bh * 1.3 + Z.h * 0.04;
-      S.box(Z.x, y, lw, bh * 1.3, { round: 12000, fill: { s: 'accent1', tint: 0.2 }, color: 'tx1', paras: [{ runs: [{ t: 'Petits-enfants en nue-propriété', b: true, sz: 1300 }] }, { runs: [{ t: 'Ils récupèrent les capitaux sans droits au décès de leur parent', sz: 1000 }] }] });
+      S.box(Z.x, y, lw, bh * 1.3, { round: 12000, fill: { s: 'accent1', tint: 0.2 }, color: 'tx1', paras: [{ runs: [{ t: G2.charAt(0).toUpperCase() + G2.slice(1) + ' en nue-propriété', b: true, sz: 1300 }] }, { runs: [{ t: 'Ils récupèrent les capitaux sans droits au décès de leur parent', sz: 1000 }] }] });
     }
     // Chiffres
     var sansAV = A.sans.moyenne, avecAV = A.etapes[1].moyenne;
@@ -1311,6 +1375,7 @@ var PPTX = (function () {
     items.push(P.dettesRembourseesAuDeces ? 'Les emprunts sont supposés remboursés par les revenus des biens avant les décès.' : 'Les emprunts restant dus sont déduits des successions.');
     items.push('Donations en nue-propriété avec réserve d’usufruit, sans réversion ; droits payés par les donateurs (non constitutif d’une donation supplémentaire).');
     items.push('Pas de donation de nue-propriété de liquidités avec quasi-usufruit (créance non déductible, art. 774 bis CGI).');
+    if (!ctx.enfants.length) items.push('Sans descendant : conjoint héritier de la totalité (parents prédécédés, droit de retour légal des frères et sœurs non pris en compte) ; à défaut, frères et sœurs, neveux et nièces par représentation.');
     items.push('Clauses bénéficiaires à rédiger par testament ou auprès de l’assureur ; à adapter à chaque contrat.');
     S.text(Z.x, Z.y, Z.w, Z.h, items.map(function (t) { return { runs: [t], bullet: true, spcAft: 5 }; }), { sz: 1200 });
     return S;
@@ -1329,6 +1394,21 @@ var PPTX = (function () {
       { runs: ['Dons familiaux de sommes d’argent (donateur de moins de 80 ans) : 31 865 €'], bullet: true },
       { runs: ['Le conjoint survivant est exonéré de droits de succession.'], bullet: true, spcAft: 6 },
       { runs: [{ t: 'Les abattements et le barème se renouvellent tous les 15 ans.', b: true, color: 'accent1' }] }], { sz: 1200 });
+    return S;
+  }
+  function sCollateraux(M, A) {
+    var ctx = A.ctx, Z = M.zone, S = new Slide(M);
+    S.title('Frères, sœurs, neveux et nièces', 'Une fiscalité lourde');
+    var b = [['Bénéficiaire', 'Abattement', 'Taux']];
+    b.push(['Frère ou sœur', '15 932 €', '35 % jusqu’à 24 430 €, puis 45 %']);
+    b.push(['Frère ou sœur vivant avec le défunt (art. 796-0 ter)', 'Exonération', 'Sous conditions']);
+    b.push(['Neveux et nièces par représentation', '15 932 € par souche', '35 % / 45 %']);
+    b.push(['Neveux et nièces de leur propre chef', '7 967 €', '55 %']);
+    S.table(Z.x, Z.y, Z.w, [3.4, 1.8, 2.6], b, { sz: 1150, rowH: Math.round(EMU * 0.42), algn: ['l', 'l', 'l'] });
+    S.text(Z.x, Z.y + Z.h * 0.5, Z.w, Z.h * 0.45, [
+      { runs: [{ t: 'Exonération 796-0 ter : frère ou sœur célibataire, veuf, divorcé ou séparé, de plus de 50 ans ou infirme, ayant vécu avec le défunt les 5 années précédant le décès.' }], bullet: true, spcAft: 5 },
+      { runs: [{ t: 'En donation, pas de représentation : neveux et nièces taxés à 55 % après 7 967 € ; dons familiaux de sommes d’argent possibles (31 865 €) à défaut de descendants.' }], bullet: true, spcAft: 5 },
+      { runs: [{ t: 'L’assurance-vie est ici le levier majeur : 152 500 € par bénéficiaire, quel que soit le lien de parenté.', b: true, color: 'accent1' }], bullet: true }], { sz: 1200 });
     return S;
   }
   function sDemembrementFallback(M) {
@@ -1350,8 +1430,8 @@ var PPTX = (function () {
     b.push(['Avant 70 ans (art. 990 I)', '152 500 € par bénéficiaire', '20 % jusqu’à 700 000 €, puis 31,25 %']);
     b.push(['Après 70 ans (art. 757 B)', '30 500 € au global', 'Droits de succession sur les primes ; intérêts exonérés']);
     S.table(Z.x, Z.y, Z.w, [2, 2, 3], b, { sz: 1150, rowH: Math.round(EMU * 0.45) });
-    var n = A.ctx.enfants.length * A.ctx.clients.length;
-    S.text(Z.x, Z.y + Z.h * 0.45, Z.w, Z.h * 0.3, [{ runs: [{ t: 'Avec ' + A.ctx.enfants.length + ' enfant' + (A.ctx.enfants.length > 1 ? 's' : '') + ', vous pouvez transmettre par ce biais jusqu’à 152 500 € x ' + n + ' = ' + eur(152500 * n) + ' hors droits.', b: true, color: 'accent1' }] }], { sz: 1400 });
+    var n = 0; A.ctx.clients.forEach(function (k) { n += CALC.heritiersDe(A.ctx, k).length; });
+    S.text(Z.x, Z.y + Z.h * 0.45, Z.w, Z.h * 0.3, [{ runs: [{ t: 'Avec ' + n + ' bénéficiaire' + (n > 1 ? 's' : '') + ' désigné' + (n > 1 ? 's' : '') + ', vous pouvez transmettre par ce biais jusqu’à 152 500 € x ' + n + ' = ' + eur(152500 * n) + ' hors droits.', b: true, color: 'accent1' }] }], { sz: 1400 });
     return S;
   }
 
@@ -1385,10 +1465,11 @@ var PPTX = (function () {
       if (reg) seq.push({ keep: reg });
       var ok = CALC.heritiersDe(ctx, 'c1').concat(CALC.heritiersDe(ctx, 'c2')).every(function (e) { return e.parent === 'commun'; });
       var dc = d.ddv ? trouver(M, ['donation entre epoux que vous avez realisee']) : ok ? trouver(M, ['il peut opter pour l\'une de ces 2 options']) : trouver(M, ['il ne peut pas opter']);
-      if (dc) seq.push({ keep: dc });
+      if (dc && ctx.enfants.length) seq.push({ keep: dc });
     }
     var bar = trouver(M, ['une donation consomme']) || trouver(M, ['abattement en ligne directe']);
-    seq.push(bar ? { keep: bar } : { gen: sBaremeFallback(M) });
+    if (ctx.enfants.length) seq.push(bar ? { keep: bar } : { gen: sBaremeFallback(M) });
+    if (ctx.clients.some(function (k) { var h = CALC.heritiersDe(ctx, k); return h.length && h[0].lien !== 'enfant'; })) seq.push({ gen: sCollateraux(M, A) });
     var dem = trouver(M, ['qu\'est ce que le demembrement']);
     if (dem) seq.push({ keep: dem });
     var b669 = trouver(M, ['interet du demembrement']);
@@ -1399,8 +1480,9 @@ var PPTX = (function () {
     // 5. Assurance-vie
     var av = trouver(M, ['alimenter vos contrats d\'assurance-vie']);
     if (av) {
-      var n = ctx.enfants.length * ctx.clients.length;
-      av.xml = replaceParagraphs(av.xml, function (t) { return /^Avec \d+ enfants?/.test(t.trim()); }, function () { return 'Avec ' + ctx.enfants.length + ' enfant' + (ctx.enfants.length > 1 ? 's' : '') + ', vous pouvez transmettre par ce biais jusqu’à 152 500 € x ' + n + ' = ' + eur(152500 * n); }).xml;
+      var nh = 0, ids = []; ctx.clients.forEach(function (k) { var h = CALC.heritiersDe(ctx, k); nh += h.length; h.forEach(function (e) { if (ids.indexOf(e.id) < 0) ids.push(e.id); }); });
+      var lib = ctx.enfants.length ? ctx.enfants.length + ' enfant' + (ctx.enfants.length > 1 ? 's' : '') : ids.length + ' héritier' + (ids.length > 1 ? 's' : '');
+      av.xml = replaceParagraphs(av.xml, function (t) { return /^Avec \d+ enfants?/.test(t.trim()); }, function () { return 'Avec ' + lib + ', vous pouvez transmettre par ce biais jusqu’à 152 500 € x ' + nh + ' = ' + eur(152500 * nh); }).xml;
       seq.push({ keep: av });
     } else seq.push({ gen: sAVFallback(M, A) });
     var dates = trouver(M, ['importance de la date de versement']);
@@ -1613,6 +1695,8 @@ var XLSXOUT = (function () {
     ctx.clients.forEach(function (k) { var p = ctx.persons[k]; rows.push(['Client', p.label, CALC.parseDate(p.naissance), p.age, Math.round(p.ev * 10) / 10, ctx.T0.getFullYear() + Math.round(p.ev)]); });
     ctx.enfants.forEach(function (e) { rows.push(['Enfant' + (e.parent !== 'commun' ? ' de ' + nomCourt(ctx, e.parent).toLowerCase() : ''), e.label, CALC.parseDate(e.naissance), e.age, '', '']); });
     ctx.petitsEnfants.forEach(function (p) { rows.push(['Petit-enfant (' + (ctx.persons[p.parentId] ? ctx.persons[p.parentId].prenom : '') + ')', p.label, CALC.parseDate(p.naissance), p.age, '', '']); });
+    ctx.freres.forEach(function (f) { rows.push(['Frère / sœur de ' + nomCourt(ctx, f.de).toLowerCase() + (f.decede ? ' (prédécédé)' : '') + (f.exo796 ? ' – exonération 796-0 ter' : ''), f.label, CALC.parseDate(f.naissance), f.decede ? '' : f.age, '', '']); });
+    ctx.neveux.forEach(function (n) { rows.push(['Neveu / nièce (' + (ctx.persons[n.parentId] ? ctx.persons[n.parentId].prenom : '') + ')', n.label, CALC.parseDate(n.naissance), n.age, '', '']); });
     t = table(ws, r, [{ h: 'Lien', w: 26 }, { h: 'Nom', w: 30 }, { h: 'Naissance', fmt: 'dd/mm/yyyy', w: 14 }, { h: 'Âge', fmt: '0', w: 8 }, { h: 'Espérance de vie (ans)', fmt: '0.0', w: 14 }, { h: 'Année de décès estimée', fmt: '0', w: 14 }], rows);
     r = t.next;
     var REG = { communaute: 'Communauté réduite aux acquêts', separation: 'Séparation de biens', participation: 'Participation aux acquêts', universelle: 'Communauté universelle (attribution intégrale)' };
@@ -1644,7 +1728,7 @@ var XLSXOUT = (function () {
     r = t.next;
     r = section(ws, r, 'Abattements disponibles à la date de l’étude');
     rows = CALC.etatAbattements(d).map(function (e) { return [nomCourt(ctx, e.donor), ctx.persons[e.donee].label, e.utilise, e.disponible, e.reconstitution || 'Disponible']; });
-    table(ws, r, [{ h: 'Parent', w: 16 }, { h: 'Enfant', w: 28 }, { h: 'Utilisé (< 15 ans)', fmt: EUR, w: 14 }, { h: 'Disponible', fmt: EUR, w: 22 }, { h: 'Reconstitution totale', fmt: 'dd/mm/yyyy', w: 16 }], rows);
+    table(ws, r, [{ h: 'Donateur', w: 16 }, { h: 'Bénéficiaire', w: 28 }, { h: 'Utilisé (< 15 ans)', fmt: EUR, w: 14 }, { h: 'Disponible', fmt: EUR, w: 22 }, { h: 'Reconstitution totale', fmt: 'dd/mm/yyyy', w: 16 }], rows);
 
     /* ---- Successions (sans action / après plan) ---- */
     function feuilleSuccessions(nom, E, avecDonations) {
@@ -1706,7 +1790,11 @@ var XLSXOUT = (function () {
     rows = CALC.FISC.baremeLD.map(function (x) { var row = [prev, x[0] === Infinity ? 'au-delà' : x[0], x[1]]; prev = x[0]; return row; });
     t = table(ws, r, [{ h: 'De', fmt: EUR, w: 16 }, { h: 'À', fmt: EUR, w: 16 }, { h: 'Taux ligne directe', fmt: PCT, w: 14 }], rows);
     r = t.next;
-    rows = [['Ligne directe (par parent et par enfant)', 100000], ['Grands-parents / petits-enfants', 31865], ['Dons familiaux de sommes d’argent (790 G)', 31865], ['Personne handicapée (cumulable)', 159325], ['Assurance-vie 990 I (par bénéficiaire)', 152500], ['Assurance-vie 757 B (global)', 30500]];
+    t = table(ws, r, [{ h: 'Frères et sœurs : de', fmt: EUR, w: 16 }, { h: 'À', fmt: EUR, w: 16 }, { h: 'Taux', fmt: PCT, w: 14 }], [[0, 24430, 0.35], [24430, 'au-delà', 0.45]]);
+    r = t.next;
+    t = table(ws, r, [{ h: 'Neveux et nièces (propre chef)', w: 16 }, { h: '', w: 16 }, { h: 'Taux', fmt: PCT, w: 14 }], [['Part nette taxable', '', 0.55]]);
+    r = t.next;
+    rows = [['Ligne directe (par parent et par enfant)', 100000], ['Frère ou sœur (ou souche représentée)', 15932], ['Neveu ou nièce de son propre chef', 7967], ['Grands-parents / petits-enfants', 31865], ['Dons familiaux de sommes d’argent (790 G)', 31865], ['Personne handicapée (cumulable)', 159325], ['Assurance-vie 990 I (par bénéficiaire)', 152500], ['Assurance-vie 757 B (global)', 30500]];
     t = table(ws, r, [{ h: 'Abattement', w: 46 }, { h: 'Montant', fmt: EUR, w: 16 }], rows);
     r = t.next;
     rows = CALC.FISC.usufruit.map(function (x, i, arr) { var de = i ? arr[i - 1][0] + 1 : 0; return [x[0] === Infinity ? 'À partir de ' + de + ' ans' : 'De ' + de + ' à ' + x[0] + ' ans', x[1], 1 - x[1]]; });
@@ -1759,7 +1847,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   var VIDE = {"dateEtude":"","situation":"marie","regime":"communaute","ddv":false,
     "c1":{"civ":"M.","prenom":"","nom":"","naissance":"","sexe":"H","evOverride":""},
     "c2":{"civ":"Mme","prenom":"","nom":"","naissance":"","sexe":"F","evOverride":""},
-    "enfants":[],"petitsEnfants":[],"donations":[],"actifs":[],"av":[],"plan":{"versementAV":{"c1":0,"c2":0}},"params":{}};
+    "enfants":[],"petitsEnfants":[],"freres":[],"neveux":[],"donations":[],"actifs":[],"av":[],"plan":{"versementAV":{"c1":0,"c2":0}},"params":{}};
 
   var state = null, analyse = null, modele = null, modeleInfo = null;
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -1882,11 +1970,29 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       html += '<div class="row card"><div class="grid g4">' + field('Prénom', 'petitsEnfants.' + i + '.prenom', 'text') + field('Nom', 'petitsEnfants.' + i + '.nom', 'text') + field('Naissance', 'petitsEnfants.' + i + '.naissance', 'date') +
         field('Parent', 'petitsEnfants.' + i + '.parentId', 'select', { options: state.enfants.map(function (e) { return [e.id, e.prenom || 'Enfant']; }) }) + '</div><button class="del" data-act="del-pe" data-i="' + i + '" aria-label="Supprimer ce petit-enfant">Supprimer</button></div>';
     });
+    html += '<div class="listhead"><h3>Frères et sœurs</h3><button class="btn ghost" data-act="add-frere">Ajouter un frère ou une sœur</button></div>';
+    html += '<p class="lead">' + (state.enfants.length ? 'Avec des enfants, frères et sœurs ne sont pas héritiers ; ils peuvent être donataires ou bénéficiaires d’assurance-vie.' : 'Sans enfant, les frères et sœurs héritent ; les enfants d’un frère ou d’une sœur prédécédé(e) viennent par représentation.') + '</p>';
+    var de = [['c1', 'de ' + nomClient('c1')]].concat(couple() ? [['c2', 'de ' + nomClient('c2')]] : []);
+    state.freres.forEach(function (f, i) {
+      html += '<div class="row card"><div class="grid g6">' + field('Prénom', 'freres.' + i + '.prenom', 'text') + field('Nom', 'freres.' + i + '.nom', 'text') + field('Naissance', 'freres.' + i + '.naissance', 'date') +
+        (couple() ? field('Frère ou sœur', 'freres.' + i + '.de', 'select', { options: de }) : '<div></div>') +
+        field('Prédécédé(e)', 'freres.' + i + '.decede', 'check') +
+        field('Exonération 796-0 ter', 'freres.' + i + '.exo796', 'check', { hint: 'Vie commune avec le défunt, sous conditions.' }) +
+        '</div><button class="del" data-act="del-frere" data-i="' + i + '" aria-label="Supprimer ce frère ou cette sœur">Supprimer</button></div>';
+    });
+    if (!state.freres.length) html += '<p class="empty">Aucun frère ni sœur saisi.</p>';
+    html += '<div class="listhead"><h3>Neveux et nièces</h3><button class="btn ghost" data-act="add-neveu"' + (state.freres.length ? '' : ' disabled') + '>Ajouter un neveu ou une nièce</button></div>';
+    state.neveux.forEach(function (n, i) {
+      html += '<div class="row card"><div class="grid g4">' + field('Prénom', 'neveux.' + i + '.prenom', 'text') + field('Nom', 'neveux.' + i + '.nom', 'text') + field('Naissance', 'neveux.' + i + '.naissance', 'date') +
+        field('Enfant de', 'neveux.' + i + '.parentId', 'select', { options: state.freres.map(function (f) { return [f.id, (f.prenom || 'Frère / sœur') + (f.decede ? ' (prédécédé)' : '')]; }) }) + '</div><button class="del" data-act="del-neveu" data-i="' + i + '" aria-label="Supprimer ce neveu ou cette nièce">Supprimer</button></div>';
+    });
+    if (!state.neveux.length) html += '<p class="empty">' + (state.freres.length ? 'Aucun neveu ni nièce saisi.' : 'Ajoutez d’abord un frère ou une sœur.') + '</p>';
     return html;
   }
   function rDonations() {
     var donateurs = [['c1', nomClient('c1')]].concat(couple() ? [['c2', nomClient('c2')]] : []);
-    var benef = state.enfants.map(function (e) { return [e.id, (e.prenom || 'Enfant') + ' (enfant)']; }).concat(state.petitsEnfants.map(function (p) { return [p.id, (p.prenom || 'Petit-enfant') + ' (petit-enfant)']; }));
+    var benef = state.enfants.map(function (e) { return [e.id, (e.prenom || 'Enfant') + ' (enfant)']; }).concat(state.petitsEnfants.map(function (p) { return [p.id, (p.prenom || 'Petit-enfant') + ' (petit-enfant)']; }))
+      .concat(state.freres.filter(function (f) { return !f.decede; }).map(function (f) { return [f.id, (f.prenom || 'Frère / sœur') + ' (frère / sœur)']; })).concat(state.neveux.map(function (n) { return [n.id, (n.prenom || 'Neveu / nièce') + ' (neveu / nièce)']; }));
     var html = '<p class="lead">Les donations de moins de 15 ans consomment l’abattement et les tranches du barème (rappel fiscal, art. 784 CGI). Saisissez la valeur fiscale déclarée.</p>';
     html += '<div class="listhead"><h3>Donations antérieures</h3><button class="btn ghost" data-act="add-don"' + (benef.length ? '' : ' disabled') + '>Ajouter une donation</button></div>';
     if (!state.donations.length) html += '<p class="empty">Aucune donation antérieure : les abattements sont intégralement disponibles.</p>';
@@ -1894,10 +2000,11 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       html += '<div class="row card"><div class="grid g5">' + field('Date', 'donations.' + i + '.date', 'date') + field('Donateur', 'donations.' + i + '.donateur', 'select', { options: donateurs }) + field('Bénéficiaire', 'donations.' + i + '.beneficiaireId', 'select', { options: benef }) +
         field('Nature', 'donations.' + i + '.type', 'select', { options: [['PP', 'Pleine propriété'], ['NP', 'Nue-propriété'], ['790G', 'Don familial 790 G']] }) + field('Valeur fiscale', 'donations.' + i + '.montant', 'money') + '</div><button class="del" data-act="del-don" data-i="' + i + '" aria-label="Supprimer cette donation">Supprimer</button></div>';
     });
-    if (state.enfants.length && state.c1.naissance) {
-      var etats = CALC.etatAbattements(state);
-      html += '<h3 class="sub">Abattements disponibles aujourd’hui</h3><div class="tablewrap"><table class="t"><thead><tr><th>Parent</th><th>Enfant</th><th class="n">Utilisé (&lt; 15 ans)</th><th class="n">Disponible</th><th class="n">Reconstitué le</th></tr></thead><tbody>' +
-        etats.map(function (e) { var en = state.enfants.filter(function (x) { return x.id === e.donee; })[0]; return '<tr><td>' + h(nomClient(e.donor)) + '</td><td>' + h(en ? en.prenom : '') + '</td><td class="n">' + eur(e.utilise) + '</td><td class="n">' + eur(e.disponible) + '</td><td class="n">' + (e.reconstitution ? e.reconstitution.toLocaleDateString('fr-FR') : 'Disponible') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    if ((state.enfants.length || state.freres.length) && state.c1.naissance) {
+      var etats = CALC.etatAbattements(normaliser(clone(state)));
+      var pers = state.enfants.concat(state.freres, state.neveux);
+      html += '<h3 class="sub">Abattements disponibles aujourd’hui</h3><div class="tablewrap"><table class="t"><thead><tr><th>Donateur</th><th>Bénéficiaire</th><th class="n">Utilisé (&lt; 15 ans)</th><th class="n">Disponible</th><th class="n">Reconstitué le</th></tr></thead><tbody>' +
+        etats.map(function (e) { var en = pers.filter(function (x) { return x.id === e.donee; })[0]; return '<tr><td>' + h(nomClient(e.donor)) + '</td><td>' + h(en ? en.prenom : '') + '</td><td class="n">' + eur(e.utilise) + '</td><td class="n">' + eur(e.disponible) + '</td><td class="n">' + (e.reconstitution ? e.reconstitution.toLocaleDateString('fr-FR') : 'Disponible') + '</td></tr>'; }).join('') + '</tbody></table></div>';
     }
     return html;
   }
@@ -1935,14 +2042,14 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       html += '</tbody></table></div>';
     }
     html += '<h3 class="sub">Assurance-vie</h3><div class="grid g2">' + field('Clauses bénéficiaires démembrées', 'params.clauseDemembree', 'check', { hint: 'Conjoint usufruitier ; à défaut, enfants usufruitiers.' }) +
-      field('Petits-enfants nus-propriétaires', 'params.inclurePetitsEnfantsClause', 'check', { hint: 'Avec les enfants (par souche) sous l’usufruit du conjoint ; seuls sous l’usufruit de leur parent ensuite.' }) + '</div>';
+      field(state.enfants.length ? 'Petits-enfants nus-propriétaires' : 'Neveux et nièces nus-propriétaires', 'params.inclurePetitsEnfantsClause', 'check', { hint: 'Avec leurs parents (par souche) sous l’usufruit du conjoint ; seuls sous l’usufruit de leur parent ensuite.' }) + '</div>';
     html += '<div class="grid g2">';
     ['c1'].concat(couple() ? ['c2'] : []).forEach(function (k) {
       var age = state[k].naissance ? CALC.ageAt(state[k].naissance, CALC.parseDate(state.dateEtude) || new Date()) : 0;
       html += field('Versement AV préconisé – ' + nomClient(k), 'plan.versementAV.' + k, 'money', { hint: age >= 70 ? 'Plus de 70 ans : primes soumises à l’art. 757 B.' : 'Avant 70 ans : abattement de 152 500 € par bénéficiaire.' });
     });
     html += '</div><h3 class="sub">Dons de sommes d’argent</h3><div class="grid g3">' +
-      field('Don familial 790 G aux enfants majeurs', 'params.don790GEnfants', 'check', { hint: '31 865 € par enfant, donateur de moins de 80 ans.' }) +
+      field(state.enfants.length ? 'Don familial 790 G aux enfants majeurs' : 'Don familial 790 G aux neveux et nièces majeurs', 'params.don790GEnfants', 'check', { hint: '31 865 € par bénéficiaire, donateur de moins de 80 ans' + (state.enfants.length ? '.' : ' sans descendant.') }) +
       field('Don familial 790 G aux petits-enfants majeurs', 'params.don790GPetitsEnfants', 'check') +
       field('Don aux petits-enfants (abatt. 31 865 €)', 'params.don790BPetitsEnfants', 'check') + '</div>';
     return html;
@@ -1960,7 +2067,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   }
   function bar(v, mx, cls) { return '<span class="bar ' + (cls || '') + '" style="--w:' + Math.max(1, Math.round(100 * v / (mx || 1))) + '%"></span>'; }
   function rAnalyse() {
-    if (!analyse) return '<p class="empty">Complétez au minimum les dates de naissance des clients et un enfant pour lancer l’analyse.</p>';
+    if (!analyse) return '<p class="empty">Complétez au minimum les dates de naissance des clients et d’un héritier (enfant, ou à défaut frère, sœur, neveu ou nièce) pour lancer l’analyse.</p>';
     var A = analyse, html = '';
     var mx = Math.max.apply(null, A.etapes.map(function (e) { return e.moyenne; }));
     html += '<h3>Effet de chaque levier</h3><div class="steps">' + A.etapes.map(function (e, i) { return '<div class="step"><span class="lbl">' + h(e.label) + '</span>' + bar(e.moyenne, mx, i === 0 ? 'base' : '') + '<span class="val">' + eur(e.moyenne) + '</span></div>'; }).join('') + '</div><p class="note">Moyenne des deux ordres de décès possibles, droits de donation et coûts de société inclus.</p>';
@@ -2038,7 +2145,12 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       '<div class="kpi"><span class="k">Avec la stratégie</span><span class="v">' + eur(analyse.plan.moyenne) + '</span></div>' +
       '<div class="kpi gain"><span class="k">Économie</span><span class="v">' + eur(analyse.gain) + '</span></div>';
   }
-  function pret() { return state.c1 && state.c1.naissance && (!couple() || state.c2.naissance) && state.enfants.length && state.enfants.every(function (e) { return e.naissance; }); }
+  function pret() {
+    if (!(state.c1 && state.c1.naissance && (!couple() || state.c2.naissance))) return false;
+    if (state.enfants.length) return state.enfants.every(function (e) { return e.naissance; });
+    var vivants = state.freres.filter(function (f) { return !f.decede; });
+    return (vivants.length || state.neveux.length) && vivants.every(function (f) { return f.naissance; }) && state.neveux.every(function (n) { return n.naissance; });
+  }
   function calculer() {
     try { analyse = pret() ? CALC.analyseComplete(clone(state)) : null; }
     catch (e) { console.error(e); analyse = null; }
@@ -2055,7 +2167,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var el = ev.target;
     if (el.dataset && el.dataset.path) {
       set(el.dataset.path, lire(el));
-      var structural = /^(situation|regime|c1\.naissance|c2\.naissance|c1\.sexe|c2\.sexe|c1\.civ|c2\.civ|dateEtude|actifs\.\d+\.type|enfants\.\d+\.prenom)$/.test(el.dataset.path);
+      var structural = /^(situation|regime|c1\.naissance|c2\.naissance|c1\.sexe|c2\.sexe|c1\.civ|c2\.civ|dateEtude|actifs\.\d+\.type|enfants\.\d+\.prenom|freres\.\d+\.(prenom|decede))$/.test(el.dataset.path);
       planifier(structural || courante() === 'strategie');
       if (el.dataset.type === 'num' && el.closest('.money')) el.value = Number(get(el.dataset.path) || 0).toLocaleString('fr-FR');
       return;
@@ -2076,14 +2188,18 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'del-enfant') { var id = state.enfants[i].id; state.enfants.splice(i, 1); state.petitsEnfants = state.petitsEnfants.filter(function (p) { return p.parentId !== id; }); state.donations = state.donations.filter(function (x) { return x.beneficiaireId !== id; }); }
     if (a === 'add-pe') state.petitsEnfants.push({ id: uid('p'), prenom: '', nom: '', naissance: '', parentId: state.enfants[0].id });
     if (a === 'del-pe') { var pid = state.petitsEnfants[i].id; state.petitsEnfants.splice(i, 1); state.donations = state.donations.filter(function (x) { return x.beneficiaireId !== pid; }); }
-    if (a === 'add-don') state.donations.push({ id: uid('d'), date: '', donateur: 'c1', beneficiaireId: (state.enfants[0] || state.petitsEnfants[0]).id, montant: 0, type: 'PP' });
+    if (a === 'add-frere') state.freres.push({ id: uid('f'), prenom: '', nom: '', naissance: '', de: 'c1', decede: false, exo796: false });
+    if (a === 'del-frere') { var fid = state.freres[i].id; state.freres.splice(i, 1); var nids = state.neveux.filter(function (n) { return n.parentId === fid; }).map(function (n) { return n.id; }); state.neveux = state.neveux.filter(function (n) { return n.parentId !== fid; }); state.donations = state.donations.filter(function (x) { return x.beneficiaireId !== fid && nids.indexOf(x.beneficiaireId) < 0; }); }
+    if (a === 'add-neveu') state.neveux.push({ id: uid('n'), prenom: '', nom: '', naissance: '', parentId: state.freres[0].id });
+    if (a === 'del-neveu') { var nid = state.neveux[i].id; state.neveux.splice(i, 1); state.donations = state.donations.filter(function (x) { return x.beneficiaireId !== nid; }); }
+    if (a === 'add-don') { var cand = state.enfants.concat(state.petitsEnfants, state.freres.filter(function (f) { return !f.decede; }), state.neveux); state.donations.push({ id: uid('d'), date: '', donateur: 'c1', beneficiaireId: cand[0].id, montant: 0, type: 'PP' }); }
     if (a === 'del-don') state.donations.splice(i, 1);
     if (a === 'add-actif') state.actifs.push({ id: uid('a'), libelle: 'Nouveau bien', type: 'immo', partC1: 50, valeur: 0, passif: 0, planVague: 0, planSociete: false });
     if (a === 'del-actif') state.actifs.splice(i, 1);
     if (a === 'add-av') state.av.push({ id: uid('v'), libelle: 'Contrat', souscripteur: 'c1', valeur: 0, valeurApres70: 0, primesApres70: 0 });
     if (a === 'del-av') state.av.splice(i, 1);
     if (a === 'optimiser') {
-      if (!pret()) { toast('Complétez d’abord clients, enfants et dates de naissance.'); return; }
+      if (!pret()) { toast('Complétez d’abord clients, héritiers et dates de naissance.'); return; }
       b.disabled = true; b.textContent = 'Optimisation…';
       setTimeout(function () {
         try { var opt = CALC.optimiserPlan(clone(state)); opt.forEach(function (o) { var x = state.actifs.filter(function (y) { return y.id === o.id; })[0]; if (x) { x.planVague = o.planVague; x.planSociete = o.planSociete; } }); toast('Plan optimisé : vagues et recours à la SCI mis à jour.'); }
@@ -2156,6 +2272,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     ['c1', 'c2'].forEach(function (k) { d[k] = Object.assign(clone(VIDE[k]), d[k] || {}); });
     d.plan = Object.assign({ versementAV: { c1: 0, c2: 0 } }, d.plan || {});
     d.plan.versementAV = Object.assign({ c1: 0, c2: 0 }, d.plan.versementAV || {});
+    d.freres = d.freres || []; d.neveux = d.neveux || [];
     d.params = d.params || {};
     var defs = CALC.defaultParams();
     Object.keys(defs).forEach(function (k) { if (d.params[k] === undefined || d.params[k] === null) d.params[k] = defs[k]; });
