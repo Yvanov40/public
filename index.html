@@ -1662,6 +1662,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   }
   const cheminSocietes = () => [...github.chemin.split("/").slice(0, -1), "societes.json"].join("/");
   async function chargerSocietes() {
+    return;  // les sociétés sont maintenant dans suivi_gp.json
     if (!github) return;
     try {
       const r = await fetch(adresseDe(cheminSocietes()) + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
@@ -1674,6 +1675,8 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   }
   async function enregistrerSocietes() {
     localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes));
+    annexeModifiee();
+    return;  // enregistré avec le fichier principal
     if (!github) return;
     try {
       const url = adresseDe(cheminSocietes());
@@ -1878,6 +1881,37 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     return { texte, sha: info.sha };
   }
 
+  // ---- un seul fichier : dossiers, clients, pactes Dutreil, horaires de l'agenda et sociétés ----
+  function sectionsAnnexes() {
+    const { sha: _s, ...agenda } = reglagesAgenda || {};
+    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes };
+  }
+  function contenuComplet() {
+    return JSON.stringify({ version: 3, dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }, null, 1);
+  }
+  // reprend les sections annexes d'un fichier lu (GitHub ou import)
+  function appliquerAnnexes(contenu) {
+    if (!contenu || Array.isArray(contenu)) return;
+    if (contenu.dutreil && Array.isArray(contenu.dutreil.pactes)) { dutreil = { ...dutreil, pactes: contenu.dutreil.pactes, modifie: null, absent: false }; garderDutreil(); }
+    if (contenu.agenda) { reglagesAgenda = { ...AGENDA_DEFAUT, ...contenu.agenda }; localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda)); }
+    if (contenu.societes) { societes = contenu.societes; INDEX_ETUDES = null; localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes)); }
+  }
+  // ancien format (dutreil.json, agenda.json, societes.json à part) : on les reprend une fois dans le fichier principal
+  async function reprendreFichiersSepares(contenu) {
+    let repris = 0;
+    const lire = async (chemin) => {
+      const r = await fetch(adresseDe(chemin) + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
+      return r.ok ? JSON.parse(depuisBase64((await r.json()).content)) : null;
+    };
+    const dossierDe = (nom) => [...github.chemin.split("/").slice(0, -1), nom].join("/");
+    try {
+      if (!contenu.dutreil) { const x = await lire(cheminDutreil()); if (x) { dutreil = { ...dutreil, pactes: Array.isArray(x) ? x : (x.pactes || []), modifie: null }; garderDutreil(); repris++; } }
+      if (!contenu.agenda) { const x = await lire(dossierDe("agenda.json")); if (x) { reglagesAgenda = { ...AGENDA_DEFAUT, ...x }; localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda)); repris++; } }
+      if (!contenu.societes) { const x = await lire(dossierDe("societes.json")); if (x) { societes = x; INDEX_ETUDES = null; localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes)); repris++; } }
+    } catch (e) { /* hors ligne : on garde ce qu'a cet appareil */ }
+    return repris;
+  }
+
   async function chargerDepuisGithub(silencieux) {
     if (!github) return;
     etatSync("envoi", "Lecture sur GitHub…");
@@ -1889,8 +1923,11 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
       const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
       donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: github.chemin, source: "github" };
       shaDistant = sha;
-      const nouveaux = assurerIds(donnees.dossiers) + migrerTypes(donnees.dossiers);
-      localStorage.setItem(CLE_STOCKAGE + "-base", JSON.stringify({ dossiers: donnees.dossiers, clients: donnees.clients }));
+      let nouveaux = assurerIds(donnees.dossiers) + migrerTypes(donnees.dossiers);
+      appliquerAnnexes(contenu);
+      // pas encore de section Dutreil / agenda / sociétés dans le fichier : on y met celles des anciens fichiers (ou de cet appareil)
+      if (!Array.isArray(contenu) && (!contenu.dutreil || !contenu.agenda || !contenu.societes)) { await reprendreFichiersSepares(contenu); nouveaux++; }
+      localStorage.setItem(CLE_STOCKAGE + "-base", JSON.stringify({ dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }));
       localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
       localStorage.setItem(CLE_STOCKAGE + "-sha", sha);
       if (nouveaux) { donnees.modifie = new Date().toISOString(); setTimeout(envoyerGithub, 500); }  // identifiants ajoutés : on les partage
@@ -1928,7 +1965,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
       const fSuivi = liste.find((f) => f.path === github.chemin);
       const fDutreil = liste.find((f) => f.path === cheminDutreil());
       const suiviChange = donnees && !donnees.modifie && fSuivi && fSuivi.sha !== shaDistant;
-      const dutreilChange = !dutreil.modifie && fDutreil && fDutreil.sha !== dutreil.sha;
+      const dutreilChange = false;  // le Dutreil est dans le fichier principal
       if (!suiviChange && !dutreilChange) { etagDossier = r.headers.get("ETag"); return; }
       if (document.querySelector(".feuille.ouverte") || glisse) {
         rechargementEnAttente = true;  // une fiche est ouverte : on attend qu'elle soit fermée
@@ -1983,6 +2020,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
 
   const cheminAgenda = () => [...github.chemin.split("/").slice(0, -1), "agenda.json"].join("/");
   async function chargerReglagesAgenda() {
+    return;  // les horaires sont maintenant dans suivi_gp.json
     if (!github) return;
     try {
       const r = await fetch(adresseDe(cheminAgenda()) + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
@@ -1995,6 +2033,8 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   }
   async function enregistrerReglagesAgenda() {
     localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda));
+    annexeModifiee();
+    return;  // enregistré avec le fichier principal
     if (!github) return;
     try {
       const url = adresseDe(cheminAgenda());
@@ -2008,6 +2048,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   }
 
   async function chargerDutreil(silencieux) {
+    return;  // le Dutreil est maintenant dans suivi_gp.json (lu avec le reste)
     if (!github) return;
     const url = adresseDe(cheminDutreil()) + "?ref=" + encodeURIComponent(github.branche);
     try {
@@ -2032,12 +2073,15 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   }
 
   function sauverDutreil() {
-    dutreil.modifie = new Date().toISOString();
     garderDutreil();
-    if (!github) return;
-    etatSync("envoi", "Modification à envoyer…");
-    clearTimeout(minuteurDutreil);
-    minuteurDutreil = setTimeout(envoyerDutreil, 1500);
+    annexeModifiee();
+  }
+  // une section annexe a changé : on enregistre le fichier principal
+  function annexeModifiee() {
+    if (!donnees) return;
+    donnees.modifie = new Date().toISOString();
+    localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
+    planifierEnvoi();
   }
 
   async function envoyerDutreil(forcer) {
@@ -2134,6 +2178,11 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     const resultat = fusionner(base, donnees, distant);
     donnees.dossiers = resultat.dossiers;
     donnees.clients = resultat.clients;
+    // Dutreil, agenda, sociétés : on garde la version de cet appareil s'il l'a changée, sinon celle de GitHub
+    const ici = sectionsAnnexes();
+    const pris = {};
+    for (const k of ["dutreil", "agenda", "societes"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
+    appliquerAnnexes(pris);
     shaDistant = sha;
     localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
     afficherTout();
@@ -2148,7 +2197,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     try {
       let sha = shaDistant;
       if (forcer) sha = (await lireGithub()).sha;  // écraser : on prend la version actuelle comme base
-      const contenu = JSON.stringify({ version: 2, dossiers: donnees.dossiers, clients: donnees.clients }, null, 1);
+      const contenu = contenuComplet();
       const r = await fetch(adresseFichier(), {
         method: "PUT", headers: { ...entetes(), "Content-Type": "application/json" },
         body: JSON.stringify({ message: "Mise à jour depuis le téléphone", content: versBase64(contenu), sha, branch: github.branche })
@@ -2167,7 +2216,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
       const resultat = await r.json();
       shaDistant = resultat.content.sha;
       localStorage.setItem(CLE_STOCKAGE + "-sha", shaDistant);
-      localStorage.setItem(CLE_STOCKAGE + "-base", JSON.stringify({ dossiers: donnees.dossiers, clients: donnees.clients }));
+      localStorage.setItem(CLE_STOCKAGE + "-base", JSON.stringify({ dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }));
       donnees.modifie = null;
       localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
       etatSync("", "Enregistré sur GitHub · " + heure());
@@ -2227,7 +2276,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     const vide = !donnees || !donnees.dossiers.length;
     if (!confirm(vide ? `Créer un fichier « ${g.chemin} » vide dans le dépôt ${g.depot} ?`
       : `Créer « ${g.chemin} » dans le dépôt ${g.depot} avec les ${donnees.dossiers.length} dossiers de cet appareil ?`)) return;
-    const contenu = JSON.stringify({ version: 2, dossiers: vide ? [] : donnees.dossiers, clients: vide ? {} : donnees.clients }, null, 1);
+    const contenu = JSON.stringify({ version: 3, dossiers: vide ? [] : donnees.dossiers, clients: vide ? {} : donnees.clients, ...sectionsAnnexes() }, null, 1);
     const url = `https://api.github.com/repos/${encodeURIComponent(g.proprietaire)}/${encodeURIComponent(g.depot)}/contents/${g.chemin.split("/").map(encodeURIComponent).join("/")}`;
     const r = await fetch(url, { method: "PUT", headers: { "Authorization": "Bearer " + g.cle, "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
       body: JSON.stringify({ message: `Création de ${g.chemin}`, content: versBase64(contenu), branch: g.branche }) });
@@ -2366,6 +2415,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
     assurerIds(dossiers);
     migrerTypes(dossiers);
+    appliquerAnnexes(contenu);
     donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: nomFichier || "suivi_gp.json" };
     sauver(false);
     informer(`${dossiers.length} dossiers chargés.`);
@@ -2382,7 +2432,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   const exportReussi = (texte) => { donnees.modifie = null; sauver(false); informer(texte); };
 
   function exporter() {
-    const contenu = JSON.stringify({ version: 2, dossiers: donnees.dossiers, clients: donnees.clients }, null, 1);
+    const contenu = contenuComplet();
     // 1. dans Claude (appli ou page claude.ai) : enregistrement par Claude
     if (telechargements) {
       telechargements.save({ filename: "suivi_gp.json", data: contenu })
@@ -5579,7 +5629,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   if (github) {
     if (donnees && donnees.modifie) envoyerGithub();
     else chargerDepuisGithub(true).catch(() => {});
-    if (dutreil.modifie) envoyerDutreil(); else chargerDutreil(true);
+    // (le Dutreil voyage maintenant avec le fichier principal)
     chargerReglagesAgenda();
     chargerSocietes();
   } else if (donnees) {
