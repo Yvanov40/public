@@ -1,12 +1,16 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-08T15:00:00+01:00",
+ "mis_a_jour": "2026-11-08T15:39:23.513Z",
  "session_id": "2026-11-08-presents-usage",
- "statut": "en_cours",
+ "statut": "terminee",
  "termine_le": null,
  "score": null,
  "total": null,
- "programme": {"nb_questions": 40, "fiches": [], "consignes": ""},
+ "programme": {
+  "nb_questions": 40,
+  "fiches": [],
+  "consignes": ""
+ },
  "erreurs_recentes": [],
  "stats_par_fiche": {}
 }
