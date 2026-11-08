@@ -1080,6 +1080,24 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
 @media (min-width: 901px) { body.vue-dutreil .filtres .filtre.recherche { flex: 0 1 380px; } body.vue-dutreil .filtres .dutreil-seul { flex: 0 1 200px; } }
 
 .tache-contacts { margin: -6px 0 14px; }
+
+/* ---------- onglet Outils ---------- */
+body.vue-outils .filtres, body.vue-outils .outils.ordi { display: none !important; }
+.outils-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 10px; }
+.outil-carte { text-align: left; border: 1px solid var(--bordure); background: var(--carte); border-radius: 14px; padding: 16px 18px; display: grid; gap: 6px; cursor: pointer; }
+.outil-carte:hover { border-color: var(--or); box-shadow: 0 4px 14px rgba(12,45,57,.08); }
+.outil-carte .ic { font-size: 26px; }
+.outil-carte b { font: 600 19px var(--titre); color: var(--bleu); }
+.outil-carte span:not(.ic) { color: var(--discret); font-size: 14px; }
+.outil-carte i { font-style: normal; color: var(--or); font-weight: 600; font-size: 13.5px; margin-top: 4px; }
+.outil-barre { display: flex; align-items: center; gap: 10px; padding: 6px 0 8px; }
+.outil-barre b { flex: 1; font: 600 18px var(--titre); color: var(--bleu); }
+.outil-barre a { text-decoration: none; color: var(--bleu); }
+#outilFrame { width: 100%; border: 1px solid var(--bordure); border-radius: 12px; background: #fff; height: calc(100vh - 150px); display: block; }
+@media (max-width: 900px) {
+  #outilFrame { height: calc(100vh - 230px - env(safe-area-inset-bottom, 0px)); border-radius: 10px; }
+  body.outil-plein .fab { display: none; }
+}
 </style>
 </head>
 <body>
@@ -1097,6 +1115,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
       <a href="#calendrier" data-vue="calendrier">📅 Calendrier</a>
       <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
       <a href="#activite" data-vue="activite">📊 Activité</a>
+      <a href="#outils" data-vue="outils">🧰 Outils</a>
     </nav>
     <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
     <button class="icone" id="btnMenu" aria-label="GitHub, import et export">⋯</button>
@@ -1199,6 +1218,18 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
           <div id="calSemaine"></div>
         </div>
         <aside class="cal-panneau" id="calPanneau"></aside>
+      </div>
+    </section>
+
+    <section class="vue" id="vue-outils" hidden>
+      <div class="outils-liste" id="outilsListe"></div>
+      <div class="outil-cadre" id="outilCadre" hidden>
+        <div class="outil-barre">
+          <button type="button" class="bouton-discret" id="outilRetour">‹ Outils</button>
+          <b id="outilTitre"></b>
+          <a class="bouton-discret" id="outilSeul" target="_blank" rel="noopener">Ouvrir à part ↗</a>
+        </div>
+        <iframe id="outilFrame" title="Outil" allow="clipboard-write"></iframe>
       </div>
     </section>
 
@@ -1375,6 +1406,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     <button class="bouton leger large" id="btnGithub">Réglages GitHub</button>
     <button class="bouton leger large" id="btnHoraires">Horaires et congés</button>
     <button class="bouton leger large" id="btnDemandeurs">Demandeurs et sociétés</button>
+    <button class="bouton leger large" id="btnOutils">🧰 Outils : audit, révision</button>
     <button class="bouton leger large" id="btnExporter">Exporter une copie</button>
     <button class="bouton leger large" id="btnImporter">Ouvrir un autre fichier</button>
     <button class="bouton leger large" id="btnFermerMenu">Fermer</button>
@@ -4356,8 +4388,8 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   // ---------------------------------------------------------------- navigation
   function vueCourante() {
     const v = location.hash.replace("#", "");
-    if (estTel()) return ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"].includes(v) ? v : "accueil";
-    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite"].includes(v) ? v : "accueil";
+    if (estTel()) return ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils"].includes(v) ? v : "accueil";
+    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite", "outils"].includes(v) ? v : "accueil";
   }
   // ---- téléphone : glisser le doigt vers la gauche ou la droite pour changer de vue ----
   const ORDRE_VUES = ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"];
@@ -4390,11 +4422,42 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
       if (doigtCible.closest("#calPanneau")) { changerJourCalendrier(dx < 0 ? 1 : -1); return; }
       if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
     }
+    if (vueCourante() === "outils") return;  // l'onglet Outils n'est pas dans l'ordre de balayage
     const i = ORDRE_VUES.indexOf(vueCourante()) + (dx < 0 ? 1 : -1);
     if (i < 0 || i >= ORDRE_VUES.length) return;
     sensVue = dx < 0 ? "depuis-droite" : "depuis-gauche";
     location.hash = "#" + ORDRE_VUES[i];
   }, { passive: true });
+
+  // ---- les autres applis du dépôt, ouvertes dans l'appli (même adresse : elles gardent leurs données) ----
+  const OUTILS = [
+    { id: "audit", ic: "⚖", nom: "Audit civil et fiscal", adresse: "gp.html",
+      desc: "Audit de transmission : successions, démembrement, assurance-vie, levier société." },
+    { id: "revision", ic: "📚", nom: "Révision de la base", adresse: "revision/",
+      desc: "Réviser les fiches de la base en QCM, vrai ou faux et restitution, avec répétition espacée." }
+  ];
+  let outilOuvert = null;
+  function afficherOutils() {
+    $("outilsListe").hidden = !!outilOuvert;
+    $("outilCadre").hidden = !outilOuvert;
+    document.body.classList.toggle("outil-plein", !!outilOuvert);
+    if (outilOuvert) return;
+    $("outilsListe").replaceChildren(
+      el("h2", { class: "m-h2" }, "Outils"),
+      el("p", { class: "aide" }, "Vos autres applis, ouvertes ici sans quitter le suivi. Elles gardent leurs propres données."),
+      el("div", { class: "outils-cartes" }, OUTILS.map((o) => el("button", { type: "button", class: "outil-carte", onclick: () => ouvrirOutil(o.id) },
+        el("span", { class: "ic" }, o.ic), el("b", null, o.nom), el("span", null, o.desc), el("i", null, "Ouvrir ›")))));
+  }
+  function ouvrirOutil(id) {
+    const o = OUTILS.find((x) => x.id === id);
+    if (!o) return;
+    outilOuvert = id;
+    $("outilTitre").textContent = o.nom;
+    $("outilSeul").href = o.adresse;
+    if ($("outilFrame").dataset.id !== id) { $("outilFrame").src = o.adresse; $("outilFrame").dataset.id = id; }
+    if (vueCourante() !== "outils") location.hash = "#outils"; else afficherOutils();
+  }
+  function fermerOutil() { outilOuvert = null; afficherOutils(); }
 
   function montrerVue() {
     const v = vueCourante();
@@ -4408,7 +4471,8 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     document.querySelectorAll(".vue").forEach((s) => { s.hidden = s.id !== "vue-" + v; });
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    if (v === "outils") afficherOutils();
     // la recherche dit ce qu'elle cherche selon l'onglet
     $("recherche").placeholder = v === "dutreil" ? "Rechercher un pacte, une société, un client…" : v === "calendrier" ? "Rechercher un client, une tâche…" : "Filtrer les dossiers… (« / »)";
     if (donnees) majPortee();
@@ -5354,6 +5418,8 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
   $("enregistrerLot").addEventListener("click", enregistrerLot);
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
+  $("btnOutils").addEventListener("click", () => { fermerMenu(); outilOuvert = null; location.hash = "#outils"; });
+  $("outilRetour").addEventListener("click", fermerOutil);
   $("enregistrerTache").addEventListener("click", enregistrerTache);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
