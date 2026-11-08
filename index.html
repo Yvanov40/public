@@ -4871,7 +4871,7 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
         const vus = new Set();
         const contacts = liensDans([f.commentaire, f.notes, d && d.commentaire].filter(Boolean).join("\n"))
           .filter((x) => (x.type === "tel" || x.type === "mail") && !vus.has(x.valeur.replace(/\s|\./g, "")) && vus.add(x.valeur.replace(/\s|\./g, "")));
-        return contacts.length ? el("div", { class: "liens tache-contacts" }, contacts.slice(0, 6).map(puceLien)) : null;
+        return contacts.length ? el("div", { class: "liens tache-contacts" }, contacts.slice(0, 6).map(puceLien)) : "";  // (replaceChildren écrirait « null »)
       })(),
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: t.pour || "" })),
