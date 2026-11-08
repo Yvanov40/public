@@ -1064,6 +1064,20 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
 .lot-demandeurs { background: var(--section); border-radius: 10px; padding: 8px 12px; margin: 4px 0 8px; display: grid; gap: 4px; font-size: 13.5px; }
 .lot-demandeurs p { margin: 0 0 2px; font-weight: 600; color: var(--bleu); }
 .lot-demandeurs small { color: var(--discret); }
+
+/* ---------- onglet Dutreil : seulement la recherche et les filtres des pactes ---------- */
+.filtres .dutreil-seul { display: none; }
+body.vue-dutreil .filtres .dutreil-seul { display: block; }
+body.vue-dutreil .filtres .filtre:not(.recherche):not(.dutreil-seul), body.vue-dutreil .filtres .option-archives,
+body.vue-dutreil .filtres .plus-filtres, body.vue-dutreil .filtres .nb-affiches { display: none !important; }
+body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !important; }
+.filtres select.choix-pacte { border: 1px solid var(--bordure); background-color: var(--carte); color: var(--texte); border-radius: 7px; padding: 6px 9px; font-size: 13.5px; font: inherit; }
+@media (max-width: 900px) { .filtres select.choix-pacte { background-color: var(--fond); padding: 11px 14px; font-size: 15px; border-radius: 12px; } }
+.filtres select.choix-pacte { appearance: none; -webkit-appearance: none; width: 100%; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 26px; }
+.filtres select.choix-pacte.actif { background-color: var(--or-doux) !important; border-color: var(--or); font-weight: 600; }
+@media (min-width: 901px) { body.vue-dutreil .filtres .filtre.recherche { flex: 0 1 380px; } body.vue-dutreil .filtres .dutreil-seul { flex: 0 1 200px; } }
 </style>
 </head>
 <body>
@@ -1120,6 +1134,11 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       <div class="filtre secondaire"><span class="lib">Encaissement</span><button class="segment" data-cle="encaisse"><span data-titre="Encaissement">Tous</span></button></div>
       <div class="filtre secondaire"><span class="lib">Modifié</span><button class="segment" data-cle="modifie"><span data-titre="Modifié">Tous</span></button></div>
       <div class="filtre secondaire"><span class="lib">Rendez-vous</span><button class="segment" data-cle="rdvf"><span data-titre="Rendez-vous">Tous</span></button></div>
+      <div class="filtre dutreil-seul"><span class="lib">État du pacte</span>
+        <select id="fEtatDutreil" class="choix-pacte"><option value="">Tous</option><option>en cours</option><option>pas utilisé</option><option>terminé</option></select></div>
+      <div class="filtre dutreil-seul"><span class="lib">Échéance</span>
+        <select id="fEcheanceDutreil" class="choix-pacte"><option value="">Toutes</option><option value="depassee">Dépassée</option><option value="3m">Dans les 3 mois</option>
+          <option value="12m">Dans les 12 mois</option><option value="plus">Plus tard</option><option value="aucune">Sans échéance</option></select></div>
       <label class="option-archives secondaire"><input type="checkbox" id="masquerArchives"> Masquer les archives</label>
       <div class="filtres-fin">
         <button class="bouton-discret plus-filtres" id="plusFiltres" type="button" aria-expanded="false">Plus de filtres<i id="nbSecondaires"></i></button>
@@ -2959,12 +2978,16 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   let etatDutreilTel = "";
   function pactesVisibles() {
     const t = $("recherche").value.trim().toLocaleLowerCase("fr");
-    const etat = estTel() ? etatDutreilTel : $("etatDutreil").value;
-    const proches = !estTel() && $("prochesDutreil").checked;
+    const etat = $("fEtatDutreil").value;
+    const echeance = $("fEcheanceDutreil").value;
     return dutreil.pactes.map((p, i) => [p, i]).filter(([p]) => {
       if (t && !Object.values(p).join(" ").toLocaleLowerCase("fr").includes(t)) return false;
       if (etat && (p.etat || "") !== etat) return false;
-      if (proches) { const e = prochaineEcheance(p); if (!e || e[2] > 365) return false; }
+      if (echeance) {
+        const e = prochaineEcheance(p), j = e ? e[2] : null;
+        const tranche = j === null ? "aucune" : j < 0 ? "depassee" : j <= 92 ? "3m" : j <= 366 ? "12m" : "plus";
+        if (echeance === "12m" ? !["3m", "12m"].includes(tranche) : tranche !== echeance) return false;  // « 12 mois » inclut les 3 mois
+      }
       return true;
     }).sort(([a], [b]) => {
       const ea = prochaineEcheance(a), eb = prochaineEcheance(b);
@@ -2977,6 +3000,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
 
   function afficherDutreil() {
     memoriserFiltres();
+    if (vueCourante() === "dutreil") { const n = pactesVisibles().length; $("fermerFiltres").textContent = `Voir ${n === dutreil.pactes.length ? "les" : "ces"} ${n} pacte${n > 1 ? "s" : ""}`; }
     const pactes = dutreil.pactes;
     const echeances = pactes.map((p, i) => [prochaineEcheance(p), p, i]).filter(([e]) => e);
     const indic = (titre, valeur, c, v) => el("div", { class: "indic", style: `--c:${c};${v ? "--v:" + v : ""}` }, el("span", null, titre), el("b", null, valeur));
@@ -3248,7 +3272,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
       localStorage.setItem(CLE_FILTRES, JSON.stringify({
         selections: Object.fromEntries(Object.entries(selections).map(([k, v]) => [k, [...v]])),
         archives: $("masquerArchives").checked, etapeActive, typesCalendrier: [...typesCalendrier], modeCalendrier2: modeCalendrier,
-        etatDutreil: $("etatDutreil").value, prochesDutreil: $("prochesDutreil").checked, etatDutreilTel
+        etatDutreil: $("etatDutreil").value, prochesDutreil: $("prochesDutreil").checked, etatDutreilTel,
+        fEtatDutreil: $("fEtatDutreil").value, fEcheanceDutreil: $("fEcheanceDutreil").value
       }));
     } catch (e) {}
   }
@@ -3261,6 +3286,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
         if (f.etapeActive) etapeActive = f.etapeActive;
         $("etatDutreil").value = f.etatDutreil || "";
         $("prochesDutreil").checked = !!f.prochesDutreil;
+        $("fEtatDutreil").value = f.fEtatDutreil ?? f.etatDutreil ?? "";
+        $("fEcheanceDutreil").value = f.fEcheanceDutreil ?? (f.prochesDutreil ? "12m" : "");
         etatDutreilTel = f.etatDutreilTel || "";
         if (Array.isArray(f.typesCalendrier)) typesCalendrier = new Set(f.typesCalendrier);
         if (f.modeCalendrier2) modeCalendrier = f.modeCalendrier2;  // (l'ancien réglage est ignoré : la semaine devient la vue par défaut)
@@ -4318,6 +4345,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
     ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    // la recherche dit ce qu'elle cherche selon l'onglet
+    $("recherche").placeholder = v === "dutreil" ? "Rechercher un pacte, une société, un client…" : v === "calendrier" ? "Rechercher un client, une tâche…" : "Filtrer les dossiers… (« / »)";
     if (donnees) majPortee();
     if (v === "calendrier") afficherCalendrier();
     if (v === "activite") afficherActivite(visibles());
@@ -5255,6 +5284,7 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
   $("enregistrerTache").addEventListener("click", enregistrerTache);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
+  for (const id of ["fEtatDutreil", "fEcheanceDutreil"]) $(id).addEventListener("change", () => { $(id).classList.toggle("actif", !!$(id).value); memoriserFiltres(); afficherDutreil(); });
   $("btnGithub").addEventListener("click", ouvrirReglages);
   $("btnGithubVide").addEventListener("click", ouvrirReglages);
   $("connecterGithub").addEventListener("click", connecter);
@@ -5480,6 +5510,8 @@ body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinit
     $("plusFiltres").setAttribute("aria-expanded", String(f.classList.contains("etendus")));
   });
   $("reinitialiser").addEventListener("click", () => {
+    $("fEtatDutreil").value = ""; $("fEcheanceDutreil").value = "";
+    $("fEtatDutreil").classList.remove("actif"); $("fEcheanceDutreil").classList.remove("actif");
     $("recherche").value = ""; $("rechercheTel").value = ""; $("masquerArchives").checked = false;
     Object.values(selections).forEach((s) => s.clear());
     fermerSegment(); afficherTout();
