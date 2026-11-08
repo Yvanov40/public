@@ -116,7 +116,7 @@ function go(hash) { if (location.hash === hash) route(); else location.hash = ha
 window.addEventListener('hashchange', route);
 $('#btnBack').onclick = () => {
   if (S.session && !S.session.done && S.session.answered > 0 && !confirm('Quitter la session en cours ? Vos réponses sont déjà enregistrées.')) return;
-  S.session = null; go('#accueil');
+  S.session = null; S.cs = null; go('#accueil');
 };
 $('#btnRead').onclick = () => go('#lire');
 $('#btnSettings').onclick = () => go('#base');
@@ -124,6 +124,7 @@ $('#btnSettings').onclick = () => go('#base');
 function route() {
   const h = location.hash.slice(1) || 'accueil';
   window.scrollTo(0, 0);
+  if (h === 'claude' && S.cs) return viewClaudeQ();
   if (!S.docs.length && h !== 'base') return viewEmpty();
   if (h === 'session' && S.session) return viewCard();
   if (h === 'lire') return viewLibrary();
@@ -150,7 +151,7 @@ function viewHome() {
     ? (newN ? `Plus ${plural(newN, 'nouvelle carte', 'nouvelles cartes')} pour avancer dans la base.` : 'Toutes les cartes des thèmes choisis ont été vues.')
     : (c.fresh ? `Découvrez ${plural(newN, 'nouvelle carte', 'nouvelles cartes')} aujourd’hui.` : 'Revenez demain, ou entraînez-vous en avance.');
   const th = themeList();
-  app.innerHTML = `
+  app.innerHTML = claudeBlock() + `
   <section class="today"><div class="stack"><div class="under"></div><div class="sheet">
     <h2>${esc(headline)}</h2><p>${esc(line)}</p>
     <button class="btn primary block" id="start">${total ? 'Commencer la session' : 'S’entraîner en avance'}</button>
@@ -169,6 +170,7 @@ function viewHome() {
       <span class="pct" title="Maîtrise">${pct} %</span><div class="bar"><i style="width:${pct}%"></i></div></div>`;
   }).join('')}</div>
   <p class="note" style="margin-top:14px">La maîtrise progresse quand une carte est réussie plusieurs fois à quelques jours d’intervalle.</p>`;
+  bindClaudeBlock();
   $('#start').onclick = () => startSession('mix');
   app.querySelectorAll('.mode').forEach(b => b.onclick = () => startSession(b.dataset.mode));
   app.querySelectorAll('[data-theme]').forEach(cb => cb.onchange = () => {
@@ -259,7 +261,7 @@ function viewCard() {
   const after = $('#after');
   const ctx = () => ref ? `<details class="ctx"><summary>Voir la section de la fiche</summary>${sectionHTML(ref.s)}</details>` : '';
   const finish = (grade, html) => {
-    record(card, grade);
+    record(card, grade, m.good);
     after.innerHTML = `<div class="reveal">${html}${ctx()}<button class="btn primary block next" id="nxt">Continuer</button></div>`;
     $('#nxt').focus({ preventScroll: true });
     $('#nxt').onclick = () => { ss.i++; viewCard(); };
@@ -301,8 +303,10 @@ function viewCard() {
   };
 }
 
-function record(card, grade) {
+function record(card, grade, attendu) {
   const ss = S.session;
+  const ref = S.secById[card.sec], d = S.docByKey[card.doc];
+  queueResult({ src: 'auto', type: card.type, fiche: d ? d.title : '', section: ref && ref.s.path.length ? ref.s.path[ref.s.path.length - 1] : '', attendu: attendu || null, note: grade });
   const p = Engine.schedule(S.prog[card.id], grade, Date.now());
   S.prog[card.id] = p;
   DB.put('progress', p, card.id);
@@ -317,6 +321,7 @@ function record(card, grade) {
 
 function viewEnd() {
   const ss = S.session; ss.done = true;
+  flushResults();
   const pct = ss.answered ? Math.round(100 * ss.good / ss.answered) : 0;
   const c = counts(MODES[0].types);
   setHeader('Session terminée', true);
@@ -446,7 +451,7 @@ async function importFiles(files) {
 function viewEmpty() {
   setHeader(null, false);
   $('#btnRead').classList.add('hidden');
-  app.innerHTML = `<section class="today"><div class="stack"><div class="under"></div><div class="sheet">
+  app.innerHTML = claudeBlock() + `<section class="today"><div class="stack"><div class="under"></div><div class="sheet">
     <h2>Chargez votre base pour commencer</h2>
     <p>L’application transforme vos fiches Word en questions sur les seuils, taux, délais et articles, en vrai ou faux et en sections à restituer. Les fiches restent sur cet appareil : rien n’est envoyé en ligne.</p>
     ${importBlock()}
@@ -460,6 +465,7 @@ function viewEmpty() {
   <p class="note">Une sauvegarde faite sur un autre appareil (menu Base) peut aussi être restaurée ici, fiches et progression comprises.</p>
   <button class="btn" id="restore">Restaurer une sauvegarde</button>`;
   bindImport();
+  bindClaudeBlock();
   $('#restore').onclick = () => $('#restoreInput').click();
 }
 
@@ -478,6 +484,12 @@ function viewBase() {
   <p style="margin:16px 0 8px">Nouvelles cartes par session, au maximum</p>
   <div class="seg" id="newp">${[5, 10, 20, 30].map(n => `<button aria-pressed="${S.meta.newPerSession === n}" data-n="${n}">${n}</button>`).join('')}</div>
 
+  <h3 class="sec">Sessions préparées par Claude</h3>
+  <p class="note">Vos résultats sont envoyés dans le dépôt GitHub à la fin de chaque session. Une tâche planifiée Cowork les lit et prépare la session suivante. Le token reste sur cet appareil.</p>
+  <input class="search" id="tok" type="password" placeholder="Token GitHub (github_pat_…)" autocomplete="off" value="${ghToken() ? '••••••••' : ''}">
+  <div class="row"><button class="btn" id="saveTok">Enregistrer le token</button>${ghToken() ? '<button class="btn" id="delTok">Oublier le token</button>' : ''}</div>
+  <p class="note" id="tokState">${ghToken() ? (S.meta.pending && S.meta.pending.length ? S.meta.pending.length + ' réponses en attente d’envoi.' : 'Synchronisation active.') : 'Aucun token : les résultats restent en attente sur cet appareil.'}</p>
+
   <h3 class="sec">Sauvegarde</h3>
   <p class="note">La sauvegarde contient les fiches et la progression. Elle permet de passer de l’ordinateur au téléphone sans réimporter le dossier BASE.</p>
   <div class="row"><button class="btn" id="backup">Télécharger une sauvegarde</button><button class="btn" id="restore">Restaurer une sauvegarde</button></div>
@@ -489,6 +501,16 @@ function viewBase() {
   const seg = (id, key) => app.querySelectorAll('#' + id + ' button').forEach(b => b.onclick = () => { S.meta[key] = +b.dataset.n; saveMeta(); viewBase(); });
   seg('size', 'size'); seg('newp', 'newPerSession');
   $('#backup').onclick = backup;
+  $('#saveTok').onclick = async () => {
+    const v = $('#tok').value.trim();
+    if (!v || v.startsWith('••')) { $('#tokState').textContent = 'Collez un token qui commence par github_pat_.'; return; }
+    $('#tokState').textContent = 'Vérification…';
+    const r = await fetch('https://api.github.com/repos/' + GH.repo, { headers: { Authorization: 'Bearer ' + v } }).catch(() => null);
+    if (!r || !r.ok) { $('#tokState').textContent = 'Ce token n’a pas accès au dépôt ' + GH.repo + '. Vérifiez-le puis réessayez.'; return; }
+    try { localStorage.setItem('rev-gh-token', v); } catch (e) {}
+    await flushResults(); viewBase(); toast('Token enregistré.');
+  };
+  if ($('#delTok')) $('#delTok').onclick = () => { try { localStorage.removeItem('rev-gh-token'); } catch (e) {} viewBase(); };
   $('#restore').onclick = () => $('#restoreInput').click();
   app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     const d = S.docByKey[b.dataset.del];
@@ -533,6 +555,112 @@ $('#restoreInput').onchange = async e => {
   } catch (err) { toast('Ce fichier n’est pas une sauvegarde de cette application.'); }
 };
 
+/* ====== sessions préparées par Claude + synchronisation GitHub ====== */
+const GH = { repo: 'Yvanov40/public', dir: 'revision/data' };
+function ghToken() { try { return localStorage.getItem('rev-gh-token') || ''; } catch (e) { return ''; } }
+function toB64(str) { const u = new TextEncoder().encode(str); let b = ''; for (let i = 0; i < u.length; i += 0x8000) b += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(b); }
+function fromB64(b) { return new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g, '')), c => c.charCodeAt(0))); }
+function queueResult(e) {
+  e.t = new Date().toISOString();
+  e.appareil = /Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? 'mobile' : 'ordinateur';
+  S.meta.pending = (S.meta.pending || []).concat(e).slice(-3000);
+  saveMeta();
+}
+let flushing = null;
+function flushResults() {
+  if (flushing) return flushing;
+  const tok = ghToken();
+  if (!tok || !(S.meta.pending || []).length) return Promise.resolve();
+  flushing = (async () => {
+    const url = `https://api.github.com/repos/${GH.repo}/contents/${GH.dir}/resultats.json`;
+    const h = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const batch = S.meta.pending.slice();
+      let data = { reponses: [] }, sha;
+      const g = await fetch(url + '?ref=main&t=' + Date.now(), { headers: h, cache: 'no-store' });
+      if (g.ok) { const j = await g.json(); sha = j.sha; try { data = JSON.parse(fromB64(j.content)); } catch (e) {} }
+      else if (g.status !== 404) throw new Error('lecture ' + g.status);
+      data.reponses = (data.reponses || []).concat(batch).slice(-2000);
+      data.mis_a_jour = new Date().toISOString();
+      const body = { message: 'Révision : ' + batch.length + ' réponses', content: toB64(JSON.stringify(data, null, 1)), branch: 'main' };
+      if (sha) body.sha = sha;
+      const p = await fetch(url, { method: 'PUT', headers: h, body: JSON.stringify(body) });
+      if (p.ok) { S.meta.pending = S.meta.pending.slice(batch.length); await saveMeta(); return; }
+      if (p.status !== 409 && p.status !== 422) throw new Error('écriture ' + p.status);
+    }
+  })().catch(e => console.warn('Synchronisation', e)).finally(() => { flushing = null; });
+  return flushing;
+}
+async function loadClaude() {
+  try {
+    const r = await fetch('data/session-claude.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const c = await r.json();
+    if (!c || !c.id || !Array.isArray(c.questions) || !c.questions.length) return;
+    const changed = !S.claude || S.claude.id !== c.id;
+    S.claude = c;
+    if (changed && /^#?(accueil)?$/.test(location.hash.replace('#', '')) && !S.session) route();
+  } catch (e) {}
+}
+function claudeBlock() {
+  const c = S.claude;
+  if (!c) return '';
+  const done = (S.meta.claudeDone || []).includes(c.id);
+  if (done) return `<p class="note" style="margin:14px 0 0">Session préparée par Claude terminée. La suivante arrive au prochain passage de la tâche Cowork, toutes les 2 heures en journée.</p>`;
+  return `<article class="card" style="margin:34px 0 8px"><div class="tab">Préparée par Claude</div><div class="face">
+    <h2 style="font:600 22px/1.25 var(--serif);margin:0 0 6px">${esc(c.titre || 'Session du moment')}</h2>
+    <p class="note" style="margin:0 0 16px">${plural(c.questions.length, 'question')}. ${esc(c.pourquoi || '')}</p>
+    <button class="btn primary block" id="startClaude">Commencer</button></div></article>`;
+}
+function bindClaudeBlock() { const b = $('#startClaude'); if (b) b.onclick = () => startClaude(); }
+function startClaude(only) {
+  const c = S.claude;
+  const idx = only || c.questions.map((_, i) => i);
+  S.cs = { id: c.id, idx, i: 0, good: 0, miss: [], replay: !!only };
+  go('#claude');
+}
+function viewClaudeQ() {
+  const cs = S.cs, c = S.claude;
+  setHeader('Préparée par Claude', true);
+  if (cs.i >= cs.idx.length) return viewClaudeEnd();
+  const k = cs.idx[cs.i], q = c.questions[k];
+  app.innerHTML = `<div class="session-top"><div class="progress"><i style="width:${100 * cs.i / cs.idx.length}%"></i></div><span class="n">${cs.i + 1} / ${cs.idx.length}</span></div>
+  <article class="card"><div class="tab">${esc(q.theme || 'Claude')}</div><div class="face">
+    <p class="src">${esc(q.fiche || '')}</p>
+    <p class="prompt">${esc(q.question)}</p>
+    <div class="choices">${q.choix.map((o, j) => `<button class="choice" data-j="${j}"><kbd>${j + 1}</kbd>${esc(o)}</button>`).join('')}</div>
+    <div id="after"></div></div></article>`;
+  const btns = [...app.querySelectorAll('.choice')];
+  btns.forEach(b => b.onclick = () => {
+    const j = +b.dataset.j, ok = j === q.reponse;
+    btns.forEach(x => { x.disabled = true; if (+x.dataset.j === q.reponse) x.classList.add('ok'); });
+    if (!ok) { b.classList.add('ko'); cs.miss.push(k); } else cs.good++;
+    if (!cs.replay) queueResult({ src: 'claude', session: c.id, q: k, fiche: q.fiche || '', question: q.question, choisi: q.choix[j], ok });
+    $('#after').innerHTML = `<div class="reveal"><p class="verdict ${ok ? 'ok' : 'ko'}">${ok ? 'Exact.' : 'La bonne réponse est : ' + esc(q.choix[q.reponse]) + '.'}</p>
+      ${q.explication ? `<p class="doc" style="margin:8px 0 0">${esc(q.explication)}</p>` : ''}
+      <button class="btn primary block next" id="nxt">${cs.i + 1 < cs.idx.length ? 'Question suivante' : 'Voir le résultat'}</button></div>`;
+    $('#nxt').focus({ preventScroll: true });
+    $('#nxt').onclick = () => { cs.i++; viewClaudeQ(); };
+  });
+}
+function viewClaudeEnd() {
+  const cs = S.cs, c = S.claude;
+  if (!cs.replay && !(S.meta.claudeDone || []).includes(c.id)) {
+    S.meta.claudeDone = (S.meta.claudeDone || []).concat(c.id).slice(-200);
+    queueResult({ src: 'claude', session: c.id, fin: true, score: cs.good, total: cs.idx.length });
+    if (!S.meta.days.includes(today())) S.meta.days = S.meta.days.concat(today());
+    saveMeta();
+  }
+  flushResults();
+  app.innerHTML = `<section class="today"><div class="stack"><div class="under"></div><div class="sheet">
+    <p class="score">${cs.good} / ${cs.idx.length}</p>
+    <p>${cs.miss.length ? plural(cs.miss.length, 'question') + ' à revoir. Claude en tiendra compte pour la prochaine session.' : 'Sans faute.'}${ghToken() ? '' : ' Ajoutez votre token GitHub dans Base et réglages pour que Claude reçoive vos résultats.'}</p>
+    <div class="row">${cs.miss.length ? '<button class="btn primary" id="rv">Rejouer mes erreurs</button>' : ''}<button class="btn" id="home">Accueil</button></div>
+  </div></div></section>`;
+  if ($('#rv')) $('#rv').onclick = () => startClaude(cs.miss.slice());
+  $('#home').onclick = () => { S.cs = null; go('#accueil'); };
+}
+
 /* ====== divers ====== */
 let toastT;
 function toast(msg, action) {
@@ -564,4 +692,5 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-load().then(route);
+load().then(() => { route(); loadClaude(); flushResults(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { loadClaude(); flushResults(); } });

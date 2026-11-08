@@ -1,5 +1,5 @@
 /* Service worker : application disponible hors connexion */
-const VERSION = 'revision-v1';
+const VERSION = 'revision-v2';
 const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'vendor/jszip.min.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', e => {
@@ -18,7 +18,7 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.open(VERSION).then(async c => (await c.match(req)) || fetch(req).then(r => { c.put(req, r.clone()); return r; }).catch(() => new Response('', { status: 504 }))));
     return;
   }
-  if (url.origin !== location.origin) return;
+  if (url.origin !== location.origin || url.pathname.includes('/data/')) return;
   e.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req).then(r => {
     if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
     return r;
