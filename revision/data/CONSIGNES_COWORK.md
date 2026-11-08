@@ -20,12 +20,12 @@ Repère : les fiches et notions ratées récemment, les fiches jamais travaillé
 ## 3. Choisir le contenu
 
 - Les fiches sont dans le dossier OneDrive **BASE** (connecteur Microsoft 365). Lis la ou les fiches choisies **en entier** avant d'écrire.
-- Composition : environ 4 questions sur les erreurs récentes (reformulées autrement, pas à l'identique), 6 sur une fiche pas encore travaillée ou peu réussie, 2 de rappel sur une fiche réussie il y a plus d'une semaine.
+- Composition : environ 4 questions sur les erreurs récentes (reformulées autrement, pas à l'identique), 20 sur une fiche pas encore travaillée ou peu réussie, 6 de rappel sur une fiche réussie il y a plus d'une semaine.
 - Alterne les thèmes d'une session à l'autre (transmission, succession, assurance-vie, IR, IFI, plus-values, sociétés, immobilier, reports d'imposition).
 
 ## 4. Rédiger les questions
 
-- 12 questions à choix multiples, 4 choix (ou 2 pour un vrai/faux), une seule bonne réponse, position de la bonne réponse variée.
+- 26 questions à choix multiples, 4 choix (ou 2 pour un vrai/faux), une seule bonne réponse, position de la bonne réponse variée.
 - Formulées **avec tes propres mots**. Ne recopie jamais de passage des fiches (contenu Fidroit, dépôt public) : une explication fait au plus 2 phrases.
 - Privilégie le raisonnement de conseiller : cas pratiques chiffrés courts, conditions, délais, pièges, articles du CGI ou du Code civil.
 - Chaque chiffre doit être vérifié dans la fiche (date de mise à jour comprise). En cas de doute, ne pose pas la question.
