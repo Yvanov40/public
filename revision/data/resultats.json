@@ -1,1 +1,146 @@
-{"reponses": [], "mis_a_jour": null}
+{
+ "reponses": [
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 0,
+   "fiche": "Présent d'usage",
+   "question": "Quel article du Code civil écarte le rapport des présents d’usage ?",
+   "choisi": "Article 931",
+   "ok": false,
+   "t": "2026-11-08T14:27:44.880Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 1,
+   "fiche": "Présent d'usage",
+   "question": "Fiscalement, un présent d’usage…",
+   "choisi": "n’est soumis ni aux droits de mutation ni au rappel fiscal",
+   "ok": true,
+   "t": "2026-11-08T14:27:55.345Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 2,
+   "fiche": "Présent d'usage",
+   "question": "Au décès du donateur, le présent d’usage est-il rapportable à la succession ?",
+   "choisi": "Non, sauf volonté contraire du disposant",
+   "ok": true,
+   "t": "2026-11-08T14:28:00.550Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 3,
+   "fiche": "Présent d'usage",
+   "question": "Le présent d’usage entre-t-il dans la masse de calcul de la réserve et de la quotité disponible ?",
+   "choisi": "Oui, pour sa valeur au jour du don",
+   "ok": false,
+   "t": "2026-11-08T14:28:06.652Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 4,
+   "fiche": "Présent d'usage",
+   "question": "Quelle est la valeur maximale d’un présent d’usage ?",
+   "choisi": "Aucun plafond légal : elle s’apprécie selon la fortune et le train de vie du donateur",
+   "ok": true,
+   "t": "2026-11-08T14:28:10.453Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 5,
+   "fiche": "Présent d'usage",
+   "question": "À quelle date apprécie-t-on si le présent est excessif ?",
+   "choisi": "Au jour où le présent est consenti",
+   "ok": true,
+   "t": "2026-11-08T14:28:17.775Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 6,
+   "fiche": "Présent d'usage",
+   "question": "Un présent d’usage peut-il porter sur un appartement ?",
+   "choisi": "Non, il ne peut porter que sur des biens meubles",
+   "ok": true,
+   "t": "2026-11-08T14:28:23.689Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 7,
+   "fiche": "Présent d'usage",
+   "question": "Des aquarelles offertes pour un mariage sont revendues 80 fois leur valeur des années plus tard. Conséquence ?",
+   "choisi": "Aucune : la qualification se juge au jour du présent",
+   "ok": true,
+   "t": "2026-11-08T14:28:29.648Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 8,
+   "fiche": "Présent d'usage",
+   "question": "Un cadeau important fait sans événement particulier, ou excessif au regard de la fortune du donateur, est…",
+   "choisi": "un don manuel",
+   "ok": true,
+   "t": "2026-11-08T14:28:52.479Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 9,
+   "fiche": "Présent d'usage",
+   "question": "Un héritier peut-il contester la qualification de présent d’usage après le décès ?",
+   "choisi": "Oui, pour faire requalifier en donation rapportable",
+   "ok": true,
+   "t": "2026-11-08T14:29:01.234Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 10,
+   "fiche": "Présent d'usage",
+   "question": "Faut-il que tous les enfants reçoivent des présents équivalents ?",
+   "choisi": "Non, ce n’est pas une condition",
+   "ok": true,
+   "t": "2026-11-08T14:29:05.274Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "q": 11,
+   "fiche": "Présent d'usage",
+   "question": "Quel conseil donner à un client qui fait un chèque important pour un anniversaire ?",
+   "choisi": "Garder la preuve de l’occasion : mot daté, lien avec l’événement",
+   "ok": true,
+   "t": "2026-11-08T14:29:12.760Z",
+   "appareil": "mobile"
+  },
+  {
+   "src": "claude",
+   "session": "2026-11-08-presents-usage",
+   "fin": true,
+   "score": 10,
+   "total": 12,
+   "t": "2026-11-08T14:29:13.580Z",
+   "appareil": "mobile"
+  }
+ ],
+ "mis_a_jour": "2026-11-08T14:29:46.719Z"
+}
