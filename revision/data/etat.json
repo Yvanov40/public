@@ -1,16 +1,39 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-08T15:39:23.513Z",
+ "mis_a_jour": "2026-11-08T16:59:24.520Z",
  "session_id": "2026-11-08-presents-usage",
  "statut": "terminee",
- "termine_le": null,
- "score": null,
- "total": null,
+ "termine_le": "2026-11-08T16:58:37.923Z",
+ "score": 10,
+ "total": 12,
  "programme": {
-  "nb_questions": 40,
+  "nb_questions": 60,
   "fiches": [],
   "consignes": ""
  },
- "erreurs_recentes": [],
- "stats_par_fiche": {}
+ "erreurs_recentes": [
+  {
+   "le": "2026-11-08T16:57",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Quel article du Code civil écarte le rapport des présents d’usage ?",
+   "repondu": "Article 931",
+   "bonne_reponse": "Article 852"
+  },
+  {
+   "le": "2026-11-08T16:57",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Le présent d’usage entre-t-il dans la masse de calcul de la réserve et de la quotité disponible ?",
+   "repondu": "Oui, pour sa valeur au jour du don",
+   "bonne_reponse": "Non"
+  }
+ ],
+ "stats_par_fiche": {
+  "Présent d'usage": {
+   "vues": 12,
+   "reussies": 10,
+   "derniere": "2026-11-08"
+  }
+ }
 }
