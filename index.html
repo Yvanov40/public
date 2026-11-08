@@ -1478,9 +1478,15 @@ body.vue-dutreil .d-outils, body.vue-dutreil #dEtatsTel { display: none !importa
     return n;
   };
 
+  // Après un geste traité au lâcher du doigt, le téléphone envoie encore des événements « souris » (mousedown, mouseup, click)
+  // au même endroit : ils tombaient sur la fiche tout juste ouverte (case « Faite » cochée, liste « Durée » ouverte…).
+  // 1) on annule le touchend du geste (plus d'événements souris du tout) ; 2) par sécurité, on avale ceux qui passeraient quand même.
   let avaleJusqua = 0;
-  document.addEventListener("click", (e) => { if (Date.now() < avaleJusqua) { e.stopPropagation(); e.preventDefault(); } }, true);
-  const avalerClic = () => { avaleJusqua = Date.now() + 450; };
+  for (const type of ["mousedown", "mouseup", "click"]) {
+    document.addEventListener(type, (e) => { if (Date.now() < avaleJusqua) { e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  const avalerClic = () => { avaleJusqua = Date.now() + 700; };
+  document.addEventListener("touchend", (e) => { if (Date.now() < avaleJusqua && e.cancelable) e.preventDefault(); }, { capture: true, passive: false });
 
   // ---------------------------------------------------------------- utilitaires
   const cleClient = (nom) => String(nom || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("fr");
