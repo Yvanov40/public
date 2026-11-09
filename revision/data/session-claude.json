@@ -1,20 +1,788 @@
 {
- "id": "2026-11-08-presents-usage",
- "creee_le": "2026-11-08T14:00:00+01:00",
- "titre": "Présent d’usage ou don manuel ?",
- "pourquoi": "Première session : la frontière entre présent d’usage et don manuel, complément des dons familiaux 790 G.",
+ "id": "2026-11-09-14h11-transmission-assurance-vie",
+ "creee_le": "2026-11-09T14:11:00+01:00",
+ "titre": "Transmission et assurance-vie",
+ "pourquoi": "Consolider la frontière présent d'usage / don manuel (notions ratées), puis couvrir les fiches peu ou pas travaillées : dons familiaux 790 G, assurance-vie 990 I et 757 B, avantages matrimoniaux, paiement différé et fractionné des DMTG.",
  "questions": [
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Quel article du Code civil écarte le rapport des présents d’usage ?", "choix": ["Article 843", "Article 852", "Article 894", "Article 931"], "reponse": 1, "explication": "L’article 852 du Code civil exclut du rapport les présents d’usage (avec les frais d’entretien, d’éducation, de noces…), sauf volonté contraire du disposant."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Fiscalement, un présent d’usage…", "choix": ["supporte les droits de donation après abattement", "est exonéré mais soumis au rappel fiscal de 15 ans", "n’est soumis ni aux droits de mutation ni au rappel fiscal", "doit être déclaré sur le formulaire 2735"], "reponse": 2, "explication": "Il échappe aux droits de mutation à titre gratuit et n’entre pas dans le rappel fiscal des donations."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Au décès du donateur, le présent d’usage est-il rapportable à la succession ?", "choix": ["Oui, toujours", "Non, sauf volonté contraire du disposant", "Oui, s’il dépasse 31 865 €", "Seulement s’il a été fait à un héritier réservataire"], "reponse": 1, "explication": "Il n’est pas rapportable, sauf si le disposant a exprimé une volonté contraire."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Le présent d’usage entre-t-il dans la masse de calcul de la réserve et de la quotité disponible ?", "choix": ["Oui, pour sa valeur au décès", "Oui, pour sa valeur au jour du don", "Non", "Seulement s’il porte sur des espèces"], "reponse": 2, "explication": "On n’en tient pas compte pour le rapport et la réduction : il reste hors de la masse de calcul (Cass. civ. 1, 19 sept. 2018)."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Quelle est la valeur maximale d’un présent d’usage ?", "choix": ["1 % du patrimoine du donateur", "2 % des revenus annuels du donateur", "31 865 €", "Aucun plafond légal : elle s’apprécie selon la fortune et le train de vie du donateur"], "reponse": 3, "explication": "La loi ne fixe ni montant ni pourcentage. Le présent ne doit pas être excessif au regard des revenus, du patrimoine et des habitudes du donateur."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "À quelle date apprécie-t-on si le présent est excessif ?", "choix": ["Au jour du décès du donateur", "Au jour où le présent est consenti", "Au jour du partage", "Au jour de la revente du bien"], "reponse": 1, "explication": "Le caractère de présent d’usage s’apprécie à la date où il est consenti, compte tenu de la fortune du disposant à ce moment-là."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Un présent d’usage peut-il porter sur un appartement ?", "choix": ["Oui, si le donateur est fortuné", "Oui, par acte notarié", "Non, il ne peut porter que sur des biens meubles", "Oui, en nue-propriété seulement"], "reponse": 2, "explication": "Il repose sur une remise de la main à la main : seuls les meubles sont concernés (espèces, chèque, virement, bijoux, véhicule, titres…)."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Des aquarelles offertes pour un mariage sont revendues 80 fois leur valeur des années plus tard. Conséquence ?", "choix": ["Requalification en don manuel", "La plus-value est rapportable", "Aucune : la qualification se juge au jour du présent", "Le présent devient réductible"], "reponse": 2, "explication": "La Cour de cassation (10 mai 1995) a maintenu la qualification de présent d’usage malgré une revente pour une valeur bien supérieure."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Un cadeau important fait sans événement particulier, ou excessif au regard de la fortune du donateur, est…", "choix": ["un présent d’usage réduit à la quotité disponible", "un don manuel", "une donation nulle", "un avantage matrimonial"], "reponse": 1, "explication": "Si les conditions d’événement et de valeur ne sont pas réunies, c’est un don manuel : rapportable et taxable."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Un héritier peut-il contester la qualification de présent d’usage après le décès ?", "choix": ["Non, elle est définitive", "Oui, pour faire requalifier en donation rapportable", "Seulement dans les 6 mois du don", "Seulement l’administration fiscale"], "reponse": 1, "explication": "Un héritier peut demander la requalification en donation pour obtenir le rapport des sommes à la succession."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Faut-il que tous les enfants reçoivent des présents équivalents ?", "choix": ["Oui, sinon c’est un don manuel", "Oui, à 10 % près", "Non, ce n’est pas une condition", "Seulement entre enfants mineurs"], "reponse": 2, "explication": "La cour d’appel de Paris (3 déc. 2014) a jugé que le fait que tous les enfants n’en bénéficient pas n’empêche pas la qualification."},
-  {"fiche": "Présent d'usage", "theme": "Transmission", "question": "Quel conseil donner à un client qui fait un chèque important pour un anniversaire ?", "choix": ["Le déclarer en don manuel par prudence", "Garder la preuve de l’occasion : mot daté, lien avec l’événement", "Le faire en espèces", "Le faire par acte notarié"], "reponse": 1, "explication": "Pour éviter une requalification, il faut se ménager la preuve de l’événement et du caractère d’usage du présent."}
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Dans le Code civil, quelle disposition exclut du rapport les présents d'usage et les frais de noces, sauf volonté contraire ?",
+   "choix": [
+    "Article 843",
+    "Article 894",
+    "Article 852",
+    "Article 931"
+   ],
+   "reponse": 2,
+   "explication": "L'article 852 du Code civil dispense de rapport les présents d'usage, comme les frais de noces ou d'éducation, sauf volonté contraire du disposant. Il faut retenir cette règle de base avant de regarder les exceptions."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Pour le calcul de la réserve et de la quotité disponible, comment traite-t-on un présent d'usage ?",
+   "choix": [
+    "Il reste hors de la masse de calcul, sauf volonté contraire du disposant",
+    "Il est réintégré pour sa valeur au décès du donateur",
+    "Il est réintégré pour sa valeur au jour du don",
+    "Il n'y entre que s'il porte sur des espèces"
+   ],
+   "reponse": 0,
+   "explication": "Les présents d'usage ne sont pas intégrés à la masse de calcul de la réserve et de la quotité disponible (Cass. civ. 1re, 19 sept. 2018). Seule une volonté contraire du disposant change la règle."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Dans une affaire où une défunte percevait environ 1 000 € de revenus par mois, des chèques de 200 € offerts pour anniversaires et Noël ont été jugés présents d'usage. Quel critère a été décisif ?",
+   "choix": [
+    "L'âge de la bénéficiaire",
+    "La remise des chèques par un notaire",
+    "Le régime matrimonial de la défunte",
+    "Le montant limité des chèques au regard des ressources mensuelles"
+   ],
+   "reponse": 3,
+   "explication": "Les chèques de 200 € étaient limités au regard des ressources mensuelles de la défunte et liés à des occasions précises : anniversaire ou Noël. C'est la combinaison montant modeste et occasion qui a été retenue."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Un chèque remis par un époux à son épouse, sans indication de l'occasion ni de l'usage, a été qualifié de présent d'usage par les juges du fond. Pourquoi la Cour de cassation a-t-elle censuré cette décision ?",
+   "choix": [
+    "Le chèque était supérieur à 1 000 €",
+    "Les juges n'avaient pas précisé à l'occasion de quel événement et conformément à quel usage le cadeau avait été fait",
+    "Le chèque avait été émis en francs",
+    "Le donateur était réservataire"
+   ],
+   "reponse": 1,
+   "explication": "Cass. civ. 1re, 6 déc. 1988 : la qualification suppose de caractériser l'événement et l'usage, faute de quoi la décision n'a pas de base légale. Le seul montant ne suffit pas."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Une voiture offerte à l'occasion d'un anniversaire, dans un contexte où la personne concernée disposait de revenus très importants et possédait déjà deux automobiles, a été jugée présent d'usage. Qu'est-ce qui a justifié cette qualification ?",
+   "choix": [
+    "La qualification ne dépend jamais de la fortune du donateur",
+    "Le fait que la voiture était d'occasion",
+    "L'occasion (anniversaire) combinée à la fortune, qui rendait le cadeau non excessif",
+    "La minorité du bénéficiaire"
+   ],
+   "reponse": 2,
+   "explication": "La Cour de cassation a retenu l'occasion (un anniversaire) et l'importance des revenus, le cadeau n'étant pas excessif. La qualification se juge donc sur l'événement et la situation financière."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "En cas de requalification d'un présent d'usage en don manuel, quelles conséquences sont relevées ?",
+   "choix": [
+    "Majoration de 10 % sans rapport",
+    "Nullité du don et restitution au donateur",
+    "Aucune conséquence si le don a été déclaré",
+    "Rapport à la succession et réduction possibles ; droits de donation et rappel fiscal au décès possibles"
+   ],
+   "reponse": 3,
+   "explication": "Le don est soumis aux règles du rapport et de la réduction ; fiscalement, les droits de donation sont dus et le rappel fiscal peut s'appliquer au décès. D'où l'intérêt de se ménager la preuve de la qualité de présent d'usage."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Selon la fiche, des cadeaux faits à un enfant mineur par des membres ou des amis de la famille...",
+   "choix": [
+    "sont toujours des dons manuels",
+    "sont soumis aux droits de mutation dès le premier euro",
+    "doivent être passés devant notaire",
+    "peuvent généralement être reconnus comme présents d'usage"
+   ],
+   "reponse": 3,
+   "explication": "Le caractère de présent d'usage peut généralement être reconnu aux cadeaux faits aux enfants mineurs par des membres et amis de la famille. Reste une question de fait, appréciée selon les circonstances."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "L'administration fiscale fixe-t-elle une règle de proportionnalité entre un présent d'usage et la fortune du donateur ?",
+   "choix": [
+    "Oui, 1 % du patrimoine",
+    "Non, elle apprécie au cas par cas, sous le contrôle souverain des juges du fond",
+    "Oui, 2 % des revenus annuels",
+    "Oui, le plafond de 31 865 €"
+   ],
+   "reponse": 1,
+   "explication": "Le rescrit du 3 avril 2013 rappelle qu'aucun seuil n'est fixé : la nature du don s'apprécie au cas par cas selon les circonstances de fait. Il n'existe donc aucun pourcentage légal."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Une bague offerte par un mari à son épouse à l'occasion de la naissance de leur fille a été reconnue comme...",
+   "choix": [
+    "un don manuel rapportable",
+    "une donation notariée",
+    "un avantage matrimonial soumis aux droits de succession",
+    "un présent d'usage"
+   ],
+   "reponse": 3,
+   "explication": "La Cour de cassation (19 nov. 2014) a retenu la qualification de présent d'usage pour cette bague offerte à l'occasion d'une naissance. C'est un exemple d'occasion familiale admise."
+  },
+  {
+   "fiche": "Présent d'usage",
+   "theme": "Transmission",
+   "question": "Dans une affaire où un héritier a obtenu le rapport de sommes remises en espèces à son frère, pourquoi les juges ont-ils retenu le rapport ?",
+   "choix": [
+    "Les sommes n'avaient pas été remises à l'occasion d'un événement ou d'un usage particulier",
+    "Les sommes étaient incompatibles avec les ressources de la donatrice",
+    "Le don dépassait 31 865 €",
+    "La donatrice était mineure"
+   ],
+   "reponse": 0,
+   "explication": "Les retraits (2 200 € et 1 300 €) étaient compatibles avec les ressources de la donatrice, mais sans événement ni usage identifiable la qualification a été écartée (Cass. civ. 1re, 11 mai 2023). Un héritier peut donc demander la requalification."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Quel est le montant exonéré par donateur et par donataire au titre du don familial de somme d'argent (790 G) ?",
+   "choix": [
+    "30 000 €",
+    "100 000 €",
+    "31 395 €",
+    "31 865 €"
+   ],
+   "reponse": 3,
+   "explication": "L'exonération de 31 865 € s'apprécie pour chaque bénéficiaire à raison de chaque donateur. Elle se cumule avec les abattements de droit commun."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Au bout de combien de temps le plafond du 790 G peut-il à nouveau être utilisé entre le même donateur et le même donataire ?",
+   "choix": [
+    "Jamais, il est à usage unique",
+    "15 ans, de date à date",
+    "10 ans",
+    "Chaque année"
+   ],
+   "reponse": 1,
+   "explication": "Le plafond est renouvelable tous les 15 ans, de date à date ; il était de 10 ans avant le 17 août 2012. Le don peut aussi être réalisé en plusieurs fois."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Un donateur âgé de 81 ans peut-il consentir un don familial de somme d'argent exonéré ?",
+   "choix": [
+    "Oui, sans limite d'âge",
+    "Oui, si le donataire a plus de 25 ans",
+    "Non : il doit avoir moins de 80 ans au jour de la transmission",
+    "Non : le donataire doit avoir moins de 18 ans"
+   ],
+   "reponse": 2,
+   "explication": "Le donateur doit avoir moins de 80 ans au jour de la transmission, et le donataire plus de 18 ans (ou être émancipé). L'âge du donateur est donc un critère bloquant."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Un neveu par alliance peut-il bénéficier du 790 G, à défaut de descendance du donateur ?",
+   "choix": [
+    "Non : seuls les neveux issus des frères et sœurs du donateur sont visés",
+    "Oui, comme tout neveu",
+    "Oui, s'il est mineur",
+    "Oui, si le donateur est veuf"
+   ],
+   "reponse": 0,
+   "explication": "Les neveux par alliance sont exclus : seuls les enfants des frères et sœurs du donateur entrent dans le dispositif, à défaut de descendance. Les enfants des frères et sœurs du conjoint ne sont pas visés."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Dans quel délai le don familial de somme d'argent doit-il être déclaré ou enregistré ?",
+   "choix": [
+    "Dans les 6 mois",
+    "Dans l'année",
+    "Avant le virement",
+    "Dans le mois suivant la réalisation du don"
+   ],
+   "reponse": 3,
+   "explication": "Le don doit être enregistré au service de l'enregistrement du domicile du donataire dans le mois suivant le transfert de la somme. Le délai court à partir de la remise effective des fonds."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Quels dons peuvent bénéficier du 790 G ?",
+   "choix": [
+    "Titres vifs de sociétés non cotées",
+    "Sommes d'argent (virement, chèque, espèces) données en pleine propriété",
+    "Donations de créances",
+    "Usufruit de sommes d'argent"
+   ],
+   "reponse": 1,
+   "explication": "Seules les sommes d'argent données en pleine propriété sont éligibles. Les créances et les titres vifs n'entrent pas dans le dispositif."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Un père de 62 ans donne 300 000 € à sa fille de 26 ans en 2014 (don manuel). Quelle est la base taxable après le 790 G et l'abattement de 100 000 € en ligne directe ?",
+   "choix": [
+    "268 135 €",
+    "31 821 €",
+    "168 135 €",
+    "200 000 €"
+   ],
+   "reponse": 2,
+   "explication": "300 000 € moins 31 865 € (790 G) puis moins 100 000 € (ligne directe) donne 168 135 €. Le montant de 31 821 € est le droit calculé ensuite, pas la base."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Un grand-père âgé de 78 ans donne 60 000 € à son petit-fils de 18 ans. Quel est le résultat fiscal ?",
+   "choix": [
+    "Aucun droit ; il reste un abattement résiduel de 3 730 €",
+    "31 821 € de droits",
+    "28 135 € de droits",
+    "Aucun droit et aucun abattement restant"
+   ],
+   "reponse": 0,
+   "explication": "Après le 790 G (31 865 €), il reste 28 135 €, couverts par l'abattement de 31 865 € du 790 B : aucun droit, et 3 730 € d'abattement demeurent disponibles. Il s'agit d'un exemple fiscal de la fiche."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Depuis le 1er janvier 2026, comment le don familial de somme d'argent doit-il en principe être déclaré ?",
+   "choix": [
+    "Sur papier uniquement",
+    "Devant notaire uniquement",
+    "Par courrier recommandé",
+    "En ligne"
+   ],
+   "reponse": 3,
+   "explication": "La déclaration doit en principe être faite en ligne depuis le 1er janvier 2026, avec des exceptions comme la déclaration papier pour certains majeurs protégés. Le formulaire 2735 reste le support papier."
+  },
+  {
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "theme": "Transmission",
+   "question": "Pour les dons de sommes d'argent réalisés entre le 1er juin 2004 et le 31 décembre 2005 (dons « Sarkozy »), quel était le plafond d'exonération à partir du 8 février 2005 ?",
+   "choix": [
+    "20 000 €",
+    "30 000 €",
+    "31 865 €",
+    "50 000 €"
+   ],
+   "reponse": 1,
+   "explication": "Le plafond est passé de 20 000 € à 30 000 € à partir du 8 février 2005, pour les enfants majeurs et, à défaut, les neveux sans descendance. Ce dispositif était distinct du 790 G actuel."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Le montant de l'abattement de 152 500 € prévu à l'article 990 I est-il revalorisé chaque année ?",
+   "choix": [
+    "Oui, chaque année",
+    "Oui, tous les 5 ans",
+    "Non, il est fixe",
+    "Oui, indexé sur l'inflation"
+   ],
+   "reponse": 2,
+   "explication": "L'abattement de 152 500 € par bénéficiaire et par assuré est fixe et n'est pas revalorisé annuellement. Il s'impute sur les capitaux décès nets de prélèvements sociaux."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Pour un décès survenu après le 1er juillet 2014, quel est le barème du prélèvement de l'article 990 I ?",
+   "choix": [
+    "20 % jusqu'à 700 000 €, 31,25 % au-delà",
+    "20 % jusqu'à 902 838 €, 25 % au-delà",
+    "20 % sans plafond",
+    "25 % forfaitaire"
+   ],
+   "reponse": 0,
+   "explication": "Pour les décès depuis le 1er juillet 2014, le taux est de 20 % jusqu'à 700 000 € de fraction nette, puis 31,25 %. Les taux sont forfaitaires et ne tiennent pas compte du lien de parenté."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Décès le 1er août 2014, capitaux nets de 1 200 000 € pour un bénéficiaire en pleine propriété. Quel est le prélèvement 990 I ?",
+   "choix": [
+    "291 733 €",
+    "152 500 €",
+    "1 047 500 €",
+    "248 594 €"
+   ],
+   "reponse": 3,
+   "explication": "Après abattement, la base est de 1 047 500 € : 700 000 € × 20 % plus 347 500 € × 31,25 % font 248 594 €. Le résultat est retenu à la source par la compagnie."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "En principe, quelle est l'assiette du prélèvement 990 I pour un contrat rachetable ?",
+   "choix": [
+    "Les primes versées",
+    "La valeur faciale du capital brut",
+    "La valeur de rachat au jour du décès, nette de prélèvements sociaux",
+    "L'actif successoral du défunt"
+   ],
+   "reponse": 2,
+   "explication": "Pour un contrat rachetable, l'assiette est la valeur de rachat au décès, nette de prélèvements sociaux. Pour un contrat non rachetable, ce sont les primes qui servent de base."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Le conjoint survivant, bénéficiaire d'un capital décès relevant du 990 I, doit-il payer le prélèvement ?",
+   "choix": [
+    "Oui, au-delà de 152 500 €",
+    "Oui, au taux de 20 %",
+    "Non, il est exonéré (CGI art. 796-0 bis)",
+    "Non, car il est héritier"
+   ],
+   "reponse": 2,
+   "explication": "Le conjoint ou partenaire survivant est exonéré du prélèvement de 20 % et 31,25 % sur le fondement de l'article 796-0 bis. Cette exonération joue indépendamment de sa qualité d'héritier."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Un frère de l'assuré est-il exonéré du prélèvement 990 I ?",
+   "choix": [
+    "Oui, cumulativement : célibataire, veuf, divorcé ou séparé ; plus de 50 ans ou infirmité ; domicilié chez le défunt 5 ans avant le décès",
+    "Oui, s'il a plus de 50 ans seulement",
+    "Non, jamais",
+    "Oui, s'il est héritier réservataire"
+   ],
+   "reponse": 0,
+   "explication": "L'exonération (CGI art. 796-0 ter) suppose trois conditions cumulatives : situation matrimoniale, âge ou infirmité, et domicile constant chez le défunt pendant les 5 années précédant le décès. Une seule condition ne suffit pas."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Des primes versées à 65 ans, après le 13 octobre 1998, sur un contrat souscrit après le 20 novembre 1991, relèvent de quel régime au décès ?",
+   "choix": [
+    "757 B",
+    "Exonération totale",
+    "Droits de succession sur la totalité du capital",
+    "990 I"
+   ],
+   "reponse": 3,
+   "explication": "Les primes versées avant 70 ans et après le 13 octobre 1998 relèvent du 990 I ; celles versées après 70 ans relèvent du 757 B. L'âge au jour du versement est le critère déterminant."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "En cas de clause démembrée, quel âge retient-on pour répartir l'abattement entre usufruitier et nu-propriétaire ?",
+   "choix": [
+    "Celui du nu-propriétaire",
+    "Celui de l'usufruitier au moment de la création du démembrement",
+    "Celui de l'assuré au décès",
+    "Celui du souscripteur"
+   ],
+   "reponse": 1,
+   "explication": "L'abattement est réparti selon le barème de l'article 669 du CGI, l'âge retenu étant celui de l'usufruitier à la création du démembrement. Il existe autant d'abattements que de couples usufruitier / nu-propriétaire."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Un contrat de 600 000 € nets, avec un conjoint de 77 ans en usufruit (exonéré) et deux enfants en nue-propriété : quel est le prélèvement total ?",
+   "choix": [
+    "63 000 €",
+    "0 €",
+    "41 300 €",
+    "30 500 €"
+   ],
+   "reponse": 2,
+   "explication": "Chaque enfant reçoit 210 000 € avec un abattement de 106 750 € : (210 000 − 106 750) × 20 % × 2 = 41 300 €. Le conjoint, exonéré, ne paie rien."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+   "theme": "Assurance-vie",
+   "question": "Que se passe-t-il si l'un des nus-propriétaires ne fournit pas l'attestation sur l'honneur ?",
+   "choix": [
+    "Le versement du capital est bloqué",
+    "Le prélèvement est reporté d'un an",
+    "L'assureur verse quand même",
+    "Il paie un taux de 31,25 %"
+   ],
+   "reponse": 0,
+   "explication": "L'attestation sur l'honneur est exigée de tous les bénéficiaires, usufruitiers et nus-propriétaires, au prorata de leurs droits. Sans elle, le versement du capital est bloqué."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "L'abattement de 30 500 € de l'article 757 B s'applique :",
+   "choix": [
+    "par bénéficiaire",
+    "par contrat",
+    "par année de versement",
+    "globalement, pour l'ensemble des bénéficiaires et des contrats du même assuré"
+   ],
+   "reponse": 3,
+   "explication": "Il est global : il vaut pour tous les bénéficiaires et tous les contrats d'un même assuré, et n'est pas revalorisé."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "En principe, quelle est l'assiette taxable de l'article 757 B ?",
+   "choix": [
+    "Le capital décès total",
+    "Le montant brut des primes versées après 70 ans, après abattement",
+    "Les produits attachés au contrat",
+    "La valeur de rachat au décès"
+   ],
+   "reponse": 1,
+   "explication": "Ce sont les primes brutes versées après le 70e anniversaire qui sont taxées, et non le capital ; les produits en sont exclus. La valeur de rachat ne sert de base qu'en cas de contrat en perte."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "Un contrat est souscrit à 71 ans avec une prime unique de 100 000 € au profit du fils ; au décès le contrat vaut 130 000 €. Quelle somme est soumise aux droits de succession ?",
+   "choix": [
+    "130 000 €",
+    "100 000 €",
+    "69 500 €",
+    "30 500 €"
+   ],
+   "reponse": 2,
+   "explication": "Seules les primes après 70 ans sont retenues : 100 000 € moins l'abattement de 30 500 € donne 69 500 €. La plus-value du contrat n'est pas taxée."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "Lorsque les capitaux décès sont inférieurs aux primes versées après 70 ans, quelle est l'assiette ?",
+   "choix": [
+    "Les primes versées",
+    "Zéro",
+    "Les primes diminuées de 30 500 €",
+    "La valeur de rachat au décès, soit les capitaux décès"
+   ],
+   "reponse": 0,
+   "explication": "Le contrat est alors « en perte » : l'assiette est limitée aux capitaux décès, soit la valeur de rachat au décès, et l'abattement s'applique sur ce montant."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "Depuis le 1er janvier 2018, un conjoint marié exonéré doit-il produire un certificat de non-imposition pour percevoir le capital 757 B ?",
+   "choix": [
+    "Oui, toujours",
+    "Oui, uniquement pour les partenaires de PACS",
+    "Non, sauf s'il a son domicile de fait ou de droit à l'étranger",
+    "Non, jamais"
+   ],
+   "reponse": 2,
+   "explication": "Depuis 2018, les conjoints et partenaires de PACS exonérés n'ont plus à le produire, sauf domicile à l'étranger. L'obligation est donc maintenue dans ce cas."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "Un petit-fils vient par représentation de son père prédécédé et est bénéficiaire d'un contrat 757 B. Comment est-il taxé ?",
+   "choix": [
+    "Selon le lien avec l'ascendant représenté",
+    "Au taux forfaitaire de 60 %",
+    "Il est exonéré",
+    "Selon son degré de parenté direct avec l'assuré, sans considération de la représentation"
+   ],
+   "reponse": 3,
+   "explication": "En droit fiscal, la représentation ne s'applique pas aux bénéficiaires d'assurance-vie : la taxation suit le degré de parenté avec l'assuré. Elle ne se présume pas non plus en droit des assurances."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "Un contrat d'assurance-vie dénoué par décès, avec bénéficiaires déterminés, entre-t-il dans le calcul du forfait mobilier de 5 % ?",
+   "choix": [
+    "Oui, pour sa totalité",
+    "Oui, à hauteur de 50 %",
+    "Non, il ne fait pas partie de la succession",
+    "Oui, uniquement s'il est héritier"
+   ],
+   "reponse": 2,
+   "explication": "Les contrats dénoués au profit de bénéficiaires déterminés ne font pas partie de la succession et sont exclus du forfait mobilier. Le cas est différent pour un bénéficiaire indéterminé."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "Pour identifier les contrats 757 B et le nombre de bénéficiaires, quel fichier le notaire peut-il interroger ?",
+   "choix": [
+    "Le fichier FICOVIE",
+    "Le fichier FICOBA",
+    "Le registre du commerce",
+    "Le casier judiciaire"
+   ],
+   "reponse": 0,
+   "explication": "Les compagnies opposant parfois le secret professionnel, le notaire peut consulter le fichier FICOVIE. L'administration fiscale centralise aussi les informations transmises par les assureurs."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "Dans quel délai le bénéficiaire-héritier doit-il transmettre la déclaration partielle 2705-A pour les capitaux relevant du 757 B ?",
+   "choix": [
+    "1 mois",
+    "3 mois",
+    "1 an",
+    "6 mois"
+   ],
+   "reponse": 3,
+   "explication": "La déclaration partielle 2705-A est à transmettre dans les 6 mois, au service de l'enregistrement du domicile du défunt. Elle peut être envoyée par courrier ou voie dématérialisée."
+  },
+  {
+   "fiche": "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans  (CGI. art. 757 B)",
+   "theme": "Assurance-vie",
+   "question": "La créance de restitution d'un quasi-usufruit, passif successoral, peut-elle réduire les droits 757 B ?",
+   "choix": [
+    "Oui, comme passif déductible",
+    "Non, elle ne permet pas de réduire la fiscalité au titre de 757 B",
+    "Oui, pour moitié",
+    "Seulement en nue-propriété"
+   ],
+   "reponse": 1,
+   "explication": "Les capitaux 757 B n'intègrent pas la succession : ils sont taxés au taux des droits de succession sans que le passif successoral ne réduise la base. Le passif n'a d'effet que sur l'actif successoral."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Les avantages matrimoniaux peuvent-ils être prévus sous le régime de séparation de biens ?",
+   "choix": [
+    "Oui, dans tous les régimes",
+    "Oui, par simple lettre entre époux",
+    "Non : par principe, ils ne se conçoivent que dans les régimes communautaires",
+    "Seulement si l'un des époux est réservataire"
+   ],
+   "reponse": 2,
+   "explication": "Par principe, les avantages matrimoniaux ne peuvent être prévus que dans les régimes communautaires ; les époux séparés de biens en sont exclus. Ils se prévoient dans un contrat de mariage ou un acte de changement de régime."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Un avantage matrimonial est-il taxé aux droits de mutation au décès, hors action en retranchement ?",
+   "choix": [
+    "Non, il n'est pas considéré comme une libéralité",
+    "Oui, au tarif des donations",
+    "Oui, au-delà de 31 865 €",
+    "Oui, seulement pour le préciput"
+   ],
+   "reponse": 0,
+   "explication": "L'avantage est une convention matrimoniale, non une libéralité : il n'est pas taxé aux droits de mutation, sauf réduction après action en retranchement. Ce point ne concerne pas les donations."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Face à un enfant non commun qui exerce l'action en retranchement, jusqu'où le conjoint peut-il être avantagé ?",
+   "choix": [
+    "Dans la limite de la totalité des biens",
+    "Dans la limite de la quotité disponible spéciale de 1/4",
+    "Dans la limite de la moitié des biens communs",
+    "Dans la limite de ce qu'il pourrait recevoir par donation entre époux de biens à venir"
+   ],
+   "reponse": 3,
+   "explication": "Au-delà de la portion de l'article 1094-1 du Code civil, la convention est sans effet pour l'excédent. Le conjoint ne peut donc prétendre à plus qu'une donation entre époux de biens à venir."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Des enfants communs peuvent-ils exercer seuls l'action en retranchement ?",
+   "choix": [
+    "Oui, directement",
+    "Oui, mais seulement après 10 ans",
+    "Jamais, même en se joignant",
+    "Non, mais ils peuvent se joindre aux enfants non communs qui l'exercent"
+   ],
+   "reponse": 3,
+   "explication": "Les enfants communs ne peuvent pas intenter directement l'action, mais peuvent se joindre à ceux qui l'exercent. Le privilège de l'action reste réservé aux enfants non communs."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Depuis la loi du 31 mai 2024, quel sort est réservé aux avantages matrimoniaux favorables au conjoint condamné pour avoir donné la mort à son époux ?",
+   "choix": [
+    "Ils sont conservés intégralement",
+    "Ils sont réduits de moitié",
+    "Déchéance de plein droit",
+    "Ils sont transférés aux enfants"
+   ],
+   "reponse": 2,
+   "explication": "Le conjoint condamné comme auteur ou complice d'un meurtre sur son époux est déchu de plein droit des avantages matrimoniaux qui lui sont favorables (C. civ. art. 1399-1). Ces dispositions s'appliquent même à des conventions antérieures."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Lors d'un divorce, quels avantages matrimoniaux sont en principe révoqués de plein droit ?",
+   "choix": [
+    "La communauté universelle",
+    "La société d'acquêts",
+    "Le préciput et l'attribution intégrale de la communauté",
+    "La communauté des meubles et acquêts"
+   ],
+   "reponse": 2,
+   "explication": "Les avantages qui ne prennent effet qu'à la dissolution (préciput, attribution intégrale, parts inégales, dispense de récompense) sont révoqués. La communauté universelle et la société d'acquêts demeurent."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Depuis le 2 juin 2024, comment maintenir malgré le divorce un avantage normalement révoqué ?",
+   "choix": [
+    "Par acte sous seing privé",
+    "Par donation notariée",
+    "Par mention au registre des régimes",
+    "Par volonté exprimée lors du divorce (convention) ou dans le contrat de mariage / acte de changement de régime"
+   ],
+   "reponse": 3,
+   "explication": "Depuis le 2 juin 2024, la volonté contraire s'exprime soit dans la convention de divorce, soit dans l'acte matrimonial instituant l'avantage. Le juge la constate au prononcé du divorce."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Une communauté de 1 000 € sans biens propres ; le conjoint prélève moyennant indemnité une maison de 700 €, imputable subsidiairement sur ses droits successoraux. Quelle indemnité reste due à la succession ?",
+   "choix": [
+    "200 €",
+    "25 €",
+    "175 €",
+    "0 €"
+   ],
+   "reponse": 1,
+   "explication": "Le conjoint, dont les droits (175 €, soit le quart) s'imputent sur le bien, doit verser 200 − 175 = 25 € à la succession. Sans imputation subsidiaire, l'indemnité serait de 200 €."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Quelle est la fiscalité de l'attribution, par le conjoint survivant, d'un bien en vertu d'une faculté d'attribution ?",
+   "choix": [
+    "Droits de succession à 60 %",
+    "Droits de donation au tarif en ligne directe",
+    "Aucun droit de mutation à titre gratuit ; l'acquisition, elle, relève des droits de mutation à titre onéreux",
+    "Taxe forfaitaire de 20 %"
+   ],
+   "reponse": 2,
+   "explication": "Le conjoint est exonéré de droits de succession : l'attribution n'est pas taxée, alors que l'acquisition à titre onéreux donne lieu aux droits de mutation à titre onéreux. La faculté doit être prévue dans le contrat de mariage."
+  },
+  {
+   "fiche": "Avantage matrimonial : Principes généraux",
+   "theme": "Succession & couple",
+   "question": "Un divorce est prononcé aux torts exclusifs d'un époux. Quel est le sort des avantages que son conjoint lui avait consentis ?",
+   "choix": [
+    "Il les conserve intégralement",
+    "Il perd seulement le préciput",
+    "Il les perd de plein droit",
+    "Il doit en rendre la moitié"
+   ],
+   "reponse": 2,
+   "explication": "Le conjoint fautif perd de plein droit tous les avantages matrimoniaux que son conjoint lui avait consentis (Cass. civ. 1re, 25 sept. 2013). Il ne s'agit pas d'une simple réduction."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Pour un paiement fractionné des droits de succession, quel est le délai de droit commun ?",
+   "choix": [
+    "6 mois",
+    "3 ans",
+    "5 ans",
+    "1 an"
+   ],
+   "reponse": 3,
+   "explication": "Le délai de droit commun est d'un an : les droits sont payés en versements égaux, le premier au dépôt de la déclaration, à 6 mois d'intervalle au plus."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "En droit commun, combien de versements égaux comporte un paiement fractionné des droits de succession ?",
+   "choix": [
+    "2",
+    "3",
+    "4",
+    "7"
+   ],
+   "reponse": 1,
+   "explication": "Le nombre de versements est en principe de 3 : un tiers au dépôt, un tiers à 6 mois, un tiers à un an. Le plafond de 7 versements ne vaut que pour le délai spécial."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "À quelle condition peut-on bénéficier du délai spécial de 3 ans et jusqu'à 7 versements ?",
+   "choix": [
+    "Si le défunt avait moins de 70 ans",
+    "Si la succession dépasse 1 M€",
+    "Si l'actif comprend au moins 50 % de biens non liquides",
+    "Il suffit de le demander au notaire"
+   ],
+   "reponse": 2,
+   "explication": "Lorsque l'actif héréditaire comprend au moins 50 % de biens non liquides, le délai passe à 3 ans et le nombre de versements peut atteindre 7. Le délai de droit commun reste d'un an."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Lequel de ces biens N'est PAS considéré comme non liquide pour le délai spécial ?",
+   "choix": [
+    "Un fonds de commerce",
+    "Des valeurs mobilières cotées en Bourse",
+    "Un immeuble",
+    "Une créance non exigible au décès"
+   ],
+   "reponse": 1,
+   "explication": "Sont non liquides notamment les immeubles, fonds de commerce, créances non exigibles et valeurs mobilières non cotées. Les valeurs cotées ne figurent pas dans la liste."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Pour les demandes formulées après le 30 novembre 2015, dans quel délai les garanties doivent-elles être constituées ?",
+   "choix": [
+    "1 mois",
+    "1 an",
+    "6 mois après le décès",
+    "4 mois après le dépôt de la demande de crédit"
+   ],
+   "reponse": 3,
+   "explication": "Les garanties doivent être constituées dans les 4 mois du dépôt de la demande de crédit, faute de quoi le régime peut être déchu. Elles peuvent prendre toutes les formes habituellement admises."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Quel est le taux d'intérêt de droit commun du crédit de paiement pour 2026 ?",
+   "choix": [
+    "3,09 %",
+    "0,6 %",
+    "2 %",
+    "1,7 %"
+   ],
+   "reponse": 2,
+   "explication": "Le taux de référence est de 3,09 %, réduit d'un tiers, soit 2 % pour 2026. Le taux de 3,09 % sert de base de calcul et n'est pas le taux appliqué."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Le taux d'intérêt de 2 % tombe à 0,6 % en transmission d'entreprise dans quel cas ?",
+   "choix": [
+    "Si le donataire est un enfant",
+    "Si l'entreprise compte moins de 5 salariés",
+    "Si chaque héritier reçoit plus de 10 % de la valeur de l'entreprise ou si plus du tiers du capital est transmis globalement",
+    "Si le donateur a plus de 70 ans"
+   ],
+   "reponse": 2,
+   "explication": "Le taux est réduit des deux tiers lorsque la valeur comprise dans la part de chaque bénéficiaire dépasse 10 % de l'entreprise, ou si globalement plus du tiers du capital est transmis. Le lien de parenté est indifférent."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Pour une transmission d'entreprise à titre gratuit, quel est le schéma de paiement ?",
+   "choix": [
+    "3 ans de différé, puis 3 ans de fractionnement",
+    "10 ans de différé, puis 5 ans de fractionnement",
+    "1 an, puis 7 versements",
+    "5 ans de paiement différé, puis paiement fractionné sur 10 ans"
+   ],
+   "reponse": 3,
+   "explication": "Le dispositif comporte un différé de 5 ans, suivi d'un fractionnement sur 10 ans, soit au maximum 21 versements. Les intérêts sont versés chaque année pendant le différé."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Pour une transmission de titres de société non cotée, combien chaque bénéficiaire doit-il recevoir au minimum individuellement ?",
+   "choix": [
+    "1 % du capital",
+    "10 % du capital",
+    "33 % du capital",
+    "5 % du capital"
+   ],
+   "reponse": 3,
+   "explication": "Chaque bénéficiaire doit recevoir individuellement au moins 5 % du capital social, apprécié selon les lots ou les droits théoriques. Ce seuil s'applique aussi en cas de démembrement."
+  },
+  {
+   "fiche": "DMTG : Paiement différé et_ou fractionné",
+   "theme": "Transmission",
+   "question": "Quel événement met fin au paiement différé par déchéance du terme ?",
+   "choix": [
+    "Le dépôt de la déclaration de succession",
+    "La réunion de l'usufruit et de la nue-propriété",
+    "Le paiement de la première annuité d'intérêts",
+    "Le changement de domicile du redevable"
+   ],
+   "reponse": 1,
+   "explication": "La réunion de l'usufruit et de la nue-propriété, ou la cession totale ou partielle de la nue-propriété, provoque la déchéance du terme. Les droits deviennent alors dus dans les 6 mois."
+  }
  ]
 }
