@@ -138,6 +138,47 @@ main#main { position: relative; }
 .bulle.sheet { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto !important; border-radius: 16px 16px 0 0; max-height: 82vh; overflow-y: auto; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
 .bulle.sheet .fleche { display: none; }
 @media (max-width: 600px) { .patsum { grid-template-columns: 1fr; } .chips { grid-template-columns: 1fr; } }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.arbre-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--brand) 3%, var(--paper)); margin-bottom: 8px; }
+.arbre { position: relative; min-width: max-content; padding: 26px 28px 30px; display: flex; flex-direction: column; gap: 46px; }
+.arbre .rang { display: flex; justify-content: center; align-items: center; gap: 14px; min-height: 10px; position: relative; z-index: 1; }
+.arbre .rang:empty { display: none; }
+.arbre .grp { display: flex; gap: 12px; }
+.arbre .sep { width: 70px; }
+.arbre .union-place { width: 46px; }
+.arbre svg.liens { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 0; }
+.arbre svg.liens path { fill: none; stroke: color-mix(in srgb, var(--ink) 35%, transparent); stroke-width: 1.5; }
+.noeud { display: flex; align-items: center; gap: 9px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 22px; padding: 6px 14px 6px 6px; cursor: pointer; text-align: left; white-space: nowrap; }
+.noeud:hover { border-color: color-mix(in srgb, var(--brand) 55%, var(--line)); }
+.noeud.open { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+.noeud .ico { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--brand) 12%, var(--paper)); color: var(--brand-text); flex: none; }
+.noeud .ico svg { width: 19px; height: 19px; }
+.noeud .nt { display: flex; flex-direction: column; line-height: 1.2; }
+.noeud .nt strong { font-size: 14px; } .noeud .nt small { font-size: 12px; color: var(--muted); }
+.noeud.n-client { background: var(--brand); color: var(--on-brand); border-color: var(--brand); padding: 9px 18px 9px 9px; }
+.noeud.n-client .ico { background: color-mix(in srgb, #FFFFFF 18%, transparent); color: #FFFFFF; }
+.noeud.n-client .nt small { color: color-mix(in srgb, #FFFFFF 75%, transparent); }
+.noeud.n-parent .ico, .noeud.n-frere .ico, .noeud.n-neveu .ico { background: color-mix(in srgb, #6976B3 16%, var(--paper)); color: #4B568F; }
+.noeud.decede { opacity: .6; border-style: dashed; }
+.poignees { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.poignee { position: absolute; width: 22px; height: 22px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--brand) 45%, var(--line)); background: var(--paper); color: var(--brand-text); font: 700 12px/1 var(--sans); display: grid; place-items: center; cursor: pointer; pointer-events: auto; padding: 0; }
+.poignee:hover { background: var(--brand); color: var(--on-brand); }
+.bulle.menu { padding: 10px; width: auto !important; }
+.bulle.menu .choix { display: flex; gap: 8px; }
+.pill { display: flex; align-items: center; gap: 8px; font: 600 14px var(--sans); color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 20px; padding: 8px 14px; cursor: pointer; }
+.pill svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.pill:hover { border-color: var(--brand); }
+.minilist { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.mini { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; text-align: left; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.mini:hover { border-color: var(--brand); }
+.mini .ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--brand-text); }
+.mini .ico svg { width: 17px; height: 17px; }
+.mini em { font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bactions.wrap { flex-wrap: wrap; justify-content: flex-start; }
+.bactions.wrap .btn:last-child { margin-left: auto; }
+.pvbox { background: var(--soft); border-radius: 8px; padding: 8px 10px; }
+.mini-sel { min-height: 28px !important; padding: 2px 6px !important; width: auto !important; font-size: 13px !important; }
+@media (max-width: 600px) { .bulle.menu.sheet .choix { flex-direction: column; } }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -284,6 +325,47 @@ function taxe990(taxable) {
 }
 function round(x) { return Math.round(x); }
 
+/* ---------------- Plus-values de cession (apport en société, family buy out) ---------------- */
+function surtaxePV(pv) {
+  if (pv <= 50000) return 0;
+  var T = [[60000, 0.02, 60000, 1 / 20], [100000, 0.02], [110000, 0.03, 110000, 1 / 10], [150000, 0.03], [160000, 0.04, 160000, 15 / 100], [200000, 0.04], [210000, 0.05, 210000, 20 / 100], [250000, 0.05], [260000, 0.06, 260000, 25 / 100]];
+  for (var i = 0; i < T.length; i++) if (pv <= T[i][0]) return T[i][2] ? Math.max(0, pv * T[i][1] - (T[i][2] - pv) * T[i][3]) : pv * T[i][1];
+  return pv * 0.06;
+}
+// a : actif ; valeur cédée (quote-part) ; part : quote-part du bien ; date de cession
+function plusValue(a, valeur, part, date) {
+  var res = { prix: valeur, acquisition: 0, pvBrute: 0, impot: 0, ir: 0, ps: 0, surtaxe: 0, annees: 0, regime: '', renseigne: false };
+  if (a.type === 'rp') { res.regime = 'Résidence principale : exonérée'; return res; }
+  if (a.type === 'financier') { res.regime = 'Non concerné'; return res; }
+  var prix0 = +a.prixAcquisition || 0, dAcq = parseDate(a.dateAcquisition);
+  if (a.origine === 'donation' || a.origine === 'succession') { prix0 = prix0 || (+a.valeurOrigine || 0); dAcq = dAcq || parseDate(a.dateOrigine); }
+  if (!prix0 || !dAcq) { res.regime = 'Prix ou date d’acquisition non renseignés'; return res; }
+  res.renseigne = true;
+  var annees = Math.max(0, Math.floor(yearsBetween(dAcq, date)));
+  res.annees = annees;
+  var immo = a.type === 'immo' || a.type === 'autre' || (a.type === 'societe' && /SCI/i.test(a.forme || 'SCI'));
+  var base = prix0 * part;
+  if (immo) {
+    var frais = a.origine === 'donation' || a.origine === 'succession' ? 0 : 0.075 * base;
+    var travaux = +a.travaux ? +a.travaux * part : (annees > 5 && a.type !== 'societe' ? 0.15 * base : 0);
+    res.acquisition = base + frais + travaux;
+    var pv = Math.max(0, valeur - res.acquisition);
+    var aIR = annees <= 5 ? 0 : annees < 22 ? (annees - 5) * 0.06 : 1;
+    var aPS = annees <= 5 ? 0 : annees <= 21 ? (annees - 5) * 0.0165 : annees === 22 ? 16 * 0.0165 + 0.016 : Math.min(1, 16 * 0.0165 + 0.016 + (annees - 22) * 0.09);
+    res.pvBrute = pv;
+    var pvIR = pv * (1 - aIR), pvPS = pv * (1 - aPS);
+    res.ir = pvIR * 0.19; res.ps = pvPS * 0.172; res.surtaxe = surtaxePV(pvIR);
+    res.regime = 'Plus-value immobilière (' + annees + ' ans de détention)';
+  } else {
+    res.acquisition = base;
+    res.pvBrute = Math.max(0, valeur - base);
+    res.ir = res.pvBrute * 0.128; res.ps = res.pvBrute * 0.186;
+    res.regime = 'Plus-value sur titres (PFU 31,4 %)';
+  }
+  res.impot = res.ir + res.ps + res.surtaxe;
+  return res;
+}
+
 /* Régimes d'exonération partielle (Dutreil, bois et forêts, biens ruraux / GFA) */
 var REGIMES = {
   dutreil: { label: 'Dutreil société (art. 787 B)', taux: 0.75 },
@@ -320,7 +402,8 @@ function defaultParams() {
     don790ABis: false,              // dons pour RP neuve / rénovation énergétique (jusqu'au 31/12/2026)
     heritageParents: true,          // intégrer l'héritage attendu des parents dans la succession des clients
     sautGeneration: false,          // stratégie : héritage des parents transmis directement aux petits-enfants
-    fboTaux: 0.036, fboDuree: 20, fboPonderation: 0.7
+    fboTaux: 0.036, fboDuree: 20, fboPonderation: 0.7,
+    fboFraisImmo: 0.075, fboFraisTitres: 0.03   // frais d'acquisition supportés par la société des enfants
   };
 }
 
@@ -352,7 +435,7 @@ function prepare(d) {
     var age = ageAt(p.naissance, T0), sexe = p.lien === 'mere' ? 'F' : 'H';
     var nb = (+p.nbEnfants > 0) ? +p.nbEnfants : 1 + (d.freres || []).filter(function (f) { return f.de === p.de; }).length;
     return { id: p.id, label: (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')) + (p.nom ? ' ' + p.nom : ''), prenom: p.prenom || '', lien: p.lien, de: p.de || 'c1', naissance: p.naissance, decede: !!p.decede, sexe: sexe, age: age,
-      ev: p.decede ? 0 : esperanceVie(sexe, age), patrimoine: +p.patrimoine || 0, nbEnfants: nb, lienType: 'parent' };
+      ev: p.decede ? 0 : esperanceVie(sexe, age), patrimoine: ((+p.patImmo || 0) + (+p.patFin || 0) + (+p.patAutre || 0)) || (+p.patrimoine || 0), nbEnfants: nb, lienType: 'parent' };
   });
   ctx.parents.forEach(function (p) { p.deces = p.decede ? null : addYears(T0, Math.max(0.5, p.ev)); ctx.persons[p.id] = p; });
   ctx.enfants.forEach(function (e) { e.lienType = 'enfant'; ctx.persons[e.id] = e; });
@@ -535,8 +618,33 @@ function simulate(d, scen) {
 
   /* ---- PLAN : donations en nue-propriété (vagues tous les 15 ans) ---- */
   var npDonne = {}; // npDonne[assetId][client] = {date, societe}
-  var dptFait = {};
-  res.dpt = [];
+  var dptFait = {}, vendu = {};
+  res.dpt = []; res.fbo = []; res.pvApport = [];
+  /* ---- PLAN : family buy out (vente à une société des enfants) ---- */
+  if (plan.donations) {
+    actifs.slice().forEach(function (a) {
+      if (!a.planFBO || a.type === 'financier' || a.type === 'rp' || usufruitParent(ctx, a, T0)) return;
+      vendu[a.id] = true;
+      ctx.clients.forEach(function (k) {
+        var pk = partClient(a, k, ctx); if (pk <= 0) return;
+        var prix = (a.type === 'societe' ? Math.max(0, a.valeur - a.passif) : a.valeur) * pk;
+        var pv = plusValue(a, prix, pk, T0);
+        var dette = a.type === 'societe' ? 0 : a.passif * pk;
+        var frais = prix * (a.type === 'societe' || a.type === 'pro' ? P.fboFraisTitres : P.fboFraisImmo);
+        var net = Math.max(0, prix - dette - pv.impot);
+        var cap = 0, r = P.fboTaux / 12, n = P.fboDuree * 12, rev = (+a.revenu || 0) * pk * P.fboPonderation;
+        cap = r > 0 ? (rev / 12) * (1 - Math.pow(1 + r, -n)) / r : rev * P.fboDuree;
+        var aff = a.fboAffectation || 'av';
+        if (aff === 'av') {
+          var apres70 = ageAt(ctx.persons[k].naissance, T0) >= 70;
+          avs.push({ id: 'fbo_' + a.id + '_' + k, libelle: 'Assurance-vie (prix de ' + a.libelle + ')', souscripteur: k, valeur: net, valeurApres70: apres70 ? net : 0, primesApres70: apres70 ? net : 0, nouveau: true });
+        } else {
+          actifs.push({ id: 'fbo_' + a.id + '_' + k, libelle: 'Prix de vente de ' + a.libelle, type: 'financier', partC1: k === 'c1' ? 100 : 0, valeur: net, passif: 0, cca: 0 });
+        }
+        res.fbo.push({ actif: a.libelle, actifId: a.id, client: k, prix: prix, dette: dette, impotPV: pv.impot, pv: pv, frais: frais, net: net, affectation: aff, financable: cap, apportNecessaire: Math.max(0, prix + frais - cap) });
+      });
+    });
+  }
   if (plan.donations) {
     actifs.forEach(function (a) {
       if (!a.planDPT || !eligibleDPT(ctx, a)) return;
@@ -556,7 +664,7 @@ function simulate(d, scen) {
       actifs.forEach(function (a) {
         if ((+a.planVague || 0) !== w) return;
         if (a.type === 'financier') return; // 774 bis : pas de donation NP de liquidités avec quasi-usufruit
-        if (dptFait[a.id] || usufruitParent(ctx, a, date)) return; // déjà réattribué, ou usufruit encore détenu par un parent
+        if (dptFait[a.id] || vendu[a.id] || usufruitParent(ctx, a, date)) return; // réattribué, vendu, ou usufruit encore détenu par un parent
         ctx.clients.forEach(function (k) {
           var pk = partClient(a, k, ctx); if (pk <= 0) return;
           if (date >= deaths[k]) { res.warnings.push('Vague ' + w + ' (' + a.libelle + ') : ' + ctx.persons[k].label + ' serait décédé(e) selon son espérance de vie – donation non retenue.'); return; }
@@ -587,7 +695,16 @@ function simulate(d, scen) {
         var anySoc = Object.keys(npDonne[a.id]).some(function (k) { return npDonne[a.id][k].societe; });
         if (!anySoc) return;
         var cout = P.fraisFixesSociete + P.fraisActeSocietePct * a.valeur + P.droitApportOnereuxPct * a.passif;
-        res.societe.push({ actif: a.libelle, actifId: a.id, valeur: a.valeur, passif: a.passif, decote: P.decoteSociete, cout: cout, rp: a.type === 'rp' });
+        // l'apport d'un immeuble à une société est une cession : plus-value imposable (sauf résidence principale)
+        var impotApport = 0;
+        Object.keys(npDonne[a.id]).forEach(function (k) {
+          if (!npDonne[a.id][k].societe) return;
+          var pk = partClient(a, k, ctx), pv = plusValue(a, a.valeur * pk, pk, npDonne[a.id][k].date);
+          impotApport += pv.impot;
+          if (pv.impot > 0 || pv.renseigne) res.pvApport.push({ actif: a.libelle, client: k, pv: pv });
+        });
+        cout += impotApport;
+        res.societe.push({ impotPV: impotApport, actif: a.libelle, actifId: a.id, valeur: a.valeur, passif: a.passif, decote: P.decoteSociete, cout: cout, rp: a.type === 'rp' });
       });
     }
   }
@@ -606,6 +723,7 @@ function simulate(d, scen) {
     actifs.forEach(function (a) {
       var pk = partClient(a, k, ctx); if (pk <= 0) return;
       if (dptFait[a.id]) { D.lignes.push({ libelle: a.libelle, valeur: 0, note: 'Réattribué aux enfants (donation-partage transgénérationnelle)' }); return; }
+      if (vendu[a.id]) { D.lignes.push({ libelle: a.libelle, valeur: 0, note: 'Vendu à la société des enfants (family buy out)' }); return; }
       var don = npDonne[a.id] && npDonne[a.id][k] && npDonne[a.id][k].date <= date;
       // compte courant d'associé : créance des clients sur la société, sauf s'il est remboursé et consommé avant le décès
       if (a.cca > 0 && !P.ccaRembourseAvantDeces) { brut += a.cca * pk; D.lignes.push({ libelle: 'Compte courant d’associé – ' + a.libelle, valeur: a.cca * pk }); }
@@ -770,7 +888,9 @@ function simulate(d, scen) {
   res.coutsSociete = res.societe.reduce(function (s, x) { return s + x.cout; }, 0);
   res.droitsSuccessions = res.deces.reduce(function (s, x) { return s + x.droitsSucc; }, 0);
   res.taxesAV = res.deces.reduce(function (s, x) { return s + x.tax990; }, 0);
-  res.total = res.droitsDonations + res.droitsSuccessions + res.taxesAV + res.coutsSociete + res.droitsDPT;
+  res.impotFBO = res.fbo.reduce(function (s, x) { return s + x.impotPV; }, 0);
+  res.fraisFBO = res.fbo.reduce(function (s, x) { return s + x.frais; }, 0);
+  res.total = res.droitsDonations + res.droitsSuccessions + res.taxesAV + res.coutsSociete + res.droitsDPT + res.impotFBO + res.fraisFBO;
   return res;
 }
 
@@ -793,7 +913,7 @@ function optimiserPlan(d) {
   var maxVague = 1;
   ctx.clients.forEach(function (k) { var ev = ctx.persons[k].ev; if (ev > 16) maxVague = Math.max(maxVague, 2); if (ev > 31) maxVague = Math.max(maxVague, 3); });
   function cout() { return moyenne(dd, PLAN_FULL).moyenne; }
-  cand.forEach(function (a) { a.planVague = 1; a.planSociete = a.type === 'rp' && ctx.P.sciResidencePrincipale; });
+  cand.forEach(function (a) { a.planVague = 1; a.planSociete = a.type === 'rp' && ctx.P.sciResidencePrincipale; a.planFBO = false; });
   var best = cout();
   for (var pass = 0; pass < 3; pass++) {
     var improved = false;
@@ -805,13 +925,14 @@ function optimiserPlan(d) {
         opts.push({ w: w, s: false });
         if (w > 0 && a.type !== 'pro' && (+a.passif > 0 || (ctx.P.decoteSociete > 0))) opts.push({ w: w, s: true });
       }
-      var cur = { w: a.planVague, s: a.planSociete };
+      if (+a.revenu > 0 && a.type !== 'rp') opts.push({ w: 0, s: false, f: true });
+      var cur = { w: a.planVague, s: a.planSociete, f: !!a.planFBO };
       opts.forEach(function (o) {
-        a.planVague = o.w; a.planSociete = o.s;
+        a.planVague = o.w; a.planSociete = o.s; a.planFBO = !!o.f; if (o.f && !a.fboAffectation) a.fboAffectation = 'av';
         var c = cout();
         if (c < best - 1) { best = c; cur = o; improved = true; }
       });
-      a.planVague = cur.w; a.planSociete = cur.s;
+      a.planVague = cur.w; a.planSociete = cur.s; a.planFBO = !!cur.f;
     });
     if (!improved) break;
   }
@@ -821,14 +942,14 @@ function optimiserPlan(d) {
     a.planDPT = true; var avec = cout(); a.planDPT = false; var sans = cout();
     if (avec < sans - 1) { a.planDPT = true; best = avec; }
   });
-  return dd.actifs.map(function (a) { return { id: a.id, planVague: a.planVague || 0, planSociete: !!a.planSociete, planDPT: !!a.planDPT }; });
+  return dd.actifs.map(function (a) { return { id: a.id, planVague: a.planVague || 0, planSociete: !!a.planSociete, planDPT: !!a.planDPT, planFBO: !!a.planFBO, fboAffectation: a.fboAffectation || 'av' }; });
 }
 
 // Intérêt du levier société, actif par actif (le reste du plan inchangé)
 function analyseLevier(d) {
   var out = [];
   (d.actifs || []).forEach(function (a) {
-    if (a.type === 'financier' || a.type === 'pro' || !(+a.planVague > 0)) return;
+    if (a.type === 'financier' || a.type === 'pro' || a.planFBO || !(+a.planVague > 0)) return;
     if (a.type === 'societe') {
       // société déjà endettée : effet des dettes internes sur la valeur des parts transmises
       var e0 = JSON.parse(JSON.stringify(d));
@@ -864,6 +985,7 @@ function analyseComplete(d) {
   A.levier = analyseLevier(d);
   A.ifi = { avant: calculIFI(d, false), apres: calculIFI(d, true) };
   A.fbo = analyseFBO(d);
+  A.pvLatentes = plusValuesLatentes(d);
   var c0 = prepare(d);
   A.dptPossibles = (d.actifs || []).filter(function (a) { return eligibleDPT(c0, a); }).map(function (a) { return { id: a.id, actif: a.libelle, retenu: !!a.planDPT }; });
   A.donsAnciens = (d.donations || []).filter(function (x) { var dt = parseDate(x.date); return dt && addYears(dt, 15) <= c0.T0; });
@@ -879,6 +1001,7 @@ function calculIFI(d, avecPlan) {
   (d.actifs || []).forEach(function (a) {
     var v = +a.valeur || 0, passif = +a.passif || 0, base = 0, dette = 0, note = '';
     if (avecPlan && a.planDPT && eligibleDPT(ctx, a)) { lignes.push({ libelle: a.libelle, base: 0, note: 'Réattribué (DPT)' }); return; }
+    if (avecPlan && a.planFBO && a.type !== 'rp' && a.type !== 'financier') { lignes.push({ libelle: a.libelle, base: 0, note: 'Vendu (family buy out)' }); return; }
     if (usufruitParent(ctx, a, ctx.T0)) { lignes.push({ libelle: a.libelle, base: 0, note: 'Nue-propriété reçue : déclarée par l’usufruitier' }); return; }
     if (a.type === 'rp') { base = v * 0.7; dette = passif; note = 'Abattement 30 %'; }
     else if (a.type === 'immo') { base = v; dette = passif; }
@@ -899,6 +1022,14 @@ function calculIFI(d, avecPlan) {
 }
 
 /* ---------------- Family buy out : capacité de financement par les revenus ---------------- */
+function plusValuesLatentes(d) {
+  var ctx = prepare(d);
+  return (d.actifs || []).filter(function (a) { return a.type !== 'financier'; }).map(function (a) {
+    var v = a.type === 'societe' ? Math.max(0, (+a.valeur || 0) - (+a.passif || 0)) : (+a.valeur || 0);
+    var pv = plusValue(a, v, 1, ctx.T0);
+    return { actifId: a.id, actif: a.libelle, valeur: v, pv: pv };
+  });
+}
 function analyseFBO(d) {
   var ctx = prepare(d), P = ctx.P, out = [];
   var r = P.fboTaux / 12, n = P.fboDuree * 12;
@@ -909,7 +1040,14 @@ function analyseFBO(d) {
     var capacite = r > 0 ? (annuite / 12) * (1 - Math.pow(1 + r, -n)) / r : annuite * P.fboDuree;
     var net = Math.max(0, (+a.valeur || 0) - (+a.passif || 0));
     var ratio = net > 0 ? capacite / net : 0;
+    var pv = plusValue(a, +a.valeur || 0, 1, ctx.T0);
+    // intérêt fiscal : droits et coûts du plan avec et sans cette vente
+    var d0 = JSON.parse(JSON.stringify(d)), d1 = JSON.parse(JSON.stringify(d));
+    d0.actifs.forEach(function (x) { if (x.id === a.id) x.planFBO = false; });
+    d1.actifs.forEach(function (x) { if (x.id === a.id) { x.planFBO = true; x.fboAffectation = x.fboAffectation || 'av'; } });
+    var m0 = moyenne(d0, PLAN_FULL).moyenne, m1 = moyenne(d1, PLAN_FULL).moyenne;
     out.push({ actifId: a.id, actif: a.libelle, type: a.type, categorie: a.categorieRevenu || '', revenu: rev, rendement: (+a.valeur ? rev / +a.valeur : 0), valeurNette: net, capacite: capacite, ratio: ratio,
+      impotPV: pv.impot, pv: pv, gain: m0 - m1, retenu: !!a.planFBO,
       verdict: ratio >= 0.6 ? 'Bon candidat' : ratio >= 0.3 ? 'Avec donation complémentaire' : 'Peu adapté' });
   });
   return out.sort(function (x, y) { return y.ratio - x.ratio; });
@@ -935,7 +1073,7 @@ function etatAbattements(d) {
 }
 
 if (typeof module !== 'undefined') module.exports = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
-var CALC = { FISC: FISC, REGIMES: REGIMES, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
+var CALC = { FISC: FISC, REGIMES: REGIMES, plusValue: plusValue, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
 if (typeof module !== 'undefined') module.exports = CALC;
 
 </script>
@@ -1378,9 +1516,10 @@ var PPTX = (function () {
       { runs: [{ t: 'Hypothèses', b: true, color: 'accent1', sz: 1300 }], spcAft: 4 },
       { runs: ['Crédit sur ' + P.fboDuree + ' ans à ' + (Math.round(P.fboTaux * 1000) / 10).toLocaleString('fr-FR') + ' %, ' + Math.round(P.fboPonderation * 100) + ' % des revenus nets affectés au remboursement.'], bullet: true, spcAft: 3 },
       { runs: ['Plus-value de cession et frais d’acquisition à chiffrer.'], bullet: true }], { sz: 1100 });
-    var b = [['Bien', 'Revenu net', 'Finançable', 'Part de la valeur', 'Verdict']];
-    A.fbo.slice(0, 8).forEach(function (f) { b.push([f.actif, eur(f.revenu), eur(f.capacite), Math.round(f.ratio * 100) + ' %', { t: f.verdict, algn: 'ctr', fill: f.ratio >= 0.3 ? { s: 'accent1', tint: 0.3 } : null }]); });
-    S.table(Z.x + lw + Z.w * 0.04, Z.y, Z.w - lw - Z.w * 0.04, [2.4, 1.3, 1.4, 1.3, 2], b, { sz: 1000, rowH: Math.round(EMU * 0.4) });
+    var b = [['Bien', 'Finançable', 'Part', 'Impôt plus-value', 'Effet sur les droits', '']];
+    A.fbo.slice(0, 8).forEach(function (f) { b.push([f.actif, eur(f.capacite), Math.round(f.ratio * 100) + ' %', f.pv.renseigne ? eur(f.impotPV) : 'à chiffrer', (f.gain >= 0 ? '− ' : '+ ') + eur(Math.abs(f.gain)), { t: f.retenu ? 'Retenu' : 'Non retenu', algn: 'ctr', fill: f.retenu ? { s: 'accent1', tint: 0.3 } : null }]); });
+    S.table(Z.x + lw + Z.w * 0.04, Z.y, Z.w - lw - Z.w * 0.04, [2.4, 1.3, 0.8, 1.3, 1.5, 1.3], b, { sz: 950, rowH: Math.round(EMU * 0.4) });
+    S.text(Z.x + lw + Z.w * 0.04, Z.y + Z.h * 0.72, Z.w - lw - Z.w * 0.04, Z.h * 0.25, [{ runs: [{ t: 'Effet sur les droits : comparaison de la stratégie avec et sans la vente, plus-value et frais d’acquisition inclus. Le family buy out est retenu lorsqu’il réduit le coût global.', i: true }] }], { sz: 1000 });
     return S;
   }
   function sDonationsAnterieures(M, A) {
@@ -1592,6 +1731,7 @@ var PPTX = (function () {
       if (pi === pages.length - 1) {
         var notes = [];
         ctx.clients.forEach(function (k) { var p = ctx.persons[k]; notes.push(nomCourt(ctx, k) + ' : ' + p.age + ' ans, espérance de vie ' + Math.round(p.ev) + ' ans' + (p.ev > 15 ? ' – abattements reconstitués le ' + dfr(CALC.addYears(ctx.T0, 15)) : ' – un renouvellement à 15 ans est incertain') + '.'); });
+        if ((r.fbo || []).length) notes.push('Family buy out : ' + r.fbo.map(function (f) { return f.actif + ' vendu ' + eur(f.prix) + ' par ' + nomCourt(ctx, f.client).toLowerCase() + ' (impôt de plus-value ' + eur(f.impotPV) + ')'; }).join(', ') + '.');
         if ((r.dpt || []).length) notes.push('Réattribution par donation-partage transgénérationnelle : ' + r.dpt.map(function (x) { return x.actif + ' (' + eur(x.valeur) + ', droit de partage ' + eur(x.droits) + ')'; }).join(', ') + '.');
         if (ctx.P.sautGeneration && (r.heritages || []).length) notes.push('Saut de génération sur l’héritage de vos parents.');
         if (r.cashGifts.length) notes.push('Dons de sommes d’argent : ' + eur(r.cashGifts.reduce(function (s, x) { return s + x.montant; }, 0)) + ' en franchise de droits (art. 790 G / 790 B).');
@@ -2181,8 +2321,8 @@ var XLSXOUT = (function () {
       rr = blocDeces('N', 'P', 'Q', rr, dj ? '2ème décès' : '1er décès', Pl[0], Pl[1], dj);
       ldd.push(st + 7, st + 8);
     }
-    put(ws, 'N' + rr, 'Coûts société et droit de partage (DPT)');
-    Pl.forEach(function (R, i) { put(ws, ['P', 'Q'][i] + rr, Math.round(R.coutsSociete + (R.droitsDPT || 0)), { fmt: EUR }); });
+    put(ws, 'N' + rr, 'Coûts : société, plus-values, FBO, DPT');
+    Pl.forEach(function (R, i) { put(ws, ['P', 'Q'][i] + rr, Math.round(R.coutsSociete + (R.droitsDPT || 0) + (R.impotFBO || 0) + (R.fraisFBO || 0)), { fmt: EUR }); });
     var coutRow = rr; rr++;
     put(ws, 'N' + rr, 'Total des droits :', { b: true, bt: 'medium' });
     Pl.forEach(function (R, i) {
@@ -2231,15 +2371,20 @@ var XLSXOUT = (function () {
     put(wf, 'A3', 'Taux'); put(wf, 'B3', P.fboTaux, { fmt: '0.00%', input: true });
     put(wf, 'A4', 'Durée (années)'); put(wf, 'B4', P.fboDuree, { input: true });
     put(wf, 'A5', 'Part des revenus affectée'); put(wf, 'B5', P.fboPonderation, { fmt: PCT, input: true });
-    ['Bien', 'Catégorie', 'Revenu net', 'Rendement', 'Finançable', 'Part de la valeur', 'Verdict'].forEach(function (z, i) { put(wf, String.fromCharCode(65 + i) + '7', z, { navy: true }); });
+    [32, 18, 14, 12, 16, 14, 24, 16, 16, 14].forEach(function (z, i) { wf.getColumn(i + 1).width = z; });
+    ['Bien', 'Catégorie', 'Revenu net', 'Rendement', 'Finançable', 'Part de la valeur', 'Verdict', 'Impôt plus-value', 'Effet sur les droits', 'Retenu'].forEach(function (z, i) { put(wf, String.fromCharCode(65 + i) + '7', z, { navy: true }); });
     var CAT = { foncier: 'Revenus fonciers', bic: 'Location meublée (BIC)', dividendes: 'Dividendes', interets: 'Intérêts', autre: 'Autre' };
     A.fbo.forEach(function (f, i) {
       var y = 8 + i;
       put(wf, 'A' + y, f.actif); put(wf, 'B' + y, CAT[f.categorie] || ''); put(wf, 'C' + y, f.revenu, { fmt: EUR, input: true }); put(wf, 'D' + y, f.rendement, { fmt: '0.0%' });
       put(wf, 'E' + y, { formula: 'PV($B$3/12,$B$4*12,-C' + y + '*$B$5/12)', result: f.capacite }, { fmt: EUR });
-      put(wf, 'F' + y, { formula: 'IFERROR(E' + y + '/' + Math.round(f.valeurNette) + ',0)', result: f.ratio }, { fmt: PCT }); put(wf, 'G' + y, f.verdict);
+      put(wf, 'F' + y, { formula: 'IFERROR(E' + y + '/' + Math.round(f.valeurNette) + ',0)', result: f.ratio }, { fmt: PCT }); put(wf, 'G' + y, f.verdict); put(wf, 'H' + y, Math.round(f.impotPV), { fmt: EUR }); put(wf, 'I' + y, Math.round(f.gain), { fmt: EUR }); put(wf, 'J' + y, f.retenu ? 'Oui' : 'Non', { b: f.retenu });
     });
     if (!A.fbo.length) put(wf, 'A8', 'Aucun bien productif de revenus saisi.', { i: true });
+    var yp = 10 + A.fbo.length;
+    put(wf, 'A' + yp, 'Plus-values latentes', { b: true, sz: 12 }); yp++;
+    ['Bien', 'Régime', 'Valeur', 'Prix de revient', 'Plus-value', 'Impôt', 'Durée de détention'].forEach(function (z, i) { put(wf, String.fromCharCode(65 + i) + yp, z, { navy: true }); }); yp++;
+    (A.pvLatentes || []).filter(function (z) { return z.pv.renseigne; }).forEach(function (z) { put(wf, 'A' + yp, z.actif); put(wf, 'B' + yp, z.pv.regime); put(wf, 'C' + yp, Math.round(z.valeur), { fmt: EUR }); put(wf, 'D' + yp, Math.round(z.pv.acquisition), { fmt: EUR }); put(wf, 'E' + yp, { formula: 'MAX(0,C' + yp + '-D' + yp + ')', result: z.pv.pvBrute }, { fmt: EUR }); put(wf, 'F' + yp, Math.round(z.pv.impot), { fmt: EUR }); put(wf, 'G' + yp, z.pv.annees + ' ans'); yp++; });
     if (A.ctx.parents.length) {
       var wp = wb.addWorksheet('Parents', { views: [{ showGridLines: false }] });
       [32, 12, 14, 16, 12, 16, 16].forEach(function (z, i) { wp.getColumn(i + 1).width = z; });
@@ -2520,13 +2665,59 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       (aide ? '<p class="lead">' + aide + '</p>' : '') +
       '<div class="chips">' + l.map(function (x) { return RENDU[kind](x); }).join('') + (l.length ? '' : '<p class="empty">Aucun pour l’instant.</p>') + '</div>';
   }
+  function noeud(id, kind, l1, l2, opts) {
+    opts = opts || {};
+    return '<button class="noeud n-' + kind + (opts.decede ? ' decede' : '') + (editeur && (editeur.id === id || editeur.anchor === id) ? ' open' : '') + '" data-act="noeud" data-kind="' + kind + '" data-id="' + h(id) + '" data-node="' + h(id) + '">' +
+      '<span class="ico">' + icone(kind === 'client' ? 'parent' : kind) + '</span><span class="nt"><strong>' + h(l1) + (opts.decede ? ' †' : '') + '</strong><small>' + h(l2) + '</small></span></button>';
+  }
+  function age2(n) { if (!n) return 'naissance à saisir'; return CALC.ageAt(n, CALC.parseDate(state.dateEtude) || new Date()) + ' ans'; }
   function rFamille() {
-    var html = groupe('Parents des clients', 'parent', 'Leur espérance de vie fixe la fin des usufruits qu’ils ont conservés ; leur patrimoine estimé permet de chiffrer l’héritage attendu et l’intérêt d’un saut de génération.', 'Ajouter un parent');
-    html += groupe('Enfants', 'enfant', '', 'Ajouter un enfant');
-    html += groupe('Petits-enfants', 'pe', 'Ils peuvent être désignés nus-propriétaires dans les clauses bénéficiaires démembrées.', 'Ajouter un petit-enfant', !state.enfants.length);
-    html += groupe('Frères et sœurs', 'frere', state.enfants.length ? 'Avec des enfants, frères et sœurs ne sont pas héritiers ; ils peuvent être donataires ou bénéficiaires d’assurance-vie.' : 'Sans enfant, les frères et sœurs héritent ; les enfants d’un frère ou d’une sœur prédécédé(e) viennent par représentation.', 'Ajouter un frère ou une sœur');
-    html += groupe('Neveux et nièces', 'neveu', '', 'Ajouter un neveu ou une nièce', !state.freres.length);
-    return html + bulle();
+    var cp = couple();
+    var tb = '<div class="toolbar">' +
+      '<button class="btn ghost" data-act="add-parent">+ Parent</button>' +
+      (cp ? '' : '<button class="btn ghost" data-act="add-conjoint">+ Conjoint</button>') +
+      '<button class="btn ghost" data-act="add-enfant">+ Enfant</button>' +
+      '<button class="btn ghost" data-act="add-pe"' + (state.enfants.length ? '' : ' disabled') + '>+ Petit-enfant</button>' +
+      '<button class="btn ghost" data-act="add-frere">+ Frère ou sœur</button>' +
+      '<button class="btn ghost" data-act="add-neveu"' + (state.freres.length ? '' : ' disabled') + '>+ Neveu ou nièce</button></div>';
+    var aide = '<p class="lead">Cliquez sur une personne pour modifier son état civil ou son patrimoine ; cliquez sur un rond posé sur un lien pour changer la filiation ou l’union.</p>';
+    var cotes = cp ? ['c1', 'c2'] : ['c1'];
+    function parentsDe(k) { return state.parentsClients.filter(function (p) { return (p.de || 'c1') === k; }); }
+    function freresDe(k) { return state.freres.filter(function (f) { return (f.de || 'c1') === k; }); }
+    var r0 = '<div class="rang">' + cotes.map(function (k) { return '<div class="grp">' + parentsDe(k).map(function (p) { return noeud(p.id, 'parent', (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')), (p.lien === 'mere' ? 'mère' : 'père') + ' · ' + (p.decede ? 'décédé(e)' : age2(p.naissance)), { decede: p.decede }); }).join('') + '</div>'; }).join('<div class="sep"></div>') + '</div>';
+    var c = function (k) { var x = state[k]; return noeud(k, 'client', ((x.prenom || '') + ' ' + (x.nom || '')).trim() || (k === 'c1' ? 'Client' : 'Conjoint'), age2(x.naissance)); };
+    var r1 = '<div class="rang">' + '<div class="grp">' + freresDe('c1').map(function (f) { return noeud(f.id, 'frere', f.prenom || 'Frère / sœur', f.decede ? 'prédécédé(e)' : age2(f.naissance), { decede: f.decede }); }).join('') + '</div>' +
+      c('c1') + (cp ? '<span class="union-place"></span>' + c('c2') : '') +
+      '<div class="grp">' + (cp ? freresDe('c2').map(function (f) { return noeud(f.id, 'frere', f.prenom || 'Frère / sœur', f.decede ? 'prédécédé(e)' : age2(f.naissance), { decede: f.decede }); }).join('') : '') + '</div></div>';
+    function nev(k) { return freresDe(k).map(function (f) { return state.neveux.filter(function (n) { return n.parentId === f.id; }).map(function (n) { return noeud(n.id, 'neveu', n.prenom || 'Neveu / nièce', age2(n.naissance)); }).join(''); }).join(''); }
+    var enfOrd = state.enfants.filter(function (e) { return e.parent === 'c1'; }).concat(state.enfants.filter(function (e) { return e.parent === 'commun' || !e.parent; }), state.enfants.filter(function (e) { return e.parent === 'c2'; }));
+    var r2 = '<div class="rang"><div class="grp">' + nev('c1') + '</div>' + enfOrd.map(function (e) { return noeud(e.id, 'enfant', e.prenom || 'Enfant', age2(e.naissance) + (e.handicap ? ' · handicap' : '')); }).join('') + '<div class="grp">' + (cp ? nev('c2') : '') + '</div></div>';
+    var r3 = '<div class="rang">' + enfOrd.map(function (e) { return state.petitsEnfants.filter(function (p) { return p.parentId === e.id; }).map(function (p) { return noeud(p.id, 'pe', p.prenom || 'Petit-enfant', age2(p.naissance)); }).join(''); }).join('') + '</div>';
+    return tb + aide + '<div class="arbre-wrap"><div class="arbre" id="arbre"><svg class="liens" aria-hidden="true"></svg>' + r0 + r1 + r2 + r3 + '<div class="poignees"></div></div></div>' + bulle();
+  }
+  // tracé des liens et des poignées (après rendu)
+  function dessinerArbre() {
+    var A = $('#arbre'); if (!A) return;
+    var svg = A.querySelector('svg.liens'), pg = A.querySelector('.poignees');
+    var ar = A.getBoundingClientRect();
+    svg.setAttribute('width', A.scrollWidth); svg.setAttribute('height', A.scrollHeight);
+    function bx(id) { var n = A.querySelector('[data-node="' + id + '"]'); if (!n) return null; var r = n.getBoundingClientRect(); return { l: r.left - ar.left, r: r.right - ar.left, t: r.top - ar.top, b: r.bottom - ar.top, cx: (r.left + r.right) / 2 - ar.left, cy: (r.top + r.bottom) / 2 - ar.top }; }
+    var paths = [], handles = [];
+    function coude(x1, y1, x2, y2) { var my = (y1 + y2) / 2; paths.push('M' + x1 + ' ' + y1 + ' V' + my + ' H' + x2 + ' V' + y2); }
+    function poignee(id, x, y, titre, sym) { handles.push('<button class="poignee" data-act="lien" data-id="' + h(id) + '" style="left:' + (x - 11) + 'px;top:' + (y - 11) + 'px" title="' + h(titre) + '" aria-label="' + h(titre) + '">' + sym + '</button>'); }
+    var c1 = bx('c1'), c2 = couple() ? bx('c2') : null;
+    if (c1 && c2) { paths.push('M' + c1.r + ' ' + c1.cy + ' H' + c2.l); poignee('L:union', (c1.r + c2.l) / 2, c1.cy, 'Union : mariage, régime, donation entre époux', '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>'); }
+    state.parentsClients.forEach(function (p) { var b = bx(p.id), cl = bx(p.de || 'c1'); if (!b || !cl) return; coude(b.cx, b.b, cl.cx, cl.t); poignee('L:parent:' + p.id, b.cx, b.b + 12, 'Parent de… (père / mère)', '↓'); });
+    state.freres.forEach(function (f) { var b = bx(f.id), cl = bx(f.de || 'c1'); if (!b || !cl) return; var y = Math.min(b.t, cl.t) - 10; paths.push('M' + cl.cx + ' ' + cl.t + ' V' + y + ' H' + b.cx + ' V' + b.t); poignee('L:frere:' + f.id, b.cx, y, 'Frère ou sœur de…', '↔'); });
+    state.enfants.forEach(function (e) {
+      var b = bx(e.id); if (!b) return;
+      var src = (e.parent === 'commun' || !e.parent) && c1 && c2 ? { cx: (c1.r + c2.l) / 2, b: c1.cy } : bx(e.parent === 'c2' ? 'c2' : 'c1');
+      if (!src) return; coude(src.cx, src.b, b.cx, b.t); poignee('L:enfant:' + e.id, b.cx, b.t - 12, 'Filiation de ' + (e.prenom || 'l’enfant'), '↓');
+    });
+    state.petitsEnfants.forEach(function (p) { var b = bx(p.id), par = bx(p.parentId); if (!b || !par) return; coude(par.cx, par.b, b.cx, b.t); poignee('L:pe:' + p.id, b.cx, b.t - 12, 'Parent de ' + (p.prenom || 'ce petit-enfant'), '↓'); });
+    state.neveux.forEach(function (n) { var b = bx(n.id), par = bx(n.parentId); if (!b || !par) return; coude(par.cx, par.b, b.cx, b.t); poignee('L:neveu:' + n.id, b.cx, b.t - 12, 'Parent de ' + (n.prenom || 'ce neveu'), '↓'); });
+    svg.innerHTML = paths.map(function (d) { return '<path d="' + d + '"/>'; }).join('');
+    pg.innerHTML = handles.join('');
   }
   function rDonations() {
     var benefs = state.enfants.length + state.petitsEnfants.length + state.freres.filter(function (f) { return !f.decede; }).length + state.neveux.length;
@@ -2578,6 +2769,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       if (dto && CALC.addYears(dto, 15) <= (CALC.parseDate(state.dateEtude) || new Date()) && don && !don.decede) tags.push('Plus de 15 ans : DPT 2,5 %');
     } else if (a.origine === 'succession') tags.push('Reçu par succession');
     if (+a.revenu) tags.push('Revenus ' + eur(a.revenu) + ' / an');
+    if (a.planFBO) tags.push('Family buy out');
+    if (a.type !== 'rp' && a.type !== 'financier') { var pvx = CALC.plusValue(a, a.type === 'societe' ? Math.max(0, (+a.valeur || 0) - (+a.passif || 0)) : (+a.valeur || 0), 1, CALC.parseDate(state.dateEtude) || new Date()); if (pvx.renseigne && pvx.pvBrute > 0) tags.push('Plus-value ' + eur(pvx.pvBrute)); }
     if (+a.planVague > 0 && a.type !== 'financier') tags.push('Donation ' + ['', 'aujourd’hui', '+15 ans', '+30 ans'][+a.planVague] + (a.planSociete && a.type !== 'societe' ? ' · SCI' : ''));
     return '<button class="chip t-' + h(a.type) + (editeur && editeur.kind === 'actif' && editeur.id === a.id ? ' open' : '') + '" data-act="edit-actif" data-id="' + h(a.id) + '" aria-haspopup="dialog">' +
       '<span class="ico">' + icone(a.type) + '</span><span class="body"><span class="nm">' + h(a.libelle || 'Sans nom') + '</span>' +
@@ -2594,6 +2787,65 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   function bulle() {
     if (!editeur) return '';
     var html = '', titre = '';
+    if (editeur.kind === 'menu') {
+      var estClient = editeur.id === 'c1' || editeur.id === 'c2';
+      return '<div class="bulle menu" role="dialog" aria-label="Choisir"><span class="fleche"></span><div class="choix">' +
+        '<button class="pill" data-act="ouvrir" data-k="' + (estClient ? 'client' : 'parent') + '" data-id="' + h(editeur.id) + '">' + icone('enfant') + 'État civil</button>' +
+        '<button class="pill" data-act="ouvrir" data-k="' + (estClient ? 'patclient' : 'patparent') + '" data-id="' + h(editeur.id) + '">' + icone('immo') + 'Patrimoine</button></div></div>';
+    }
+    if (editeur.kind === 'client') {
+      var k = editeur.id;
+      var ag = state[k].naissance ? CALC.ageAt(state[k].naissance, CALC.parseDate(state.dateEtude) || new Date()) : null;
+      var ev = ag !== null ? CALC.esperanceVie(state[k].sexe, ag) : null;
+      titre = k === 'c1' ? 'Client' : 'Conjoint / partenaire';
+      html = '<div class="grid g2">' + field('Civilité', k + '.civ', 'select', { options: [['M.', 'M.'], ['Mme', 'Mme']] }) + field('Sexe (tables)', k + '.sexe', 'select', { options: [['H', 'Homme'], ['F', 'Femme']] }) +
+        field('Prénom', k + '.prenom', 'text') + field('Nom', k + '.nom', 'text') + field('Date de naissance', k + '.naissance', 'date') +
+        field('Espérance de vie retenue', k + '.evOverride', 'num', { ph: ev !== null ? (Math.round(ev * 10) / 10).toLocaleString('fr-FR') + ' ans (table)' : 'table', hint: ag !== null ? ag + ' ans aujourd’hui.' : '' }) + '</div>' +
+        '<div class="bactions">' + (k === 'c2' ? '<button class="btn ghost danger" data-act="retirer-conjoint">Retirer le conjoint</button>' : '<span></span>') + '<button class="btn" data-act="fermer">Valider</button></div>';
+      return enveloppe(titre, html);
+    }
+    if (editeur.kind === 'patclient') {
+      var kc = editeur.id;
+      titre = 'Patrimoine de ' + nomClient(kc);
+      var biens = state.actifs.filter(function (a) { return partUI(a, kc) > 0; });
+      var avs = state.av.filter(function (c) { return c.souscripteur === kc; });
+      var tot = biens.reduce(function (sm, a) { return sm + ((+a.valeur || 0) - (+a.passif || 0)) * partUI(a, kc); }, 0) + avs.reduce(function (sm, c) { return sm + (+c.valeur || 0); }, 0);
+      html = '<p class="note">Part nette de ' + h(nomClient(kc)) + ' : <strong>' + eur(tot) + '</strong></p><div class="minilist">' +
+        biens.map(function (a) { return '<button class="mini" data-act="ouvrir" data-k="actif" data-id="' + h(a.id) + '" data-anchor="' + kc + '"><span class="ico">' + icone(a.type) + '</span><span>' + h(a.libelle) + '</span><em>' + eur(((+a.valeur || 0) - (+a.passif || 0)) * partUI(a, kc)) + (partUI(a, kc) < 1 ? ' (' + Math.round(partUI(a, kc) * 100) + ' %)' : '') + '</em></button>'; }).join('') +
+        avs.map(function (c) { return '<button class="mini" data-act="ouvrir" data-k="av" data-id="' + h(c.id) + '" data-anchor="' + kc + '"><span class="ico">' + icone('av') + '</span><span>' + h(c.libelle) + '</span><em>' + eur(c.valeur) + '</em></button>'; }).join('') +
+        (biens.length + avs.length ? '' : '<p class="empty">Aucun bien pour l’instant.</p>') + '</div>' +
+        '<div class="bactions wrap"><button class="btn ghost" data-act="bien-propre" data-id="' + kc + '">+ Bien propre</button>' + (couple() ? '<button class="btn ghost" data-act="bien-commun" data-id="' + kc + '">+ Bien commun</button>' : '') + '<button class="btn ghost" data-act="av-client" data-id="' + kc + '">+ Assurance-vie</button><button class="btn" data-act="fermer">Fermer</button></div>';
+      return enveloppe(titre, html);
+    }
+    if (editeur.kind === 'patparent') {
+      var ip = state.parentsClients.findIndex(function (p) { return p.id === editeur.id; }); if (ip < 0) return '';
+      var bp = 'parentsClients.' + ip + '.';
+      titre = 'Patrimoine estimé de ' + (state.parentsClients[ip].prenom || 'ce parent');
+      html = '<div class="grid g2">' + field('Immobilier', bp + 'patImmo', 'money') + field('Financier', bp + 'patFin', 'money') + field('Assurance-vie et autres', bp + 'patAutre', 'money') +
+        field('Nombre d’enfants', bp + 'nbEnfants', 'num', { ph: String(1 + state.freres.filter(function (f) { return f.de === (state.parentsClients[ip].de || 'c1'); }).length) }) + '</div>' +
+        '<p class="note">Hors biens déjà donnés. Total : ' + eur((+state.parentsClients[ip].patImmo || 0) + (+state.parentsClients[ip].patFin || 0) + (+state.parentsClients[ip].patAutre || 0) || +state.parentsClients[ip].patrimoine || 0) + '</p><div class="bactions"><span></span><button class="btn" data-act="fermer">Valider</button></div>';
+      return enveloppe(titre, html);
+    }
+    if (editeur.kind === 'lien') {
+      var parts = editeur.id.split(':'), typ = parts[1], pid = parts[2];
+      if (typ === 'union') {
+        titre = 'Union';
+        html = '<div class="grid g1">' + field('Situation', 'situation', 'select', { options: [['marie', 'Mariés'], ['pacs', 'Partenaires de PACS'], ['seul', 'Seul(e)']] }) +
+          (state.situation === 'marie' ? field('Régime matrimonial', 'regime', 'select', { options: [['communaute', 'Communauté réduite aux acquêts'], ['separation', 'Séparation de biens'], ['participation', 'Participation aux acquêts'], ['universelle', 'Communauté universelle (attribution intégrale)']] }) + field('Donation entre époux réalisée', 'ddv', 'check', { hint: 'Permet l’usufruit total même avec des enfants non communs.' }) : '') + '</div>';
+      } else {
+        var L = { parent: 'parentsClients', frere: 'freres', enfant: 'enfants', pe: 'petitsEnfants', neveu: 'neveux' }[typ];
+        var ix = state[L].findIndex(function (x) { return x.id === pid; }); if (ix < 0) return '';
+        var b0 = L + '.' + ix + '.', who = state[L][ix].prenom || '';
+        var deux = [['c1', nomClient('c1')]].concat(couple() ? [['c2', nomClient('c2')]] : []);
+        if (typ === 'parent') { titre = 'Lien de parenté'; html = '<div class="grid g2">' + field('Lien', b0 + 'lien', 'select', { options: [['pere', 'Père'], ['mere', 'Mère']] }) + field('Parent de', b0 + 'de', 'select', { options: deux }) + '</div>'; }
+        if (typ === 'frere') { titre = 'Fratrie'; html = '<div class="grid g2">' + field('Frère ou sœur de', b0 + 'de', 'select', { options: deux, cls: 'span2' }) + field('Prédécédé(e)', b0 + 'decede', 'check') + field('Exonération 796-0 ter', b0 + 'exo796', 'check') + '</div>'; }
+        if (typ === 'enfant') { titre = 'Filiation de ' + who; html = '<div class="grid g1">' + field('Enfant', b0 + 'parent', 'select', { options: [['commun', 'Enfant commun']].concat(couple() ? [['c1', 'De ' + nomClient('c1') + ' seul(e)'], ['c2', 'De ' + nomClient('c2') + ' seul(e)']] : [['c1', 'De ' + nomClient('c1')]]) }) + '</div>'; }
+        if (typ === 'pe') { titre = 'Parent de ' + who; html = '<div class="grid g1">' + field('Parent', b0 + 'parentId', 'select', { options: state.enfants.map(function (e) { return [e.id, e.prenom || 'Enfant']; }) }) + '</div>'; }
+        if (typ === 'neveu') { titre = 'Parent de ' + who; html = '<div class="grid g1">' + field('Parent', b0 + 'parentId', 'select', { options: state.freres.map(function (f) { return [f.id, f.prenom || 'Frère / sœur']; }) }) + '</div>'; }
+      }
+      html += '<div class="bactions"><span></span><button class="btn" data-act="fermer">Valider</button></div>';
+      return enveloppe(titre, html);
+    }
     if (editeur.kind === 'actif') {
       var i = state.actifs.findIndex(function (a) { return a.id === editeur.id; }); if (i < 0) return '';
       var a = state.actifs[i], soc = a.type === 'societe';
@@ -2604,6 +2856,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
         field(soc ? 'Valeur des actifs de la société' : 'Valeur', 'actifs.' + i + '.valeur', 'money') +
         field(soc ? 'Dettes de la société (total)' : 'Passif (emprunt)', 'actifs.' + i + '.passif', 'money', { hint: soc ? 'Emprunts bancaires et comptes courants.' : '' }) +
         (soc ? field('dont compte courant d’associé des clients', 'actifs.' + i + '.cca', 'money', { cls: 'span2', hint: 'Créance des clients sur la société : elle réduit la valeur des parts données, mais reste dans leur succession sauf hypothèse de remboursement (onglet Stratégie).' }) : '') +
+        (a.type !== 'financier' ? field('Prix d’acquisition', 'actifs.' + i + '.prixAcquisition', 'money', { hint: a.origine ? 'Ou valeur déclarée lors de la transmission.' : '' }) + field('Date d’acquisition', 'actifs.' + i + '.dateAcquisition', 'date') +
+          (a.type === 'immo' || a.type === 'autre' ? field('Travaux réels (facultatif)', 'actifs.' + i + '.travaux', 'money', { hint: 'Sinon forfait de 15 % après 5 ans.', cls: 'span2' }) : '') + pvApercu(a) : '') +
         field('Origine', 'actifs.' + i + '.origine', 'select', { cls: 'span2', options: [['', 'Acquis par les clients'], ['donation', 'Reçu par donation'], ['succession', 'Reçu par succession']] }) +
         (a.origine === 'donation' ? field('Date de la donation reçue', 'actifs.' + i + '.dateOrigine', 'date') + field('Valeur déclarée à l’époque', 'actifs.' + i + '.valeurOrigine', 'money') +
           field('Donateur', 'actifs.' + i + '.donateurId', 'select', { options: [['', 'Autre / non renseigné']].concat(state.parentsClients.map(function (p) { return [p.id, (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')) + ' (' + (p.lien === 'mere' ? 'mère' : 'père') + ' de ' + nomClient(p.de || 'c1') + ')']; })) }) +
@@ -2647,8 +2901,17 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
         field('Primes versées après 70 ans', 'av.' + j + '.primesApres70', 'money', { hint: 'Assiette 757 B (intérêts exonérés).', cls: 'span2' }) + '</div>' +
         '<div class="bactions"><button class="btn ghost danger" data-act="del-av" data-i="' + j + '">Supprimer ce contrat</button><button class="btn" data-act="fermer">Valider</button></div>';
     }
-    return '<div class="bulle" role="dialog" aria-label="' + h(titre) + '"><span class="fleche"></span><div class="bhead"><strong>' + h(titre) + '</strong><button class="x" data-act="fermer" aria-label="Fermer">×</button></div>' + html + '</div>';
+    return enveloppe(titre, html);
   }
+  function pvApercu(a) {
+    if (a.type === 'rp') return '<p class="note span2">Résidence principale : plus-value exonérée.</p>';
+    var v = a.type === 'societe' ? Math.max(0, (+a.valeur || 0) - (+a.passif || 0)) : (+a.valeur || 0);
+    var pv = CALC.plusValue(a, v, 1, CALC.parseDate(state.dateEtude) || new Date());
+    if (!pv.renseigne) return '<p class="note span2">Renseignez le prix et la date d’acquisition pour chiffrer la plus-value d’un apport en société ou d’une vente.</p>';
+    return '<p class="note span2 pvbox">Plus-value latente : <strong>' + eur(pv.pvBrute) + '</strong> · impôt si cession aujourd’hui : <strong>' + eur(pv.impot) + '</strong><br><small>' + h(pv.regime) + '</small></p>';
+  }
+  function enveloppe(titre, html) { return '<div class="bulle" role="dialog" aria-label="' + h(titre) + '"><span class="fleche"></span><div class="bhead"><strong>' + h(titre) + '</strong><button class="x" data-act="fermer" aria-label="Fermer">×</button></div>' + html + '</div>'; }
+  function partUI(a, k) { if (!couple()) return k === 'c1' ? 1 : 0; var p = +a.partC1; if (isNaN(p)) p = 50; return k === 'c1' ? p / 100 : 1 - p / 100; }
   function rPatrimoine() {
     var tot = state.actifs.reduce(function (s, a) { return s + (+a.valeur || 0) - (+a.passif || 0); }, 0);
     var totAV = state.av.reduce(function (s, c) { return s + (+c.valeur || 0); }, 0);
@@ -2662,7 +2925,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   function placerBulle() {
     var mainEl = $('#main'); if (mainEl) mainEl.style.minHeight = '';
     var b = $('.bulle'); if (!b || !editeur) return;
-    var chip = $('.chip[data-id="' + editeur.id + '"]'), main = $('#main');
+    var chip = $('[data-id="' + (editeur.anchor || editeur.id) + '"]'), main = $('#main');
     if (!chip) return;
     if (window.matchMedia('(max-width: 600px)').matches) { b.classList.add('sheet'); return; }
     b.classList.remove('sheet');
@@ -2681,10 +2944,10 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (!cand.length) html += '<p class="empty">Aucun bien transmissible en nue-propriété (les liquidités sont exclues : art. 774 bis CGI).</p>';
     else {
       var ctxS = CALC.prepare(normaliser(clone(state)));
-      html += '<div class="tablewrap"><table class="t edit"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Passif</th><th>Vague</th><th>Via SCI</th><th>DPT 2,5 %</th></tr></thead><tbody>';
+      html += '<div class="tablewrap"><table class="t edit"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Passif</th><th>Vague</th><th>Via SCI</th><th>FBO</th><th>DPT 2,5 %</th></tr></thead><tbody>';
       state.actifs.forEach(function (a, i) {
         if (a.type === 'financier') return;
-        html += '<tr><td>' + h(a.libelle) + '</td><td class="n">' + eur(a.valeur) + '</td><td class="n">' + (a.passif ? eur(a.passif) : '–') + '</td><td><select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></td><td>' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + '</td><td>' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '>' : '<span class="muted">–</span>') + '</td></tr>';
+        html += '<tr><td>' + h(a.libelle) + '</td><td class="n">' + eur(a.valeur) + '</td><td class="n">' + (a.passif ? eur(a.passif) : '–') + '</td><td>' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td>' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + '</td><td>' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="av"' + (a.fboAffectation !== 'conserve' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td>' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '>' : '<span class="muted">–</span>') + '</td></tr>';
       });
       html += '</tbody></table></div>';
     }
@@ -2707,7 +2970,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     return html;
   }
   function rHypotheses() {
-    return '<p class="lead">Hypothèses de l’étude. Par défaut : premier décès après 81 ans, conjoint optant pour l’usufruit total valorisé à 20 %.</p><div class="grid g3">' +
+    return '<p class="lead">Hypothèses de l’étude. Par défaut : premier décès après 81 ans, conjoint optant pour l’usufruit total valorisé à 20 %.</p><div class="grid g3">' + field('Date de l’étude', 'dateEtude', 'date') + '</div><div class="grid g3">' +
       field('Âge minimum au 1er décès', 'params.ageMinPremierDeces', 'num', { hint: 'Fixe aussi l’âge minimum de l’usufruitier (art. 669).' }) +
       field('Décote sur parts de SCI', 'params.decoteSociete', 'pct') +
       field('Frais fixes de création de SCI', 'params.fraisFixesSociete', 'money') +
@@ -2717,7 +2980,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       field('Abattement de 20 % sur la résidence principale', 'params.abattementRP', 'check') +
       field('Emprunts remboursés avant les décès', 'params.dettesRembourseesAuDeces', 'check') + '</div><div class="grid g3">' +
       field('Héritage attendu des parents dans les successions', 'params.heritageParents', 'check') + '</div>' +
-      '<h3 class="sub">Family buy out</h3><div class="grid g3">' + field('Taux d’emprunt', 'params.fboTaux', 'pct') + field('Durée (années)', 'params.fboDuree', 'num') + field('Part des revenus affectée au crédit', 'params.fboPonderation', 'pct', { hint: '70 % par défaut, comme la pondération bancaire des loyers.' }) + '</div>';
+      '<h3 class="sub">Family buy out</h3><div class="grid g3">' + field('Taux d’emprunt', 'params.fboTaux', 'pct') + field('Durée (années)', 'params.fboDuree', 'num') + field('Part des revenus affectée au crédit', 'params.fboPonderation', 'pct', { hint: '70 % par défaut, comme la pondération bancaire des loyers.' }) +
+      field('Frais d’acquisition (immeubles)', 'params.fboFraisImmo', 'pct') + field('Frais d’acquisition (titres)', 'params.fboFraisTitres', 'pct') + '</div>';
   }
   function bar(v, mx, cls) { return '<span class="bar ' + (cls || '') + '" style="--w:' + Math.max(1, Math.round(100 * v / (mx || 1))) + '%"></span>'; }
   function rAnalyse() {
@@ -2735,7 +2999,14 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
           s += '<tr><td>Actif taxable</td><td class="n">' + eur(D.actifNet) + '</td></tr><tr><td>Droits de succession</td><td class="n">' + eur(D.droitsSucc) + '</td></tr><tr><td>Prélèvement AV (990 I)</td><td class="n">' + eur(D.tax990) + '</td></tr>';
           if (D.creance) s += '<tr><td>Créance de restitution</td><td class="n">' + eur(D.creance) + '</td></tr>';
         });
-        if (avecDon) { s += '<tr class="sec"><td colspan="2">Plan</td></tr><tr><td>Droits de donation</td><td class="n">' + eur(r.droitsDonations) + '</td></tr>'; if (r.coutsSociete) s += '<tr><td>Coûts société</td><td class="n">' + eur(r.coutsSociete) + '</td></tr>'; }
+        if (avecDon) {
+          s += '<tr class="sec"><td colspan="2">Plan</td></tr><tr><td>Droits de donation</td><td class="n">' + eur(r.droitsDonations) + '</td></tr>';
+          if (r.coutsSociete) s += '<tr><td>Coûts société (dont plus-value d’apport)</td><td class="n">' + eur(r.coutsSociete) + '</td></tr>';
+          if (r.impotFBO) s += '<tr><td>Impôt de plus-value (family buy out)</td><td class="n">' + eur(r.impotFBO) + '</td></tr>';
+          if (r.fraisFBO) s += '<tr><td>Frais d’acquisition (société des enfants)</td><td class="n">' + eur(r.fraisFBO) + '</td></tr>';
+          if (r.droitsDPT) s += '<tr><td>Droit de partage (DPT)</td><td class="n">' + eur(r.droitsDPT) + '</td></tr>';
+          (r.fbo || []).forEach(function (f) { s += '<tr><td colspan="2" class="opt">Family buy out : ' + h(f.actif) + ' vendu ' + eur(f.prix) + ' par ' + h(nomClient(f.client)) + ', ' + eur(f.net) + ' net ' + (f.affectation === 'av' ? 'placés en assurance-vie' : 'conservés') + (f.apportNecessaire > 0 ? ' ; apport à prévoir pour les enfants : ' + eur(f.apportNecessaire) : '') + '</td></tr>'; });
+        }
         s += '<tr class="tot"><td>Total</td><td class="n">' + eur(r.total) + '</td></tr></tbody></table>';
         if (r.warnings.length) s += '<ul class="warn">' + r.warnings.map(function (w) { return '<li>' + h(w) + '</li>'; }).join('') + '</ul>';
         s += '</div>';
@@ -2758,8 +3029,11 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       '<tr><td>Dettes déductibles</td><td class="n">− ' + eur(I.avant.dettes) + '</td></tr><tr class="tot"><td>Patrimoine net taxable</td><td class="n">' + eur(I.avant.net) + '</td></tr><tr class="tot"><td>IFI annuel</td><td class="n">' + eur(I.avant.ifi) + '</td></tr></tbody></table>' +
       '<p class="note">' + (I.avant.assujetti ? 'Assujetti (seuil 1 300 000 €). ' : 'Non assujetti (seuil 1 300 000 €). ') + 'Les donations en nue-propriété avec réserve d’usufruit ne réduisent pas l’IFI : l’usufruitier déclare la pleine propriété.</p></div>' +
       '<div class="res card"><h4>Après la stratégie</h4><table class="t compact"><tbody><tr><td>Patrimoine net taxable</td><td class="n">' + eur(I.apres.net) + '</td></tr><tr class="tot"><td>IFI annuel</td><td class="n">' + eur(I.apres.ifi) + '</td></tr></tbody></table></div></div>';
-    if (A.fbo.length) html += '<h3>Family buy out</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Revenu net</th><th class="n">Rendement</th><th class="n">Finançable par les revenus</th><th class="n">Part de la valeur nette</th><th>Verdict</th></tr></thead><tbody>' +
-      A.fbo.map(function (f) { return '<tr><td>' + h(f.actif) + '</td><td class="n">' + eur(f.revenu) + '</td><td class="n">' + (Math.round(f.rendement * 1000) / 10).toLocaleString('fr-FR') + ' %</td><td class="n">' + eur(f.capacite) + '</td><td class="n">' + Math.round(f.ratio * 100) + ' %</td><td><span class="tag ' + (f.ratio >= 0.3 ? 'ok' : 'ko') + '">' + h(f.verdict) + '</span></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Une société détenue par vos enfants rachète le bien à crédit ; les revenus remboursent l’emprunt. Vous percevez le prix (plus-value de cession à chiffrer), que vous pouvez conserver, donner ou placer en assurance-vie.</p>';
+    if (A.fbo.length) html += '<h3>Family buy out</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Revenu net</th><th class="n">Finançable</th><th class="n">Part de la valeur</th><th class="n">Impôt de plus-value</th><th class="n">Effet sur les droits</th><th>Dans la stratégie</th></tr></thead><tbody>' +
+      A.fbo.map(function (f) { return '<tr><td>' + h(f.actif) + '<br><small class="muted">' + h(f.verdict) + '</small></td><td class="n">' + eur(f.revenu) + '</td><td class="n">' + eur(f.capacite) + '</td><td class="n">' + Math.round(f.ratio * 100) + ' %</td><td class="n">' + (f.pv.renseigne ? eur(f.impotPV) : '<span class="muted">prix d’achat ?</span>') + '</td><td class="n">' + (f.gain >= 0 ? 'économie ' : 'surcoût ') + eur(Math.abs(f.gain)) + '</td><td><span class="tag ' + (f.retenu ? 'ok' : 'ko') + '">' + (f.retenu ? 'Utilisé' : 'Non utilisé') + '</span></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Une société détenue par vos enfants rachète le bien à crédit ; les revenus remboursent l’emprunt. Vous percevez le prix (plus-value de cession à chiffrer), que vous pouvez conserver, donner ou placer en assurance-vie.</p>';
+    var pvs = (A.pvLatentes || []).filter(function (x) { return x.pv.renseigne; });
+    if (pvs.length) html += '<h3>Plus-values latentes</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Prix de revient</th><th class="n">Plus-value</th><th class="n">Impôt si cession ou apport</th><th>Régime</th></tr></thead><tbody>' +
+      pvs.map(function (x) { return '<tr><td>' + h(x.actif) + '</td><td class="n">' + eur(x.valeur) + '</td><td class="n">' + eur(x.pv.acquisition) + '</td><td class="n">' + eur(x.pv.pvBrute) + '</td><td class="n">' + eur(x.pv.impot) + '</td><td><small>' + h(x.pv.regime) + '</small></td></tr>'; }).join('') + '</tbody></table></div><p class="note">L’apport d’un immeuble à une société est une cession : la plus-value est imposée au jour de l’apport. Elle est intégrée aux coûts du levier société et du family buy out.</p>';
     var hs = A.sans.resultats[0].heritages || [];
     if (hs.length) html += '<h3>Héritage attendu de vos parents</h3><div class="tablewrap"><table class="t"><thead><tr><th>Parent</th><th>Pour</th><th class="n">Décès estimé</th><th class="n">Part reçue</th><th class="n">Droits à payer</th></tr></thead><tbody>' +
       hs.map(function (x) { return '<tr><td>' + h(x.parent) + '</td><td>' + h(nomClient(x.client)) + '</td><td class="n">' + x.date.getFullYear() + '</td><td class="n">' + eur(x.montant) + '</td><td class="n">' + eur(x.droits) + '</td></tr>'; }).join('') + '</tbody></table></div><p class="note">Sans saut de génération, cet héritage s’ajoute ensuite à votre propre succession et il est taxé une seconde fois.</p>';
@@ -2790,7 +3064,6 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   }
 
   var SECTIONS = [
-    { id: 'clients', t: 'Clients', r: rClients },
     { id: 'famille', t: 'Famille', r: rFamille },
     { id: 'donations', t: 'Donations antérieures', r: rDonations },
     { id: 'patrimoine', t: 'Patrimoine', r: rPatrimoine },
@@ -2799,7 +3072,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     { id: 'analyse', t: 'Analyse', r: rAnalyse },
     { id: 'exports', t: 'Exports', r: rExports }
   ];
-  function courante() { var x = (location.hash || '').slice(1); return SECTIONS.some(function (s) { return s.id === x; }) ? x : 'clients'; }
+  function courante() { var x = (location.hash || '').slice(1); if (x === 'clients') return 'famille'; return SECTIONS.some(function (s) { return s.id === x; }) ? x : 'famille'; }
   function rendre() {
     var cur = courante();
     $('#nav').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '"' + (s.id === cur ? ' aria-current="page"' : '') + '>' + h(s.t) + '</a>'; }).join('');
@@ -2807,6 +3080,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (cur !== rendre.derniere) editeur = null;
     rendre.derniere = cur;
     $('#main').innerHTML = '<h2>' + h(sec.t) + '</h2>' + sec.r();
+    dessinerArbre();
     placerBulle();
     rendreBandeau();
     var act = $('#nav a[aria-current]'); if (act && act.scrollIntoView) { try { act.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { } }
@@ -2886,6 +3160,18 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'del-actif') { state.actifs.splice(i, 1); editeur = null; }
     if (a === 'add-av') { var nc = { id: uid('v'), libelle: 'Contrat', souscripteur: 'c1', valeur: 0, valeurApres70: 0, primesApres70: 0 }; state.av.push(nc); editeur = { kind: 'av', id: nc.id }; }
     if (a === 'del-av') { state.av.splice(i, 1); editeur = null; }
+    if (a === 'noeud') {
+      var nk = b.dataset.kind, nid = b.dataset.id;
+      if (nk === 'client' || nk === 'parent') editeur = editeur && editeur.kind === 'menu' && editeur.id === nid ? null : { kind: 'menu', id: nid };
+      else editeur = { kind: nk, id: nid };
+      rendre(); return;
+    }
+    if (a === 'ouvrir') { editeur = { kind: b.dataset.k, id: b.dataset.id, anchor: b.dataset.anchor || (b.dataset.k === 'client' || b.dataset.k === 'parent' || /^pat/.test(b.dataset.k) ? b.dataset.id : undefined) }; rendre(); var f0 = $('.bulle input, .bulle select'); if (f0) f0.focus({ preventScroll: true }); return; }
+    if (a === 'lien') { editeur = editeur && editeur.id === b.dataset.id ? null : { kind: 'lien', id: b.dataset.id }; rendre(); return; }
+    if (a === 'add-conjoint') { state.situation = 'marie'; editeur = { kind: 'client', id: 'c2' }; }
+    if (a === 'retirer-conjoint') { if (!confirm('Retirer le conjoint ? Les biens restent saisis.')) return; state.situation = 'seul'; editeur = null; }
+    if (a === 'bien-propre' || a === 'bien-commun') { var kb = b.dataset.id; var nb2 = { id: uid('a'), libelle: 'Nouveau bien', type: 'immo', partC1: a === 'bien-commun' ? 50 : (kb === 'c1' ? 100 : 0), valeur: 0, passif: 0, planVague: 0, planSociete: false }; state.actifs.push(nb2); editeur = { kind: 'actif', id: nb2.id, anchor: kb }; }
+    if (a === 'av-client') { var kv = b.dataset.id; var nv = { id: uid('v'), libelle: 'Contrat', souscripteur: kv, valeur: 0, valeurApres70: 0, primesApres70: 0 }; state.av.push(nv); editeur = { kind: 'av', id: nv.id, anchor: kv }; }
     if (/^edit-/.test(a)) { var kind = a.slice(5); editeur = editeur && editeur.id === b.dataset.id ? null : { kind: kind, id: b.dataset.id }; rendre(); var f = $('.bulle input, .bulle select'); if (f && editeur) f.focus({ preventScroll: true }); return; }
     if (a === 'fermer') { editeur = null; planifier(true); return; }
     if (a === 'optimiser') {
@@ -2902,7 +3188,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'xlsx') return genererXLSX(b);
     if (a === 'json') return enregistrer(nomFichier('Dossier') + '.json', new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
     if (a === 'exemple') { state = clone(EXEMPLE); state.dateEtude = today(); toast('Exemple chargé.'); }
-    if (a === 'nouveau') { if (!confirm('Effacer le dossier en cours ?')) return; state = clone(VIDE); state.dateEtude = today(); location.hash = '#clients'; }
+    if (a === 'nouveau') { if (!confirm('Effacer le dossier en cours ?')) return; state = clone(VIDE); state.dateEtude = today(); location.hash = '#famille'; }
     if (a === 'reset-all') {
       if (!confirm('Tout réinitialiser ? Le dossier en cours et le modèle PowerPoint mémorisé seront effacés de ce navigateur. Pensez à enregistrer le dossier (.json) avant.')) return;
       try { localStorage.removeItem(STORE_KEY); } catch (e) { }
@@ -2910,7 +3196,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       modele = null; modeleInfo = null; appliquerTheme(null);
       state = normaliser(clone(VIDE)); state.dateEtude = today();
       analyse = null; sauver();
-      location.hash = '#clients'; rendre(); window.scrollTo(0, 0);
+      location.hash = '#famille'; rendre(); window.scrollTo(0, 0);
       toast('Tout a été réinitialisé.');
       return;
     }
@@ -2920,11 +3206,11 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   window.addEventListener('hashchange', function () { rendre(); window.scrollTo(0, 0); });
   document.addEventListener('mousedown', function (ev) {
     if (!editeur) return;
-    if (ev.target.closest('.bulle') || ev.target.closest('.chip') || ev.target.closest('[data-act^="add-"]')) return;
+    if (ev.target.closest('.bulle') || ev.target.closest('.chip') || ev.target.closest('.noeud') || ev.target.closest('.poignee') || ev.target.closest('[data-act^="add-"]')) return;
     editeur = null; planifier(true);
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && editeur) { editeur = null; planifier(true); } });
-  window.addEventListener('resize', function () { placerBulle(); });
+  window.addEventListener('resize', function () { dessinerArbre(); placerBulle(); });
 
   function nomFichier(prefix) {
     var n = [state.c1.nom, couple() && state.c2.nom !== state.c1.nom ? state.c2.nom : ''].filter(Boolean).join(' - ') || 'Client';
