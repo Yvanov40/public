@@ -1,5 +1,17 @@
 <!doctype html>
+<!-- ==================================================================================
+     gp.html — ancienne adresse de l'Audit civil et fiscal
+     L'Audit a déménagé dans le dossier audit/. Cette page ne contient plus l'appli :
+     elle renvoie simplement vers la nouvelle adresse, pour que les anciens favoris et
+     l'appli Audit installée avant le déménagement continuent de fonctionner.
+     À supprimer quand l'Audit aura été réinstallé depuis audit/ sur tous les appareils.
+     ================================================================================== -->
 <html lang="fr"><head><meta charset="utf-8"><title>Audit civil et fiscal</title>
+<!-- 1re méthode : la balise « refresh » demande au navigateur d'aller à audit/ après 0 seconde -->
 <meta http-equiv="refresh" content="0; url=audit/">
+<!-- 2e méthode, plus rapide : une ligne de JavaScript qui remplace l'adresse.
+     location.replace : on change de page sans garder gp.html dans l'historique (le bouton retour
+     ne ramène donc pas ici). location.hash : on garde un éventuel #… de fin d'adresse. -->
 <script>location.replace("audit/" + location.hash);</script></head>
+<!-- Si ni l'un ni l'autre ne marche (cas très rare), un lien à cliquer -->
 <body><p>L’Audit civil et fiscal a déménagé : <a href="audit/">audit/</a></p></body></html>

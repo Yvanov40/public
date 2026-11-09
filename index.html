@@ -1,35 +1,56 @@
 <!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
+<!-- ==================================================================================
+     index.html (racine du site) — la page d'accueil « Mes applis »
+     Adresse : https://yvanov40.github.io/public/
+     Elle ne fait qu'une chose : présenter les trois applis et ouvrir chacune dans sa
+     propre fenêtre. Une page web se compose de trois langages :
+       - le HTML (les balises <…>) décrit le contenu : titres, liens, images ;
+       - le CSS (entre <style> et </style>) décrit l'apparence : couleurs, tailles, marges ;
+       - le JavaScript (entre <script> et </script>) décrit le comportement.
+     ================================================================================== -->
+<html lang="fr">                                      <!-- la page est en français -->
+<head>                                                <!-- l'en-tête : réglages invisibles de la page -->
+<meta charset="utf-8">                                <!-- encodage des caractères (pour les accents) -->
+<!-- Sur téléphone : la page prend la largeur de l'écran (sans zoom arrière), jusque sous l'encoche -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mes applis</title>
-<meta name="theme-color" content="#0c2d39">
-<link rel="icon" type="image/png" href="suivi/icone-192.png">
+<title>Mes applis</title>                             <!-- le nom affiché dans l'onglet du navigateur -->
+<meta name="theme-color" content="#0c2d39">           <!-- couleur de la barre du navigateur sur téléphone -->
+<link rel="icon" type="image/png" href="suivi/icone-192.png">   <!-- la petite icône de l'onglet -->
 <style>
+  /* :root = toute la page. On y range des « variables » de couleurs (--bleu, --or…) qu'on
+     réutilise plus bas avec var(--bleu) : pour changer une couleur, on ne la change qu'ici. */
   :root { color-scheme: light; --bleu: #0c2d39; --or: #a77d2f; --fond: #f6f2ea; --carte: #fffdf9; --bordure: #e8e2d6; --discret: #7a6f60; }
+  /* * = tous les éléments. border-box : la largeur d'un élément inclut ses marges intérieures. */
   * { box-sizing: border-box; }
+  /* Le corps de la page : fond beige, texte bleu, police du système. env(safe-area-inset-…) =
+     place laissée par l'encoche et la barre du bas des téléphones. */
   body { margin: 0; min-height: 100vh; background: var(--fond); color: var(--bleu); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     padding: calc(env(safe-area-inset-top, 0px) + 32px) 20px calc(env(safe-area-inset-bottom, 0px) + 32px); }
-  main { max-width: 760px; margin: 0 auto; }
-  h1 { font: 600 30px Georgia, "Times New Roman", serif; margin: 0 0 6px; }
-  p.sous { color: var(--discret); margin: 0 0 26px; }
-  .applis { display: grid; gap: 14px; }
+  main { max-width: 760px; margin: 0 auto; }          /* le contenu : 760 px de large au plus, centré */
+  h1 { font: 600 30px Georgia, "Times New Roman", serif; margin: 0 0 6px; }   /* le grand titre */
+  p.sous { color: var(--discret); margin: 0 0 26px; }  /* la phrase sous le titre, en gris */
+  .applis { display: grid; gap: 14px; }               /* les trois cartes l'une sous l'autre, espacées de 14 px */
+  /* Chaque carte est un lien (<a>) découpé en 3 colonnes : icône (64 px), texte (le reste), flèche. */
   a.appli { display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; align-items: center; text-decoration: none; color: inherit;
     background: var(--carte); border: 1px solid var(--bordure); border-radius: 18px; padding: 16px 18px; transition: border-color .15s, box-shadow .15s; }
-  a.appli:hover { border-color: var(--or); box-shadow: 0 6px 18px rgba(12,45,57,.08); }
-  a.appli img { width: 64px; height: 64px; border-radius: 15px; }
-  a.appli b { display: block; font: 600 20px Georgia, "Times New Roman", serif; }
-  a.appli span { color: var(--discret); font-size: 14px; }
-  a.appli i { font-style: normal; color: var(--or); font-size: 22px; }
+  a.appli:hover { border-color: var(--or); box-shadow: 0 6px 18px rgba(12,45,57,.08); }  /* au survol de la souris : bord doré et ombre */
+  a.appli img { width: 64px; height: 64px; border-radius: 15px; }   /* l'icône de l'appli, aux coins arrondis */
+  a.appli b { display: block; font: 600 20px Georgia, "Times New Roman", serif; }  /* le nom de l'appli */
+  a.appli span { color: var(--discret); font-size: 14px; }          /* la description, en gris */
+  a.appli i { font-style: normal; color: var(--or); font-size: 22px; }  /* la flèche › dorée */
+  /* L'encadré d'aide en bas, à bord pointillé */
   .aide { margin-top: 26px; font-size: 13.5px; color: var(--discret); background: var(--carte); border: 1px dashed var(--bordure); border-radius: 12px; padding: 12px 14px; }
 </style>
 </head>
-<body>
+<body>                                                <!-- le corps : ce qu'on voit -->
 <main>
   <h1>Mes applis</h1>
   <p class="sous">Chacune s’ouvre dans sa propre fenêtre et s’installe séparément, avec sa propre icône.</p>
   <div class="applis">
+    <!-- Une carte par appli. href = l'adresse à ouvrir (le dossier de l'appli).
+         target="appli-suivi" : on ouvre dans une fenêtre nommée « appli-suivi ». La 1re fois, elle
+         est créée ; les fois suivantes, le navigateur réutilise la même fenêtre au lieu d'en ouvrir une autre.
+         rel="opener" : la nouvelle fenêtre sait d'où elle vient (utile au navigateur pour la retrouver). -->
     <a class="appli" href="suivi/" target="appli-suivi" rel="opener"><img src="suivi/icone-192.png" alt=""><div><b>Suivi des dossiers</b><span>Dossiers, clients, agenda, Dutreil, activité.</span></div><i>›</i></a>
     <a class="appli" href="audit/" target="appli-audit" rel="opener"><img src="audit/icon-192.png" alt=""><div><b>Audit civil et fiscal</b><span>Transmission : successions, démembrement, assurance-vie, levier société.</span></div><i>›</i></a>
     <a class="appli" href="revision/" target="appli-revision" rel="opener"><img src="revision/icons/icon-192.png" alt=""><div><b>Révision de la base</b><span>QCM, vrai ou faux et fiches, avec répétition espacée.</span></div><i>›</i></a>
@@ -38,8 +59,12 @@
     ou bouton Partager → « Sur l’écran d’accueil » (iPhone). Vos données et vos réglages sont conservés.</p>
 </main>
 <script>
-  // l'ancien service commun (à la racine) n'a plus lieu d'être : on le retire, chaque appli a le sien
+  // L'ancien service commun (qui vivait à la racine) n'a plus lieu d'être : chaque appli a le sien.
+  // On demande au navigateur la liste des services inscrits pour ce site…
   if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then((liste) => {
+    // …et on désinscrit celui dont la zone (scope) est exactement la racine (/public/).
+    // location.pathname.replace(/[^/]*$/, "") enlève le nom de fichier éventuel de l'adresse
+    // (« /public/index.html » devient « /public/ »).
     for (const r of liste) if (new URL(r.scope).pathname === location.pathname.replace(/[^/]*$/, "")) r.unregister();
   });
 </script>
