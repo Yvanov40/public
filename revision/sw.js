@@ -1,5 +1,5 @@
 /* Service worker : application disponible hors connexion */
-const VERSION = 'revision-v3';
+const VERSION = 'revision-v4';
 const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'vendor/jszip.min.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', e => {

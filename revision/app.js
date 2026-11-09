@@ -623,34 +623,84 @@ function flushResults(force) {
   })().catch(e => { console.warn('Synchronisation', e); return false; }).finally(() => { pushing = null; });
   return pushing;
 }
+function validSession(c) {
+  return c && typeof c.id === 'string' && Array.isArray(c.questions) && c.questions.length &&
+    c.questions.every(q => q && q.question && Array.isArray(q.choix) && q.choix.length >= 2 && Number.isInteger(q.reponse) && q.reponse >= 0 && q.reponse < q.choix.length);
+}
+const tsOf = c => (c && Date.parse(c.creee_le)) || 0;
+async function ghPut(path, obj, message) {
+  const tok = ghToken(); if (!tok) return false;
+  const url = `https://api.github.com/repos/${GH.repo}/contents/${GH.dir}/${path}`;
+  const h = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let sha; const g = await fetch(url + '?ref=main&t=' + Date.now(), { headers: h, cache: 'no-store' });
+    if (g.ok) sha = (await g.json()).sha;
+    const body = { message, content: toB64(JSON.stringify(obj, null, 1)), branch: 'main' }; if (sha) body.sha = sha;
+    const p = await fetch(url, { method: 'PUT', headers: h, body: JSON.stringify(body) });
+    if (p.ok) return true;
+    if (p.status !== 409 && p.status !== 422) return false;
+  }
+  return false;
+}
+/* Publie sur le site une session chargée depuis OneDrive, pour les autres appareils */
+async function publishSession(c) {
+  const { catalogue, ...sess } = c;
+  const ok = await ghPut('session-claude.json', sess, 'Session Claude : ' + (c.titre || c.id));
+  if (ok && Array.isArray(catalogue) && catalogue.length) await ghPut('catalogue.json', { mis_a_jour: c.creee_le || new Date().toISOString(), source: 'OneDrive/BASE', fiches: catalogue }, 'Catalogue des fiches BASE');
+  return ok;
+}
+function setSession(c) {
+  const changed = !S.claude || S.claude.id !== c.id;
+  S.claude = c;
+  if (Array.isArray(c.catalogue) && c.catalogue.length) S.catalogue = c.catalogue;
+  if (changed && S.meta.claudeSeen !== c.id) { S.meta.claudeSeen = c.id; S.meta.dirty = true; saveMeta(); flushResults(); }
+  return changed;
+}
 async function loadClaude() {
   try {
     const [r, k] = await Promise.all([
-      fetch('data/session-claude.json?t=' + Date.now(), { cache: 'no-store' }),
+      fetch('data/session-claude.json?t=' + Date.now(), { cache: 'no-store' }).catch(() => null),
       fetch('data/catalogue.json?t=' + Date.now(), { cache: 'no-store' }).catch(() => null)
     ]);
-    if (k && k.ok) { try { S.catalogue = (await k.json()).fiches || null; } catch (e) {} }
-    if (!r.ok) return;
-    const c = await r.json();
-    if (!c || !c.id || !Array.isArray(c.questions) || !c.questions.length) return;
-    const changed = !S.claude || S.claude.id !== c.id;
-    S.claude = c;
-    if (changed) {
-      if (!S.meta.claudeSeen || S.meta.claudeSeen !== c.id) { S.meta.claudeSeen = c.id; S.meta.dirty = true; saveMeta(); flushResults(); }
-      if (/^#?(accueil)?$/.test(location.hash) && !S.session && !S.cs) route();
+    if (k && k.ok) { try { S.catalogue = (await k.json()).fiches || S.catalogue; } catch (e) {} }
+    let remote = null;
+    if (r && r.ok) { try { remote = await r.json(); } catch (e) {} }
+    const local = S.meta.claudeLocal;
+    let pick = validSession(remote) ? remote : null;
+    if (validSession(local) && (!pick || tsOf(local) > tsOf(pick))) {
+      pick = local;
+      if (remote && remote.id !== local.id && ghToken()) publishSession(local);
     }
+    if (!pick) return;
+    if (setSession(pick) && /^#?(accueil)?$/.test(location.hash) && !S.session && !S.cs) route();
   } catch (e) {}
 }
+async function importSessionFile(f) {
+  try {
+    const c = JSON.parse(await f.text());
+    if (!validSession(c)) throw new Error('format');
+    if (!c.creee_le) c.creee_le = new Date().toISOString();
+    const same = S.claude && S.claude.id === c.id;
+    S.meta.claudeLocal = c; await saveMeta();
+    setSession(c);
+    toast(same ? 'Cette session était déjà chargée.' : `Session chargée : ${plural(c.questions.length, 'question')}.`);
+    go('#accueil'); route();
+    if (!same && ghToken()) publishSession(c).then(ok => { if (ok) toast('Session publiée sur le site pour vos autres appareils.'); });
+  } catch (e) { toast('Ce fichier n’est pas une session de révision valide.'); }
+}
+$('#sessionInput').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importSessionFile(f); };
 function claudeBlock() {
   const c = S.claude;
-  if (!c) return '';
+  if (!c) return `<article class="card" style="margin:34px 0 8px"><div class="tab">Préparée par Claude</div><div class="face">
+    <p class="note" style="margin:0 0 14px">Aucune session pour l’instant. Quand Claude en a préparé une, chargez-la depuis le dossier BASE/_revision de votre OneDrive.</p>
+    <button class="btn primary block" id="loadSess">Charger la session depuis OneDrive</button></div></article>`;
   const done = (S.meta.claudeDone || []).includes(c.id);
   const pr = S.meta.claudeProgress && S.meta.claudeProgress.id === c.id && !S.meta.claudeProgress.replay ? S.meta.claudeProgress : null;
   const last = S.meta.claudeLast && S.meta.claudeLast.id === c.id ? S.meta.claudeLast : null;
   let line, actions;
   if (done) {
-    line = `Terminée${last ? ' avec ' + last.score + ' / ' + last.total : ''}. Claude prépare la suivante : elle apparaîtra ici dans l’heure, entre 8 h et 20 h. En attendant, vous pouvez la refaire.`;
-    actions = `<button class="btn primary block" id="startClaude">Refaire la session</button>`;
+    line = `Terminée${last ? ' avec ' + last.score + ' / ' + last.total : ''}. Claude prépare la suivante dans l’heure (entre 8 h et 20 h) et vous prévient par notification. Chargez-la alors depuis OneDrive ; en attendant, vous pouvez refaire celle-ci.`;
+    actions = `<div class="row"><button class="btn primary" id="loadSess" style="flex:1">Nouvelle session</button><button class="btn" id="startClaude" style="flex:1">Refaire</button></div>`;
   } else {
     line = `${plural(c.questions.length, 'question')}. ${esc(c.pourquoi || '')}`;
     actions = pr ? `<button class="btn primary block" id="startClaude">Reprendre à la question ${pr.i + 1}</button>` : `<button class="btn primary block" id="startClaude">Commencer</button>`;
@@ -659,12 +709,13 @@ function claudeBlock() {
     <h2 style="font:600 22px/1.25 var(--serif);margin:0 0 6px">${esc(c.titre || 'Session du moment')}</h2>
     <p class="note" style="margin:0 0 16px">${done ? esc(line) : line}</p>
     ${actions}
-    <div class="small-actions"><button class="linkbtn" id="toProg">Régler le programme</button>${ghToken() ? '' : '<button class="linkbtn" id="toTok">Connecter GitHub</button>'}</div></div></article>`;
+    <div class="small-actions"><button class="linkbtn" id="toProg">Régler le programme</button>${done ? '' : '<button class="linkbtn" id="loadSess2">Charger depuis OneDrive</button>'}</div>
+    ${ghToken() ? '' : '<p class="note" style="margin:10px 0 0">Connectez GitHub dans Base et réglages : sinon Claude ne voit pas que la session est terminée.</p>'}</div></article>`;
 }
 function bindClaudeBlock() {
   const b = $('#startClaude'); if (b) b.onclick = () => startClaude();
   const p = $('#toProg'); if (p) p.onclick = () => go('#programme');
-  const t = $('#toTok'); if (t) t.onclick = () => go('#base');
+  ['#loadSess', '#loadSess2'].forEach(id => { const l = $(id); if (l) l.onclick = () => $('#sessionInput').click(); });
 }
 function startClaude(only) {
   const c = S.claude;
@@ -719,7 +770,7 @@ function viewClaudeEnd() {
   if ($('#rv')) $('#rv').onclick = () => startClaude(cs.miss.slice());
   $('#redo').onclick = () => startClaude(c.questions.map((_, i) => i));
   $('#home').onclick = () => { S.cs = null; go('#accueil'); };
-  if (!cs.replay && tok) flushResults().then(ok => { const m = $('#syncMsg'); if (m) m.textContent = ok ? 'Résultat envoyé : Claude prépare la session suivante, elle apparaîtra dans l’heure (entre 8 h et 20 h).' : 'Envoi impossible pour l’instant, nouvel essai à la prochaine ouverture.'; });
+  if (!cs.replay && tok) flushResults().then(ok => { const m = $('#syncMsg'); if (m) m.textContent = ok ? 'Résultat envoyé : Claude prépare la session suivante dans l’heure (entre 8 h et 20 h) et la dépose dans OneDrive, dossier BASE/_revision.' : 'Envoi impossible pour l’instant, nouvel essai à la prochaine ouverture.'; });
 }
 
 /* ====== programme de révision (modulable) ====== */
