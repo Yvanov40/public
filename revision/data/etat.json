@@ -1,6 +1,6 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-09T19:39:07.769Z",
+ "mis_a_jour": "2026-11-09T19:47:58.275Z",
  "session_id": "2026-11-09-16h16-dons-reserve-av-matrimonial",
  "statut": "en_cours",
  "termine_le": null,
@@ -11,6 +11,47 @@
   "fiches": [],
   "consignes": ""
  },
- "erreurs_recentes": [],
- "stats_par_fiche": {}
+ "erreurs_recentes": [
+  {
+   "le": "2026-11-09T19:45",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Un présent consenti en 2010 est revendu en 2024 pour une somme bien supérieure. Quelle conséquence sur sa qualification ?",
+   "repondu": "Requalification automatique en don manuel",
+   "bonne_reponse": "Aucune : la qualification s'apprécie au moment du présent"
+  },
+  {
+   "le": "2026-11-09T19:46",
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "source": "claude",
+   "question": "Un grand-père de 78 ans donne 60 000 € à son petit-fils majeur par virement. Une fois l'exonération 790 G appliquée, quel montant reste à traiter ?",
+   "repondu": "0 €",
+   "bonne_reponse": "28 135 €"
+  },
+  {
+   "le": "2026-11-09T19:47",
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "source": "claude",
+   "question": "Le dispositif 790 G impose-t-il une clause d'obligation d'emploi, par exemple d'épargne ?",
+   "repondu": "Cela dépend du notaire",
+   "bonne_reponse": "Non, et une telle clause risque de rendre le don inéligible"
+  }
+ ],
+ "stats_par_fiche": {
+  "Présent d'usage": {
+   "vues": 10,
+   "reussies": 9,
+   "derniere": "2026-11-09"
+  },
+  "Dons familiaux de somme d'argent (CGI art. 790 G)": {
+   "vues": 10,
+   "reussies": 8,
+   "derniere": "2026-11-09"
+  },
+  "Réserve et quotité disponible": {
+   "vues": 6,
+   "reussies": 6,
+   "derniere": "2026-11-09"
+  }
+ }
 }
