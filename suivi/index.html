@@ -1185,7 +1185,11 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .calc-fiche { border: 1px dashed var(--bordure); border-radius: 10px; padding: 6px 10px; margin: -2px 0 10px; background: var(--carte); }
 .calc-fiche summary { cursor: pointer; font-size: 13.5px; color: var(--bleu); font-weight: 500; padding: 2px 0; }
 .calc-fiche[open] summary { margin-bottom: 8px; }
-.calc-fiche-saisie { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 70px; gap: 8px; }
+.calc-fiche-saisie { display: flex; flex-wrap: wrap; gap: 8px; }
+.calc-fiche-saisie > * { flex: 1 1 120px; }
+.calc-fiche-saisie select[name=acte] { flex: 2 1 240px; }
+.calc-fiche-saisie input[type=number] { flex: 0 0 70px; }
+.calc-fiche-saisie [hidden] { display: none !important; }
 .calc-fiche-saisie select, .calc-fiche-saisie input { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 7px 8px; min-width: 0; }
 .calc-fiche-sortie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 2px; }
 .calc-fiche-chiffres b { font-size: 17px; color: var(--bleu); margin-right: 8px; }
@@ -1196,6 +1200,11 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .calc-fiche-boutons button.lien { border: 0; background: none; text-decoration: underline; }
 .vient-de-changer { outline: 2px solid var(--or); transition: outline .3s; }
 @media (max-width: 900px) { .calc-fiche-saisie { grid-template-columns: 1fr 1fr; } .calc-fiche-saisie select { grid-column: 1 / -1; } }
+
+.emol-saisie { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.emol-saisie > * { flex: 1 1 140px; border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 9px 10px; font-size: 15px; }
+.emol-saisie [hidden], #corpsEmoluments [hidden] { display: none !important; }
+.emol-table tr.sous-titre td { font-weight: 600; color: var(--bleu); padding-top: 10px; }
 </style>
 </head>
 <body>
@@ -4582,25 +4591,47 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     if (vueCourante() !== "outils") location.hash = "#outils"; else afficherOutils();
   }
   // ================================================================ émoluments du notaire (tarif réglementé)
-  // Barèmes du Code de commerce (partie Arrêtés), en vigueur du 1er mars 2026 au 29 février 2028 (tarif 2021 reconduit) :
-  // tranches d'assiette et taux HT. Seuls les émoluments proportionnels de l'acte : sans émoluments de formalités,
-  // débours, droits ni taxes. Métropole (pas de majoration des départements d'outre-mer).
-  const TRANCHES = [6500, 17000, 60000];  // bornes des tranches : 0–6 500, 6 500–17 000, 17 000–60 000, au-delà
+  // Barèmes du Code de commerce (partie Arrêtés, art. A444-59 et suivants), en vigueur du 1er mars 2026 au 29 février 2028
+  // (tarif de 2021 reconduit). Montants HT. Seuls les émoluments de l'acte : sans émoluments de formalités, débours,
+  // droits ni taxes. Métropole (pas de majoration outre-mer).
+  //   taux     : taux HT par tranche (en %) ; tranches : bornes des tranches (par défaut 6 500 / 17 000 / 60 000 €)
+  //   fixe     : émolument fixe (forfait), sans montant à saisir
+  //   seuil    : en dessous de ce montant, c'est le forfait « fixe » qui s'applique (contrat de mariage)
+  //   donateurs: l'émolument se calcule par donateur (on peut en saisir deux)
+  const T60 = [6500, 17000, 60000], T30 = [6500, 17000, 30000];
   const BAREMES_EMOL = {
-    vente:      { nom: "Vente ou cession de gré à gré", ref: "art. A444-91", taux: [3.870, 1.596, 1.064, 0.799] },
-    donation:   { nom: "Donation (immobilier, biens non cotés…)", ref: "art. A444-67, 1°", taux: [4.837, 1.995, 1.330, 0.998],
+    // ventes et sociétés
+    vente:      { groupe: "Ventes et sociétés", nom: "Vente ou cession de gré à gré", ref: "art. A444-91", taux: [3.870, 1.596, 1.064, 0.799] },
+    apport:     { groupe: "Ventes et sociétés", nom: "Apport en société (biens soumis à publicité foncière)", ref: "art. A444-158", taux: [1.935, 0.798, 0.532, 0.399] },
+    // donations
+    donation:   { groupe: "Donations", nom: "Donation (immobilier, biens non cotés…)", ref: "art. A444-67, 1°", taux: [4.837, 1.995, 1.330, 0.998], donateurs: true,
                   aide: "Calcul par donateur, sur la valeur en pleine propriété (même avec réserve d’usufruit)." },
-    donpartage: { nom: "Donation-partage", ref: "art. A444-68", taux: [4.837, 1.995, 1.330, 0.998],
-                  aide: "Conjonctive : par donateur. Par une seule personne : sur les biens partagés, rapports compris." },
-    donargent:  { nom: "Donation de sommes d’argent, créances ou titres cotés", ref: "art. A444-67, 4°", taux: [2.322, 0.958, 0.639, 0.479],
+    donpartage: { groupe: "Donations", nom: "Donation-partage", ref: "art. A444-68", taux: [4.837, 1.995, 1.330, 0.998], donateurs: true,
+                  aide: "Conjonctive : par donateur, rapports compris." },
+    donargent:  { groupe: "Donations", nom: "Donation de sommes d’argent, créances ou titres cotés", ref: "art. A444-67, 4°", taux: [2.322, 0.958, 0.639, 0.479], donateurs: true,
                   aide: "Calcul par donateur." },
-    apport:     { nom: "Apport en société (biens soumis à publicité foncière)", ref: "art. A444-158", taux: [1.935, 0.798, 0.532, 0.399] }
+    donepoux:   { groupe: "Donations", nom: "Donation entre époux (au dernier vivant)", ref: "art. A444-69", fixe: 113.20 },
+    revocation: { groupe: "Donations", nom: "Révocation de donation entre époux ou de testament", ref: "art. A444-69", fixe: 26.41 },
+    // famille
+    mariage:    { groupe: "Famille", nom: "Contrat de mariage, changement de régime matrimonial", ref: "art. A444-82", taux: [1.290, 0.532, 0.355, 0.266],
+                  seuil: 30800, fixe: 188.68, aide: "Forfait de 188,68 € HT sans apports ou jusqu’à 30 800 € de biens déclarés ; au-delà, barème sur leur valeur." },
+    pacs:       { groupe: "Famille", nom: "PACS (initial ou modificatif)", ref: "art. A444-81", fixe: 84.51 },
+    mandatpf:   { groupe: "Famille", nom: "Mandat de protection future (établissement)", ref: "art. A444-79-1", fixe: 113.20 },
+    mandatpost: { groupe: "Famille", nom: "Mandat à effet posthume (établissement)", ref: "art. A444-79", fixe: 113.20 },
+    testament:  { groupe: "Famille", nom: "Testament authentique (ou partage testamentaire)", ref: "art. A444-60", fixe: 113.19 },
+    raar:       { groupe: "Famille", nom: "Renonciation anticipée à l’action en réduction", ref: "art. A444-72", fixe: 150.93 },
+    // successions
+    notoriete:  { groupe: "Successions", nom: "Acte de notoriété après décès", ref: "art. A444-66", fixe: 56.60 },
+    attestation:{ groupe: "Successions", nom: "Attestation de propriété immobilière", ref: "art. A444-59", taux: [1.935, 1.064, 0.726, 0.532], tranches: T30 },
+    declaration:{ groupe: "Successions", nom: "Déclaration de succession", ref: "art. A444-63", taux: [1.548, 0.851, 0.580, 0.426], tranches: T30,
+                  aide: "Sur l’actif brut total, biens de communauté compris." }
   };
   const SEUIL_REMISE = 100000;  // une remise (20 % au plus) peut porter sur l'émolument de la part d'assiette au-delà de 100 000 €
-  function emolumentBareme(assiette, taux) {
+  // émolument proportionnel d'un montant, tranche par tranche
+  function emolumentBareme(assiette, taux, tranches = T60) {
     const lignes = [];
     let bas = 0, total = 0;
-    [...TRANCHES, Infinity].forEach((haut, k) => {
+    [...tranches, Infinity].forEach((haut, k) => {
       if (assiette <= bas) return;
       const base = Math.min(assiette, haut) - bas;
       const montant = Math.round(base * taux[k]) / 100;  // taux en %, arrondi au centime
@@ -4610,97 +4641,158 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     });
     return { lignes, total: Math.round(total * 100) / 100 };
   }
-  // calcul complet : { lignes, total, remise, ht, tva, ttc } pour un acte, un montant (assiette) et une remise en %
-  function calculerEmoluments(acte, assiette, remisePct = 0) {
+  // calcul complet pour un acte : montants = [un montant] ou [donateur 1, donateur 2]
+  // renvoie { forfait, parts: [{ lignes, total, remise }], total, remise, ht, tva, ttc }
+  function calculerEmoluments(acte, montants, remisePct = 0) {
     const b = BAREMES_EMOL[acte];
-    assiette = Math.round(assiette || 0);
-    const { lignes, total } = emolumentBareme(assiette, b.taux);
-    const auDela = assiette > SEUIL_REMISE ? total - emolumentBareme(SEUIL_REMISE, b.taux).total : 0;
-    const remise = Math.round(auDela * Math.min(20, Math.max(0, remisePct))) / 100;
+    const pct = Math.min(20, Math.max(0, Number(remisePct) || 0));
+    const liste = (Array.isArray(montants) ? montants : [montants]).map((m) => Math.round(Number(m) || 0));
+    let parts, forfait = false;
+    if (b.fixe !== undefined && (!b.taux || (liste[0] || 0) <= (b.seuil || 0))) {
+      forfait = true;
+      parts = [{ lignes: [], total: b.fixe, remise: 0 }];
+    } else {
+      parts = liste.filter((m) => m > 0).map((m) => {
+        const { lignes, total } = emolumentBareme(m, b.taux, b.tranches);
+        const auDela = m > SEUIL_REMISE ? total - emolumentBareme(SEUIL_REMISE, b.taux, b.tranches).total : 0;
+        return { assiette: m, lignes, total, remise: Math.round(auDela * pct) / 100 };
+      });
+    }
+    const total = Math.round(parts.reduce((s, p) => s + p.total, 0) * 100) / 100;
+    const remise = Math.round(parts.reduce((s, p) => s + p.remise, 0) * 100) / 100;
     const ht = Math.round((total - remise) * 100) / 100, tva = Math.round(ht * 20) / 100;
-    return { lignes, total, remise, ht, tva, ttc: Math.round((ht + tva) * 100) / 100 };
+    return { forfait, parts, total, remise, ht, tva, ttc: Math.round((ht + tva) * 100) / 100, assiette: liste.reduce((s, m) => s + m, 0) };
   }
+  const lireMontant = (txt) => Number(String(txt || "").replace(/\s|€/g, "").replace(",", ".")) || 0;
+  const fmtEuros = (n) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  // la liste des actes, rangée par groupe
+  const choixActes = (selectionne) => el("select", { name: "acte", "aria-label": "Acte" },
+    [...new Set(Object.values(BAREMES_EMOL).map((b) => b.groupe))].map((g) => el("optgroup", { label: g },
+      Object.entries(BAREMES_EMOL).filter(([, b]) => b.groupe === g).map(([k, b]) => el("option", { value: k, selected: k === selectionne }, b.nom)))));
   // l'acte probable d'un dossier, d'après sa tâche et sa nature (« Donation SARL » → donation…)
   function acteProbable(texte) {
     const t = sansAccents(texte);
     if (/donation.partage/.test(t)) return "donpartage";
     if (/don(ation)? (d.argent|de somme|manuel)|somme d.argent/.test(t)) return "donargent";
+    if (/donation entre epoux|dernier vivant/.test(t)) return "donepoux";
     if (/donation|donner/.test(t)) return "donation";
     if (/apport/.test(t)) return "apport";
+    if (/contrat de mariage|regime matrimonial|changement de regime/.test(t)) return "mariage";
+    if (/pacs/.test(t)) return "pacs";
+    if (/mandat de protection|protection future/.test(t)) return "mandatpf";
+    if (/mandat posthume|effet posthume/.test(t)) return "mandatpost";
+    if (/testament/.test(t)) return "testament";
+    if (/raar|renonciation anticipee/.test(t)) return "raar";
+    if (/notoriete/.test(t)) return "notoriete";
+    if (/declaration de succession/.test(t)) return "declaration";
+    if (/attestation/.test(t)) return "attestation";
     return "vente";
   }
-  // le petit calculateur glissé dans la fiche dossier, sous les honoraires
+  // les champs de montant : un seul, ou un par donateur ; rien pour un forfait
+  function champsMontants(onChange) {
+    const nb = el("select", { "aria-label": "Nombre de donateurs" }, el("option", { value: "1" }, "1 donateur"), el("option", { value: "2" }, "2 donateurs"));
+    const m1 = el("input", { type: "text", inputmode: "decimal", placeholder: "Montant de l’acte", "aria-label": "Montant", autocomplete: "off" });
+    const m2 = el("input", { type: "text", inputmode: "decimal", placeholder: "Donateur 2", "aria-label": "Montant du donateur 2", autocomplete: "off" });
+    const majPour = (b) => {
+      const forfaitSeul = b.fixe !== undefined && !b.taux;
+      nb.hidden = !b.donateurs;
+      if (!b.donateurs) nb.value = "1";
+      m1.hidden = forfaitSeul;
+      m2.hidden = nb.value !== "2" || !b.donateurs;
+      m1.placeholder = b.donateurs && nb.value === "2" ? "Donateur 1" : b.seuil ? "Valeur des biens déclarés" : "Montant de l’acte";
+    };
+    for (const c of [nb, m1, m2]) c.addEventListener("input", onChange);
+    m1.addEventListener("blur", () => { const n = lireMontant(m1.value); if (n) m1.value = n.toLocaleString("fr-FR"); });
+    m2.addEventListener("blur", () => { const n = lireMontant(m2.value); if (n) m2.value = n.toLocaleString("fr-FR"); });
+    return { nb, m1, m2, majPour, montants: () => (nb.value === "2" && !nb.hidden ? [lireMontant(m1.value), lireMontant(m2.value)] : [lireMontant(m1.value)]) };
+  }
+
+  // ---- le petit calculateur glissé dans la fiche dossier, sous les honoraires ----
   function calculetteFiche(d) {
-    const choix = el("select", { "aria-label": "Acte" }, Object.entries(BAREMES_EMOL).map(([k, b]) => el("option", { value: k, selected: k === acteProbable(`${d.tache || ""} ${sansNumero(d.type)}`) }, b.nom)));
-    const montant = el("input", { type: "text", inputmode: "decimal", placeholder: "Montant de l’acte", "aria-label": "Montant de l’acte", autocomplete: "off" });
+    const choix = choixActes(acteProbable(`${d.tache || ""} ${sansNumero(d.type)}`));
     const remise = el("input", { type: "number", min: "0", max: "20", step: "1", value: "0", "aria-label": "Remise en %", title: "Remise (%) sur la part au-delà de 100 000 €" });
     const sortie = el("div", { class: "calc-fiche-sortie" });
-    const fmt = (n) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
     const reporter = (valeur) => {
       const champ = $("corpsDossier").querySelector("[name=honos_regl]");
       champ.value = valeur.toFixed(2);
       champ.dispatchEvent(new Event("input", { bubbles: true }));
       champ.classList.add("vient-de-changer"); setTimeout(() => champ.classList.remove("vient-de-changer"), 900);
-      informer(`${fmt(valeur)} reporté dans « Prévu réglementés » (pensez à enregistrer).`);
+      informer(`${fmtEuros(valeur)} reporté dans « Prévu réglementés » (pensez à enregistrer).`);
     };
     const calculer = () => {
-      const assiette = Number(String(montant.value).replace(/\s|€/g, "").replace(",", ".")) || 0;
-      if (!assiette) { sortie.replaceChildren(el("span", { class: "aide" }, "Tapez le montant de l’acte : le calcul se fait tout seul.")); return; }
-      const r = calculerEmoluments(choix.value, assiette, Number(remise.value) || 0);
+      const b = BAREMES_EMOL[choix.value];
+      saisie.majPour(b);
+      remise.hidden = !!(b.fixe !== undefined && !b.taux);
+      const montants = saisie.montants();
+      if (b.taux && !montants.some((m) => m > 0) && !b.seuil) { sortie.replaceChildren(el("span", { class: "aide" }, "Tapez le montant de l’acte : le calcul se fait tout seul.")); return; }
+      const r = calculerEmoluments(choix.value, montants, remise.value);
       sortie.replaceChildren(
-        el("div", { class: "calc-fiche-chiffres" }, el("b", null, fmt(r.ht) + " HT"), el("span", null, `${fmt(r.ttc)} TTC${r.remise ? ` · remise ${fmt(r.remise)}` : ""}`)),
+        el("div", { class: "calc-fiche-chiffres" }, el("b", null, fmtEuros(r.ht) + " HT"),
+          el("span", null, `${fmtEuros(r.ttc)} TTC${r.forfait ? " · forfait" : ""}${r.parts.length > 1 ? " · 2 donateurs" : ""}${r.remise ? ` · remise ${fmtEuros(r.remise)}` : ""}`)),
         el("div", { class: "calc-fiche-boutons" },
           el("button", { type: "button", onclick: () => reporter(r.ht) }, "Reporter le HT"),
           el("button", { type: "button", onclick: () => reporter(r.ttc) }, "Reporter le TTC"),
-          el("button", { type: "button", class: "lien", onclick: () => { ouvrirEmoluments(); } }, "Détail…")));
+          el("button", { type: "button", class: "lien", onclick: () => ouvrirEmoluments(choix.value, saisie.montants()) }, "Détail…")));
     };
-    for (const c of [choix, montant, remise]) c.addEventListener("input", calculer);
+    const saisie = champsMontants(calculer);
+    for (const c of [choix, remise]) c.addEventListener("input", calculer);
     calculer();
     return el("details", { class: "calc-fiche" },
       el("summary", null, "🧮 Calculer les émoluments réglementés"),
-      el("div", { class: "calc-fiche-saisie" }, choix, montant, remise),
+      el("div", { class: "calc-fiche-saisie" }, choix, saisie.nb, saisie.m1, saisie.m2, remise),
       sortie);
   }
 
-  function ouvrirEmoluments() {
-    const choixActe = el("select", { name: "acte" }, Object.entries(BAREMES_EMOL).map(([k, b]) => el("option", { value: k }, b.nom)));
-    const champMontant = el("input", { type: "text", inputmode: "decimal", placeholder: "Ex. 250 000", autocomplete: "off" });
+  // ---- la grande calculatrice (onglet Outils, menu ⋯, recherche éclair) ----
+  function ouvrirEmoluments(acteDepart, montantsDepart) {
+    const choixActe = choixActes(typeof acteDepart === "string" ? acteDepart : "vente");
     const champRemise = el("input", { type: "number", min: "0", max: "20", step: "1", value: "0" });
     const resultat = el("div", { class: "emol-resultat" });
-    const fmt = (n) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+    const blocRemise = champ("Remise (%)", champRemise);
     const calculer = () => {
       const b = BAREMES_EMOL[choixActe.value];
-      const assiette = Math.round(Number(String(champMontant.value).replace(/\s|€/g, "").replace(",", ".")) || 0);  // arrondie à l'euro
-      const remisePct = Math.min(20, Math.max(0, Number(champRemise.value) || 0));
-      if (!assiette) { resultat.replaceChildren(el("p", { class: "aide" }, b.aide || "Indiquez le montant de l’acte."), el("p", { class: "aide" }, `Barème : ${b.ref}.`)); return; }
-      const { lignes, total } = emolumentBareme(assiette, b.taux);
-      // remise : sur la part de l'émolument qui correspond à l'assiette au-delà de 100 000 €
-      const auDela = assiette > SEUIL_REMISE ? total - emolumentBareme(SEUIL_REMISE, b.taux).total : 0;
-      const remise = Math.round(auDela * remisePct) / 100;
-      const ht = Math.round((total - remise) * 100) / 100, tva = Math.round(ht * 20) / 100, ttc = Math.round((ht + tva) * 100) / 100;
+      saisie.majPour(b);
+      blocRemise.hidden = !!(b.fixe !== undefined && !b.taux);
+      const montants = saisie.montants();
+      if (b.taux && !montants.some((m) => m > 0) && !b.seuil) {
+        resultat.replaceChildren(el("p", { class: "aide" }, b.aide || "Indiquez le montant de l’acte."), el("p", { class: "aide" }, `Barème : ${b.ref}.`));
+        return;
+      }
+      const r = calculerEmoluments(choixActe.value, montants, champRemise.value);
+      const lignesTable = [];
+      r.parts.forEach((p, k) => {
+        if (r.parts.length > 1) lignesTable.push(el("tr", { class: "sous-titre" }, el("td", { colspan: "3" }, `Donateur ${k + 1} · ${p.assiette.toLocaleString("fr-FR")} €`)));
+        if (r.forfait) lignesTable.push(el("tr", null, el("td", { colspan: "2" }, "Émolument fixe (forfait)"), el("td", null, fmtEuros(p.total))));
+        for (const l of p.lignes) lignesTable.push(el("tr", null,
+          el("td", null, l.a === Infinity ? `au-delà de ${l.de.toLocaleString("fr-FR")} €` : `${l.de.toLocaleString("fr-FR")} à ${l.a.toLocaleString("fr-FR")} €`,
+            el("small", null, ` · sur ${l.base.toLocaleString("fr-FR")} €`)),
+          el("td", null, l.taux.toLocaleString("fr-FR", { minimumFractionDigits: 3 }) + " %"), el("td", null, fmtEuros(l.montant))));
+        if (p.remise) lignesTable.push(el("tr", { class: "remise" }, el("td", { colspan: "2" }, `Remise de ${champRemise.value} % sur la part au-delà de 100 000 €`), el("td", null, "− " + fmtEuros(p.remise))));
+      });
       resultat.replaceChildren(
-        el("div", { class: "emol-total" }, el("span", null, "Émoluments TTC"), el("b", null, fmt(ttc)),
-          el("small", null, `${fmt(ht)} HT · TVA 20 % ${fmt(tva)} · soit ${(ttc / assiette * 100).toLocaleString("fr-FR", { maximumFractionDigits: 3 })} % du montant`)),
+        el("div", { class: "emol-total" }, el("span", null, "Émoluments TTC"), el("b", null, fmtEuros(r.ttc)),
+          el("small", null, `${fmtEuros(r.ht)} HT · TVA 20 % ${fmtEuros(r.tva)}` + (r.assiette && !r.forfait ? ` · soit ${(r.ttc / r.assiette * 100).toLocaleString("fr-FR", { maximumFractionDigits: 3 })} % du montant` : ""))),
         el("table", { class: "emol-table" },
           el("thead", null, el("tr", null, el("th", null, "Tranche"), el("th", null, "Taux HT"), el("th", null, "Émolument HT"))),
-          el("tbody", null, lignes.map((l) => el("tr", null,
-            el("td", null, l.a === Infinity ? `au-delà de ${l.de.toLocaleString("fr-FR")} €` : `${l.de.toLocaleString("fr-FR")} à ${l.a.toLocaleString("fr-FR")} €`,
-              el("small", null, ` · sur ${l.base.toLocaleString("fr-FR")} €`)),
-            el("td", null, l.taux.toLocaleString("fr-FR", { minimumFractionDigits: 3 }) + " %"), el("td", null, fmt(l.montant)))),
-            remise ? el("tr", { class: "remise" }, el("td", { colspan: "2" }, `Remise de ${remisePct} % sur la part au-delà de 100 000 €`), el("td", null, "− " + fmt(remise))) : null),
-          el("tfoot", null, el("tr", null, el("td", { colspan: "2" }, "Total HT"), el("td", null, fmt(ht))))),
+          el("tbody", null, lignesTable),
+          el("tfoot", null, el("tr", null, el("td", { colspan: "2" }, "Total HT"), el("td", null, fmtEuros(r.ht))))),
         el("p", { class: "aide" }, `Barème : ${b.ref} (tarif en vigueur jusqu’au 29 février 2028). ${b.aide || ""}`),
         el("p", { class: "aide" }, "Émoluments de l’acte seulement : hors émoluments de formalités, débours, droits d’enregistrement, taxe de publicité foncière et contribution de sécurité immobilière. Estimation indicative."));
     };
-    for (const c of [choixActe, champMontant, champRemise]) c.addEventListener("input", calculer);
-    champMontant.addEventListener("blur", () => { const n = Number(String(champMontant.value).replace(/\s|€/g, "").replace(",", ".")); if (n) champMontant.value = n.toLocaleString("fr-FR"); });
+    const saisie = champsMontants(calculer);
+    if (Array.isArray(montantsDepart)) {
+      if (montantsDepart[0]) saisie.m1.value = montantsDepart[0].toLocaleString("fr-FR");
+      if (montantsDepart[1]) { saisie.nb.value = "2"; saisie.m2.value = montantsDepart[1].toLocaleString("fr-FR"); }
+    }
+    for (const c of [choixActe, champRemise]) c.addEventListener("input", calculer);
     $("corpsEmoluments").replaceChildren(
       champ("Acte", choixActe),
-      el("div", { class: "deux" }, champ("Montant (assiette)", champMontant), champ("Remise (%)", champRemise)),
+      el("div", { class: "emol-saisie" }, saisie.nb, saisie.m1, saisie.m2),
+      blocRemise,
       resultat);
     calculer();
-    ouvrirFeuille("feuilleEmoluments", ouvrirEmoluments);
-    setTimeout(() => champMontant.focus(), 60);
+    ouvrirFeuille("feuilleEmoluments", () => ouvrirEmoluments(choixActe.value, saisie.montants()));
+    setTimeout(() => { if (!saisie.m1.hidden) saisie.m1.focus(); }, 60);
   }
 
   function fermerOutil() { outilOuvert = null; afficherOutils(); }
