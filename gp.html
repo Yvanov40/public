@@ -179,6 +179,9 @@ main#main { position: relative; }
 .pvbox { background: var(--soft); border-radius: 8px; padding: 8px 10px; }
 .mini-sel { min-height: 28px !important; padding: 2px 6px !important; width: auto !important; font-size: 13px !important; }
 @media (max-width: 600px) { .bulle.menu.sheet .choix { flex-direction: column; } }
+.tip { border-bottom: 1px dotted currentColor; cursor: help; }
+#infobulle { position: fixed; z-index: 40; background: var(--ink); color: var(--paper); padding: 10px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; white-space: pre-line; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .12s; font-variant-numeric: tabular-nums; }
+#infobulle.on { opacity: 1; }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -483,20 +486,46 @@ function regimeTiers(p) {
   return { abat: FISC.abatDefaut, bareme: 'LD' };
 }
 function autre(k) { return k === 'c1' ? 'c2' : 'c1'; }
-// bien reçu en nue-propriété dont l'usufruit appartient encore à un parent vivant à la date
-function usufruitParent(ctx, a, date) {
-  if (a.origine !== 'donation' || a.droitRecu !== 'NP') return null;
-  var p = ctx.parents.filter(function (x) { return x.id === (a.usufruitierId || a.donateurId); })[0];
-  if (!p || p.decede || !p.deces || p.deces <= date) return null;
-  return p;
+// Donation reçue : moitiés par donateur (donation conjointe des deux parents = 50 / 50)
+function moities(ctx, a) {
+  var ids = [a.donateurId, a.donateur2Id].filter(function (x, k, t) { return x && t.indexOf(x) === k; });
+  var ps = ids.map(function (id) { return ctx.parents.filter(function (p) { return p.id === id; })[0]; }).filter(Boolean);
+  return ps.map(function (p) { return { donateur: p, part: 1 / ps.length }; });
 }
-// éligibilité à la réincorporation dans une donation-partage transgénérationnelle (droit de partage 2,5 %)
-function eligibleDPT(ctx, a) {
-  if (a.origine !== 'donation') return false;
-  var dt = parseDate(a.dateOrigine); if (!dt || addYears(dt, 15) > ctx.T0) return false;
-  var p = ctx.parents.filter(function (x) { return x.id === a.donateurId; })[0];
-  return !!(p && !p.decede);
+function vivantA(p, date) { return !!(p && !p.decede && p.deces && p.deces > date); }
+// quote-parts du bien encore grevées de l'usufruit d'un parent à la date
+function grevement(ctx, a, date) {
+  if (a.origine !== 'donation' || a.droitRecu !== 'NP') return [];
+  if (a.usufruitierId) { var u = ctx.parents.filter(function (x) { return x.id === a.usufruitierId; })[0]; return vivantA(u, date) ? [{ part: 1, usufruitier: u }] : []; }
+  var m = moities(ctx, a); if (!m.length) return [];
+  if (m.length > 1 && !a.sansReversion) {
+    // donation conjointe avec réversion d'usufruit : l'usufruit dure jusqu'au décès du dernier parent
+    var vivants = m.map(function (x) { return x.donateur; }).filter(function (p) { return vivantA(p, date); });
+    if (!vivants.length) return [];
+    vivants.sort(function (x, y) { return y.deces - x.deces; });
+    return [{ part: 1, usufruitier: vivants[0] }];
+  }
+  return m.filter(function (x) { return vivantA(x.donateur, date); }).map(function (x) { return { part: x.part, usufruitier: x.donateur }; });
 }
+function usufruitParent(ctx, a, date) { var g = grevement(ctx, a, date); return g.length ? g[0].usufruitier : null; }
+function fractionGrevee(ctx, a, date) { return grevement(ctx, a, date).reduce(function (s, g) { return s + g.part; }, 0); }
+// coefficient de valeur du bien dans le patrimoine du client (nue-propriété valorisée selon l'âge de l'usufruitier)
+function coefNP(ctx, a, date) {
+  var g = grevement(ctx, a, date), f = 0, c = 0;
+  g.forEach(function (x) { f += x.part; c += x.part * (1 - usufruitPct(ageAt(x.usufruitier.naissance, date))); });
+  return (1 - f) + c;
+}
+// éligibilité de chaque part à la donation-partage transgénérationnelle
+function moitiesDPT(ctx, a) {
+  if (a.origine !== 'donation') return [];
+  var dt = parseDate(a.dateOrigine), ancienne = !!(dt && addYears(dt, 15) <= ctx.T0);
+  return moities(ctx, a).map(function (x) {
+    var vivant = !x.donateur.decede;
+    return { donateur: x.donateur, part: x.part, mode: vivant && ancienne ? 'dpt' : !vivant ? 'directe' : 'recente' };
+  });
+}
+function eligibleDPT(ctx, a) { return moitiesDPT(ctx, a).some(function (x) { return x.mode === 'dpt'; }); }
+
 function partClient(a, k, ctx) {
   if (!ctx.couple) return k === 'c1' ? 1 : 0;
   var p1 = (a.partC1 === undefined || a.partC1 === null || a.partC1 === '') ? 50 : +a.partC1;
@@ -623,7 +652,7 @@ function simulate(d, scen) {
   /* ---- PLAN : family buy out (vente à une société des enfants) ---- */
   if (plan.donations) {
     actifs.slice().forEach(function (a) {
-      if (!a.planFBO || a.type === 'financier' || a.type === 'rp' || usufruitParent(ctx, a, T0)) return;
+      if (!a.planFBO || a.type === 'financier' || a.type === 'rp' || fractionGrevee(ctx, a, T0) > 0) return;
       vendu[a.id] = true;
       ctx.clients.forEach(function (k) {
         var pk = partClient(a, k, ctx); if (pk <= 0) return;
@@ -648,13 +677,31 @@ function simulate(d, scen) {
   if (plan.donations) {
     actifs.forEach(function (a) {
       if (!a.planDPT || !eligibleDPT(ctx, a)) return;
-      var donateur = ctx.parents.filter(function (x) { return x.id === a.donateurId; })[0];
-      var k = donateur.de, pk = partClient(a, k, ctx); if (pk <= 0) { k = autre(k); pk = partClient(a, k, ctx); }
+      var ms = moitiesDPT(ctx, a), k = ms[0].donateur.de, pk = partClient(a, k, ctx);
+      if (pk <= 0) { k = autre(k); pk = partClient(a, k, ctx); }
       if (pk <= 0) return;
-      var up = usufruitParent(ctx, a, T0);
-      var valeur = a.valeur * pk * (up ? 1 - usufruitPct(ageAt(up.naissance, T0)) : 1);
-      dptFait[a.id] = true;
-      res.dpt.push({ actif: a.libelle, actifId: a.id, client: k, donateur: donateur.label, valeur: valeur, droits: 0.025 * valeur, beneficiaires: heritiersDe(ctx, k).map(function (e) { return e.label; }) });
+      // la génération intermédiaire conserve (ou retient) l'usufruit : les petits-enfants ne reçoivent que la nue-propriété
+      var ageC = ageAt(ctx.persons[k].naissance, T0), npC = 1 - usufruitPct(ageC);
+      var fait = 0;
+      ms.forEach(function (m) {
+        var valeur = a.valeur * pk * m.part * npC;
+        if (m.mode === 'dpt') {
+          fait += m.part;
+          res.dpt.push({ actif: a.libelle, actifId: a.id, client: k, donateur: m.donateur.label, part: m.part, valeur: valeur, valeurPP: a.valeur * pk * m.part, npPct: npC, droits: 0.025 * valeur, mode: 'dpt', beneficiaires: heritiersDe(ctx, k).map(function (e) { return e.label; }) });
+        } else if (m.mode === 'directe') {
+          // part du donateur prédécédé : transmise directement par le client (nue-propriété, usufruit conservé)
+          fait += m.part;
+          var heirs = heritiersDe(ctx, k), tot = 0;
+          heirs.forEach(function (e) {
+            var v = valeur * e.part, rp = rappel(k, e.id, T0, 'LD'), dr = droitsLD(v, rp, e.abatDon, e.baremeDon);
+            ledger.push({ date: T0, donor: k, donee: e.id, value: v, bucket: 'LD' }); tot += dr;
+            res.donations.push({ vague: 1, date: T0, donor: k, donorAge: ageC, donee: e.id, actif: a.libelle + ' (part de ' + (m.donateur.prenom || 'parent') + ', prédécédé)', actifId: a.id, valeurPP: a.valeur * pk * m.part * e.part, valeurPPBrute: a.valeur * pk * m.part * e.part, npPct: npC, valeurNP: v, exoneration: 0, regime: '', valeurTaxable: v, societe: false, existante: false, rappel: rp, abattement: e.abatDon, droits: dr });
+          });
+          res.dpt.push({ actif: a.libelle, actifId: a.id, client: k, donateur: m.donateur.label, part: m.part, valeur: valeur, valeurPP: a.valeur * pk * m.part, npPct: npC, droits: tot, mode: 'directe' });
+        }
+      });
+      if (fait > 0) dptFait[a.id] = fait;
+      if ((ms[0].donateur.nbEnfants || 1) <= 1 && heritiersDe(ctx, k).length <= 1) res.warnings.push(a.libelle + ' : la rétention d’un usufruit successif suppose des lots divis ; impossible avec un enfant unique ayant lui-même un enfant unique.');
     });
   }
   if (plan.donations) {
@@ -664,7 +711,7 @@ function simulate(d, scen) {
       actifs.forEach(function (a) {
         if ((+a.planVague || 0) !== w) return;
         if (a.type === 'financier') return; // 774 bis : pas de donation NP de liquidités avec quasi-usufruit
-        if (dptFait[a.id] || vendu[a.id] || usufruitParent(ctx, a, date)) return; // réattribué, vendu, ou usufruit encore détenu par un parent
+        if (dptFait[a.id] || vendu[a.id] || fractionGrevee(ctx, a, date) > 0) return; // réattribué, vendu, ou usufruit encore détenu par un parent
         ctx.clients.forEach(function (k) {
           var pk = partClient(a, k, ctx); if (pk <= 0) return;
           if (date >= deaths[k]) { res.warnings.push('Vague ' + w + ' (' + a.libelle + ') : ' + ctx.persons[k].label + ' serait décédé(e) selon son espérance de vie – donation non retenue.'); return; }
@@ -722,7 +769,7 @@ function simulate(d, scen) {
     var brut = 0, abattRP = 0, passif = 0, exoTot = 0, nbHer = Math.max(1, heritiersDe(ctx, k).length);
     actifs.forEach(function (a) {
       var pk = partClient(a, k, ctx); if (pk <= 0) return;
-      if (dptFait[a.id]) { D.lignes.push({ libelle: a.libelle, valeur: 0, note: 'Réattribué aux enfants (donation-partage transgénérationnelle)' }); return; }
+      if (dptFait[a.id] >= 0.999) { D.lignes.push({ libelle: a.libelle, valeur: 0, note: 'Nue-propriété réattribuée aux enfants ; usufruit successif éteint au décès' }); return; }
       if (vendu[a.id]) { D.lignes.push({ libelle: a.libelle, valeur: 0, note: 'Vendu à la société des enfants (family buy out)' }); return; }
       var don = npDonne[a.id] && npDonne[a.id][k] && npDonne[a.id][k].date <= date;
       // compte courant d'associé : créance des clients sur la société, sauf s'il est remboursé et consommé avant le décès
@@ -738,8 +785,8 @@ function simulate(d, scen) {
         var dettesBanque = Math.max(0, a.passif - a.cca);
         v = Math.max(0, a.valeur - (P.dettesRembourseesAuDeces ? 0 : dettesBanque) - (P.ccaRembourseAvantDeces ? 0 : a.cca)) * (1 - P.decoteSociete) * pk;
       }
-      var upar = usufruitParent(ctx, a, date);
-      if (upar) v = v * (1 - usufruitPct(ageAt(upar.naissance, date))); // seule la nue-propriété reçue est dans la succession
+      v = v * coefNP(ctx, a, date);                       // nue-propriété reçue encore grevée de l'usufruit d'un parent
+      if (dptFait[a.id]) v = v * (1 - dptFait[a.id]);     // part réattribuée hors succession
       var rp = (a.type === 'rp' && P.abattementRP && spouse && ctx.marie) ? 0.2 * v : 0;
       var ex = exoneration(a.regime, v - rp, nbHer);
       brut += v; abattRP += rp; exoTot += ex;
@@ -877,13 +924,13 @@ function simulate(d, scen) {
     if (p.decede || p.patrimoine <= 0) return;
     var k = p.de; if (!ctx.persons[k]) return;
     var part = p.patrimoine / Math.max(1, p.nbEnfants);
-    var recus = (d.actifs || []).filter(function (a) { return a.origine === 'donation' && a.donateurId === p.id && parseDate(a.dateOrigine) && addYears(parseDate(a.dateOrigine), 15) > p.deces; })
-      .reduce(function (s, a) { return s + (+a.valeurOrigine || 0); }, 0);
+    var recus = (d.actifs || []).filter(function (a) { return a.origine === 'donation' && (a.donateurId === p.id || a.donateur2Id === p.id) && parseDate(a.dateOrigine) && addYears(parseDate(a.dateOrigine), 15) > p.deces; })
+      .reduce(function (s, a) { return s + (+a.valeurOrigine || 0) / (a.donateur2Id && a.donateur2Id !== a.donateurId ? 2 : 1); }, 0);
     var dr = droitsLD(part, recus, FISC.abatEnfant);
     var avantClient = p.deces < deaths[k];
     res.heritages.push({ parent: p.label, parentId: p.id, client: k, date: p.deces, montant: part, droits: dr, avantClient: avantClient, saut: !!(plan.donations && P.sautGeneration && avantClient) });
   });
-  res.droitsDPT = res.dpt.reduce(function (s, x) { return s + x.droits; }, 0);
+  res.droitsDPT = res.dpt.reduce(function (s, x) { return s + (x.mode === 'dpt' ? x.droits : 0); }, 0);
   res.droitsDonations = res.donations.reduce(function (s, x) { return s + x.droits; }, 0);
   res.coutsSociete = res.societe.reduce(function (s, x) { return s + x.cout; }, 0);
   res.droitsSuccessions = res.deces.reduce(function (s, x) { return s + x.droitsSucc; }, 0);
@@ -986,6 +1033,7 @@ function analyseComplete(d) {
   A.ifi = { avant: calculIFI(d, false), apres: calculIFI(d, true) };
   A.fbo = analyseFBO(d);
   A.pvLatentes = plusValuesLatentes(d);
+  A.rendements = rendements(d);
   var c0 = prepare(d);
   A.dptPossibles = (d.actifs || []).filter(function (a) { return eligibleDPT(c0, a); }).map(function (a) { return { id: a.id, actif: a.libelle, retenu: !!a.planDPT }; });
   A.donsAnciens = (d.donations || []).filter(function (x) { var dt = parseDate(x.date); return dt && addYears(dt, 15) <= c0.T0; });
@@ -1000,9 +1048,11 @@ function calculIFI(d, avecPlan) {
   var ctx = prepare(d), P = ctx.P, lignes = [], brut = 0, dettes = 0;
   (d.actifs || []).forEach(function (a) {
     var v = +a.valeur || 0, passif = +a.passif || 0, base = 0, dette = 0, note = '';
-    if (avecPlan && a.planDPT && eligibleDPT(ctx, a)) { lignes.push({ libelle: a.libelle, base: 0, note: 'Réattribué (DPT)' }); return; }
+
     if (avecPlan && a.planFBO && a.type !== 'rp' && a.type !== 'financier') { lignes.push({ libelle: a.libelle, base: 0, note: 'Vendu (family buy out)' }); return; }
-    if (usufruitParent(ctx, a, ctx.T0)) { lignes.push({ libelle: a.libelle, base: 0, note: 'Nue-propriété reçue : déclarée par l’usufruitier' }); return; }
+    var fg = fractionGrevee(ctx, a, ctx.T0);
+    if (fg >= 0.999) { lignes.push({ libelle: a.libelle, base: 0, note: 'Nue-propriété reçue : déclarée par l’usufruitier' }); return; }
+    if (fg > 0) { v = v * (1 - fg); passif = passif * (1 - fg); }
     if (a.type === 'rp') { base = v * 0.7; dette = passif; note = 'Abattement 30 %'; }
     else if (a.type === 'immo') { base = v; dette = passif; }
     else if (a.type === 'societe' && /SCI/i.test(a.forme || 'SCI')) { base = Math.max(0, v - Math.max(0, passif - (+a.cca || 0))); note = 'Parts de SCI (compte courant des clients non déductible)'; }
@@ -1022,6 +1072,15 @@ function calculIFI(d, avecPlan) {
 }
 
 /* ---------------- Family buy out : capacité de financement par les revenus ---------------- */
+function rendements(d) {
+  var ctx = prepare(d);
+  return (d.actifs || []).filter(function (a) { return +a.revenu > 0; }).map(function (a) {
+    var v = a.type === 'societe' ? Math.max(0, (+a.valeur || 0) - (+a.passif || 0)) : (+a.valeur || 0);
+    var pv = plusValue(a, v, 1, ctx.T0), dette = a.type === 'societe' ? 0 : (+a.passif || 0);
+    var netVente = Math.max(0, v - dette - pv.impot);
+    return { actifId: a.id, actif: a.libelle, revenu: +a.revenu, valeur: v, dette: dette, impotPV: pv.impot, pvRenseigne: pv.renseigne, netVente: netVente, brut: v ? +a.revenu / v : 0, net: netVente ? +a.revenu / netVente : 0 };
+  });
+}
 function plusValuesLatentes(d) {
   var ctx = prepare(d);
   return (d.actifs || []).filter(function (a) { return a.type !== 'financier'; }).map(function (a) {
@@ -1040,14 +1099,18 @@ function analyseFBO(d) {
     var capacite = r > 0 ? (annuite / 12) * (1 - Math.pow(1 + r, -n)) / r : annuite * P.fboDuree;
     var net = Math.max(0, (+a.valeur || 0) - (+a.passif || 0));
     var ratio = net > 0 ? capacite / net : 0;
-    var pv = plusValue(a, +a.valeur || 0, 1, ctx.T0);
+    var pv = plusValue(a, a.type === 'societe' ? net : (+a.valeur || 0), 1, ctx.T0);
+    var prixV = a.type === 'societe' ? net : (+a.valeur || 0), dette = a.type === 'societe' ? 0 : (+a.passif || 0);
+    var frais = prixV * (a.type === 'societe' || a.type === 'pro' ? P.fboFraisTitres : P.fboFraisImmo);
+    var netVente = Math.max(0, prixV - dette - pv.impot);
     // intérêt fiscal : droits et coûts du plan avec et sans cette vente
     var d0 = JSON.parse(JSON.stringify(d)), d1 = JSON.parse(JSON.stringify(d));
     d0.actifs.forEach(function (x) { if (x.id === a.id) x.planFBO = false; });
     d1.actifs.forEach(function (x) { if (x.id === a.id) { x.planFBO = true; x.fboAffectation = x.fboAffectation || 'av'; } });
     var m0 = moyenne(d0, PLAN_FULL).moyenne, m1 = moyenne(d1, PLAN_FULL).moyenne;
     out.push({ actifId: a.id, actif: a.libelle, type: a.type, categorie: a.categorieRevenu || '', revenu: rev, rendement: (+a.valeur ? rev / +a.valeur : 0), valeurNette: net, capacite: capacite, ratio: ratio,
-      impotPV: pv.impot, pv: pv, gain: m0 - m1, retenu: !!a.planFBO,
+      impotPV: pv.impot, pv: pv, gain: m0 - m1, retenu: !!a.planFBO, prix: prixV, dette: dette, frais: frais, netVente: netVente, rendementNet: netVente > 0 ? rev / netVente : 0,
+      apport: Math.max(0, prixV + frais - capacite), droitsAvec: m1, droitsSans: m0,
       verdict: ratio >= 0.6 ? 'Bon candidat' : ratio >= 0.3 ? 'Avec donation complémentaire' : 'Peu adapté' });
   });
   return out.sort(function (x, y) { return y.ratio - x.ratio; });
@@ -1073,7 +1136,7 @@ function etatAbattements(d) {
 }
 
 if (typeof module !== 'undefined') module.exports = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
-var CALC = { FISC: FISC, REGIMES: REGIMES, plusValue: plusValue, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
+var CALC = { FISC: FISC, REGIMES: REGIMES, plusValue: plusValue, rendements: rendements, moitiesDPT: moitiesDPT, fractionGrevee: fractionGrevee, grevement: grevement, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
 if (typeof module !== 'undefined') module.exports = CALC;
 
 </script>
@@ -1485,7 +1548,8 @@ var PPTX = (function () {
     S.table(Z.x, Z.y, Z.w, [2.8, 1.8, 1.2, 1.5, 1.6, 1.3, 1.8], b, { sz: 1000, rowH: Math.round(EMU * 0.34), algn: ['l', 'l', 'l', 'l', 'l', 'r', 'l'] });
     S.text(Z.x, Z.y + Z.h * 0.66, Z.w, Z.h * 0.32, [
       { runs: ['Un bien reçu en nue-propriété redevient le vôtre en pleine propriété, sans droits, au décès de l’usufruitier (art. 1133 CGI) ; l’IFI est déclaré par l’usufruitier.'], bullet: true, spcAft: 5 },
-      { runs: ['Une donation reçue il y a plus de 15 ans peut être réattribuée à vos enfants dans une donation-partage transgénérationnelle de vos parents : seul le droit de partage de 2,5 % est dû (art. 776 A CGI) et le bien sort de votre succession.'], bullet: true }], { sz: 1150 });
+      { runs: ['Une donation reçue il y a plus de 15 ans peut être réincorporée dans une donation-partage transgénérationnelle de vos parents : vous conservez l’usufruit, vos enfants reçoivent la nue-propriété au seul droit de partage de 2,5 % (art. 776 A CGI).'], bullet: true, spcAft: 5 },
+      { runs: ['La part d’un donateur décédé ne peut pas être réincorporée : vous la transmettez directement, en nue-propriété, sur vos propres abattements.'], bullet: true }], { sz: 1100 });
     return S;
   }
   function sIFI(M, A) {
@@ -1516,9 +1580,9 @@ var PPTX = (function () {
       { runs: [{ t: 'Hypothèses', b: true, color: 'accent1', sz: 1300 }], spcAft: 4 },
       { runs: ['Crédit sur ' + P.fboDuree + ' ans à ' + (Math.round(P.fboTaux * 1000) / 10).toLocaleString('fr-FR') + ' %, ' + Math.round(P.fboPonderation * 100) + ' % des revenus nets affectés au remboursement.'], bullet: true, spcAft: 3 },
       { runs: ['Plus-value de cession et frais d’acquisition à chiffrer.'], bullet: true }], { sz: 1100 });
-    var b = [['Bien', 'Finançable', 'Part', 'Impôt plus-value', 'Effet sur les droits', '']];
-    A.fbo.slice(0, 8).forEach(function (f) { b.push([f.actif, eur(f.capacite), Math.round(f.ratio * 100) + ' %', f.pv.renseigne ? eur(f.impotPV) : 'à chiffrer', (f.gain >= 0 ? '− ' : '+ ') + eur(Math.abs(f.gain)), { t: f.retenu ? 'Retenu' : 'Non retenu', algn: 'ctr', fill: f.retenu ? { s: 'accent1', tint: 0.3 } : null }]); });
-    S.table(Z.x + lw + Z.w * 0.04, Z.y, Z.w - lw - Z.w * 0.04, [2.4, 1.3, 0.8, 1.3, 1.5, 1.3], b, { sz: 950, rowH: Math.round(EMU * 0.4) });
+    var b = [['Bien', 'Rendement net de vente', 'Finançable', 'Impôt plus-value', 'Effet sur les droits', '']];
+    A.fbo.slice(0, 8).forEach(function (f) { b.push([f.actif, (Math.round(f.rendementNet * 1000) / 10).toLocaleString('fr-FR') + ' %', eur(f.capacite) + ' (' + Math.round(f.ratio * 100) + ' %)', f.pv.renseigne ? eur(f.impotPV) : 'à chiffrer', (f.gain >= 0 ? '− ' : '+ ') + eur(Math.abs(f.gain)), { t: f.retenu ? 'Retenu' : 'Non retenu', algn: 'ctr', fill: f.retenu ? { s: 'accent1', tint: 0.3 } : null }]); });
+    S.table(Z.x + lw + Z.w * 0.04, Z.y, Z.w - lw - Z.w * 0.04, [2.2, 1.2, 1.6, 1.2, 1.4, 1.2], b, { sz: 900, rowH: Math.round(EMU * 0.42) });
     S.text(Z.x + lw + Z.w * 0.04, Z.y + Z.h * 0.72, Z.w - lw - Z.w * 0.04, Z.h * 0.25, [{ runs: [{ t: 'Effet sur les droits : comparaison de la stratégie avec et sans la vente, plus-value et frais d’acquisition inclus. Le family buy out est retenu lorsqu’il réduit le coût global.', i: true }] }], { sz: 1000 });
     return S;
   }
@@ -1732,7 +1796,7 @@ var PPTX = (function () {
         var notes = [];
         ctx.clients.forEach(function (k) { var p = ctx.persons[k]; notes.push(nomCourt(ctx, k) + ' : ' + p.age + ' ans, espérance de vie ' + Math.round(p.ev) + ' ans' + (p.ev > 15 ? ' – abattements reconstitués le ' + dfr(CALC.addYears(ctx.T0, 15)) : ' – un renouvellement à 15 ans est incertain') + '.'); });
         if ((r.fbo || []).length) notes.push('Family buy out : ' + r.fbo.map(function (f) { return f.actif + ' vendu ' + eur(f.prix) + ' par ' + nomCourt(ctx, f.client).toLowerCase() + ' (impôt de plus-value ' + eur(f.impotPV) + ')'; }).join(', ') + '.');
-        if ((r.dpt || []).length) notes.push('Réattribution par donation-partage transgénérationnelle : ' + r.dpt.map(function (x) { return x.actif + ' (' + eur(x.valeur) + ', droit de partage ' + eur(x.droits) + ')'; }).join(', ') + '.');
+        if ((r.dpt || []).length) notes.push('Réattributions en nue-propriété (usufruit conservé) : ' + r.dpt.map(function (x) { return x.actif + ', part de ' + x.donateur.split(' ')[0] + (x.mode === 'dpt' ? ' : DPT, ' + eur(x.droits) + ' (2,5 %)' : ' : donation directe, ' + eur(x.droits) + ' de droits'); }).join(' ; ') + '.');
         if (ctx.P.sautGeneration && (r.heritages || []).length) notes.push('Saut de génération sur l’héritage de vos parents.');
         if (r.cashGifts.length) notes.push('Dons de sommes d’argent : ' + eur(r.cashGifts.reduce(function (s, x) { return s + x.montant; }, 0)) + ' en franchise de droits (art. 790 G / 790 B).');
         if (r.avVersements.length) notes.push('Versements assurance-vie : ' + r.avVersements.map(function (v) { return eur(v.montant) + ' par ' + nomCourt(ctx, v.client).toLowerCase() + (v.apres70 ? ' (après 70 ans, art. 757 B)' : ''); }).join(', ') + '.');
@@ -2372,13 +2436,14 @@ var XLSXOUT = (function () {
     put(wf, 'A4', 'Durée (années)'); put(wf, 'B4', P.fboDuree, { input: true });
     put(wf, 'A5', 'Part des revenus affectée'); put(wf, 'B5', P.fboPonderation, { fmt: PCT, input: true });
     [32, 18, 14, 12, 16, 14, 24, 16, 16, 14].forEach(function (z, i) { wf.getColumn(i + 1).width = z; });
-    ['Bien', 'Catégorie', 'Revenu net', 'Rendement', 'Finançable', 'Part de la valeur', 'Verdict', 'Impôt plus-value', 'Effet sur les droits', 'Retenu'].forEach(function (z, i) { put(wf, String.fromCharCode(65 + i) + '7', z, { navy: true }); });
+    wf.getColumn(11).width = 14; wf.getColumn(12).width = 14;
+    ['Bien', 'Catégorie', 'Revenu net', 'Rendement', 'Finançable', 'Part de la valeur', 'Verdict', 'Impôt plus-value', 'Effet sur les droits', 'Retenu', 'Net de vente', 'Rendement net de vente'].forEach(function (z, i) { put(wf, String.fromCharCode(65 + i) + '7', z, { navy: true }); });
     var CAT = { foncier: 'Revenus fonciers', bic: 'Location meublée (BIC)', dividendes: 'Dividendes', interets: 'Intérêts', autre: 'Autre' };
     A.fbo.forEach(function (f, i) {
       var y = 8 + i;
       put(wf, 'A' + y, f.actif); put(wf, 'B' + y, CAT[f.categorie] || ''); put(wf, 'C' + y, f.revenu, { fmt: EUR, input: true }); put(wf, 'D' + y, f.rendement, { fmt: '0.0%' });
       put(wf, 'E' + y, { formula: 'PV($B$3/12,$B$4*12,-C' + y + '*$B$5/12)', result: f.capacite }, { fmt: EUR });
-      put(wf, 'F' + y, { formula: 'IFERROR(E' + y + '/' + Math.round(f.valeurNette) + ',0)', result: f.ratio }, { fmt: PCT }); put(wf, 'G' + y, f.verdict); put(wf, 'H' + y, Math.round(f.impotPV), { fmt: EUR }); put(wf, 'I' + y, Math.round(f.gain), { fmt: EUR }); put(wf, 'J' + y, f.retenu ? 'Oui' : 'Non', { b: f.retenu });
+      put(wf, 'F' + y, { formula: 'IFERROR(E' + y + '/' + Math.round(f.valeurNette) + ',0)', result: f.ratio }, { fmt: PCT }); put(wf, 'G' + y, f.verdict); put(wf, 'H' + y, Math.round(f.impotPV), { fmt: EUR }); put(wf, 'I' + y, Math.round(f.gain), { fmt: EUR }); put(wf, 'J' + y, f.retenu ? 'Oui' : 'Non', { b: f.retenu }); put(wf, 'K' + y, Math.round(f.netVente), { fmt: EUR }); put(wf, 'L' + y, { formula: 'IFERROR(C' + y + '/K' + y + ',0)', result: f.rendementNet }, { fmt: '0.0%' });
     });
     if (!A.fbo.length) put(wf, 'A8', 'Aucun bien productif de revenus saisi.', { i: true });
     var yp = 10 + A.fbo.length;
@@ -2404,8 +2469,12 @@ var XLSXOUT = (function () {
       var wd = wb.addWorksheet('Réattributions DPT', { views: [{ showGridLines: false }] });
       [32, 24, 16, 16].forEach(function (z, i) { wd.getColumn(i + 1).width = z; });
       put(wd, 'A1', 'Donation-partage transgénérationnelle (art. 776 A CGI)', { b: true, sz: 13 });
-      ['Bien', 'Donateur d’origine', 'Valeur réattribuée', 'Droit de partage'].forEach(function (z, i) { put(wd, String.fromCharCode(65 + i) + '3', z, { navy: true }); });
-      dptL.forEach(function (z, i) { var y = 4 + i; put(wd, 'A' + y, z.actif); put(wd, 'B' + y, z.donateur); put(wd, 'C' + y, Math.round(z.valeur), { fmt: EUR, input: true }); put(wd, 'D' + y, { formula: 'C' + y + '*2.5%', result: z.droits }, { fmt: EUR }); });
+      [32, 24, 30, 16, 12, 16, 16].forEach(function (z, i) { wd.getColumn(i + 1).width = z; });
+      ['Bien', 'Part d’origine', 'Mode', 'Valeur', 'Nue-propriété', 'Base taxée', 'Coût'].forEach(function (z, i) { put(wd, String.fromCharCode(65 + i) + '3', z, { navy: true }); });
+      dptL.forEach(function (z, i) { var y = 4 + i; put(wd, 'A' + y, z.actif); put(wd, 'B' + y, z.donateur + ' (' + Math.round(z.part * 100) + ' %)'); put(wd, 'C' + y, z.mode === 'dpt' ? 'Donation-partage transgénérationnelle' : 'Donation directe (donateur décédé)');
+        put(wd, 'D' + y, Math.round(z.valeurPP), { fmt: EUR, input: true }); put(wd, 'E' + y, z.npPct, { fmt: PCT }); put(wd, 'F' + y, { formula: 'D' + y + '*E' + y, result: Math.round(z.valeurPP) * z.npPct }, { fmt: EUR });
+        put(wd, 'G' + y, z.mode === 'dpt' ? { formula: 'F' + y + '*2.5%', result: z.droits } : Math.round(z.droits), { fmt: EUR }); });
+      put(wd, 'A' + (5 + dptL.length), 'Usufruit conservé par la génération intermédiaire (usufruit successif par rétention) : les petits-enfants reçoivent la nue-propriété.', { i: true });
     }
 
     /* ================= Détail (valeurs de l'outil) ================= */
@@ -2765,8 +2834,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a.origine === 'donation') {
       var don = state.parentsClients.filter(function (p) { return p.id === a.donateurId; })[0];
       tags.push('Reçu en ' + (a.droitRecu === 'NP' ? 'nue-propriété' : 'donation') + (don ? ' de ' + (don.prenom || (don.lien === 'mere' ? 'la mère' : 'le père')) : ''));
-      var dto = CALC.parseDate(a.dateOrigine);
-      if (dto && CALC.addYears(dto, 15) <= (CALC.parseDate(state.dateEtude) || new Date()) && don && !don.decede) tags.push('Plus de 15 ans : DPT 2,5 %');
+      if (a.donateur2Id) tags.push('Donation conjointe');
+      if (CALC.eligibleDPT(CALC.prepare(normaliser(clone(state))), a)) tags.push('Plus de 15 ans : DPT 2,5 %');
     } else if (a.origine === 'succession') tags.push('Reçu par succession');
     if (+a.revenu) tags.push('Revenus ' + eur(a.revenu) + ' / an');
     if (a.planFBO) tags.push('Family buy out');
@@ -2860,7 +2929,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
           (a.type === 'immo' || a.type === 'autre' ? field('Travaux réels (facultatif)', 'actifs.' + i + '.travaux', 'money', { hint: 'Sinon forfait de 15 % après 5 ans.', cls: 'span2' }) : '') + pvApercu(a) : '') +
         field('Origine', 'actifs.' + i + '.origine', 'select', { cls: 'span2', options: [['', 'Acquis par les clients'], ['donation', 'Reçu par donation'], ['succession', 'Reçu par succession']] }) +
         (a.origine === 'donation' ? field('Date de la donation reçue', 'actifs.' + i + '.dateOrigine', 'date') + field('Valeur déclarée à l’époque', 'actifs.' + i + '.valeurOrigine', 'money') +
-          field('Donateur', 'actifs.' + i + '.donateurId', 'select', { options: [['', 'Autre / non renseigné']].concat(state.parentsClients.map(function (p) { return [p.id, (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')) + ' (' + (p.lien === 'mere' ? 'mère' : 'père') + ' de ' + nomClient(p.de || 'c1') + ')']; })) }) +
+          field('Donateur', 'actifs.' + i + '.donateurId', 'select', { options: [['', 'Autre / non renseigné']].concat(optParents()) }) +
+          field('Second donateur (donation conjointe)', 'actifs.' + i + '.donateur2Id', 'select', { options: [['', 'Aucun']].concat(optParents()) }) +
+          (a.donateur2Id && a.droitRecu === 'NP' ? field('Sans réversion d’usufruit', 'actifs.' + i + '.sansReversion', 'check', { cls: 'span2', hint: 'Par défaut, l’usufruit des donateurs conjoints passe au survivant jusqu’au second décès.' }) : '') +
           field('Droit reçu', 'actifs.' + i + '.droitRecu', 'select', { options: [['PP', 'Pleine propriété'], ['NP', 'Nue-propriété']] }) +
           (a.droitRecu === 'NP' ? field('Usufruitier', 'actifs.' + i + '.usufruitierId', 'select', { cls: 'span2', options: [['', 'Le donateur']].concat(state.parentsClients.map(function (p) { return [p.id, p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')]; })), hint: 'L’usufruit s’éteindra sans droits au décès de l’usufruitier.' }) : '') : '') +
         (a.type !== 'financier' && a.type !== 'rp' ? field('Revenu net annuel', 'actifs.' + i + '.revenu', 'money') + field('Catégorie de revenus', 'actifs.' + i + '.categorieRevenu', 'select', { options: [['', '–'], ['foncier', 'Revenus fonciers'], ['bic', 'Location meublée (BIC)'], ['dividendes', 'Dividendes'], ['interets', 'Intérêts'], ['autre', 'Autre']] }) : '') +
@@ -2903,12 +2974,16 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     }
     return enveloppe(titre, html);
   }
+  function optParents() { return state.parentsClients.map(function (p) { return [p.id, (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')) + ' (' + (p.lien === 'mere' ? 'mère' : 'père') + ' de ' + nomClient(p.de || 'c1') + ')' + (p.decede ? ' – décédé(e)' : '')]; }); }
+  function pct1(x) { return (Math.round(x * 1000) / 10).toLocaleString('fr-FR') + ' %'; }
   function pvApercu(a) {
     if (a.type === 'rp') return '<p class="note span2">Résidence principale : plus-value exonérée.</p>';
     var v = a.type === 'societe' ? Math.max(0, (+a.valeur || 0) - (+a.passif || 0)) : (+a.valeur || 0);
     var pv = CALC.plusValue(a, v, 1, CALC.parseDate(state.dateEtude) || new Date());
     if (!pv.renseigne) return '<p class="note span2">Renseignez le prix et la date d’acquisition pour chiffrer la plus-value d’un apport en société ou d’une vente.</p>';
-    return '<p class="note span2 pvbox">Plus-value latente : <strong>' + eur(pv.pvBrute) + '</strong> · impôt si cession aujourd’hui : <strong>' + eur(pv.impot) + '</strong><br><small>' + h(pv.regime) + '</small></p>';
+    var rd = '';
+    if (+a.revenu > 0) { var dette = a.type === 'societe' ? 0 : (+a.passif || 0), nv = Math.max(0, v - dette - pv.impot); rd = '<br>Rendement : <strong>' + pct1(+a.revenu / v) + '</strong> sur la valeur, <strong>' + pct1(nv ? +a.revenu / nv : 0) + '</strong> sur le net de vente (' + eur(nv) + ' après impôt et remboursement du passif)'; }
+    return '<p class="note span2 pvbox">Plus-value latente : <strong>' + eur(pv.pvBrute) + '</strong> · impôt si cession aujourd’hui : <strong>' + eur(pv.impot) + '</strong>' + rd + '<br><small>' + h(pv.regime) + '</small></p>';
   }
   function enveloppe(titre, html) { return '<div class="bulle" role="dialog" aria-label="' + h(titre) + '"><span class="fleche"></span><div class="bhead"><strong>' + h(titre) + '</strong><button class="x" data-act="fermer" aria-label="Fermer">×</button></div>' + html + '</div>'; }
   function partUI(a, k) { if (!couple()) return k === 'c1' ? 1 : 0; var p = +a.partC1; if (isNaN(p)) p = 50; return k === 'c1' ? p / 100 : 1 - p / 100; }
@@ -2947,12 +3022,12 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       html += '<div class="tablewrap"><table class="t edit"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Passif</th><th>Vague</th><th>Via SCI</th><th>FBO</th><th>DPT 2,5 %</th></tr></thead><tbody>';
       state.actifs.forEach(function (a, i) {
         if (a.type === 'financier') return;
-        html += '<tr><td>' + h(a.libelle) + '</td><td class="n">' + eur(a.valeur) + '</td><td class="n">' + (a.passif ? eur(a.passif) : '–') + '</td><td>' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td>' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + '</td><td>' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="av"' + (a.fboAffectation !== 'conserve' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td>' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '>' : '<span class="muted">–</span>') + '</td></tr>';
+        html += '<tr><td>' + h(a.libelle) + '</td><td class="n">' + eur(a.valeur) + '</td><td class="n">' + (a.passif ? eur(a.passif) : '–') + '</td><td>' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td>' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + '</td><td>' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="av"' + (a.fboAffectation !== 'conserve' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td>' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '> <span class="tip" tabindex="0" data-tip="' + h(CALC.moitiesDPT(ctxS, a).map(function (m) { return 'Part de ' + m.donateur.prenom + ' (' + Math.round(m.part * 100) + ' %) : ' + (m.mode === 'dpt' ? 'donation-partage transgénérationnelle, droit de partage 2,5 %' : m.mode === 'directe' ? 'donateur décédé, donation directe par vous de la nue-propriété' : 'donation de moins de 15 ans : droits de donation'); }).join('\n') + '\nVous conservez l’usufruit (usufruit successif par rétention) : vos enfants ne reçoivent que la nue-propriété.') + '">ⓘ</span>' : '<span class="muted">–</span>') + '</td></tr>';
       });
       html += '</tbody></table></div>';
     }
     html += '<div class="grid g1">' + field('Transmettre la résidence principale via une SCI', 'params.sciResidencePrincipale', 'check', { hint: 'Vous restez gérants : vous décidez de la vente et du remploi du prix ; exonération de plus-value conservée pour l’occupant (SCI à l’IR, mise à disposition gratuite, statuts adaptés).' }) + '</div>';
-    html += '<p class="note">DPT 2,5 % : un bien reçu de vos parents il y a plus de 15 ans peut être réattribué directement à vos enfants par une donation-partage transgénérationnelle de vos parents, avec votre accord. Seul le droit de partage de 2,5 % est dû (art. 776 A CGI) et le bien sort de votre succession.</p>';
+    html += '<p class="note">DPT 2,5 % : un bien reçu de vos parents il y a plus de 15 ans peut être réincorporé dans une donation-partage transgénérationnelle de vos parents au profit de vos enfants. Vous conservez l’usufruit (usufruit successif par rétention, ou réserve d’usufruit si vous aviez reçu la pleine propriété) : vos enfants reçoivent la nue-propriété, taxée au seul droit de partage de 2,5 % (art. 776 A CGI). La part d’un donateur décédé ne peut pas être réincorporée : vous la donnez directement, sur vos propres abattements.</p>';
     if (state.parentsClients.some(function (p) { return !p.decede && +p.patrimoine > 0; })) html += '<div class="grid g1">' + field('Saut de génération sur l’héritage de vos parents', 'params.sautGeneration', 'check', { hint: 'Donation-partage transgénérationnelle de vos parents, ou renonciation au profit de vos enfants : mêmes droits, mais ces biens ne repasseront pas par votre succession.' }) + '</div>';
     if (state.actifs.some(function (a) { return a.type === 'societe' && +a.cca > 0; })) html += '<div class="grid g1">' + field('Comptes courants d’associé remboursés d’ici le décès', 'params.ccaRembourseAvantDeces', 'check', { hint: 'Hypothèse : la société rembourse les comptes courants par ses revenus et les sommes sont consommées. Le compte courant réduit la valeur des parts données sans être taxé au décès : levier maximal.' }) + '</div>';
     html += '<h3 class="sub">Assurance-vie</h3><div class="grid g2">' + field('Clauses bénéficiaires démembrées', 'params.clauseDemembree', 'check', { hint: 'Conjoint usufruitier ; à défaut, enfants usufruitiers.' }) +
@@ -3005,7 +3080,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
           if (r.impotFBO) s += '<tr><td>Impôt de plus-value (family buy out)</td><td class="n">' + eur(r.impotFBO) + '</td></tr>';
           if (r.fraisFBO) s += '<tr><td>Frais d’acquisition (société des enfants)</td><td class="n">' + eur(r.fraisFBO) + '</td></tr>';
           if (r.droitsDPT) s += '<tr><td>Droit de partage (DPT)</td><td class="n">' + eur(r.droitsDPT) + '</td></tr>';
-          (r.fbo || []).forEach(function (f) { s += '<tr><td colspan="2" class="opt">Family buy out : ' + h(f.actif) + ' vendu ' + eur(f.prix) + ' par ' + h(nomClient(f.client)) + ', ' + eur(f.net) + ' net ' + (f.affectation === 'av' ? 'placés en assurance-vie' : 'conservés') + (f.apportNecessaire > 0 ? ' ; apport à prévoir pour les enfants : ' + eur(f.apportNecessaire) : '') + '</td></tr>'; });
+          (r.fbo || []).forEach(function (f) { var tip = 'Prix : ' + eur(f.prix) + (f.dette ? '\n− Emprunt : ' + eur(f.dette) : '') + '\n− Impôt de plus-value : ' + eur(f.impotPV) + '\n= Net : ' + eur(f.net) + '\nFrais d’acquisition : ' + eur(f.frais) + '\nFinancé par les revenus : ' + eur(f.financable) + '\nApport à prévoir : ' + eur(f.apportNecessaire); s += '<tr><td colspan="2" class="opt"><span class="tip" tabindex="0" data-tip="' + h(tip) + '">Family buy out : ' + h(f.actif) + ' vendu ' + eur(f.prix) + ' par ' + h(nomClient(f.client)) + ', ' + eur(f.net) + ' net ' + (f.affectation === 'av' ? 'placés en assurance-vie' : 'conservés') + '</span></td></tr>'; });
         }
         s += '<tr class="tot"><td>Total</td><td class="n">' + eur(r.total) + '</td></tr></tbody></table>';
         if (r.warnings.length) s += '<ul class="warn">' + r.warnings.map(function (w) { return '<li>' + h(w) + '</li>'; }).join('') + '</ul>';
@@ -3029,8 +3104,10 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       '<tr><td>Dettes déductibles</td><td class="n">− ' + eur(I.avant.dettes) + '</td></tr><tr class="tot"><td>Patrimoine net taxable</td><td class="n">' + eur(I.avant.net) + '</td></tr><tr class="tot"><td>IFI annuel</td><td class="n">' + eur(I.avant.ifi) + '</td></tr></tbody></table>' +
       '<p class="note">' + (I.avant.assujetti ? 'Assujetti (seuil 1 300 000 €). ' : 'Non assujetti (seuil 1 300 000 €). ') + 'Les donations en nue-propriété avec réserve d’usufruit ne réduisent pas l’IFI : l’usufruitier déclare la pleine propriété.</p></div>' +
       '<div class="res card"><h4>Après la stratégie</h4><table class="t compact"><tbody><tr><td>Patrimoine net taxable</td><td class="n">' + eur(I.apres.net) + '</td></tr><tr class="tot"><td>IFI annuel</td><td class="n">' + eur(I.apres.ifi) + '</td></tr></tbody></table></div></div>';
+    if ((A.rendements || []).length) html += '<h3>Rendement des biens</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Revenu net</th><th class="n">Valeur</th><th class="n">Rendement</th><th class="n">Net de vente</th><th class="n">Rendement sur le net de vente</th></tr></thead><tbody>' +
+      A.rendements.map(function (x) { return '<tr><td>' + h(x.actif) + '</td><td class="n">' + eur(x.revenu) + '</td><td class="n">' + eur(x.valeur) + '</td><td class="n">' + pct1(x.brut) + '</td><td class="n"><span class="tip" tabindex="0" data-tip="' + h('Valeur : ' + eur(x.valeur) + '\n− Passif remboursé : ' + eur(x.dette) + '\n− Impôt de plus-value : ' + (x.pvRenseigne ? eur(x.impotPV) : 'non chiffré (prix d’acquisition manquant)') + '\n= Net de vente : ' + eur(x.netVente)) + '">' + eur(x.netVente) + '</span></td><td class="n"><strong>' + pct1(x.net) + '</strong></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Le rendement sur le net de vente compare le revenu à ce que vous percevriez réellement en vendant : il dit si conserver le bien rapporte plus que réinvestir le prix.</p>';
     if (A.fbo.length) html += '<h3>Family buy out</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Revenu net</th><th class="n">Finançable</th><th class="n">Part de la valeur</th><th class="n">Impôt de plus-value</th><th class="n">Effet sur les droits</th><th>Dans la stratégie</th></tr></thead><tbody>' +
-      A.fbo.map(function (f) { return '<tr><td>' + h(f.actif) + '<br><small class="muted">' + h(f.verdict) + '</small></td><td class="n">' + eur(f.revenu) + '</td><td class="n">' + eur(f.capacite) + '</td><td class="n">' + Math.round(f.ratio * 100) + ' %</td><td class="n">' + (f.pv.renseigne ? eur(f.impotPV) : '<span class="muted">prix d’achat ?</span>') + '</td><td class="n">' + (f.gain >= 0 ? 'économie ' : 'surcoût ') + eur(Math.abs(f.gain)) + '</td><td><span class="tag ' + (f.retenu ? 'ok' : 'ko') + '">' + (f.retenu ? 'Utilisé' : 'Non utilisé') + '</span></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Une société détenue par vos enfants rachète le bien à crédit ; les revenus remboursent l’emprunt. Vous percevez le prix (plus-value de cession à chiffrer), que vous pouvez conserver, donner ou placer en assurance-vie.</p>';
+      A.fbo.map(function (f) { return '<tr><td>' + h(f.actif) + '<br><small class="muted">' + h(f.verdict) + '</small></td><td class="n">' + eur(f.revenu) + '</td><td class="n">' + eur(f.capacite) + '</td><td class="n">' + Math.round(f.ratio * 100) + ' %</td><td class="n">' + (f.pv.renseigne ? '<span class="tip" tabindex="0" data-tip="' + h(detailPV(f.pv)) + '">' + eur(f.impotPV) + '</span>' : '<span class="muted">prix d’achat ?</span>') + '</td><td class="n"><span class="tip" tabindex="0" data-tip="' + h(detailFBO(f, A.ctx.P)) + '">' + (f.gain >= 0 ? 'économie ' : 'surcoût ') + eur(Math.abs(f.gain)) + '</span></td><td><span class="tag ' + (f.retenu ? 'ok' : 'ko') + '">' + (f.retenu ? 'Utilisé' : 'Non utilisé') + '</span></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Une société détenue par vos enfants rachète le bien à crédit ; les revenus remboursent l’emprunt. Vous percevez le prix (plus-value de cession à chiffrer), que vous pouvez conserver, donner ou placer en assurance-vie.</p>';
     var pvs = (A.pvLatentes || []).filter(function (x) { return x.pv.renseigne; });
     if (pvs.length) html += '<h3>Plus-values latentes</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Prix de revient</th><th class="n">Plus-value</th><th class="n">Impôt si cession ou apport</th><th>Régime</th></tr></thead><tbody>' +
       pvs.map(function (x) { return '<tr><td>' + h(x.actif) + '</td><td class="n">' + eur(x.valeur) + '</td><td class="n">' + eur(x.pv.acquisition) + '</td><td class="n">' + eur(x.pv.pvBrute) + '</td><td class="n">' + eur(x.pv.impot) + '</td><td><small>' + h(x.pv.regime) + '</small></td></tr>'; }).join('') + '</tbody></table></div><p class="note">L’apport d’un immeuble à une société est une cession : la plus-value est imposée au jour de l’apport. Elle est intégrée aux coûts du levier société et du family buy out.</p>';
@@ -3038,8 +3115,22 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (hs.length) html += '<h3>Héritage attendu de vos parents</h3><div class="tablewrap"><table class="t"><thead><tr><th>Parent</th><th>Pour</th><th class="n">Décès estimé</th><th class="n">Part reçue</th><th class="n">Droits à payer</th></tr></thead><tbody>' +
       hs.map(function (x) { return '<tr><td>' + h(x.parent) + '</td><td>' + h(nomClient(x.client)) + '</td><td class="n">' + x.date.getFullYear() + '</td><td class="n">' + eur(x.montant) + '</td><td class="n">' + eur(x.droits) + '</td></tr>'; }).join('') + '</tbody></table></div><p class="note">Sans saut de génération, cet héritage s’ajoute ensuite à votre propre succession et il est taxé une seconde fois.</p>';
     var dpt = A.plan.resultats[0].dpt || [];
-    if (dpt.length) html += '<h3>Réattributions (donation-partage transgénérationnelle)</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th>Donateur d’origine</th><th class="n">Valeur réattribuée</th><th class="n">Droit de partage 2,5 %</th></tr></thead><tbody>' + dpt.map(function (x) { return '<tr><td>' + h(x.actif) + '</td><td>' + h(x.donateur) + '</td><td class="n">' + eur(x.valeur) + '</td><td class="n">' + eur(x.droits) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    if (dpt.length) html += '<h3>Réattributions aux enfants</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th>Part d’origine</th><th>Mode</th><th class="n">Valeur</th><th class="n">Nue-propriété</th><th class="n">Base taxée</th><th class="n">Coût</th></tr></thead><tbody>' + dpt.map(function (x) { return '<tr><td>' + h(x.actif) + '</td><td>' + h(x.donateur) + ' (' + Math.round(x.part * 100) + ' %)</td><td>' + (x.mode === 'dpt' ? 'Donation-partage transgénérationnelle' : 'Donation directe (donateur décédé)') + '</td><td class="n">' + eur(x.valeurPP) + '</td><td class="n">' + Math.round(x.npPct * 100) + ' %</td><td class="n">' + eur(x.valeur) + '</td><td class="n">' + eur(x.droits) + (x.mode === 'dpt' ? ' (2,5 %)' : ' (droits)') + '</td></tr>'; }).join('') + '</tbody></table></div><p class="note">Vous conservez l’usufruit : il s’éteint à votre décès sans droits (usufruit successif retenu, non taxé selon la majorité des auteurs ; une réponse ministérielle de 2011 taxe en revanche les réversions). L’IFI reste dû par l’usufruitier.</p>';
     return html;
+  }
+  function detailPV(pv) {
+    return pv.regime + '\nPrix de revient : ' + eur(pv.acquisition) + '\nPlus-value brute : ' + eur(pv.pvBrute) + '\nImpôt sur le revenu : ' + eur(pv.ir) + '\nPrélèvements sociaux : ' + eur(pv.ps) + (pv.surtaxe ? '\nSurtaxe : ' + eur(pv.surtaxe) : '') + '\nTotal : ' + eur(pv.impot);
+  }
+  function detailFBO(f, P) {
+    var t = 'Prix de vente : ' + eur(f.prix);
+    if (f.dette) t += '\n− Emprunt remboursé : ' + eur(f.dette);
+    t += '\n− Impôt de plus-value : ' + (f.pv.renseigne ? eur(f.impotPV) : 'non chiffré');
+    t += '\n= Net perçu : ' + eur(f.netVente);
+    t += '\n\nFrais d’acquisition (société des enfants) : ' + eur(f.frais);
+    t += '\nFinancé par les revenus : ' + eur(f.capacite) + ' (' + Math.round(P.fboPonderation * 100) + ' % de ' + eur(f.revenu) + ' par an, ' + P.fboDuree + ' ans à ' + pct1(P.fboTaux) + ')';
+    t += '\nApport à prévoir par les enfants : ' + eur(f.apport);
+    t += '\n\nDroits et coûts de la stratégie :\nsans la vente ' + eur(f.droitsSans) + '\navec la vente ' + eur(f.droitsAvec);
+    return t;
   }
   function verdict(l) {
     if (l.existante) return { t: 'Levier de la dette', cls: 'ok' };
@@ -3211,6 +3302,24 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && editeur) { editeur = null; planifier(true); } });
   window.addEventListener('resize', function () { dessinerArbre(); placerBulle(); });
+  (function () {
+    var ib = document.createElement('div'); ib.id = 'infobulle'; ib.setAttribute('role', 'tooltip'); document.body.appendChild(ib);
+    var cible = null;
+    function montrer(el) {
+      cible = el; ib.textContent = el.getAttribute('data-tip'); ib.classList.add('on');
+      var r = el.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 24);
+      ib.style.width = w + 'px';
+      ib.style.left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), window.innerWidth - w - 12) + 'px';
+      var top = r.bottom + 8; if (top + ib.offsetHeight > window.innerHeight - 12) top = Math.max(12, r.top - ib.offsetHeight - 8);
+      ib.style.top = top + 'px';
+    }
+    function cacher() { cible = null; ib.classList.remove('on'); }
+    document.addEventListener('mouseover', function (e) { var el = e.target.closest('[data-tip]'); if (el) montrer(el); else if (cible) cacher(); });
+    document.addEventListener('focusin', function (e) { var el = e.target.closest('[data-tip]'); if (el) montrer(el); });
+    document.addEventListener('focusout', function (e) { if (e.target.closest('[data-tip]')) cacher(); });
+    window.addEventListener('scroll', cacher, true);
+  })();
+
 
   function nomFichier(prefix) {
     var n = [state.c1.nom, couple() && state.c2.nom !== state.c1.nom ? state.c2.nom : ''].filter(Boolean).join(' - ') || 'Client';
@@ -3302,7 +3411,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
 <script>
 (function () {
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { }); });
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function () { }); });
   }
   var btn = document.getElementById('installer'), evt = null;
   var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
