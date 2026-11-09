@@ -369,6 +369,11 @@ function plusValue(a, valeur, part, date) {
   return res;
 }
 
+/* Dispositifs fiscaux avec engagement : donation, apport ou vente pendant l'engagement = reprise de l'avantage */
+var DISPOSITIFS = { pinel: 'Pinel', denormandie: 'Denormandie', malraux: 'Malraux', censi: 'Censi-Bouvard', mh: 'Monument historique', deficit: 'Déficit foncier', autre: 'Autre dispositif' };
+function finEngagement(a) { return a.dispositif ? parseDate(a.finEngagement) : null; }
+function sousEngagement(a, date) { var f = finEngagement(a); return !!(f && f > date); }
+
 /* Régimes d'exonération partielle (Dutreil, bois et forêts, biens ruraux / GFA) */
 var REGIMES = {
   dutreil: { label: 'Dutreil société (art. 787 B)', taux: 0.75 },
@@ -410,7 +415,9 @@ function defaultParams() {
     tmi: 0.30,                 // tranche marginale d'IR des clients
     psFonciers: 0.172,         // prélèvements sociaux sur revenus fonciers (à vérifier)
     pfu: 0.314,                // flat tax sur dividendes : 12,8 % + 18,6 % (depuis 2026)
-    partBati: 0.8, dureeAmort: 30
+    partBati: 0.8, dureeAmort: 30,
+    delaiCommunaute: 2,           // années d'attente entre une mise en communauté isolée et la donation
+    fraisCommunauteFixe: 1500, fraisCommunautePct: 0.015  // acte notarié, publicité foncière (0,715 %) et émoluments
   };
 }
 
@@ -652,11 +659,27 @@ function simulate(d, scen) {
   /* ---- PLAN : donations en nue-propriété (vagues tous les 15 ans) ---- */
   var npDonne = {}; // npDonne[assetId][client] = {date, societe}
   var dptFait = {}, vendu = {};
-  res.dpt = []; res.fbo = []; res.pvApport = []; res.economieRevenus = 0; res.economieIFI = 0;
+  res.dpt = []; res.fbo = []; res.pvApport = []; res.economieRevenus = 0; res.economieIFI = 0; res.communaute = []; res.coutsCommunaute = 0;
+  /* ---- PLAN : mise en communauté de biens propres (apport à communauté / société d'acquêts) ---- */
+  var enCommunaute = {};
+  if (plan.donations && ctx.marie && d.regime !== 'universelle') {
+    var aMettre = actifs.filter(function (a) { return a.planCommunaute && !a.planDPT && (+a.partC1 === 100 || +a.partC1 === 0); });
+    aMettre.forEach(function (a) {
+      var proprietaire = +a.partC1 === 100 ? 'c1' : 'c2';
+      var immeuble = a.type === 'immo' || a.type === 'rp' || a.type === 'autre' || (a.type === 'societe' && /SCI/i.test(a.forme || ''));
+      var frais = (immeuble ? P.fraisCommunautePct : 0.005) * a.valeur;
+      a.partC1 = 50; enCommunaute[a.id] = { seul: aMettre.length === 1, proprietaire: proprietaire };
+      res.communaute.push({ actif: a.libelle, actifId: a.id, proprietaire: proprietaire, valeur: a.valeur, frais: frais, seul: aMettre.length === 1 });
+      res.coutsCommunaute += frais;
+    });
+    if (aMettre.length) res.coutsCommunaute += P.fraisFixesCommunaute || P.fraisCommunauteFixe;
+    if (aMettre.length === 1) res.warnings.push(aMettre[0].libelle + ' : mis seul en communauté, la donation est différée de ' + P.delaiCommunaute + ' an(s) (une donation immédiate exposerait à l’abus de droit). Vous pouvez aussi mettre un autre bien en communauté dans le même acte.');
+  }
   /* ---- PLAN : family buy out (vente à une société des enfants) ---- */
   if (plan.donations) {
     actifs.slice().forEach(function (a) {
       if (!a.planFBO || a.type === 'financier' || a.type === 'rp' || fractionGrevee(ctx, a, T0) > 0) return;
+      if (sousEngagement(a, T0)) { res.warnings.push(a.libelle + ' : vente impossible pendant l’engagement ' + DISPOSITIFS[a.dispositif] + ' (jusqu’au ' + finEngagement(a).toLocaleDateString('fr-FR') + '), family buy out non retenu.'); return; }
       vendu[a.id] = true;
       ctx.clients.forEach(function (k) {
         var pk = partClient(a, k, ctx); if (pk <= 0) return;
@@ -702,6 +725,7 @@ function simulate(d, scen) {
   if (plan.donations) {
     actifs.forEach(function (a) {
       if (!a.planDPT || !eligibleDPT(ctx, a)) return;
+      if (sousEngagement(a, T0)) { res.warnings.push(a.libelle + ' : réattribution impossible pendant l’engagement ' + DISPOSITIFS[a.dispositif] + '.'); return; }
       var ms = moitiesDPT(ctx, a), k = ms[0].donateur.de, pk = partClient(a, k, ctx);
       if (pk <= 0) { k = autre(k); pk = partClient(a, k, ctx); }
       if (pk <= 0) return;
@@ -737,25 +761,28 @@ function simulate(d, scen) {
         if ((+a.planVague || 0) !== w) return;
         if (a.type === 'financier') return; // 774 bis : pas de donation NP de liquidités avec quasi-usufruit
         if (dptFait[a.id] || vendu[a.id] || fractionGrevee(ctx, a, date) > 0) return; // réattribué, vendu, ou usufruit encore détenu par un parent
+        var dateDon = date;
+        if (w === 1 && enCommunaute[a.id] && enCommunaute[a.id].seul) dateDon = addYears(T0, P.delaiCommunaute);
+        if (sousEngagement(a, dateDon)) { var fe = finEngagement(a); res.warnings.push(a.libelle + ' : ' + DISPOSITIFS[a.dispositif] + ' en cours, donation reportée à la fin de l’engagement (' + fe.toLocaleDateString('fr-FR') + ').'); dateDon = fe; }
         ctx.clients.forEach(function (k) {
           var pk = partClient(a, k, ctx); if (pk <= 0) return;
-          if (date >= deaths[k]) { res.warnings.push('Vague ' + w + ' (' + a.libelle + ') : ' + ctx.persons[k].label + ' serait décédé(e) selon son espérance de vie – donation non retenue.'); return; }
+          if (dateDon >= deaths[k]) { res.warnings.push('Vague ' + w + ' (' + a.libelle + ') : ' + ctx.persons[k].label + ' serait décédé(e) selon son espérance de vie – donation non retenue.'); return; }
           var heirs = heritiersDe(ctx, k); if (!heirs.length) return;
-          var age = ageAt(ctx.persons[k].naissance, date);
+          var age = ageAt(ctx.persons[k].naissance, dateDon);
           var usPct = usufruitPct(age), npPct = 1 - usPct;
           var existante = a.type === 'societe';
           var viaSoc = existante || (plan.societe && a.planSociete && (a.type === 'immo' || a.type === 'rp' || a.type === 'autre'));
           var basePP = viaSoc ? Math.max(0, (a.valeur - a.passif)) * (1 - P.decoteSociete) * pk : a.valeur * pk;
           var valNP = basePP * npPct;
-          (npDonne[a.id] = npDonne[a.id] || {})[k] = { date: date, societe: viaSoc, existante: existante };
+          (npDonne[a.id] = npDonne[a.id] || {})[k] = { date: dateDon, societe: viaSoc, existante: existante };
           heirs.forEach(function (e) {
             var v0 = valNP * e.part;
             var exo = exoneration(a.regime, v0, 1);
             var v = v0 - exo;
-            var rp = rappel(k, e.id, date, 'LD');
+            var rp = rappel(k, e.id, dateDon, 'LD');
             var dr = droitsLD(v, rp, e.abatDon, e.baremeDon);
-            ledger.push({ date: date, donor: k, donee: e.id, value: v, bucket: 'LD' });
-            res.donations.push({ vague: w, date: date, donor: k, donorAge: age, donee: e.id, actif: a.libelle, actifId: a.id, valeurPP: (viaSoc ? basePP : a.valeur * pk) * e.part, valeurPPBrute: a.valeur * pk * e.part, npPct: npPct, valeurNP: v0, exoneration: exo, regime: a.regime || '', valeurTaxable: v, societe: viaSoc, existante: existante, rappel: rp, abattement: e.abatDon, droits: dr });
+            ledger.push({ date: dateDon, donor: k, donee: e.id, value: v, bucket: 'LD' });
+            res.donations.push({ vague: w, date: dateDon, communaute: !!enCommunaute[a.id], donor: k, donorAge: age, donee: e.id, actif: a.libelle, actifId: a.id, valeurPP: (viaSoc ? basePP : a.valeur * pk) * e.part, valeurPPBrute: a.valeur * pk * e.part, npPct: npPct, valeurNP: v0, exoneration: exo, regime: a.regime || '', valeurTaxable: v, societe: viaSoc, existante: existante, rappel: rp, abattement: e.abatDon, droits: dr });
           });
         });
       });
@@ -964,7 +991,7 @@ function simulate(d, scen) {
   res.impotFBO = res.fbo.reduce(function (s, x) { return s + x.impotPV; }, 0);
   res.fraisFBO = res.fbo.reduce(function (s, x) { return s + x.frais; }, 0);
   res.economiesFBO = (res.economieRevenus || 0) + (res.economieIFI || 0);
-  res.total = res.droitsDonations + res.droitsSuccessions + res.taxesAV + res.coutsSociete + res.droitsDPT + res.impotFBO + res.fraisFBO;
+  res.total = res.droitsDonations + res.droitsSuccessions + res.taxesAV + res.coutsSociete + res.droitsDPT + res.impotFBO + res.fraisFBO + res.coutsCommunaute;
   return res;
 }
 
@@ -1010,13 +1037,22 @@ function optimiserPlan(d) {
     });
     if (!improved) break;
   }
+  // mise en communauté des biens propres (époux mariés) quand elle réduit le coût global
+  if (ctx.marie && dd.regime !== 'universelle') {
+    var propres = dd.actifs.filter(function (a) { return (+a.partC1 === 100 || +a.partC1 === 0) && a.type !== 'financier' && +a.planVague > 0 && !a.planDPT; });
+    propres.forEach(function (a) { a.planCommunaute = false; });
+    var base = cout();
+    if (propres.length >= 2) { propres.forEach(function (a) { a.planCommunaute = true; }); var tous = cout(); if (tous < base - 1) base = tous; else propres.forEach(function (a) { a.planCommunaute = false; }); }
+    propres.forEach(function (a) { var av = a.planCommunaute; a.planCommunaute = !av; var c = cout(); if (c < base - 1) base = c; else a.planCommunaute = av; });
+    best = base;
+  }
   // réattributions par donation-partage transgénérationnelle quand elles réduisent les droits
   dd.actifs.forEach(function (a) {
     if (!eligibleDPT(ctx, a)) return;
     a.planDPT = true; var avec = cout(); a.planDPT = false; var sans = cout();
     if (avec < sans - 1) { a.planDPT = true; best = avec; }
   });
-  return dd.actifs.map(function (a) { return { id: a.id, planVague: a.planVague || 0, planSociete: !!a.planSociete, planDPT: !!a.planDPT, planFBO: !!a.planFBO, fboAffectation: a.fboAffectation || 'consomme' }; });
+  return dd.actifs.map(function (a) { return { id: a.id, planVague: a.planVague || 0, planSociete: !!a.planSociete, planDPT: !!a.planDPT, planFBO: !!a.planFBO, fboAffectation: a.fboAffectation || 'consomme', planCommunaute: !!a.planCommunaute }; });
 }
 
 // Intérêt du levier société, actif par actif (le reste du plan inchangé)
@@ -1190,7 +1226,7 @@ function etatAbattements(d) {
 }
 
 if (typeof module !== 'undefined') module.exports = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
-var CALC = { FISC: FISC, REGIMES: REGIMES, plusValue: plusValue, rendements: rendements, moitiesDPT: moitiesDPT, fractionGrevee: fractionGrevee, grevement: grevement, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
+var CALC = { FISC: FISC, REGIMES: REGIMES, DISPOSITIFS: DISPOSITIFS, sousEngagement: sousEngagement, plusValue: plusValue, rendements: rendements, moitiesDPT: moitiesDPT, fractionGrevee: fractionGrevee, grevement: grevement, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
 if (typeof module !== 'undefined') module.exports = CALC;
 
 </script>
@@ -1832,7 +1868,7 @@ var PPTX = (function () {
     var agg = {};
     r.donations.forEach(function (x) {
       var k = x.vague + '|' + x.donor + '|' + x.actif;
-      var a = agg[k] = agg[k] || { vague: x.vague, date: x.date, donor: x.donor, age: x.donorAge, actif: x.actif, pp: 0, np: 0, npPct: x.npPct, droits: 0, societe: x.societe, existante: x.existante, regime: x.regime, n: 0 };
+      var a = agg[k] = agg[k] || { vague: x.vague, date: x.date, donor: x.donor, age: x.donorAge, actif: x.actif, pp: 0, np: 0, npPct: x.npPct, droits: 0, societe: x.societe, existante: x.existante, regime: x.regime, communaute: x.communaute, n: 0 };
       a.pp += x.valeurPP; a.np += x.valeurNP; a.droits += x.droits; a.n++;
     });
     var rows = Object.keys(agg).map(function (k) { return agg[k]; }).sort(function (a, b) { return a.vague - b.vague || (a.donor > b.donor ? 1 : -1); });
@@ -1856,7 +1892,7 @@ var PPTX = (function () {
         S.text(Math.min(Math.max(x - bw / 2, Z.x), Z.x + Z.w - bw), above ? fy : fy + fh * 0.58, bw, fh * 0.38, [{ runs: [{ t: String(mk.y), b: true }], algn: 'ctr' }, { runs: [mk.l], algn: 'ctr' }], { sz: 950, anchor: above ? 'b' : 't' });
       });
       var b = [['Année', 'Donateur', 'Bien transmis', 'Valeur PP', 'Nue-propriété', 'Valeur NP', 'Droits']];
-      pg.forEach(function (x) { b.push([String(x.date.getFullYear()), nomCourt(ctx, x.donor) + ' (' + x.age + ' ans)', { t: x.actif + (x.societe && !x.existante ? ' (parts de SCI)' : '') + (x.regime ? ' – exonération 75 %' : ''), algn: 'l' }, eur(x.pp), pct(x.npPct), eur(x.np), eur(x.droits)]); });
+      pg.forEach(function (x) { b.push([String(x.date.getFullYear()), nomCourt(ctx, x.donor) + ' (' + x.age + ' ans)', { t: x.actif + (x.societe && !x.existante ? ' (parts de SCI)' : '') + (x.regime ? ' – exonération 75 %' : '') + (x.communaute ? ' (bien mis en communauté)' : ''), algn: 'l' }, eur(x.pp), pct(x.npPct), eur(x.np), eur(x.droits)]); });
       if (pi === pages.length - 1) {
         var t = rows.reduce(function (s, x) { s.pp += x.pp; s.np += x.np; s.d += x.droits; return s; }, { pp: 0, np: 0, d: 0 });
         b.push(['Total', '', '', eur(t.pp), '', eur(t.np), eur(t.d)]);
@@ -1865,6 +1901,8 @@ var PPTX = (function () {
       if (pi === pages.length - 1) {
         var notes = [];
         ctx.clients.forEach(function (k) { var p = ctx.persons[k]; notes.push(nomCourt(ctx, k) + ' : ' + p.age + ' ans, espérance de vie ' + Math.round(p.ev) + ' ans' + (p.ev > 15 ? ' – abattements reconstitués le ' + dfr(CALC.addYears(ctx.T0, 15)) : ' – un renouvellement à 15 ans est incertain') + '.'); });
+        if ((r.communaute || []).length) notes.push('Mise en communauté : ' + r.communaute.map(function (c) { return c.actif; }).join(', ') + ' (frais ' + eur(r.coutsCommunaute) + ')' + (r.communaute.length === 1 ? ', donation différée de ' + ctx.P.delaiCommunaute + ' ans' : '') + '.');
+        (r.warnings || []).filter(function (w) { return /engagement/.test(w); }).forEach(function (w) { notes.push(w); });
         if ((r.fbo || []).length) notes.push('Family buy out : ' + r.fbo.map(function (f) { return f.actif + ' vendu ' + eur(f.prix) + ' par ' + nomCourt(ctx, f.client).toLowerCase() + ' (impôt de plus-value ' + eur(f.impotPV) + ')'; }).join(', ') + '.');
         if ((r.dpt || []).length) notes.push('Réattributions en nue-propriété (usufruit conservé) : ' + r.dpt.map(function (x) { return x.actif + ', part de ' + x.donateur.split(' ')[0] + (x.mode === 'dpt' ? ' : DPT, ' + eur(x.droits) + ' (2,5 %)' : ' : donation directe, ' + eur(x.droits) + ' de droits'); }).join(' ; ') + '.');
         if (ctx.P.sautGeneration && (r.heritages || []).length) notes.push('Saut de génération sur l’héritage de vos parents.');
@@ -1918,6 +1956,8 @@ var PPTX = (function () {
     if (regs.length) items.push('Exonérations partielles retenues : ' + regs.map(function (x) { return x.libelle + ' (' + CALC.REGIMES[x.regime].label + ')'; }).join(' ; ') + ', sous réserve des engagements de conservation.');
     if ((ctx.d.actifs || []).some(function (x) { return x.type === 'societe' && +x.cca > 0; })) items.push(P.ccaRembourseAvantDeces ? 'Comptes courants d’associé supposés remboursés par la société et consommés avant les décès : ils réduisent la valeur des parts données sans être taxés.' : 'Comptes courants d’associé conservés : ils restent une créance taxable dans les successions.');
     if (!ctx.enfants.length) items.push('Sans descendant : conjoint héritier de la totalité (parents prédécédés, droit de retour légal des frères et sœurs non pris en compte) ; à défaut, frères et sœurs, neveux et nièces par représentation.');
+    if ((ctx.d.actifs || []).some(function (x) { return x.dispositif; })) items.push('Biens sous dispositif fiscal (Pinel, Malraux…) : aucune donation, apport ou vente avant la fin de l’engagement, sous peine de reprise de l’avantage.');
+    if ((ctx.d.actifs || []).some(function (x) { return x.planCommunaute; })) items.push('Mise en communauté de biens propres : jamais un bien seul suivi d’une donation immédiate (risque d’abus de droit) ; avantage matrimonial à apprécier en présence d’enfants non communs.');
     items.push('Clauses bénéficiaires à rédiger par testament ou auprès de l’assureur ; à adapter à chaque contrat.');
     S.text(Z.x, Z.y, Z.w, Z.h, items.map(function (t) { return { runs: [t], bullet: true, spcAft: 5 }; }), { sz: 1200 });
     return S;
@@ -2309,7 +2349,7 @@ var XLSXOUT = (function () {
     var socs = (d.actifs || []).filter(function (a) { return a.type === 'societe' || a.type === 'pro'; });
     var fins = (d.actifs || []).filter(function (a) { return a.type === 'financier'; });
     bloc('Immobilier', ['Type / usage', 'Usage', 'Passif (CRD)', 'Propriétaire', 'Valeur brute'], immos, function (a, rr) {
-      put(ws, 'B' + rr, a.libelle); put(ws, 'C' + rr, TYPES[a.type]); put(ws, 'D' + rr, a.origine === 'donation' ? 'Reçu ' + (a.droitRecu === 'NP' ? 'en NP' : 'par donation') : a.origine === 'succession' ? 'Reçu (succession)' : a.regime && CALC.REGIMES[a.regime] ? CALC.REGIMES[a.regime].label.split(' (')[0] : a.type === 'rp' ? 'Résidence principale' : a.type === 'immo' ? 'Locatif / secondaire' : '');
+      put(ws, 'B' + rr, a.libelle); put(ws, 'C' + rr, TYPES[a.type]); put(ws, 'D' + rr, a.dispositif ? (CALC.DISPOSITIFS[a.dispositif] + (a.finEngagement ? ' → ' + a.finEngagement.slice(0, 4) : '')) : a.origine === 'donation' ? 'Reçu ' + (a.droitRecu === 'NP' ? 'en NP' : 'par donation') : a.origine === 'succession' ? 'Reçu (succession)' : a.regime && CALC.REGIMES[a.regime] ? CALC.REGIMES[a.regime].label.split(' (')[0] : a.type === 'rp' ? 'Résidence principale' : a.type === 'immo' ? 'Locatif / secondaire' : '');
       put(ws, 'E' + rr, +a.passif || 0, { fmt: EUR, input: true }); put(ws, 'F' + rr, proprio(a)); put(ws, 'G' + rr, +a.valeur || 0, { fmt: EUR, input: true });
       lignesValeur.push(rr);
     });
@@ -2629,6 +2669,8 @@ var XLSXOUT = (function () {
       'Forfait mobilier 5 % : ' + (P.forfaitMobilier ? 'appliqué' : 'non appliqué') + ' ; abattement 20 % résidence principale au 1er décès : ' + (P.abattementRP ? 'appliqué' : 'non appliqué') + '.',
       P.dettesRembourseesAuDeces ? 'Les emprunts (y compris dans les sociétés) sont supposés remboursés par les revenus avant les décès.' : 'Les emprunts restants sont déduits des successions.',
       'Parts de sociétés : valeur des actifs moins les dettes, décote de ' + Math.round(P.decoteSociete * 100) + ' %.',
+      'Biens sous dispositif fiscal (Pinel, Malraux…) : donation reportée à la fin de l’engagement ; apport et vente exclus pendant l’engagement.',
+      'Mise en communauté : bien mis seul en communauté donné après ' + P.delaiCommunaute + ' ans ; immédiatement si un autre bien est apporté dans le même acte.',
       'Comptes courants d’associé : ' + (P.ccaRembourseAvantDeces ? 'supposés remboursés par la société et consommés avant les décès.' : 'conservés, ils restent une créance taxable dans les successions.'),
       'Exonérations partielles (Dutreil 75 %, bois et forêts 75 %, biens ruraux loués et GFA 75 % jusqu’à 600 000 € par bénéficiaire puis 50 %) : appliquées aux biens cochés, sous réserve des engagements de conservation.',
       'Rappel fiscal de 15 ans (art. 784 CGI) appliqué aux donations antérieures et à celles du plan.',
@@ -2914,6 +2956,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     } else if (a.origine === 'succession') tags.push('Reçu par succession');
     if (+a.revenu) tags.push('Revenus ' + eur(a.revenu) + ' / an');
     if (a.planFBO) tags.push('Family buy out');
+    if (a.planCommunaute) tags.push('Mis en communauté');
+    if (a.dispositif) { var fe = CALC.parseDate(a.finEngagement); tags.push(CALC.DISPOSITIFS[a.dispositif] + (fe ? ' jusqu’au ' + fe.toLocaleDateString('fr-FR') : '')); }
     if (a.type !== 'rp' && a.type !== 'financier') { var pvx = CALC.plusValue(a, a.type === 'societe' ? Math.max(0, (+a.valeur || 0) - (+a.passif || 0)) : (+a.valeur || 0), 1, CALC.parseDate(state.dateEtude) || new Date()); if (pvx.renseigne && pvx.pvBrute > 0) tags.push('Plus-value ' + eur(pvx.pvBrute)); }
     if (+a.planVague > 0 && a.type !== 'financier') tags.push('Donation ' + ['', 'aujourd’hui', '+15 ans', '+30 ans'][+a.planVague] + (a.planSociete && a.type !== 'societe' ? ' · SCI' : ''));
     return '<button class="chip t-' + h(a.type) + (editeur && editeur.kind === 'actif' && editeur.id === a.id ? ' open' : '') + '" data-act="edit-actif" data-id="' + h(a.id) + '" aria-haspopup="dialog">' +
@@ -3002,6 +3046,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
         (soc ? field('dont compte courant d’associé des clients', 'actifs.' + i + '.cca', 'money', { cls: 'span2', hint: 'Créance des clients sur la société : elle réduit la valeur des parts données, mais reste dans leur succession sauf hypothèse de remboursement (onglet Stratégie).' }) : '') +
         (a.type !== 'financier' ? field('Prix d’acquisition', 'actifs.' + i + '.prixAcquisition', 'money', { hint: a.origine ? 'Ou valeur déclarée lors de la transmission.' : '' }) + field('Date d’acquisition', 'actifs.' + i + '.dateAcquisition', 'date') +
           (a.type === 'immo' || a.type === 'autre' ? field('Travaux réels (facultatif)', 'actifs.' + i + '.travaux', 'money', { hint: 'Sinon forfait de 15 % après 5 ans.', cls: 'span2' }) : '') + pvApercu(a) : '') +
+        (a.type === 'immo' || a.type === 'autre' || a.type === 'societe' ? field('Dispositif fiscal en cours', 'actifs.' + i + '.dispositif', 'select', { options: [['', 'Aucun']].concat(Object.keys(CALC.DISPOSITIFS).map(function (k) { return [k, CALC.DISPOSITIFS[k]]; })) }) +
+          (a.dispositif ? field('Fin de l’engagement', 'actifs.' + i + '.finEngagement', 'date', { hint: 'Pas de donation, d’apport ni de vente avant cette date (reprise de l’avantage fiscal).' }) : '<div></div>') : '') +
         field('Origine', 'actifs.' + i + '.origine', 'select', { cls: 'span2', options: [['', 'Acquis par les clients'], ['donation', 'Reçu par donation'], ['succession', 'Reçu par succession']] }) +
         (a.origine === 'donation' ? field('Date de la donation reçue', 'actifs.' + i + '.dateOrigine', 'date') + field('Valeur déclarée à l’époque', 'actifs.' + i + '.valeurOrigine', 'money') +
           field('Donateur', 'actifs.' + i + '.donateurId', 'select', { options: [['', 'Autre / non renseigné']].concat(optParents()) }) +
@@ -3094,14 +3140,15 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (!cand.length) html += '<p class="empty">Aucun bien transmissible en nue-propriété (les liquidités sont exclues : art. 774 bis CGI).</p>';
     else {
       var ctxS = CALC.prepare(normaliser(clone(state)));
-      html += '<div class="tablewrap"><table class="t edit"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Passif</th><th>Vague</th><th>Via SCI</th><th>FBO</th><th>DPT 2,5 %</th></tr></thead><tbody>';
+      html += '<div class="tablewrap"><table class="t edit"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Passif</th><th>Vague</th><th>Via SCI</th><th>FBO</th><th>DPT 2,5 %</th>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<th>Communauté</th>' : '') + '</tr></thead><tbody>';
       state.actifs.forEach(function (a, i) {
         if (a.type === 'financier') return;
-        html += '<tr><td>' + h(a.libelle) + '</td><td class="n">' + eur(a.valeur) + '</td><td class="n">' + (a.passif ? eur(a.passif) : '–') + '</td><td>' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td>' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + '</td><td>' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="consomme"' + (!a.fboAffectation || a.fboAffectation === 'consomme' ? ' selected' : '') + '>prix consommé</option><option value="av"' + (a.fboAffectation === 'av' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td>' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '> <span class="tip" tabindex="0" data-tip="' + h(CALC.moitiesDPT(ctxS, a).map(function (m) { return 'Part de ' + m.donateur.prenom + ' (' + Math.round(m.part * 100) + ' %) : ' + (m.mode === 'dpt' ? 'donation-partage transgénérationnelle, droit de partage 2,5 %' : m.mode === 'directe' ? 'donateur décédé, donation directe par vous de la nue-propriété' : 'donation de moins de 15 ans : droits de donation'); }).join('\n') + '\nVous conservez l’usufruit (usufruit successif par rétention) : vos enfants ne reçoivent que la nue-propriété.') + '">ⓘ</span>' : '<span class="muted">–</span>') + '</td></tr>';
+        html += '<tr><td>' + h(a.libelle) + '</td><td class="n">' + eur(a.valeur) + '</td><td class="n">' + (a.passif ? eur(a.passif) : '–') + '</td><td>' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td>' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + (a.dispositif && CALC.sousEngagement(a, CALC.parseDate(state.dateEtude) || new Date()) ? ' <span class="tip" tabindex="0" data-tip="' + h(CALC.DISPOSITIFS[a.dispositif] + ' en cours jusqu’au ' + CALC.parseDate(a.finEngagement).toLocaleDateString('fr-FR') + ' : la donation est reportée à la fin de l’engagement ; apport en société et vente impossibles avant.') + '">⚠</span>' : '') + '</td><td>' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="consomme"' + (!a.fboAffectation || a.fboAffectation === 'consomme' ? ' selected' : '') + '>prix consommé</option><option value="av"' + (a.fboAffectation === 'av' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td>' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '> <span class="tip" tabindex="0" data-tip="' + h(CALC.moitiesDPT(ctxS, a).map(function (m) { return 'Part de ' + m.donateur.prenom + ' (' + Math.round(m.part * 100) + ' %) : ' + (m.mode === 'dpt' ? 'donation-partage transgénérationnelle, droit de partage 2,5 %' : m.mode === 'directe' ? 'donateur décédé, donation directe par vous de la nue-propriété' : 'donation de moins de 15 ans : droits de donation'); }).join('\n') + '\nVous conservez l’usufruit (usufruit successif par rétention) : vos enfants ne reçoivent que la nue-propriété.') + '">ⓘ</span>' : '<span class="muted">–</span>') + '</td>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<td>' + ((+a.partC1 === 100 || +a.partC1 === 0) ? '<input type="checkbox" data-path="actifs.' + i + '.planCommunaute" data-type="bool" aria-label="Mettre en communauté"' + (a.planCommunaute ? ' checked' : '') + '>' : '<span class="muted" title="Bien déjà commun ou indivis">–</span>') + '</td>' : '') + '</tr>';
       });
       html += '</tbody></table></div>';
     }
     html += '<div class="grid g1">' + field('Transmettre la résidence principale via une SCI', 'params.sciResidencePrincipale', 'check', { hint: 'Vous restez gérants : vous décidez de la vente et du remploi du prix ; exonération de plus-value conservée pour l’occupant (SCI à l’IR, mise à disposition gratuite, statuts adaptés).' }) + '</div>';
+    if (state.situation === 'marie' && state.regime !== 'universelle') html += '<p class="note">Communauté : un bien propre mis en communauté' + (state.regime === 'communaute' ? '' : ' (par une société d’acquêts, votre régime étant séparatiste)') + ' appartient pour moitié à chaque époux. Chacun le donne alors avec ses propres abattements et selon son âge. Jamais un bien seul mis en communauté puis donné aussitôt : soit on attend (délai de ' + P().delaiCommunaute + ' ans retenu), soit on met au moins un autre bien en communauté dans le même acte. L’apport peut aussi créer un avantage matrimonial à vérifier en présence d’enfants non communs.</p>';
     html += '<p class="note">DPT 2,5 % : un bien reçu de vos parents il y a plus de 15 ans peut être réincorporé dans une donation-partage transgénérationnelle de vos parents au profit de vos enfants. Vous conservez l’usufruit (usufruit successif par rétention, ou réserve d’usufruit si vous aviez reçu la pleine propriété) : vos enfants reçoivent la nue-propriété, taxée au seul droit de partage de 2,5 % (art. 776 A CGI). La part d’un donateur décédé ne peut pas être réincorporée : vous la donnez directement, sur vos propres abattements.</p>';
     if (state.parentsClients.some(function (p) { return !p.decede && +p.patrimoine > 0; })) html += '<div class="grid g1">' + field('Saut de génération sur l’héritage de vos parents', 'params.sautGeneration', 'check', { hint: 'Donation-partage transgénérationnelle de vos parents, ou renonciation au profit de vos enfants : mêmes droits, mais ces biens ne repasseront pas par votre succession.' }) + '</div>';
     if (state.actifs.some(function (a) { return a.type === 'societe' && +a.cca > 0; })) html += '<div class="grid g1">' + field('Comptes courants d’associé remboursés d’ici le décès', 'params.ccaRembourseAvantDeces', 'check', { hint: 'Hypothèse : la société rembourse les comptes courants par ses revenus et les sommes sont consommées. Le compte courant réduit la valeur des parts données sans être taxé au décès : levier maximal.' }) + '</div>';
@@ -3132,6 +3179,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       field('Héritage attendu des parents dans les successions', 'params.heritageParents', 'check') + '</div>' +
       '<h3 class="sub">Family buy out</h3><div class="grid g3">' + field('Taux d’emprunt', 'params.fboTaux', 'pct') + field('Durée (années)', 'params.fboDuree', 'num') + field('Part des revenus affectée au crédit', 'params.fboPonderation', 'pct', { hint: '70 % par défaut, comme la pondération bancaire des loyers.' }) +
       field('Frais d’acquisition (immeubles)', 'params.fboFraisImmo', 'pct') + field('Frais d’acquisition (titres)', 'params.fboFraisTitres', 'pct') + '</div>' +
+      '<h3 class="sub">Mise en communauté</h3><div class="grid g3">' + field('Délai avant donation (bien mis seul en communauté)', 'params.delaiCommunaute', 'num', { hint: 'En années.' }) + field('Frais fixes de l’acte', 'params.fraisCommunauteFixe', 'money') + field('Frais proportionnels (immeubles)', 'params.fraisCommunautePct', 'pct', { hint: 'Publicité foncière 0,715 % et émoluments.' }) + '</div>' +
       '<h3 class="sub">Fiscalité des revenus</h3><div class="grid g3">' + field('Tranche marginale d’imposition des clients', 'params.tmi', 'pct') + field('Prélèvements sociaux sur revenus fonciers', 'params.psFonciers', 'pct', { hint: '17,2 % retenu, à vérifier.' }) + field('Flat tax sur dividendes', 'params.pfu', 'pct', { hint: '12,8 % + 18,6 % depuis 2026.' }) +
       field('Part du bâti amortissable', 'params.partBati', 'pct') + field('Durée d’amortissement (années)', 'params.dureeAmort', 'num') + '</div>';
   }
@@ -3157,6 +3205,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
           if (r.impotFBO) s += '<tr><td>Impôt de plus-value (family buy out)</td><td class="n">' + eur(r.impotFBO) + '</td></tr>';
           if (r.fraisFBO) s += '<tr><td>Frais d’acquisition (société des enfants)</td><td class="n">' + eur(r.fraisFBO) + '</td></tr>';
           if (r.droitsDPT) s += '<tr><td>Droit de partage (DPT)</td><td class="n">' + eur(r.droitsDPT) + '</td></tr>';
+          if (r.coutsCommunaute) s += '<tr><td>Mise en communauté (' + r.communaute.map(function (c) { return c.actif; }).join(', ') + ')</td><td class="n">' + eur(r.coutsCommunaute) + '</td></tr>';
           if (r.economiesFBO) s += '<tr><td>Impôts sur les revenus et IFI économisés (' + Math.round(r.horizonFBO) + ' ans)</td><td class="n">− ' + eur(r.economiesFBO) + '</td></tr>';
           (r.fbo || []).forEach(function (f) { var tip = 'Prix : ' + eur(f.prix) + (f.dette ? '\n− Emprunt : ' + eur(f.dette) : '') + '\n− Impôt de plus-value : ' + eur(f.impotPV) + '\n= Net : ' + eur(f.net) + '\nFrais d’acquisition : ' + eur(f.frais) + '\nFinancé par les revenus : ' + eur(f.financable) + '\nApport à prévoir : ' + eur(f.apportNecessaire); s += '<tr><td colspan="2" class="opt"><span class="tip" tabindex="0" data-tip="' + h(tip) + '">Family buy out : ' + h(f.actif) + ' vendu ' + eur(f.prix) + ' par ' + h(nomClient(f.client)) + ', ' + eur(f.net) + ' net ' + (f.affectation === 'av' ? 'placés en assurance-vie' : 'conservés') + '</span></td></tr>'; });
         }
