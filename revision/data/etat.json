@@ -1,11 +1,11 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-08T16:59:38.583Z",
- "session_id": "2026-11-08-presents-usage",
- "statut": "terminee",
- "termine_le": "2026-11-08T16:58:37.923Z",
- "score": 10,
- "total": 12,
+ "mis_a_jour": "2026-11-09T14:21:14.541Z",
+ "session_id": "2026-11-09-14h11-transmission-assurance-vie",
+ "statut": "en_cours",
+ "termine_le": null,
+ "score": null,
+ "total": null,
  "programme": {
   "nb_questions": 60,
   "fiches": [],
