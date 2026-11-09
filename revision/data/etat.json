@@ -1,6 +1,6 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-09T15:26:14.532Z",
+ "mis_a_jour": "2026-11-09T15:32:24.600Z",
  "session_id": "2026-11-09-16h16-dons-reserve-av-matrimonial",
  "statut": "en_cours",
  "termine_le": null,
@@ -115,12 +115,20 @@
    "question": "Depuis le 1er janvier 2018, un conjoint marié exonéré doit-il produire un certificat de non-imposition pour percevoir le capital 757 B ?",
    "repondu": "Non, jamais",
    "bonne_reponse": "Non, sauf s'il a son domicile de fait ou de droit à l'étranger"
+  },
+  {
+   "le": "2026-11-09T15:27",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Pour le calcul de la réserve et de la quotité disponible, comment est traité un présent d'usage ?",
+   "repondu": "Il entre pour sa valeur au jour du don",
+   "bonne_reponse": "Il n'entre pas dans la masse de calcul"
   }
  ],
  "stats_par_fiche": {
   "Présent d'usage": {
-   "vues": 22,
-   "reussies": 18,
+   "vues": 24,
+   "reussies": 19,
    "derniere": "2026-11-09"
   },
   "Dons familiaux de somme d'argent (CGI art. 790 G)": {
