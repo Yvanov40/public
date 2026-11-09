@@ -3734,6 +3734,14 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const pxMin = compacte ? 0.95 : 1.1;  // 1 h = 66 px : un créneau de 15 min reste lisible
     const marge = compacte ? 2 : 44;      // place laissée aux heures à gauche
     const frise = el("div", { class: "frise" + (compacte ? " compacte" : ""), "data-jour": iso, style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` });
+    // double-clic dans un endroit libre : nouvelle tâche ce jour-là, à l'heure visée (arrondie au quart d'heure)
+    frise.addEventListener("dblclick", (ev) => {
+      if (estTel() || ev.target.closest(".frise-bloc")) return;
+      const y = ev.clientY - frise.getBoundingClientRect().top;
+      const minute = Math.min(FIN_FRISE - 15, Math.max(DEBUT_FRISE, DEBUT_FRISE + Math.floor(y / pxMin / 15) * 15));
+      nouvelleTache({ pour: iso, heure: enHeure(minute) });
+    });
+    frise.title = estTel() ? "" : "Double-clic pour ajouter une tâche à cette heure";
     for (let h = DEBUT_FRISE / 60; h <= FIN_FRISE / 60; h++) {
       frise.append(el("div", { class: "frise-heure", style: `top:${(h * 60 - DEBUT_FRISE) * pxMin}px` }, el("span", null, `${h} h`)));
     }
@@ -3992,7 +4000,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         el("button", { type: "button", class: "semaine-tete", onclick: () => { jourCalendrier = iso; afficherCalendrier(); } },
           el("span", null, d.toLocaleDateString("fr-FR", { weekday: "short" })), el("b", null, d.getDate()),
           congeDu(iso) ? el("em", { class: "conge" }, congeDu(iso).libelle || "Congé") : null),
-        el("div", { class: "semaine-sans-heure" }, sansHeure.map((e) => {
+        el("div", { class: "semaine-sans-heure", title: "Double-clic pour ajouter une tâche ce jour-là",
+          ondblclick: (ev) => { if (!ev.target.closest(".ev")) nouvelleTache({ pour: iso }); } }, sansHeure.map((e) => {
           const puce = el("button", { type: "button", class: `ev ${e.type}${e.retard ? " retard" : ""}`, title: e.sous, onclick: e.ouvrir }, e.titre);
           puce.addEventListener("contextmenu", (x) => { x.preventDefault(); ouvrirRoue(x.clientX, x.clientY, e, false); });
           return puce;
@@ -4096,7 +4105,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       if (congeDu(iso)) classes.push("conge");
       if (iso === auj) classes.push("aujourdhui");
       if (iso === jourCalendrier) classes.push("choisi");
-      cellules.push(el("button", { type: "button", class: classes.join(" "), "data-jour": iso, "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
+      cellules.push(el("button", { type: "button", class: classes.join(" "), "data-jour": iso,
+        ondblclick: (ev) => { if (!estTel() && !ev.target.closest(".ev")) nouvelleTache({ pour: iso }); }, "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
         onclick: (ev) => { if (ev.currentTarget.dataset.bloque) return; jourCalendrier = iso; afficherCalendrier(); if (estTel()) $("calPanneau").scrollIntoView({ behavior: "smooth", block: "start" }); } },
         el("span", { class: "num" }, jour.getDate()),
         ...liste.map((e) => {  // tous les éléments du jour : la case s'agrandit
@@ -5077,23 +5087,24 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         } }, "Supprimer")));
     ouvrirFeuille("feuilleTache", () => ouvrirTache(nom, id));
   }
-  function nouvelleTache() {
+  // proposition = { pour: "2026-11-12", heure: "10:30" } quand on vient d'un double-clic dans l'agenda
+  function nouvelleTache(proposition = {}) {
     tacheEnCours = { nouveau: true };
     $("titreTache").textContent = "Nouvelle tâche";
     const demain = new Date(); demain.setDate(demain.getDate() + 1);
-    const jourPropose = vueCourante() === "calendrier" && jourCalendrier ? jourCalendrier : enIso(demain);
+    const jourPropose = proposition.pour || (vueCourante() === "calendrier" && jourCalendrier ? jourCalendrier : enIso(demain));
     $("corpsTache").replaceChildren(
       champ("Client", [el("input", { name: "client", type: "text", list: "liste-clients-tache", autocomplete: "off", placeholder: "Nom du client" }),
         el("datalist", { id: "liste-clients-tache" }, nomsClients().map((n) => el("option", { value: n })))]),
       champ("Tâche", el("input", { name: "texte", type: "text", autocomplete: "off", placeholder: "Appeler, relancer, envoyer…" })),
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: jourPropose })),
-        champ("À", el("input", { name: "heure", type: "time", value: "" }))),
+        champ("À", el("input", { name: "heure", type: "time", value: proposition.heure || "" }))),
       el("div", { class: "deux" }, champ("Durée", choixDuree("duree", "")),
         el("label", { class: "case", style: "margin-top:22px" }, el("input", { type: "checkbox", name: "fixe" }), "📌 Heure fixe")),
       el("p", { class: "aide" }, "Sans heure, la tâche prend le premier créneau libre. Les autres tâches se décalent si besoin ; les rendez-vous et les tâches 📌 ne bougent pas."),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Détails, numéro à appeler, lien…" }, ""))));
-    ouvrirFeuille("feuilleTache", nouvelleTache);
+    ouvrirFeuille("feuilleTache", () => nouvelleTache(proposition));
     setTimeout(() => $("corpsTache").querySelector("[name=client]").focus(), 60);
   }
   function enregistrerTache() {
