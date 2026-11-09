@@ -3,15 +3,15 @@
      SUIVI DES DOSSIERS — guide de lecture pour débutant
      =====================================================================================================
      Toute l'appli tient dans ce seul fichier. Il contient trois langages, dans cet ordre :
-       1. le CSS, entre <style> et </style> (début du fichier) : l'APPARENCE (couleurs, tailles, mise en page).
+       1. le CSS, dans la balise « style » (début du fichier) : l'APPARENCE (couleurs, tailles, mise en page).
           Une règle CSS dit « tel élément » { « telle propriété » : « telle valeur » }. Exemple :
           .carte-dossier { padding: 7px 9px; } = les éléments de classe « carte-dossier » ont 7 px de marge en
           haut/bas et 9 px à gauche/droite. Les règles écrites plus bas l'emportent sur celles écrites plus haut.
           @media (max-width: 900px) { … } = règles qui ne s'appliquent qu'aux écrans étroits (téléphone).
-       2. le HTML, entre <body> et le grand <script> : le SQUELETTE de la page (onglets, barre de filtres, les
+       2. le HTML, dans la balise « body », avant le grand programme : le SQUELETTE de la page (onglets, barre de filtres, les
           « feuilles » = fiches qui s'ouvrent par-dessus, le menu ⋯…). Beaucoup de zones y sont vides : elles sont
           remplies par le JavaScript (on les reconnaît à leur id, par ex. <tbody id="clientsListe">).
-       3. le JavaScript, dans le grand <script> de la fin : le COMPORTEMENT (tout ce qui réagit, calcule, enregistre).
+       3. le JavaScript, dans la grande balise « script » de la fin : le COMPORTEMENT (tout ce qui réagit, calcule, enregistre).
 
      LES IDÉES À CONNAÎTRE POUR LIRE LE JAVASCRIPT
        - $("truc")          : raccourci pour document.getElementById("truc") = l'élément HTML d'id « truc ».
@@ -1165,6 +1165,21 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   box-shadow: 0 6px 18px rgba(0,0,0,.2); pointer-events: none; font-size: 14px; transition: background .15s; }
 .tirer-eclair.pret { background: var(--or); color: #fff; }
 @media (min-width: 901px) { .tirer-eclair { display: none; } }
+
+/* ---------- calculatrice des émoluments ---------- */
+.emol-resultat { margin-top: 6px; }
+.emol-total { background: var(--bleu); color: var(--carte); border-radius: 14px; padding: 14px 16px; display: grid; gap: 2px; margin-bottom: 12px; }
+.emol-total span { font-size: 13px; opacity: .8; }
+.emol-total b { font: 600 30px var(--titre); }
+.emol-total small { font-size: 12.5px; opacity: .85; }
+.emol-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 8px; }
+.emol-table th { text-align: left; font-weight: 500; color: var(--discret); border-bottom: 1px solid var(--bordure); padding: 5px 4px; }
+.emol-table td { padding: 6px 4px; border-bottom: 1px solid var(--bordure); }
+.emol-table td:last-child, .emol-table th:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.emol-table td small { color: var(--discret); }
+.emol-table tr.remise td { color: #2f4a2e; }
+.emol-table tfoot td { font-weight: 600; border-bottom: 0; }
+#corpsEmoluments select, #corpsEmoluments input { width: 100%; }
 </style>
 </head>
 <body>
@@ -1403,6 +1418,18 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   </div>
 </div>
 
+<!-- calculatrice des émoluments -->
+<div class="feuille feuille-petite" id="feuilleEmoluments" role="dialog" aria-modal="true" aria-labelledby="titreEmoluments">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreEmoluments">Émoluments du notaire</h3>
+      <span></span>
+    </div>
+    <div class="feuille-corps" id="corpsEmoluments"></div>
+  </div>
+</div>
+
 <!-- modification groupée -->
 <div class="feuille feuille-petite" id="feuilleLot" role="dialog" aria-modal="true" aria-labelledby="titreLot">
   <div class="feuille-boite">
@@ -1474,6 +1501,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     <button class="bouton leger large" id="btnHoraires">Horaires et congés</button>
     <button class="bouton leger large" id="btnDemandeurs">Demandeurs et sociétés</button>
     <button class="bouton leger large" id="btnOutils">🧰 Outils : audit, révision</button>
+    <button class="bouton leger large" id="btnEmoluments">🧮 Émoluments du notaire</button>
     <button class="bouton leger large" id="btnExporter">Exporter une copie</button>
     <button class="bouton leger large" id="btnImporter">Ouvrir un autre fichier</button>
     <button class="bouton leger large" id="btnFermerMenu">Fermer</button>
@@ -4511,7 +4539,9 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     { id: "audit", ic: "⚖", nom: "Audit civil et fiscal", adresse: "../audit/",
       desc: "Audit de transmission : successions, démembrement, assurance-vie, levier société." },
     { id: "revision", ic: "📚", nom: "Révision de la base", adresse: "../revision/",
-      desc: "Réviser les fiches de la base en QCM, vrai ou faux et restitution, avec répétition espacée." }
+      desc: "Réviser les fiches de la base en QCM, vrai ou faux et restitution, avec répétition espacée." },
+    { id: "emoluments", ic: "🧮", nom: "Émoluments du notaire", interne: () => ouvrirEmoluments(),
+      desc: "Calcul rapide des émoluments réglementés : vente, donation, apport en société." }
   ];
   let outilOuvert = null;
   function afficherOutils() {
@@ -4528,12 +4558,83 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   function ouvrirOutil(id) {
     const o = OUTILS.find((x) => x.id === id);
     if (!o) return;
+    if (o.interne) { o.interne(); return; }  // outil intégré à l'appli (fenêtre), pas une autre appli
     outilOuvert = id;
     $("outilTitre").textContent = o.nom;
     $("outilSeul").href = o.adresse;
     if ($("outilFrame").dataset.id !== id) { $("outilFrame").src = o.adresse; $("outilFrame").dataset.id = id; }
     if (vueCourante() !== "outils") location.hash = "#outils"; else afficherOutils();
   }
+  // ================================================================ émoluments du notaire (tarif réglementé)
+  // Barèmes du Code de commerce (partie Arrêtés), en vigueur du 1er mars 2026 au 29 février 2028 (tarif 2021 reconduit) :
+  // tranches d'assiette et taux HT. Seuls les émoluments proportionnels de l'acte : sans émoluments de formalités,
+  // débours, droits ni taxes. Métropole (pas de majoration des départements d'outre-mer).
+  const TRANCHES = [6500, 17000, 60000];  // bornes des tranches : 0–6 500, 6 500–17 000, 17 000–60 000, au-delà
+  const BAREMES_EMOL = {
+    vente:      { nom: "Vente ou cession de gré à gré", ref: "art. A444-91", taux: [3.870, 1.596, 1.064, 0.799] },
+    donation:   { nom: "Donation (immobilier, biens non cotés…)", ref: "art. A444-67, 1°", taux: [4.837, 1.995, 1.330, 0.998],
+                  aide: "Calcul par donateur, sur la valeur en pleine propriété (même avec réserve d’usufruit)." },
+    donpartage: { nom: "Donation-partage", ref: "art. A444-68", taux: [4.837, 1.995, 1.330, 0.998],
+                  aide: "Conjonctive : par donateur. Par une seule personne : sur les biens partagés, rapports compris." },
+    donargent:  { nom: "Donation de sommes d’argent, créances ou titres cotés", ref: "art. A444-67, 4°", taux: [2.322, 0.958, 0.639, 0.479],
+                  aide: "Calcul par donateur." },
+    apport:     { nom: "Apport en société (biens soumis à publicité foncière)", ref: "art. A444-158", taux: [1.935, 0.798, 0.532, 0.399] }
+  };
+  const SEUIL_REMISE = 100000;  // une remise (20 % au plus) peut porter sur l'émolument de la part d'assiette au-delà de 100 000 €
+  function emolumentBareme(assiette, taux) {
+    const lignes = [];
+    let bas = 0, total = 0;
+    [...TRANCHES, Infinity].forEach((haut, k) => {
+      if (assiette <= bas) return;
+      const base = Math.min(assiette, haut) - bas;
+      const montant = Math.round(base * taux[k]) / 100;  // taux en %, arrondi au centime
+      lignes.push({ de: bas, a: haut, base, taux: taux[k], montant });
+      total += montant;
+      bas = haut;
+    });
+    return { lignes, total: Math.round(total * 100) / 100 };
+  }
+  function ouvrirEmoluments() {
+    const choixActe = el("select", { name: "acte" }, Object.entries(BAREMES_EMOL).map(([k, b]) => el("option", { value: k }, b.nom)));
+    const champMontant = el("input", { type: "text", inputmode: "decimal", placeholder: "Ex. 250 000", autocomplete: "off" });
+    const champRemise = el("input", { type: "number", min: "0", max: "20", step: "1", value: "0" });
+    const resultat = el("div", { class: "emol-resultat" });
+    const fmt = (n) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+    const calculer = () => {
+      const b = BAREMES_EMOL[choixActe.value];
+      const assiette = Math.round(Number(String(champMontant.value).replace(/\s|€/g, "").replace(",", ".")) || 0);  // arrondie à l'euro
+      const remisePct = Math.min(20, Math.max(0, Number(champRemise.value) || 0));
+      if (!assiette) { resultat.replaceChildren(el("p", { class: "aide" }, b.aide || "Indiquez le montant de l’acte."), el("p", { class: "aide" }, `Barème : ${b.ref}.`)); return; }
+      const { lignes, total } = emolumentBareme(assiette, b.taux);
+      // remise : sur la part de l'émolument qui correspond à l'assiette au-delà de 100 000 €
+      const auDela = assiette > SEUIL_REMISE ? total - emolumentBareme(SEUIL_REMISE, b.taux).total : 0;
+      const remise = Math.round(auDela * remisePct) / 100;
+      const ht = Math.round((total - remise) * 100) / 100, tva = Math.round(ht * 20) / 100, ttc = Math.round((ht + tva) * 100) / 100;
+      resultat.replaceChildren(
+        el("div", { class: "emol-total" }, el("span", null, "Émoluments TTC"), el("b", null, fmt(ttc)),
+          el("small", null, `${fmt(ht)} HT · TVA 20 % ${fmt(tva)} · soit ${(ttc / assiette * 100).toLocaleString("fr-FR", { maximumFractionDigits: 3 })} % du montant`)),
+        el("table", { class: "emol-table" },
+          el("thead", null, el("tr", null, el("th", null, "Tranche"), el("th", null, "Taux HT"), el("th", null, "Émolument HT"))),
+          el("tbody", null, lignes.map((l) => el("tr", null,
+            el("td", null, l.a === Infinity ? `au-delà de ${l.de.toLocaleString("fr-FR")} €` : `${l.de.toLocaleString("fr-FR")} à ${l.a.toLocaleString("fr-FR")} €`,
+              el("small", null, ` · sur ${l.base.toLocaleString("fr-FR")} €`)),
+            el("td", null, l.taux.toLocaleString("fr-FR", { minimumFractionDigits: 3 }) + " %"), el("td", null, fmt(l.montant)))),
+            remise ? el("tr", { class: "remise" }, el("td", { colspan: "2" }, `Remise de ${remisePct} % sur la part au-delà de 100 000 €`), el("td", null, "− " + fmt(remise))) : null),
+          el("tfoot", null, el("tr", null, el("td", { colspan: "2" }, "Total HT"), el("td", null, fmt(ht))))),
+        el("p", { class: "aide" }, `Barème : ${b.ref} (tarif en vigueur jusqu’au 29 février 2028). ${b.aide || ""}`),
+        el("p", { class: "aide" }, "Émoluments de l’acte seulement : hors émoluments de formalités, débours, droits d’enregistrement, taxe de publicité foncière et contribution de sécurité immobilière. Estimation indicative."));
+    };
+    for (const c of [choixActe, champMontant, champRemise]) c.addEventListener("input", calculer);
+    champMontant.addEventListener("blur", () => { const n = Number(String(champMontant.value).replace(/\s|€/g, "").replace(",", ".")); if (n) champMontant.value = n.toLocaleString("fr-FR"); });
+    $("corpsEmoluments").replaceChildren(
+      champ("Acte", choixActe),
+      el("div", { class: "deux" }, champ("Montant (assiette)", champMontant), champ("Remise (%)", champRemise)),
+      resultat);
+    calculer();
+    ouvrirFeuille("feuilleEmoluments", ouvrirEmoluments);
+    setTimeout(() => champMontant.focus(), 60);
+  }
+
   function fermerOutil() { outilOuvert = null; afficherOutils(); }
 
   function montrerVue() {
@@ -5505,6 +5606,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
   $("btnOutils").addEventListener("click", () => { fermerMenu(); outilOuvert = null; location.hash = "#outils"; });
   $("outilRetour").addEventListener("click", fermerOutil);
+  $("btnEmoluments").addEventListener("click", () => { fermerMenu(); ouvrirEmoluments(); });
   $("enregistrerTache").addEventListener("click", enregistrerTache);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
@@ -5625,6 +5727,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     ["＋", "Nouveau dossier", "créer ajouter", () => ouvrirDossier(-1)],
     ["＋", "Nouveau client", "créer ajouter prospect", () => nouveauClient()],
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
+    ["🧮", "Émoluments du notaire", "calculatrice frais notaire tarif vente donation apport", () => ouvrirEmoluments()],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
     ["☰", "Aller aux clients", "liste", () => { location.hash = "#clients"; }],
