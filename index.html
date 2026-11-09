@@ -1098,6 +1098,14 @@ body.vue-outils .filtres, body.vue-outils .outils.ordi { display: none !importan
   #outilFrame { height: calc(100vh - 230px - env(safe-area-inset-bottom, 0px)); border-radius: 10px; }
   body.outil-plein .fab { display: none; }
 }
+
+/* ---------- tirer vers le bas en haut de page : recherche éclair ---------- */
+html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger » du navigateur, le geste est pour la recherche */
+.tirer-eclair { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); transform: translate(-50%, -60px); opacity: 0; z-index: 70;
+  display: flex; align-items: center; gap: 8px; background: var(--carte); color: var(--bleu); border-radius: 22px; padding: 8px 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.2); pointer-events: none; font-size: 14px; transition: background .15s; }
+.tirer-eclair.pret { background: var(--or); color: #fff; }
+@media (min-width: 901px) { .tirer-eclair { display: none; } }
 </style>
 </head>
 <body>
@@ -5498,6 +5506,43 @@ body.vue-outils .filtres, body.vue-outils .outils.ordi { display: none !importan
   $("btnEclair").title = `Recherche éclair (${surMac ? "⌘K" : "Ctrl+K"})`;
   $("btnEclair").addEventListener("click", () => ouvrirEclair());
   $("btnEclairPouce").addEventListener("click", () => ouvrirEclair());
+
+  // ---- tirer l'écran vers le bas, en haut de page : la recherche éclair (téléphone) ----
+  const indiceTirer = el("div", { class: "tirer-eclair", "aria-hidden": "true" }, el("span", null, "🔍"), el("b", null, "Recherche éclair"));
+  document.body.append(indiceTirer);
+  let tirer = null;
+  const enHautDePage = (cible) => {
+    if (window.scrollY > 2) return false;
+    for (let n = cible; n && n !== document.body; n = n.parentElement) if (n.scrollTop > 2) return false;  // une liste déjà défilée
+    return true;
+  };
+  document.addEventListener("touchstart", (e) => {
+    tirer = null;
+    if (!estTel() || e.touches.length !== 1) return;
+    const c = e.target instanceof Element ? e.target : null;
+    if (!c || c.closest("input, textarea, select, .feuille, .filtres, .fab, .fab-voile, .eclair, .choix-date, .horloge-voile, .roue-voile, .frise-bloc, .carte-dossier, .menu")) return;
+    if (document.querySelector(".feuille.ouverte, .eclair, .roue-voile") || document.body.classList.contains("filtres-ouverts")) return;
+    if (!enHautDePage(c)) return;
+    tirer = { x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0 };
+  }, { passive: true });
+  document.addEventListener("touchmove", (e) => {
+    if (!tirer) return;
+    const t = e.touches[0];
+    const dx = t.clientX - tirer.x, dy = t.clientY - tirer.y;
+    if (dy < 0 || Math.abs(dx) > Math.max(30, dy * 0.6) || window.scrollY > 2) { tirer = null; indiceTirer.style.transform = ""; indiceTirer.classList.remove("pret"); return; }
+    tirer.dy = dy;
+    const avance = Math.min(1, dy / 90);
+    indiceTirer.style.transform = `translate(-50%, ${-60 + avance * 80}px)`;
+    indiceTirer.style.opacity = String(avance);
+    indiceTirer.classList.toggle("pret", dy >= 90);
+  }, { passive: true });
+  document.addEventListener("touchend", () => {
+    if (!tirer) return;
+    const assez = tirer.dy >= 90;
+    tirer = null;
+    indiceTirer.style.transform = ""; indiceTirer.style.opacity = ""; indiceTirer.classList.remove("pret");
+    if (assez) { avalerClic(); ouvrirEclair(); }
+  }, { passive: true });
 
   // ================================================================ recherche éclair
   // Une seule case : clients, dossiers, pactes Dutreil, tâches et actions. ↑ ↓ pour choisir, Entrée pour ouvrir.
