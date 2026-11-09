@@ -182,6 +182,30 @@ main#main { position: relative; }
 .tip { border-bottom: 1px dotted currentColor; cursor: help; }
 #infobulle { position: fixed; z-index: 40; background: var(--ink); color: var(--paper); padding: 10px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; white-space: pre-line; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .12s; font-variant-numeric: tabular-nums; }
 #infobulle.on { opacity: 1; }
+.dp { position: relative; }
+.dp input { padding-right: 40px; font-variant-numeric: tabular-nums; }
+.dp-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 32px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--brand-text); cursor: pointer; display: grid; place-items: center; }
+.dp-btn:hover { background: var(--soft); }
+#datepick { position: fixed; z-index: 60; width: 300px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 16px 40px rgba(16, 32, 40, .22); padding: 10px; display: none; }
+#datepick.on { display: block; }
+#datepick.sheet { left: 0 !important; right: 0; bottom: 0; top: auto !important; width: auto; border-radius: 16px 16px 0 0; padding: 14px 14px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.dp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; min-height: 30px; }
+.dp-crumbs { display: flex; align-items: center; gap: 4px; font-size: 14px; }
+.dp-crumbs button { font: 700 14px var(--sans); color: var(--brand-text); background: var(--soft); border: 0; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+.dp-crumbs span { color: var(--muted); }
+.dp-x { background: none; border: 0; font-size: 22px; color: var(--muted); cursor: pointer; padding: 0 6px; }
+.dp-grid { display: grid; gap: 6px; }
+.dp-grid.g-decennies, .dp-grid.g-mois { grid-template-columns: repeat(3, 1fr); }
+.dp-grid.g-annees { grid-template-columns: repeat(4, 1fr); }
+.dp-grid.g-jours { grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.dp-grid button { font: 600 14px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 4px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.dp-grid.g-jours button { padding: 7px 0; border-color: transparent; }
+.dp-grid button:hover { border-color: var(--brand); }
+.dp-grid button.sel { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.dp-grid button.nav { color: var(--muted); font-size: 18px; }
+.dp-grid button small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+.dp-grid button.sel small { color: inherit; opacity: .8; }
+.dp-grid .dow { text-align: center; font-size: 11.5px; color: var(--muted); font-weight: 700; padding: 2px 0; }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -2780,14 +2804,33 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (type === 'check') {
       return '<label class="chk' + (opts.cls ? ' ' + opts.cls : '') + '"><input type="checkbox" data-path="' + path + '" data-type="bool"' + (v ? ' checked' : '') + '><span>' + h(label) + '</span>' + hint + '</label>';
     }
+    if (type === 'date') {
+      var dv = v ? CALC.parseDate(v) : null;
+      return '<label class="fld' + (opts.cls ? ' ' + opts.cls : '') + '" for="' + id + '"><span>' + h(label) + '</span><div class="dp"><input id="' + id + '" type="text" inputmode="numeric" autocomplete="off" placeholder="jj/mm/aaaa" data-path="' + path + '" data-type="date" value="' + (dv ? h(dv.toLocaleDateString('fr-FR')) : '') + '"><button type="button" class="dp-btn" data-dp="' + path + '" aria-label="Choisir la date">' + '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button></div>' + hint + '</label>';
+    }
     var inType = type === 'money' || type === 'num' || type === 'pct' ? 'text' : type;
     var shown = v === undefined || v === null ? '' : v;
     if (type === 'money' && shown !== '') shown = Number(shown).toLocaleString('fr-FR');
     if (type === 'pct' && shown !== '') shown = Math.round(Number(shown) * 1000) / 10;
     return '<label class="fld' + (opts.cls ? ' ' + opts.cls : '') + '" for="' + id + '"><span>' + h(label) + '</span><div class="inwrap' + (type === 'money' ? ' money' : type === 'pct' ? ' pctin' : '') + '"><input id="' + id + '" type="' + inType + '"' + (type === 'money' || type === 'num' || type === 'pct' ? ' inputmode="decimal"' : '') + ' data-path="' + path + '" data-type="' + (type === 'money' || type === 'num' ? 'num' : type === 'pct' ? 'pct' : 'text') + '" value="' + h(shown) + '"' + (opts.ph ? ' placeholder="' + h(opts.ph) + '"' : '') + '></div>' + hint + '</label>';
   }
+  function lireDate(s) {
+    s = String(s || '').trim(); if (!s) return '';
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s) || null, j, mo, a;
+    if (m) { a = +m[1]; mo = +m[2]; j = +m[3]; }
+    else {
+      var p = s.replace(/[^0-9]/g, ' ').trim().split(/\s+/);
+      if (p.length === 1 && p[0].length === 8) { j = +p[0].slice(0, 2); mo = +p[0].slice(2, 4); a = +p[0].slice(4); }
+      else if (p.length === 3) { j = +p[0]; mo = +p[1]; a = +p[2]; if (a < 100) a += a > 30 ? 1900 : 2000; }
+      else return null;
+    }
+    var d = new Date(a, mo - 1, j);
+    if (d.getFullYear() !== a || d.getMonth() !== mo - 1 || d.getDate() !== j || a < 1880 || a > 2120) return null;
+    return a + '-' + String(mo).padStart(2, '0') + '-' + String(j).padStart(2, '0');
+  }
   function lire(el) {
     var t = el.dataset.type;
+    if (t === 'date') { var r = lireDate(el.value); return r === null ? get(el.dataset.path) || '' : r; }
     if (t === 'bool') return el.checked;
     if (t === 'num' || t === 'pct') {
       var s = String(el.value).replace(/[\s\u00A0\u202F€%]/g, '').replace(',', '.');
@@ -3340,9 +3383,11 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   document.addEventListener('change', function (ev) {
     var el = ev.target;
     if (el.dataset && el.dataset.path) {
+      if (el.dataset.type === 'date' && lire(el) === (get(el.dataset.path) || '')) { var d1 = get(el.dataset.path); el.value = d1 ? CALC.parseDate(d1).toLocaleDateString('fr-FR') : ''; return; }
       set(el.dataset.path, lire(el));
       var structural = /^(situation|regime|c1\.naissance|c2\.naissance|c1\.sexe|c2\.sexe|c1\.civ|c2\.civ|dateEtude|actifs\.\d+\.type|enfants\.\d+\.prenom|freres\.\d+\.(prenom|decede))$/.test(el.dataset.path);
-      planifier(structural || courante() === 'strategie' || (!!editeur && el.closest('.bulle') && el.tagName !== 'INPUT') || (!!editeur && (el.type === 'checkbox' || el.type === 'date')));
+      if (el.dataset.type === 'date') { var dd0 = get(el.dataset.path); el.value = dd0 ? CALC.parseDate(dd0).toLocaleDateString('fr-FR') : ''; if (!dd0 && !el.value) return; }
+      planifier(structural || courante() === 'strategie' || (!!editeur && el.closest('.bulle') && el.tagName !== 'INPUT') || (!!editeur && (el.type === 'checkbox' || el.dataset.type === 'date')));
       if (el.dataset.type === 'num' && el.closest('.money')) el.value = Number(get(el.dataset.path) || 0).toLocaleString('fr-FR');
       return;
     }
@@ -3353,6 +3398,15 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   });
   document.addEventListener('input', function (ev) {
     var el = ev.target;
+    if (el.dataset && el.dataset.path && el.dataset.type === 'date') {
+      // insère les barres automatiquement : 12031958 -> 12/03/1958
+      var chiffres = el.value.replace(/[^0-9]/g, '');
+      if (/^\d+$/.test(el.value.replace(/\//g, '')) && chiffres.length <= 8 && ev.inputType !== 'deleteContentBackward') {
+        var f = chiffres.slice(0, 2) + (chiffres.length > 2 ? '/' + chiffres.slice(2, 4) : '') + (chiffres.length > 4 ? '/' + chiffres.slice(4) : '');
+        if (f !== el.value) el.value = f;
+      }
+      return;
+    }
     if (el.dataset && el.dataset.path && el.type !== 'checkbox' && el.tagName === 'INPUT' && el.type !== 'date') {
       set(el.dataset.path, lire(el)); planifier(false);
       if (editeur && el.closest('.bulle')) {
@@ -3431,7 +3485,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   window.addEventListener('hashchange', function () { rendre(); window.scrollTo(0, 0); });
   document.addEventListener('mousedown', function (ev) {
     if (!editeur) return;
-    if (ev.target.closest('.bulle') || ev.target.closest('.chip') || ev.target.closest('.noeud') || ev.target.closest('.poignee') || ev.target.closest('[data-act^="add-"]')) return;
+    if (ev.target.closest('#datepick') || ev.target.closest('.bulle') || ev.target.closest('.chip') || ev.target.closest('.noeud') || ev.target.closest('.poignee') || ev.target.closest('[data-act^="add-"]')) return;
     editeur = null; planifier(true);
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && editeur) { editeur = null; planifier(true); } });
@@ -3532,6 +3586,94 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       m.classList.add(dx < 0 ? 'glisse-g' : 'glisse-d');
       location.hash = '#' + ids[j];
     }, { passive: true });
+  })();
+
+  /* ---------- Sélecteur de date : décennie, année, mois, jour ---------- */
+  (function () {
+    var MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    var MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    var dp = document.createElement('div'); dp.id = 'datepick'; dp.setAttribute('role', 'dialog'); dp.setAttribute('aria-label', 'Choisir une date'); document.body.appendChild(dp);
+    var st = null; // { input, path, etape, decennie, annee, mois }
+    function decennieParDefaut(path) {
+      var y = new Date().getFullYear();
+      if (/^c[12]\.naissance/.test(path)) return 1950;
+      if (/^parentsClients/.test(path)) return 1930;
+      if (/^freres/.test(path)) return 1950;
+      if (/^enfants/.test(path)) return 1980;
+      if (/^(petitsEnfants|neveux)/.test(path)) return /^neveux/.test(path) ? 1980 : 2010;
+      if (/finEngagement/.test(path)) return Math.floor(y / 10) * 10;
+      return Math.floor(y / 10) * 10;
+    }
+    function rendu() {
+      var html = '<div class="dp-head">';
+      var miettes = [];
+      if (st.etape !== 'decennies') miettes.push('<button data-dpgo="decennies">' + st.decennie + '–' + (st.decennie + 9) + '</button>');
+      if (st.etape === 'mois' || st.etape === 'jours') miettes.push('<button data-dpgo="annees">' + st.annee + '</button>');
+      if (st.etape === 'jours') miettes.push('<button data-dpgo="mois">' + MOIS_L[st.mois] + '</button>');
+      html += '<div class="dp-crumbs">' + (miettes.length ? miettes.join('<span>›</span>') : '<strong>Choisissez la décennie</strong>') + '</div><button class="dp-x" data-dpgo="fermer" aria-label="Fermer">×</button></div><div class="dp-grid g-' + st.etape + '">';
+      var y = new Date().getFullYear();
+      if (st.etape === 'decennies') {
+        var d0 = Math.min(st.decennie - 50, Math.floor(y / 10) * 10 - 110);
+        for (var d = Math.max(1900, Math.floor(y / 10) * 10 - 110); d <= Math.floor(y / 10) * 10 + (/finEngagement|dateEtude/.test(st.path) ? 10 : 0); d += 10) html += '<button data-dec="' + d + '"' + (d === st.decennie ? ' class="sel"' : '') + '>' + d + '<small>–' + String(d + 9).slice(2) + '</small></button>';
+      } else if (st.etape === 'annees') {
+        html += '<button class="nav" data-dpdec="-10">‹</button>';
+        for (var a = st.decennie; a < st.decennie + 10; a++) html += '<button data-an="' + a + '"' + (a === st.annee ? ' class="sel"' : '') + '>' + a + '</button>';
+        html += '<button class="nav" data-dpdec="10">›</button>';
+      } else if (st.etape === 'mois') {
+        MOIS.forEach(function (m, i) { html += '<button data-mo="' + i + '"' + (i === st.mois && st.valeur && st.valeur.getFullYear() === st.annee ? ' class="sel"' : '') + '>' + m + '</button>'; });
+      } else {
+        ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(function (j) { html += '<span class="dow">' + j + '</span>'; });
+        var premier = (new Date(st.annee, st.mois, 1).getDay() + 6) % 7, nb = new Date(st.annee, st.mois + 1, 0).getDate();
+        for (var k = 0; k < premier; k++) html += '<span></span>';
+        for (var j = 1; j <= nb; j++) { var sel = st.valeur && st.valeur.getFullYear() === st.annee && st.valeur.getMonth() === st.mois && st.valeur.getDate() === j; html += '<button data-jo="' + j + '"' + (sel ? ' class="sel"' : '') + '>' + j + '</button>'; }
+      }
+      dp.innerHTML = html + '</div>';
+      placer();
+    }
+    function placer() {
+      if (window.matchMedia('(max-width: 600px)').matches) { dp.className = 'on sheet'; dp.style.left = dp.style.top = ''; return; }
+      dp.className = 'on';
+      var vivant = document.querySelector('input[data-path="' + st.path + '"]'); if (vivant) st.input = vivant;
+      var r = st.input.getBoundingClientRect(), w = 300;
+      dp.style.left = Math.min(Math.max(12, r.left), window.innerWidth - w - 12) + 'px';
+      var top = r.bottom + 6; if (top + dp.offsetHeight > window.innerHeight - 10) top = Math.max(10, r.top - dp.offsetHeight - 6);
+      dp.style.top = top + 'px';
+    }
+    function ouvrir(input) {
+      var path = input.dataset.path, v = CALC.parseDate(lireDate(input.value) || get(path) || '');
+      st = { input: input, path: path, valeur: v };
+      if (v) { st.decennie = Math.floor(v.getFullYear() / 10) * 10; st.annee = v.getFullYear(); st.mois = v.getMonth(); st.etape = 'jours'; }
+      else { st.decennie = decennieParDefaut(path); st.etape = 'decennies'; }
+      rendu();
+    }
+    function fermer() { st = null; dp.className = ''; dp.innerHTML = ''; }
+    function valider(j) {
+      var iso = st.annee + '-' + String(st.mois + 1).padStart(2, '0') + '-' + String(j).padStart(2, '0');
+      var path = st.path; fermer();
+      // le champ a pu être redessiné entre-temps : on enregistre directement la valeur
+      set(path, iso);
+      var vivant = document.querySelector('input[data-path="' + path + '"]');
+      if (vivant) vivant.value = CALC.parseDate(iso).toLocaleDateString('fr-FR');
+      planifier(true);
+    }
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-dp]');
+      if (b) { e.preventDefault(); var inp = b.parentNode.querySelector('input'); if (st && st.input === inp) fermer(); else ouvrir(inp); return; }
+      if (!st) return;
+      var t = e.target.closest('#datepick button');
+      if (!t) { if (!e.target.closest('#datepick') && e.target !== st.input) fermer(); return; }
+      e.stopPropagation();
+      if (t.dataset.dpgo === 'fermer') return fermer();
+      if (t.dataset.dpgo) { st.etape = t.dataset.dpgo; return rendu(); }
+      if (t.dataset.dec) { st.decennie = +t.dataset.dec; st.etape = 'annees'; return rendu(); }
+      if (t.dataset.dpdec) { st.decennie += +t.dataset.dpdec; return rendu(); }
+      if (t.dataset.an) { st.annee = +t.dataset.an; st.etape = 'mois'; return rendu(); }
+      if (t.dataset.mo !== undefined) { st.mois = +t.dataset.mo; st.etape = 'jours'; return rendu(); }
+      if (t.dataset.jo) return valider(+t.dataset.jo);
+    }, true);
+    document.addEventListener('focusin', function (e) { var inp = e.target; if (inp.dataset && inp.dataset.type === 'date' && !inp.value && (!st || st.input !== inp)) ouvrir(inp); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && st) { e.stopPropagation(); fermer(); } }, true);
+    window.addEventListener('resize', function () { if (st) placer(); });
   })();
 
   /* ---------- Démarrage ---------- */
