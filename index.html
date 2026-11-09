@@ -5673,10 +5673,25 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     document.body.append(fond);
     dessiner();
     setTimeout(() => saisie.focus(), 20);
+    // téléphone : quand le clavier se retire (bouton retour, flèche « masquer »…), la recherche se ferme aussi
+    const vv = window.visualViewport;
+    if (estTel() && vv) {
+      let clavierVu = false;
+      const hauteurPleine = Math.max(window.innerHeight, vv.height);  // hauteur de l'écran sans clavier
+      surveillanceClavier = () => {
+        const clavier = hauteurPleine - vv.height > 120;
+        if (clavier) clavierVu = true;
+        else if (clavierVu) fermerEclair();
+      };
+      vv.addEventListener("resize", surveillanceClavier);
+    }
   }
+  let surveillanceClavier = null;
   function fermerEclair() {
     const f = document.querySelector(".eclair");
     if (f) f.remove();
+    if (surveillanceClavier && window.visualViewport) window.visualViewport.removeEventListener("resize", surveillanceClavier);
+    surveillanceClavier = null;
   }
 
   let attente = null;
