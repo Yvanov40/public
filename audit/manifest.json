@@ -3,7 +3,7 @@
   "short_name": "Audit ACF",
   "description": "Audit de transmission : successions, démembrement, assurance-vie, levier société.",
   "lang": "fr",
-  "start_url": "./gp.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#EEF1F3",
@@ -28,5 +28,5 @@
       "purpose": "maskable"
     }
   ],
-  "id": "./gp.html"
+  "id": "./"
 }
