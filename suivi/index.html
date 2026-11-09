@@ -1,4 +1,63 @@
 <!doctype html>
+<!-- =====================================================================================================
+     SUIVI DES DOSSIERS — guide de lecture pour débutant
+     =====================================================================================================
+     Toute l'appli tient dans ce seul fichier. Il contient trois langages, dans cet ordre :
+       1. le CSS, entre <style> et </style> (début du fichier) : l'APPARENCE (couleurs, tailles, mise en page).
+          Une règle CSS dit « tel élément » { « telle propriété » : « telle valeur » }. Exemple :
+          .carte-dossier { padding: 7px 9px; } = les éléments de classe « carte-dossier » ont 7 px de marge en
+          haut/bas et 9 px à gauche/droite. Les règles écrites plus bas l'emportent sur celles écrites plus haut.
+          @media (max-width: 900px) { … } = règles qui ne s'appliquent qu'aux écrans étroits (téléphone).
+       2. le HTML, entre <body> et le grand <script> : le SQUELETTE de la page (onglets, barre de filtres, les
+          « feuilles » = fiches qui s'ouvrent par-dessus, le menu ⋯…). Beaucoup de zones y sont vides : elles sont
+          remplies par le JavaScript (on les reconnaît à leur id, par ex. <tbody id="clientsListe">).
+       3. le JavaScript, dans le grand <script> de la fin : le COMPORTEMENT (tout ce qui réagit, calcule, enregistre).
+
+     LES IDÉES À CONNAÎTRE POUR LIRE LE JAVASCRIPT
+       - $("truc")          : raccourci pour document.getElementById("truc") = l'élément HTML d'id « truc ».
+       - el("div", {…}, …)  : fabrique un élément HTML. el("b", null, "Bonjour") crée <b>Bonjour</b>.
+                              Le 2e argument donne ses attributs ({ class: "x", onclick: () => … }).
+       - donnees            : TOUTES les données du suivi pendant que l'appli tourne :
+                              donnees.dossiers = la liste des dossiers (un objet par dossier : client, type, honos…),
+                              donnees.clients  = les fiches clients, rangées par nom (commentaire, tâches…).
+       - dutreil, reglagesAgenda, societes : les pactes, les horaires/congés, le rattachement demandeur → société.
+       - localStorage       : petite mémoire du navigateur, propre à cet appareil. L'appli y garde une copie de tout,
+                              pour s'ouvrir instantanément et fonctionner sans connexion.
+       - GitHub             : le fichier suivi_gp.json du dépôt privé est la VERSION DE RÉFÉRENCE, partagée entre vos
+                              appareils. L'appli le lit au démarrage, l'écrit 1,5 s après chaque modification, et
+                              regarde toutes les 15 s s'il a changé ailleurs. Si deux appareils ont modifié en même
+                              temps, elle FUSIONNE les deux versions (fonction fusionner) au lieu d'en écraser une.
+       - afficherTout()     : redessine tous les onglets à partir de « donnees ». Après chaque modification, on
+                              change « donnees », on appelle sauver() (enregistrement) puis afficherTout().
+       - addEventListener("click", …) : « quand on clique, fais ceci ». Même idée pour "input" (on tape),
+                              "change" (une valeur a changé), "pointerdown"/"pointerup" (doigt ou souris posé/levé).
+       - (x) => { … }       : une petite fonction écrite sur place (fonction fléchée).
+       - async / await      : pour les opérations lentes (Internet) : « attends la réponse avant de continuer ».
+
+     LE PLAN DU JAVASCRIPT (cherchez ces titres avec Ctrl+F / ⌘F, ils sont écrits tels quels dans le code)
+       constantes ........................ les listes fixes : étapes, natures, couleurs…
+       état ............................... les variables qui décrivent l'appli à l'instant (onglet, filtres…)
+       utilitaires ........................ petits outils : dates, montants, noms de clients…
+       filtres ............................ la barre de filtres et le calcul des dossiers affichés
+       demandeurs et sociétés ............. le rattachement demandeur → société
+       GitHub ............................. connexion, lecture, envoi, fusion, sauvegarde du jour
+       un seul fichier .................... ce qui va dans suivi_gp.json (dossiers, clients, Dutreil, agenda, sociétés)
+       Dutreil : données / calculs ........ les pactes, leurs échéances, l'onglet Dutreil
+       stockage ........................... sauver() : la copie locale et le départ vers GitHub
+       affichage .......................... Accueil, Kanban, Clients
+       Activité : le pilotage ............. l'onglet Activité (graphiques, classements)
+       Calendrier ......................... vue mois, vue semaine, frise du jour, roue d'actions
+       agenda dynamique ................... la replanification automatique des tâches
+       glisser-déposer .................... déplacer les cartes du Kanban, sélection multiple
+       historique ......................... la trace des modifications de chaque dossier
+       navigation ......................... les onglets, le balayage du doigt, l'onglet Outils
+       fiche dossier / fiche client ....... les fenêtres de saisie
+       tâches des clients ................. les tâches, leur fiche, leur placement
+       feuilles et menu ................... l'ouverture/fermeture des fiches et le retour en arrière
+       bouton + ........................... le menu en quart de cercle
+       recherche éclair ................... la grande recherche (Ctrl+K, double toucher sur +)
+       démarrage .......................... ce qui se passe à l'ouverture de l'appli (tout en bas)
+     ===================================================================================================== -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
