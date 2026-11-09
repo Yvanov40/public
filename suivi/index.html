@@ -1180,6 +1180,22 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .emol-table tr.remise td { color: #2f4a2e; }
 .emol-table tfoot td { font-weight: 600; border-bottom: 0; }
 #corpsEmoluments select, #corpsEmoluments input { width: 100%; }
+
+/* ---------- calculette des émoluments dans la fiche dossier ---------- */
+.calc-fiche { border: 1px dashed var(--bordure); border-radius: 10px; padding: 6px 10px; margin: -2px 0 10px; background: var(--carte); }
+.calc-fiche summary { cursor: pointer; font-size: 13.5px; color: var(--bleu); font-weight: 500; padding: 2px 0; }
+.calc-fiche[open] summary { margin-bottom: 8px; }
+.calc-fiche-saisie { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 70px; gap: 8px; }
+.calc-fiche-saisie select, .calc-fiche-saisie input { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 7px 8px; min-width: 0; }
+.calc-fiche-sortie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 2px; }
+.calc-fiche-chiffres b { font-size: 17px; color: var(--bleu); margin-right: 8px; }
+.calc-fiche-chiffres span { color: var(--discret); font-size: 13px; }
+.calc-fiche-boutons { display: flex; gap: 6px; flex-wrap: wrap; }
+.calc-fiche-boutons button { border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--bleu); cursor: pointer; }
+.calc-fiche-boutons button:first-child { background: var(--bleu); color: var(--carte); border-color: var(--bleu); }
+.calc-fiche-boutons button.lien { border: 0; background: none; text-decoration: underline; }
+.vient-de-changer { outline: 2px solid var(--or); transition: outline .3s; }
+@media (max-width: 900px) { .calc-fiche-saisie { grid-template-columns: 1fr 1fr; } .calc-fiche-saisie select { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>
@@ -4594,6 +4610,58 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     });
     return { lignes, total: Math.round(total * 100) / 100 };
   }
+  // calcul complet : { lignes, total, remise, ht, tva, ttc } pour un acte, un montant (assiette) et une remise en %
+  function calculerEmoluments(acte, assiette, remisePct = 0) {
+    const b = BAREMES_EMOL[acte];
+    assiette = Math.round(assiette || 0);
+    const { lignes, total } = emolumentBareme(assiette, b.taux);
+    const auDela = assiette > SEUIL_REMISE ? total - emolumentBareme(SEUIL_REMISE, b.taux).total : 0;
+    const remise = Math.round(auDela * Math.min(20, Math.max(0, remisePct))) / 100;
+    const ht = Math.round((total - remise) * 100) / 100, tva = Math.round(ht * 20) / 100;
+    return { lignes, total, remise, ht, tva, ttc: Math.round((ht + tva) * 100) / 100 };
+  }
+  // l'acte probable d'un dossier, d'après sa tâche et sa nature (« Donation SARL » → donation…)
+  function acteProbable(texte) {
+    const t = sansAccents(texte);
+    if (/donation.partage/.test(t)) return "donpartage";
+    if (/don(ation)? (d.argent|de somme|manuel)|somme d.argent/.test(t)) return "donargent";
+    if (/donation|donner/.test(t)) return "donation";
+    if (/apport/.test(t)) return "apport";
+    return "vente";
+  }
+  // le petit calculateur glissé dans la fiche dossier, sous les honoraires
+  function calculetteFiche(d) {
+    const choix = el("select", { "aria-label": "Acte" }, Object.entries(BAREMES_EMOL).map(([k, b]) => el("option", { value: k, selected: k === acteProbable(`${d.tache || ""} ${sansNumero(d.type)}`) }, b.nom)));
+    const montant = el("input", { type: "text", inputmode: "decimal", placeholder: "Montant de l’acte", "aria-label": "Montant de l’acte", autocomplete: "off" });
+    const remise = el("input", { type: "number", min: "0", max: "20", step: "1", value: "0", "aria-label": "Remise en %", title: "Remise (%) sur la part au-delà de 100 000 €" });
+    const sortie = el("div", { class: "calc-fiche-sortie" });
+    const fmt = (n) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+    const reporter = (valeur) => {
+      const champ = $("corpsDossier").querySelector("[name=honos_regl]");
+      champ.value = valeur.toFixed(2);
+      champ.dispatchEvent(new Event("input", { bubbles: true }));
+      champ.classList.add("vient-de-changer"); setTimeout(() => champ.classList.remove("vient-de-changer"), 900);
+      informer(`${fmt(valeur)} reporté dans « Prévu réglementés » (pensez à enregistrer).`);
+    };
+    const calculer = () => {
+      const assiette = Number(String(montant.value).replace(/\s|€/g, "").replace(",", ".")) || 0;
+      if (!assiette) { sortie.replaceChildren(el("span", { class: "aide" }, "Tapez le montant de l’acte : le calcul se fait tout seul.")); return; }
+      const r = calculerEmoluments(choix.value, assiette, Number(remise.value) || 0);
+      sortie.replaceChildren(
+        el("div", { class: "calc-fiche-chiffres" }, el("b", null, fmt(r.ht) + " HT"), el("span", null, `${fmt(r.ttc)} TTC${r.remise ? ` · remise ${fmt(r.remise)}` : ""}`)),
+        el("div", { class: "calc-fiche-boutons" },
+          el("button", { type: "button", onclick: () => reporter(r.ht) }, "Reporter le HT"),
+          el("button", { type: "button", onclick: () => reporter(r.ttc) }, "Reporter le TTC"),
+          el("button", { type: "button", class: "lien", onclick: () => { ouvrirEmoluments(); } }, "Détail…")));
+    };
+    for (const c of [choix, montant, remise]) c.addEventListener("input", calculer);
+    calculer();
+    return el("details", { class: "calc-fiche" },
+      el("summary", null, "🧮 Calculer les émoluments réglementés"),
+      el("div", { class: "calc-fiche-saisie" }, choix, montant, remise),
+      sortie);
+  }
+
   function ouvrirEmoluments() {
     const choixActe = el("select", { name: "acte" }, Object.entries(BAREMES_EMOL).map(([k, b]) => el("option", { value: k }, b.nom)));
     const champMontant = el("input", { type: "text", inputmode: "decimal", placeholder: "Ex. 250 000", autocomplete: "off" });
@@ -4743,6 +4811,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
         champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
         champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
+      calculetteFiche(d),
       el("h4", { class: "rubrique" }, "Dates"),
       el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV (date, heure, durée)", el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)))),
       el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date")), champ("A-vie", saisie("a_vie", d.a_vie), true), champ("Millionnaire", avecListe("millionnaire", d.millionnaire, "millionnaire"), true)),
