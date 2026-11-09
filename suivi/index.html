@@ -1205,6 +1205,33 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .emol-saisie > * { flex: 1 1 140px; border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 9px 10px; font-size: 15px; }
 .emol-saisie [hidden], #corpsEmoluments [hidden] { display: none !important; }
 .emol-table tr.sous-titre td { font-weight: 600; color: var(--bleu); padding-top: 10px; }
+
+/* ---------- choix de l'acte (calculatrice des émoluments) ---------- */
+.choix-acte { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; border: 1px solid var(--bordure); background: var(--carte);
+  border-radius: 10px; padding: 8px 12px; cursor: pointer; color: var(--texte); }
+.choix-acte .ic { font-size: 20px; }
+.choix-acte .nom { flex: 1; font-weight: 600; font-size: 15px; color: var(--bleu); }
+.choix-acte .nom small { display: block; font-weight: 400; font-size: 11.5px; color: var(--discret); }
+.choix-acte i { font-style: normal; color: var(--discret); }
+.calc-fiche-saisie .choix-acte { flex: 2 1 240px; padding: 5px 10px; }
+.actes-voile { position: fixed; inset: 0; z-index: 95; background: rgba(8,20,25,.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: flex-end; justify-content: center; }
+.actes-boite { background: var(--carte); width: min(560px, 100%); max-height: 82vh; overflow-y: auto; border-radius: 20px 20px 0 0;
+  padding: 6px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -12px 40px rgba(0,0,0,.25); animation: monte .18s ease-out; }
+@keyframes monte { from { transform: translateY(30px); opacity: .6; } to { transform: none; opacity: 1; } }
+@media (min-width: 901px) { .actes-voile { align-items: center; } .actes-boite { border-radius: 18px; } }
+.actes-tete { display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--carte); padding: 10px 0 4px; z-index: 1; }
+.actes-tete b { font: 600 20px var(--titre); color: var(--bleu); }
+.actes-tete button { border: 0; background: var(--section); width: 32px; height: 32px; border-radius: 16px; color: var(--bleu); }
+.actes-groupe h5 { margin: 12px 2px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--discret); font-weight: 600; }
+.actes-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.acte { display: flex; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--bordure); background: var(--fond); border-radius: 10px;
+  padding: 8px 10px; cursor: pointer; color: var(--texte); font-size: 13.5px; font-weight: 500; line-height: 1.25; }
+.acte .ic { font-size: 18px; flex: none; }
+.acte small { display: block; font-size: 11px; color: var(--discret); font-weight: 400; margin-top: 1px; }
+.acte:hover { border-color: var(--or); }
+.acte.choisi { background: var(--bleu); color: var(--carte); border-color: var(--bleu); }
+.acte.choisi small { color: rgba(255,255,255,.7); }
 </style>
 </head>
 <body>
@@ -4601,29 +4628,29 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   const T60 = [6500, 17000, 60000], T30 = [6500, 17000, 30000];
   const BAREMES_EMOL = {
     // ventes et sociétés
-    vente:      { groupe: "Ventes et sociétés", nom: "Vente ou cession de gré à gré", ref: "art. A444-91", taux: [3.870, 1.596, 1.064, 0.799] },
-    apport:     { groupe: "Ventes et sociétés", nom: "Apport en société (biens soumis à publicité foncière)", ref: "art. A444-158", taux: [1.935, 0.798, 0.532, 0.399] },
+    vente:      { ic: "🏠", court: "Vente", groupe: "Ventes et sociétés", nom: "Vente ou cession de gré à gré", ref: "art. A444-91", taux: [3.870, 1.596, 1.064, 0.799] },
+    apport:     { ic: "🏢", court: "Apport en société", groupe: "Ventes et sociétés", nom: "Apport en société (biens soumis à publicité foncière)", ref: "art. A444-158", taux: [1.935, 0.798, 0.532, 0.399] },
     // donations
-    donation:   { groupe: "Donations", nom: "Donation (immobilier, biens non cotés…)", ref: "art. A444-67, 1°", taux: [4.837, 1.995, 1.330, 0.998], donateurs: true,
+    donation:   { ic: "🎁", court: "Donation", groupe: "Donations", nom: "Donation (immobilier, biens non cotés…)", ref: "art. A444-67, 1°", taux: [4.837, 1.995, 1.330, 0.998], donateurs: true,
                   aide: "Calcul par donateur, sur la valeur en pleine propriété (même avec réserve d’usufruit)." },
-    donpartage: { groupe: "Donations", nom: "Donation-partage", ref: "art. A444-68", taux: [4.837, 1.995, 1.330, 0.998], donateurs: true,
+    donpartage: { ic: "🧩", court: "Donation-partage", groupe: "Donations", nom: "Donation-partage", ref: "art. A444-68", taux: [4.837, 1.995, 1.330, 0.998], donateurs: true,
                   aide: "Conjonctive : par donateur, rapports compris." },
-    donargent:  { groupe: "Donations", nom: "Donation de sommes d’argent, créances ou titres cotés", ref: "art. A444-67, 4°", taux: [2.322, 0.958, 0.639, 0.479], donateurs: true,
+    donargent:  { ic: "💶", court: "Don d’argent, titres cotés", groupe: "Donations", nom: "Donation de sommes d’argent, créances ou titres cotés", ref: "art. A444-67, 4°", taux: [2.322, 0.958, 0.639, 0.479], donateurs: true,
                   aide: "Calcul par donateur." },
-    donepoux:   { groupe: "Donations", nom: "Donation entre époux (au dernier vivant)", ref: "art. A444-69", fixe: 113.20 },
-    revocation: { groupe: "Donations", nom: "Révocation de donation entre époux ou de testament", ref: "art. A444-69", fixe: 26.41 },
+    donepoux:   { ic: "💍", court: "Donation entre époux", groupe: "Donations", nom: "Donation entre époux (au dernier vivant)", ref: "art. A444-69", fixe: 113.20 },
+    revocation: { ic: "↩", court: "Révocation", groupe: "Donations", nom: "Révocation de donation entre époux ou de testament", ref: "art. A444-69", fixe: 26.41 },
     // famille
-    mariage:    { groupe: "Famille", nom: "Contrat de mariage, changement de régime matrimonial", ref: "art. A444-82", taux: [1.290, 0.532, 0.355, 0.266],
+    mariage:    { ic: "💒", court: "Contrat de mariage", groupe: "Famille", nom: "Contrat de mariage, changement de régime matrimonial", ref: "art. A444-82", taux: [1.290, 0.532, 0.355, 0.266],
                   seuil: 30800, fixe: 188.68, aide: "Forfait de 188,68 € HT sans apports ou jusqu’à 30 800 € de biens déclarés ; au-delà, barème sur leur valeur." },
-    pacs:       { groupe: "Famille", nom: "PACS (initial ou modificatif)", ref: "art. A444-81", fixe: 84.51 },
-    mandatpf:   { groupe: "Famille", nom: "Mandat de protection future (établissement)", ref: "art. A444-79-1", fixe: 113.20 },
-    mandatpost: { groupe: "Famille", nom: "Mandat à effet posthume (établissement)", ref: "art. A444-79", fixe: 113.20 },
-    testament:  { groupe: "Famille", nom: "Testament authentique (ou partage testamentaire)", ref: "art. A444-60", fixe: 113.19 },
-    raar:       { groupe: "Famille", nom: "Renonciation anticipée à l’action en réduction", ref: "art. A444-72", fixe: 150.93 },
+    pacs:       { ic: "🤝", court: "PACS", groupe: "Famille", nom: "PACS (initial ou modificatif)", ref: "art. A444-81", fixe: 84.51 },
+    mandatpf:   { ic: "🛡", court: "Mandat de protection future", groupe: "Famille", nom: "Mandat de protection future (établissement)", ref: "art. A444-79-1", fixe: 113.20 },
+    mandatpost: { ic: "🕊", court: "Mandat posthume", groupe: "Famille", nom: "Mandat à effet posthume (établissement)", ref: "art. A444-79", fixe: 113.20 },
+    testament:  { ic: "📜", court: "Testament authentique", groupe: "Famille", nom: "Testament authentique (ou partage testamentaire)", ref: "art. A444-60", fixe: 113.19 },
+    raar:       { ic: "✋", court: "RAAR", groupe: "Famille", nom: "Renonciation anticipée à l’action en réduction", ref: "art. A444-72", fixe: 150.93 },
     // successions
-    notoriete:  { groupe: "Successions", nom: "Acte de notoriété après décès", ref: "art. A444-66", fixe: 56.60 },
-    attestation:{ groupe: "Successions", nom: "Attestation de propriété immobilière", ref: "art. A444-59", taux: [1.935, 1.064, 0.726, 0.532], tranches: T30 },
-    declaration:{ groupe: "Successions", nom: "Déclaration de succession", ref: "art. A444-63", taux: [1.548, 0.851, 0.580, 0.426], tranches: T30,
+    notoriete:  { ic: "📋", court: "Notoriété", groupe: "Successions", nom: "Acte de notoriété après décès", ref: "art. A444-66", fixe: 56.60 },
+    attestation:{ ic: "🏛", court: "Attestation immobilière", groupe: "Successions", nom: "Attestation de propriété immobilière", ref: "art. A444-59", taux: [1.935, 1.064, 0.726, 0.532], tranches: T30 },
+    declaration:{ ic: "🧾", court: "Déclaration de succession", groupe: "Successions", nom: "Déclaration de succession", ref: "art. A444-63", taux: [1.548, 0.851, 0.580, 0.426], tranches: T30,
                   aide: "Sur l’actif brut total, biens de communauté compris." }
   };
   const SEUIL_REMISE = 100000;  // une remise (20 % au plus) peut porter sur l'émolument de la part d'assiette au-delà de 100 000 €
@@ -4666,9 +4693,34 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   const lireMontant = (txt) => Number(String(txt || "").replace(/\s|€/g, "").replace(",", ".")) || 0;
   const fmtEuros = (n) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
   // la liste des actes, rangée par groupe
-  const choixActes = (selectionne) => el("select", { name: "acte", "aria-label": "Acte" },
-    [...new Set(Object.values(BAREMES_EMOL).map((b) => b.groupe))].map((g) => el("optgroup", { label: g },
-      Object.entries(BAREMES_EMOL).filter(([, b]) => b.groupe === g).map(([k, b]) => el("option", { value: k, selected: k === selectionne }, b.nom)))));
+  // le choix de l'acte : un bouton qui ouvre une liste légère, rangée par groupe (au lieu de la longue liste du téléphone).
+  // Il se comporte comme une liste classique pour le reste du code : .value pour lire, évènement « input » au changement.
+  function choixActes(selectionne) {
+    let valeur = BAREMES_EMOL[selectionne] ? selectionne : "vente";
+    const bouton = el("button", { type: "button", class: "choix-acte", "aria-haspopup": "dialog" });
+    const dessiner = () => {
+      const b = BAREMES_EMOL[valeur];
+      bouton.replaceChildren(el("span", { class: "ic" }, b.ic), el("span", { class: "nom" }, b.court, el("small", null, b.groupe)), el("i", null, "▾"));
+    };
+    Object.defineProperty(bouton, "value", { get: () => valeur, set: (v) => { if (BAREMES_EMOL[v]) { valeur = v; dessiner(); } } });
+    bouton.addEventListener("click", () => {
+      const voile = el("div", { class: "actes-voile" });
+      const fermer = () => voile.remove();
+      voile.addEventListener("click", (e) => { if (e.target === voile) fermer(); });
+      const groupes = [...new Set(Object.values(BAREMES_EMOL).map((b) => b.groupe))];
+      voile.append(el("div", { class: "actes-boite", role: "dialog", "aria-label": "Choisir l’acte" },
+        el("div", { class: "actes-tete" }, el("b", null, "Quel acte ?"), el("button", { type: "button", "aria-label": "Fermer", onclick: fermer }, "✕")),
+        ...groupes.map((g) => el("div", { class: "actes-groupe" }, el("h5", null, g),
+          el("div", { class: "actes-grille" }, Object.entries(BAREMES_EMOL).filter(([, b]) => b.groupe === g).map(([k, b]) =>
+            el("button", { type: "button", class: "acte" + (k === valeur ? " choisi" : ""), onclick: () => {
+              valeur = k; dessiner(); fermer(); bouton.dispatchEvent(new Event("input", { bubbles: true }));
+            } }, el("span", { class: "ic" }, b.ic), el("span", null, b.court,
+              el("small", null, b.fixe !== undefined && !b.taux ? `${b.fixe.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} € HT` : b.seuil ? "forfait ou barème" : b.donateurs ? "barème · par donateur" : "barème")))))))));
+      document.body.append(voile);
+    });
+    dessiner();
+    return bouton;
+  }
   // l'acte probable d'un dossier, d'après sa tâche et sa nature (« Donation SARL » → donation…)
   function acteProbable(texte) {
     const t = sansAccents(texte);
