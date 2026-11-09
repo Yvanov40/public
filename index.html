@@ -5337,7 +5337,7 @@ body.vue-outils .filtres, body.vue-outils .outils.ordi { display: none !importan
     eclair: () => ouvrirEclair(), client: () => nouveauClient(), dossier: () => ouvrirDossier(-1),
     tache: () => nouvelleTache(), pacte: () => ouvrirPacte(-1)
   };
-  let fabOuvert = false, fabAppui = null;
+  let fabOuvert = false, fabAppui = null, dernierToucherFab = 0;
   function ouvrirFab() {
     fabOuvert = true;
     $("fab").classList.add("ouvert");
@@ -5387,6 +5387,7 @@ body.vue-outils .filtres, body.vue-outils .outils.ordi { display: none !importan
     return mieux <= ecart / 2 + 25 ? meilleur : null;               // un peu de marge au-delà de l'arc
   }
   $("btnNouveau").addEventListener("contextmenu", (e) => e.preventDefault());
+  $("btnNouveau").addEventListener("dblclick", (e) => e.preventDefault());  // pas de zoom au double toucher
   $("btnNouveau").addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -5407,7 +5408,13 @@ body.vue-outils .filtres, body.vue-outils .outils.ordi { display: none !importan
     const vise = optionSous(e.clientX, e.clientY) || (fabOuvert ? optionDansDirection(e.clientX, e.clientY) : null);
     if (vise) { lancerFab(vise.dataset.action); return; }       // glissé vers un choix (même au-delà), puis lâché
     if (a.maintenu) { if (!a.dejaOuvert) return fermerFab(); }  // appui long lâché ailleurs : on referme
-    else if (a.dejaOuvert) fermerFab(); else ouvrirFab();         // simple toucher : ouvre ou referme
+    else if (Date.now() - dernierToucherFab < 320) {              // double toucher : la recherche éclair
+      dernierToucherFab = 0;
+      lancerFab("eclair");
+    } else {
+      dernierToucherFab = Date.now();
+      if (a.dejaOuvert) fermerFab(); else ouvrirFab();           // simple toucher : ouvre ou referme
+    }
   });
   $("btnNouveau").addEventListener("pointercancel", () => { if (fabAppui) clearTimeout(fabAppui.minuteur); fabAppui = null; });
   $("fabOptions").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) lancerFab(b.dataset.action); });
