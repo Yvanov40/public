@@ -1,6 +1,6 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-10T14:01:17.870Z",
+ "mis_a_jour": "2026-11-10T14:02:20.880Z",
  "session_id": "2026-11-09-16h16-dons-reserve-av-matrimonial",
  "statut": "en_cours",
  "termine_le": null,
@@ -123,18 +123,90 @@
    "question": "Pour le calcul de la réserve et de la quotité disponible, comment est traité un présent d'usage ?",
    "repondu": "Il entre pour sa valeur au jour du don",
    "bonne_reponse": "Il n'entre pas dans la masse de calcul"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Un présent consenti en 2010 est revendu en 2024 pour une somme bien supérieure. Quelle conséquence sur sa qualification ?",
+   "repondu": "La plus-value devient rapportable",
+   "bonne_reponse": "Aucune : la qualification s'apprécie au moment du présent"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Quelle nature de bien peut faire l'objet d'un présent d'usage ?",
+   "repondu": "Un usufruit immobilier",
+   "bonne_reponse": "Un bien meuble remis de la main à la main"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Après le décès du donateur, qui peut contester la qualification de présent d'usage pour obtenir le rapport du don à la succession ?",
+   "repondu": "Personne : la qualification est définitive",
+   "bonne_reponse": "Un héritier, qui peut demander la requalification en donation"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Quel élément a conduit la Cour de cassation à censurer une cour d'appel ayant retenu la qualification de présent d'usage ?",
+   "repondu": "Le bénéficiaire était majeur",
+   "bonne_reponse": "Elle n'avait pas précisé à quelle occasion et selon quel usage le cadeau avait été fait"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Pour se ménager la preuve qu'un cadeau important était bien un présent d'usage, quel élément est le plus utile ?",
+   "repondu": "Une déclaration au service de l'enregistrement au moment du don",
+   "bonne_reponse": "Un relevé bancaire daté à la date de l'événement invoqué"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Présent d'usage",
+   "source": "claude",
+   "question": "Que se passe-t-il en cas de requalification d'un présent d'usage en don manuel ?",
+   "repondu": "Seuls les droits de succession sont dus",
+   "bonne_reponse": "Le don est rapportable et réductible, des droits de donation peuvent être dus, et un rappel fiscal peut s'appliquer au décès"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "source": "claude",
+   "question": "Quel est le montant exonéré d'un don familial de somme d'argent, par donateur et par bénéficiaire ?",
+   "repondu": "100 000 €",
+   "bonne_reponse": "31 865 €"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "source": "claude",
+   "question": "Quel âge maximal le donateur doit-il avoir au jour du don familial de somme d'argent ?",
+   "repondu": "75 ans",
+   "bonne_reponse": "80 ans"
+  },
+  {
+   "le": "2026-11-10T14:01",
+   "fiche": "Dons familiaux de somme d'argent (CGI art. 790 G)",
+   "source": "claude",
+   "question": "Un neveu par alliance peut-il bénéficier de cette exonération à défaut de descendants ?",
+   "repondu": "Oui, s'il est mineur",
+   "bonne_reponse": "Non, les neveux par alliance en sont exclus"
   }
  ],
  "stats_par_fiche": {
   "Présent d'usage": {
-   "vues": 26,
+   "vues": 32,
    "reussies": 21,
    "derniere": "2026-11-10"
   },
   "Dons familiaux de somme d'argent (CGI art. 790 G)": {
-   "vues": 10,
+   "vues": 13,
    "reussies": 5,
-   "derniere": "2026-11-09"
+   "derniere": "2026-11-10"
   },
   "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)": {
    "vues": 10,
