@@ -4654,7 +4654,14 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     setTimeout(() => document.addEventListener("pointerdown", fermerSiDehors, true), 0);
     menuOuvertTel();
   }
-  function fermerSiDehors(e) { if (!e.target.closest(".menu-contextuel")) fermerMenuSelection(); }
+  // toucher ou cliquer à côté du menu : on ferme le menu, et rien d'autre (le toucher ne va pas ouvrir ce qu'il y a dessous)
+  function fermerSiDehors(e) {
+    if (e.target.closest(".menu-contextuel")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    avalerClic();
+    fermerMenuSelection();
+  }
   function fermerMenuSelection(dejaRetire) {
     const ouvert = !!document.querySelector(".menu-contextuel");
     document.querySelectorAll(".menu-contextuel, .menu-voile").forEach((m) => m.remove());
