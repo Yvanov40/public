@@ -1274,6 +1274,17 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   .puce-collab { padding: 7px 12px !important; font-size: 14px !important; }
   .carte-dossier { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 }
+
+/* téléphone : menu plus compact, et voile derrière */
+.menu-voile { position: fixed; inset: 0; z-index: 94; background: rgba(8,20,25,.28); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+@media (max-width: 900px) {
+  .menu-contextuel { max-height: 58vh; padding: 6px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .menu-contextuel::before { content: ""; display: block; width: 38px; height: 4px; border-radius: 2px; background: var(--bordure); margin: 2px auto 4px; }
+  .menu-contextuel > button { padding: 8px 8px; font-size: 14.5px; }
+  .menu-contextuel .titre { padding: 4px 8px 2px; }
+  .menu-contextuel .sep { margin: 2px 6px; }
+  .puce-collab { padding: 5px 10px !important; font-size: 13px !important; }
+}
 </style>
 </head>
 <body>
@@ -3080,6 +3091,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     menu.style.left = Math.min(x, window.innerWidth - b.width - 8) + "px";
     menu.style.top = Math.min(y, window.innerHeight - b.height - 8) + "px";
     setTimeout(() => document.addEventListener("pointerdown", fermerSiDehors, true), 0);
+    menuOuvertTel();
   }
 
   // ---- modification groupée : demandeur, société, partenaire, millionnaire (fiche client) et exercice, statut, nature, précision (dossiers) ----
@@ -4640,11 +4652,25 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     menu.style.left = Math.min(x, window.innerWidth - b.width - 8) + "px";
     menu.style.top = Math.min(y, window.innerHeight - b.height - 8) + "px";
     setTimeout(() => document.addEventListener("pointerdown", fermerSiDehors, true), 0);
+    menuOuvertTel();
   }
   function fermerSiDehors(e) { if (!e.target.closest(".menu-contextuel")) fermerMenuSelection(); }
-  function fermerMenuSelection() {
-    document.querySelectorAll(".menu-contextuel").forEach((m) => m.remove());
+  function fermerMenuSelection(dejaRetire) {
+    const ouvert = !!document.querySelector(".menu-contextuel");
+    document.querySelectorAll(".menu-contextuel, .menu-voile").forEach((m) => m.remove());
     document.removeEventListener("pointerdown", fermerSiDehors, true);
+    // téléphone : le menu avait une étape dans l'historique (pour la touche retour) ; on la retire
+    if (ouvert && !dejaRetire) setTimeout(() => {
+      // (sauf si une action du menu vient d'ouvrir une fiche : l'étape sera sautée au retour de la fiche)
+      if (history.state && history.state.menu && !document.querySelector(".menu-contextuel, .feuille.ouverte")) { ignorerRetour++; history.back(); }
+    }, 0);
+  }
+  // téléphone : un voile derrière le menu (toucher à côté le ferme) et une étape d'historique (la touche retour le ferme)
+  function menuOuvertTel() {
+    if (!estTel()) return;
+    const menu = document.querySelector(".menu-contextuel");
+    document.body.insertBefore(el("div", { class: "menu-voile" }), menu);
+    history.pushState({ ...(history.state || {}), menu: true }, "");
   }
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
@@ -5897,10 +5923,14 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   }
   window.addEventListener("popstate", () => {
     if (ignorerRetour > 0) { ignorerRetour--; return; }
-    if (!document.querySelector(".feuille.ouverte")) return;
-    const frais = retourFrais;
-    retourFrais = false;
-    retourFiche(frais);
+    if (document.querySelector(".menu-contextuel")) { fermerMenuSelection(true); return; }  // touche retour : le menu se ferme
+    if (document.querySelector(".feuille.ouverte")) {
+      const frais = retourFrais;
+      retourFrais = false;
+      retourFiche(frais);
+    }
+    // une étape « menu » restée dans l'historique (le menu a ouvert une fiche) : on la saute
+    if (history.state && history.state.menu && !document.querySelector(".menu-contextuel, .feuille.ouverte")) { ignorerRetour++; history.back(); }
   });
   // Fermer, Échap, glissement : on passe par l'historique pour rester cohérent avec le geste « retour »
   function fermerFeuilles() {
