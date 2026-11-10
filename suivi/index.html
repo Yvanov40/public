@@ -1264,6 +1264,16 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .collab.plus { border-style: dashed; color: var(--bleu); background: none; }
 .cases-groupe { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; padding: 2px 0; }
 .cases-groupe > span { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--discret); min-width: 92px; }
+
+/* ---------- téléphone : le menu du clic droit s'ouvre en bas de l'écran (appui long sur une carte) ---------- */
+@media (max-width: 900px) {
+  .menu-contextuel { left: 0 !important; right: 0; top: auto !important; bottom: 0; min-width: 0; border-radius: 18px 18px 0 0; max-height: 78vh;
+    padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -16px 50px rgba(8,20,25,.35); animation: monte .18s ease-out; }
+  .menu-contextuel > button { padding: 11px 10px; font-size: 15px; }
+  .rangee-collab { max-width: none; }
+  .puce-collab { padding: 7px 12px !important; font-size: 14px !important; }
+  .carte-dossier { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+}
 </style>
 </head>
 <body>
@@ -4390,12 +4400,30 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       if (!selectionMulti.has(i)) { selectionMulti.clear(); selectionMulti.add(i); majSelection(); }
       menuSelection(e.clientX, e.clientY);
     });
+    let appuiLong = null;
     carte.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
       if (e.ctrlKey || e.metaKey || e.shiftKey) return;  // sélection : géré au clic
-      glisse = { i, carte, x: e.clientX, y: e.clientY, parti: false, tactile: e.pointerType !== "mouse", fantome: null, cible: null };
-      if (glisse.tactile) glisse.minuteur = setTimeout(() => demarrer(), 380);  // appui long sur téléphone
+      if (e.pointerType !== "mouse") {
+        // doigt : pas de glisser-déposer (peu pratique au téléphone) ; un appui long ouvre le menu du clic droit
+        const x = e.clientX, y = e.clientY;
+        appuiLong = { x, y, minuteur: setTimeout(() => {
+          appuiLong = null;
+          carte.dataset.bloque = "1";
+          if (!selectionMulti.has(i)) { selectionMulti.clear(); selectionMulti.add(i); majSelection(); }
+          if (navigator.vibrate) try { navigator.vibrate(12); } catch (err) {}
+          avalerClic();
+          menuSelection(x, y);
+        }, 450) };
+        return;
+      }
+      glisse = { i, carte, x: e.clientX, y: e.clientY, parti: false, tactile: false, fantome: null, cible: null };
     });
+    const annulerAppui = () => { if (appuiLong) { clearTimeout(appuiLong.minuteur); appuiLong = null; } };
+    carte.addEventListener("pointermove", (e) => { if (appuiLong && Math.hypot(e.clientX - appuiLong.x, e.clientY - appuiLong.y) > 10) annulerAppui(); });
+    carte.addEventListener("pointerup", annulerAppui);
+    carte.addEventListener("pointercancel", annulerAppui);
+    carte.addEventListener("contextmenu", (e) => { if (estTel()) e.preventDefault(); });  // pas le menu du navigateur
     carte.addEventListener("click", (e) => {
       if (carte.dataset.bloque) { delete carte.dataset.bloque; e.preventDefault(); return; }
       if (e.shiftKey) {  // Maj+clic : toutes les cartes entre la dernière cliquée et celle-ci
@@ -6336,6 +6364,15 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   });
   $("toutDeplier").addEventListener("click", () => toutDeplier(true));
   $("toutReplier").addEventListener("click", () => toutDeplier(false));
+  // un clic dans le vide du Kanban (entre les cartes, sous les colonnes) replie toutes les sections et vide la sélection
+  for (const id of ["kanban", "mSections"]) {
+    $(id).addEventListener("click", (e) => {
+      if (e.target.closest(".carte-dossier, .section-titre, button, a, input, select, label, .menu-contextuel")) return;
+      if (window.getSelection && String(window.getSelection())) return;  // on sélectionnait du texte
+      viderSelection();
+      toutDeplier(false);
+    });
+  }
   window.addEventListener("hashchange", montrerVue);
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
