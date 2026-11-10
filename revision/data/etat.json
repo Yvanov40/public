@@ -1,6 +1,6 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-10T14:02:20.880Z",
+ "mis_a_jour": "2026-11-10T14:53:16.790Z",
  "session_id": "2026-11-09-16h16-dons-reserve-av-matrimonial",
  "statut": "en_cours",
  "termine_le": null,
@@ -204,8 +204,8 @@
    "derniere": "2026-11-10"
   },
   "Dons familiaux de somme d'argent (CGI art. 790 G)": {
-   "vues": 13,
-   "reussies": 5,
+   "vues": 17,
+   "reussies": 9,
    "derniere": "2026-11-10"
   },
   "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)": {
