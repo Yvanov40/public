@@ -1285,6 +1285,22 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   .menu-contextuel .sep { margin: 2px 6px; }
   .puce-collab { padding: 5px 10px !important; font-size: 13px !important; }
 }
+
+/* ---------- rendez-vous du client ---------- */
+.bloc-rdv-client { margin: 6px 0 14px; }
+.bloc-rdv-tete { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bloc-rdv-tete .rubrique { flex: 1; }
+.bloc-rdv-client .etiquette { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--discret); margin: 6px 2px 3px; }
+.rdv-ligne { width: 100%; display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--bordure);
+  background: var(--carte); border-radius: 10px; padding: 8px 12px; margin-bottom: 5px; cursor: pointer; color: var(--texte); }
+.rdv-ligne:hover { border-color: var(--or); }
+.rdv-ligne .quand { font-weight: 600; color: #2f4a2e; text-transform: capitalize; }
+.rdv-ligne .quand small, .rdv-ligne .quoi small { display: block; font-weight: 400; font-size: 12px; color: var(--discret); text-transform: none; }
+.rdv-ligne.fort { background: #e4efe3; border-color: #a9c6a8; }
+.rdv-ligne.passe { opacity: .75; }
+.rdv-ligne.passe .quand { color: var(--discret); }
+.rdv-passes summary { cursor: pointer; font-size: 13.5px; color: var(--bleu); margin: 8px 2px 6px; }
+@media (max-width: 900px) { .rdv-ligne { grid-template-columns: 112px 1fr; } }
 </style>
 </head>
 <body>
@@ -1521,6 +1537,18 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       <button class="valider" id="enregistrerTache">Enregistrer</button>
     </div>
     <div class="feuille-corps" id="corpsTache"></div>
+  </div>
+</div>
+
+<!-- rendez-vous d'un client -->
+<div class="feuille feuille-petite" id="feuilleRdv" role="dialog" aria-modal="true" aria-labelledby="titreRdv">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreRdv">Rendez-vous</h3>
+      <button class="valider" id="enregistrerRdv">Enregistrer</button>
+    </div>
+    <div class="feuille-corps" id="corpsRdv"></div>
   </div>
 </div>
 
@@ -2875,15 +2903,20 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       el("div", { class: "m-note" }, filtre ? `Pour les ${liste.length} dossiers filtrés.` : `Sur ${liste.length} dossiers, ${part} % du prévisionnel est encaissé.`));
     const auj = aujourdhui();
     const rdv = liste.filter(([d]) => !d.archives && d.rdv)
-      .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
-      .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99"));
+      .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i]);
+    // rendez-vous des clients hors dossier, présentés comme ceux des dossiers
+    for (const f of Object.values(donnees.clients)) for (const r of f.rdvs || []) {
+      if (!estIso(r.date || "")) continue;
+      rdv.push([Math.round((versDate(r.date) - auj) / 86400000), { client: f.nom, rdv: r.date, rdv_heure: r.heure, tache: r.objet || "Rendez-vous", type: "", _rdvClient: r.id }, -1]);
+    }
+    rdv.splice(0, rdv.length, ...rdv.filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99")));
     $("mRdv").replaceChildren(...(rdv.length ? rdv.slice(0, 8).map(([e, d, i]) => {
       const jour = versDate(d.rdv);
       const quand = [e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`,
         d.rdv_heure ? el("small", { style: "display:block;font-weight:500" }, d.rdv_heure) : null];
-      return el("button", { class: "m-rdv", type: "button", onclick: () => ouvrirDossier(i) },
+      return el("button", { class: "m-rdv", type: "button", onclick: () => (d._rdvClient ? ouvrirRdv(d.client, d._rdvClient) : ouvrirDossier(i)) },
         el("div", { class: "m-rdv-date vert" + (e === 0 ? " jour" : e === 1 ? " demain" : "") }, quand),
-        el("div", null, el("b", null, d.client), el("span", null, [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "))));
+        el("div", null, el("b", null, d.client), el("span", null, d._rdvClient ? ["RDV client", d.tache].filter(Boolean).join(" · ") : [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "))));
     }) : [el("p", { class: "m-vide" }, "Aucun rendez-vous dans les 30 prochains jours.")]));
     $("mEtapes").replaceChildren(...ETAPES.map(([n, nom]) => {
       const ds = liste.filter(([d]) => etapeDe(d) === n);
@@ -3622,6 +3655,12 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
+        // rendez-vous du client (hors dossier)
+        for (const r of f.rdvs || []) {
+          if (recherche && !sansAccents(`${f.nom} ${r.objet || ""}`).includes(sansAccents(recherche))) continue;
+          ajouter(r.date, { type: "rdv", titre: (r.heure ? plage(r.heure, r.duree || DUREE_RDV) + " " : "") + f.nom, duree: r.duree || DUREE_RDV, heure: r.heure || "",
+            sous: ["RDV client", r.objet].filter(Boolean).join(" · "), ouvrir: () => ouvrirRdv(f.nom, r.id), date: r.date, ref: { client: f.nom, rdvClient: r.id } });
+        }
         for (const t of f.taches || []) {
           if (t.fait || !t.pour || !tacheRetenue(f.nom, t, retenus)) continue;
           ajouter(t.pour, { type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
@@ -3649,7 +3688,18 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 
   // ---- déplacer un élément à une autre date (glisser dans la grille, ou choisir la date dans le détail du jour) ----
   const indexEvenements = new Map();  // clé -> événement, pour retrouver ce qu'on glisse
+  // modifie un rendez-vous client depuis l'agenda (glisser, roue, heure, durée)
+  function modifierRdvClient(e, changes) {
+    const { client, rdvClient } = e.ref;
+    const avant = rdvsDe(client).find((x) => x.id === rdvClient);
+    if (!avant) return;
+    majRdvs(client, (l) => l.map((x) => (x.id === rdvClient ? { ...x, ...changes } : x)));
+    const resume = apresAgenda([avant.date, changes.date || avant.date]);
+    afficherTout();
+    informer(`Rendez-vous ${client} : ${fmtDate(changes.date || avant.date)}${(changes.heure ?? avant.heure) ? " à " + (changes.heure ?? avant.heure) : ""}.${resume}`);
+  }
   function changerHeureEvenement(e, heure) {
+    if (e.ref && e.ref.rdvClient) return modifierRdvClient(e, { heure: heure || "" });
     const r = e.ref || {};
     let resume = "";
     if (e.type === "rdv") {
@@ -3670,6 +3720,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   }
 
   function deplacerEvenement(e, iso, annulable = true) {
+    if (e.ref && e.ref.rdvClient) { if (estIso(iso) && iso !== e.date) modifierRdvClient(e, { date: iso }); return; }
     if (!estIso(iso) || iso === e.date) return;
     const ancienne = e.date;
     const r = e.ref || {};
@@ -4073,6 +4124,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 
   // un rendez-vous ou une tâche posé à un autre jour et une autre heure (vue Semaine)
   function deplacerVers(e, iso, heure) {
+    if (e.ref && e.ref.rdvClient) return modifierRdvClient(e, { date: iso, heure });
     const r = e.ref || {};
     let resume = "";
     if (e.type === "rdv") {
@@ -4093,6 +4145,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   }
 
   function changerDureeEvenement(e, duree) {
+    if (e.ref && e.ref.rdvClient) return modifierRdvClient(e, { duree: String(duree) });
     const r = e.ref || {};
     let resume = "";
     if (e.type === "rdv") {
@@ -5382,6 +5435,30 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     donnees.clients[cle] = f;
     sauver();
   }
+  // ---- rendez-vous d'un client, hors dossier : fiche.rdvs = [{ id, date, heure, duree, objet, note, dossier? }] ----
+  const rdvsDe = (nom) => (fiche(nom).rdvs || []);
+  function majRdvs(nom, modifier) {
+    const cle = cleClient(nom);
+    const f = { ...fiche(nom), nom: fiche(nom).nom || nom };
+    f.rdvs = modifier([...(f.rdvs || [])]);
+    donnees.clients[cle] = f;
+    sauver();
+  }
+  // tous les rendez-vous d'un client : les siens et ceux de ses dossiers, du plus ancien au plus récent
+  function rendezVousDuClient(nom) {
+    const l = rdvsDe(nom).map((r) => ({ ...r, source: "client" }));
+    donnees.dossiers.forEach((d, i) => {
+      if (cleClient(d.client) === cleClient(nom) && estIso(d.rdv || "")) l.push({ date: d.rdv, heure: d.rdv_heure || "", duree: d.rdv_duree, objet: d.tache || sansNumero(d.type), source: "dossier", i });
+    });
+    return l.filter((r) => estIso(r.date || "")).sort((a, b) => (a.date + (a.heure || "99")).localeCompare(b.date + (b.heure || "99")));
+  }
+  // tous les rendez-vous « client » d'une journée (pour l'agenda dynamique)
+  function rdvsClientsDuJour(iso) {
+    const l = [];
+    for (const f of Object.values(donnees ? donnees.clients : {})) for (const r of f.rdvs || []) if (r.date === iso) l.push(r);
+    return l;
+  }
+
   const heureMaintenant = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
   // en retard : date passée, ou aujourd'hui à une heure déjà passée
   const tacheEnRetard = (t) => !!t.pour && (t.pour < enIso(aujourdhui()) || (t.pour === enIso(aujourdhui()) && !!t.heure && t.heure < heureMaintenant()));
@@ -5419,6 +5496,24 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   }
 
   // dossier : { id, libelle } quand le bloc est affiché dans la fiche d'un dossier (la tâche y est rattachée)
+  function blocRdvClient(nom) {
+    const auj = enIso(aujourdhui());
+    const tous = rendezVousDuClient(nom);
+    const avenir = tous.filter((r) => r.date >= auj), passes = tous.filter((r) => r.date < auj).reverse();
+    const ouvrir = (r) => (r.source === "client" ? ouvrirRdv(nom, r.id) : ouvrirDossier(r.i));
+    const ligne = (r, classe = "") => el("button", { type: "button", class: "rdv-ligne " + classe, onclick: () => ouvrir(r) },
+      el("span", { class: "quand" }, versDate(r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: r.date.slice(0, 4) !== auj.slice(0, 4) ? "numeric" : undefined }),
+        r.heure ? el("small", null, plage(r.heure, r.duree || DUREE_RDV)) : null),
+      el("span", { class: "quoi" }, r.objet || "Rendez-vous", el("small", null, r.source === "dossier" ? "📄 rendez-vous du dossier" : r.dossier_libelle ? "📄 " + r.dossier_libelle : "")));
+    const [prochain, ...suivants] = avenir;
+    return el("div", { class: "bloc-rdv-client" },
+      el("div", { class: "bloc-rdv-tete" }, el("h4", { class: "rubrique" }, "Rendez-vous"),
+        el("button", { type: "button", class: "bouton-discret", onclick: () => ouvrirRdv(nom, null) }, "＋ Rendez-vous")),
+      prochain ? el("div", { class: "rdv-prochain" }, el("span", { class: "etiquette" }, "Prochain"), ligne(prochain, "fort")) : el("p", { class: "m-vide" }, "Aucun rendez-vous prévu."),
+      suivants.length ? el("div", { class: "rdv-liste" }, el("span", { class: "etiquette" }, "Ensuite"), ...suivants.map((r) => ligne(r))) : null,
+      passes.length ? el("details", { class: "rdv-passes" }, el("summary", null, `Rendez-vous passés (${passes.length})`), ...passes.map((r) => ligne(r, "passe"))) : null);
+  }
+
   function blocTaches(nom, dossier) {
     const bloc = el("div", { class: "taches" });
     const dessiner = () => {
@@ -5506,6 +5601,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       const m = enMinutes(d.rdv_heure);
       if (m !== null) liste.push([m, m + (Number(d.rdv_duree) || DUREE_RDV)]);
     }
+    for (const r of rdvsClientsDuJour(iso)) { const m = enMinutes(r.heure); if (m !== null) liste.push([m, m + (Number(r.duree) || DUREE_RDV)]); }
     for (const f of Object.values(donnees ? donnees.clients : {})) for (const t of f.taches || []) {
       if (t.fait || t.pour !== iso || t.id === sauf) continue;
       const m = enMinutes(t.heure);
@@ -5570,6 +5666,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       const m = enMinutes(d.rdv_heure);
       if (m !== null) fixes.push([m, m + (Number(d.rdv_duree) || DUREE_RDV)]);
     }
+    for (const r of rdvsClientsDuJour(iso)) { const m = enMinutes(r.heure); if (m !== null) fixes.push([m, m + (Number(r.duree) || DUREE_RDV)]); }
     const mobiles = [];
     for (const t of tachesDuJour(iso)) {
       const m = enMinutes(t.heure);
@@ -5688,6 +5785,50 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     ouvrirFeuille("feuilleTache", () => ouvrirTache(nom, id));
   }
   // proposition = { pour: "2026-11-12", heure: "10:30" } quand on vient d'un double-clic dans l'agenda
+  // ---- fiche d'un rendez-vous client (nouveau : id vide) ----
+  let rdvEnCours = null;
+  function ouvrirRdv(nom, id, proposition = {}) {
+    const r = id ? rdvsDe(nom).find((x) => x.id === id) : null;
+    if (id && !r) { informer("Ce rendez-vous n’existe plus."); return; }
+    rdvEnCours = { nom, id: id || null };
+    $("titreRdv").textContent = r ? "Rendez-vous" : "Nouveau rendez-vous";
+    const dossiers = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => cleClient(d.client) === cleClient(nom));
+    const demain = new Date(); demain.setDate(demain.getDate() + 1);
+    $("corpsRdv").replaceChildren(
+      el("div", { class: "tache-liens" }, el("button", { type: "button", onclick: () => ouvrirClient(nom) }, "👤 ", nom)),
+      el("div", { class: "deux" },
+        champ("Le", el("input", { name: "date", type: "date", value: r ? r.date : (proposition.date || enIso(demain)) })),
+        champ("À", el("input", { name: "heure", type: "time", value: r ? (r.heure || "") : (proposition.heure || "") }))),
+      el("div", { class: "deux" }, champ("Durée", choixDuree("duree", r ? r.duree : "60")),
+        champ("Dossier (facultatif)", el("select", { name: "dossier" }, el("option", { value: "" }, "— aucun —"),
+          dossiers.map(([d]) => el("option", { value: d.id || "", selected: r && r.dossier === d.id }, `${d.tache || sansNumero(d.type)}${d.exercice ? " · " + d.exercice : ""}`))))),
+      champ("Objet", el("input", { name: "objet", type: "text", value: r ? (r.objet || "") : "", placeholder: "Signature, point annuel, bilan…", autocomplete: "off" })),
+      champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Lieu, documents à apporter…" }, r ? (r.note || "") : ""))),
+      el("div", { class: "actions-fiche" },
+        r ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${nom}${r.objet ? " · " + r.objet : ""}`, r.date, r.note || "", r.heure, r.duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
+        r ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
+          if (!confirm("Supprimer ce rendez-vous ?")) return;
+          majRdvs(nom, (l) => l.filter((x) => x.id !== id));
+          const resume = apresAgenda([r.date]);
+          terminerFeuille(); afficherTout(); informer("Rendez-vous supprimé." + resume);
+        } }, "Supprimer") : null));
+    ouvrirFeuille("feuilleRdv", () => ouvrirRdv(nom, id, proposition));
+  }
+  function enregistrerRdv() {
+    if (!rdvEnCours) return;
+    const v = lireFormulaire($("corpsRdv"));
+    if (!v.date) { informer("Indiquez la date du rendez-vous."); return; }
+    const { nom, id } = rdvEnCours;
+    const ancien = id ? rdvsDe(nom).find((x) => x.id === id) : null;
+    const d = donnees.dossiers.find((x) => x.id && x.id === v.dossier);
+    const rdv = { id: id || nouvelId(), date: v.date, heure: v.heure || "", duree: v.duree || "", objet: (v.objet || "").trim(), note: v.note || "",
+      dossier: v.dossier || "", dossier_libelle: d ? (d.tache || sansNumero(d.type)) : "" };
+    majRdvs(nom, (l) => id ? l.map((x) => (x.id === id ? rdv : x)) : [...l, rdv]);
+    const resume = apresAgenda([ancien && ancien.date, rdv.date]);  // les tâches s'écartent autour du rendez-vous
+    terminerFeuille(); afficherTout();
+    informer(`Rendez-vous ${id ? "enregistré" : "ajouté"} : ${fmtDate(rdv.date)}${rdv.heure ? " à " + rdv.heure : ""}.${resume}`);
+  }
+
   function nouvelleTache(proposition = {}) {
     tacheEnCours = { nouveau: true };
     $("titreTache").textContent = "Nouvelle tâche";
@@ -5828,6 +5969,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       blocTaches(nom),
+      blocRdvClient(nom),
       champ("Demandeur", choixDemandeur(f.notaire), true),
       el("div", { class: "deux" }, champ("Société", [saisie("societe", (f.notaire && etudeDe(f.notaire) !== AUTRES_ETUDES ? etudeDe(f.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
       champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true),
@@ -6112,6 +6254,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   $("outilRetour").addEventListener("click", fermerOutil);
   $("btnEmoluments").addEventListener("click", () => { fermerMenu(); ouvrirEmoluments(); });
   $("enregistrerTache").addEventListener("click", enregistrerTache);
+  $("enregistrerRdv").addEventListener("click", enregistrerRdv);
   $("etatDutreil").addEventListener("change", afficherDutreil);
   $("prochesDutreil").addEventListener("change", afficherDutreil);
   for (const id of ["fEtatDutreil", "fEcheanceDutreil"]) $(id).addEventListener("change", () => { $(id).classList.toggle("actif", !!$(id).value); memoriserFiltres(); afficherDutreil(); });
@@ -6231,6 +6374,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     ["＋", "Nouveau dossier", "créer ajouter", () => ouvrirDossier(-1)],
     ["＋", "Nouveau client", "créer ajouter prospect", () => nouveauClient()],
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
+    ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", () => { const nom = (prompt("Pour quel client ?") || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
     ["🧮", "Émoluments du notaire", "calculatrice frais notaire tarif vente donation apport", () => ouvrirEmoluments()],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
