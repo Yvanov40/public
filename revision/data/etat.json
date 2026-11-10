@@ -1,6 +1,6 @@
 {
  "app": "revision-base",
- "mis_a_jour": "2026-11-09T19:47:58.275Z",
+ "mis_a_jour": "2026-11-10T06:15:28.597Z",
  "session_id": "2026-11-09-16h16-dons-reserve-av-matrimonial",
  "statut": "en_cours",
  "termine_le": null,
@@ -35,6 +35,14 @@
    "question": "Le dispositif 790 G impose-t-il une clause d'obligation d'emploi, par exemple d'épargne ?",
    "repondu": "Cela dépend du notaire",
    "bonne_reponse": "Non, et une telle clause risque de rendre le don inéligible"
+  },
+  {
+   "le": "2026-11-09T20:13",
+   "fiche": "Réserve et quotité disponible",
+   "source": "claude",
+   "question": "Au maximum, quelle libéralité le défunt peut-il consentir à son conjoint survivant en présence de descendants ?",
+   "repondu": "Le quart en pleine propriété seulement",
+   "bonne_reponse": "L'usufruit de la totalité des biens successoraux"
   }
  ],
  "stats_par_fiche": {
@@ -49,8 +57,8 @@
    "derniere": "2026-11-09"
   },
   "Réserve et quotité disponible": {
-   "vues": 6,
-   "reussies": 6,
+   "vues": 9,
+   "reussies": 8,
    "derniere": "2026-11-09"
   }
  }
