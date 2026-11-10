@@ -1258,6 +1258,12 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .puce-collab.choisi { background: var(--bleu) !important; color: var(--carte) !important; border-color: var(--bleu) !important; }
 .puce-collab.aucun, .puce-collab.ajout { color: var(--discret) !important; border-style: dashed !important; }
 .puce-collab.aucun.choisi { color: var(--carte) !important; border-style: solid !important; }
+
+.menu-contextuel { max-height: calc(100vh - 16px); overflow-y: auto; }
+.puce-collab.partiel { border-color: var(--or) !important; background: var(--or-doux) !important; }
+.collab.plus { border-style: dashed; color: var(--bleu); background: none; }
+.cases-groupe { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; padding: 2px 0; }
+.cases-groupe > span { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--discret); min-width: 92px; }
 </style>
 </head>
 <body>
@@ -1769,11 +1775,15 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     if (cle === "statut") return (ETAPES.find(([n]) => n === etapeDe(d)) || ["", ""])[1];
     return String(d[cle] ?? "").trim() || "(vide)";
   }
+  // les collaborateurs d'un dossier : « Laura, Hugo » → ["Laura", "Hugo"]
+  const collabsDe = (d) => String(d.collaborateur || "").split(/\s*,\s*/).filter(Boolean);
+  const tousCollabs = () => [...new Set(donnees.dossiers.flatMap(collabsDe))].sort((a, b) => a.localeCompare(b, "fr"));
   function correspond(d, saufSegment) {
     if (!correspondRecherche(d)) return false;
     if ($("masquerArchives").checked && d.archives) return false;
     for (const [cle, choix] of Object.entries(selections)) {
       if (cle === saufSegment || !choix.size) continue;
+      if (cle === "collaborateur") { const c = collabsDe(d); if (!(c.length ? c.some((x) => choix.has(x)) : choix.has("(vide)"))) return false; continue; }
       if (!choix.has(valeurFiltre(d, cle))) return false;
     }
     return true;
@@ -1787,13 +1797,13 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   function valeursSegment(cle) {
     const comptes = new Map();
     for (const d of donnees.dossiers) if (correspond(d, cle)) {
-      const v = valeurFiltre(d, cle);
-      comptes.set(v, (comptes.get(v) || 0) + 1);
+      for (const v of cle === "collaborateur" ? (collabsDe(d).length ? collabsDe(d) : ["(vide)"]) : [valeurFiltre(d, cle)]) comptes.set(v, (comptes.get(v) || 0) + 1);
     }
     let valeurs;
     if (cle === "anciennete") valeurs = [...ANCIENNETES];
     else if (cle === "statut") valeurs = ETAPES.map(([, nom]) => nom);
     else if (VALEURS_FIXES[cle]) valeurs = [...VALEURS_FIXES[cle]];
+    else if (cle === "collaborateur") { valeurs = tousCollabs(); if (comptes.has("(vide)")) valeurs.push("(vide)"); }
     else if (cle === "attente") valeurs = [...new Set(donnees.dossiers.map((d) => valeurFiltre(d, "attente")))]
       .sort((a, b) => (a.startsWith("(") ? 1 : 0) - (b.startsWith("(") ? 1 : 0) || a.localeCompare(b, "fr"));
     else {
@@ -2766,7 +2776,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     },
       el("div", { class: "haut" }, el("b", null, d.client || "Sans nom"), p ? el("span", { class: "prevu" }, euros(p)) : null),
       el("div", { class: "ligne" }, [d.precision ? (etapeDe(d) === "1" ? "⏳ " : "") + d.precision : "", d.tache, d.notaire].filter(Boolean).join(" · ") || sansNumero(d.type),
-        d.collaborateur ? el("span", { class: "collab-carte", title: "Collaborateur : " + d.collaborateur }, d.collaborateur) : null),
+        ...collabsDe(d).map((c) => el("span", { class: "collab-carte", title: "Collaborateur : " + c }, c))),
       comm ? el("div", { class: "ligne comm" }, comm) : null,
       (bas || anc || d.ca) ? el("div", { class: "bas" }, el("span", null, bas, bas && anc ? "   " : "", marqueAnc || ""), d.ca ? el("span", { class: "or" }, euros(d.ca)) : null) : null);
     activerGlisser(carte, i);
@@ -3051,6 +3061,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       el("div", { class: "titre" }, noms.length > 1 ? `${noms.length} clients · ${indices.length} dossiers` : `${noms[0]} · ${indices.length} dossier${indices.length > 1 ? "s" : ""}`),
       action("✎  Modifier demandeur, société, partenaire…", () => modifierEnLot(indices, noms)),
       indices.length ? rangeeCollaborateurs(indices) : null,
+      indices.length ? rangeeDemandeurs(indices) : null,
       indices.length ? action("🗄  Archiver leurs dossiers", () => { selectionMulti.clear(); indices.forEach((i) => selectionMulti.add(i)); archiverSelection(true); selectionMulti.clear(); }) : null,
       noms.length === 1 ? action("👤  Ouvrir la fiche", () => ouvrirClient(noms[0])) : null,
       noms.length > 1 ? [el("div", { class: "sep" }), action("✕  Tout désélectionner", () => { clientsChoisis.clear(); majChoixClients(); })] : null);
@@ -4492,39 +4503,74 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       sauver(); afficherTout(); informer("Déplacement annulé.");
     } });
   }
-  // ---- collaborateur depuis le clic droit : une rangée de cases (les connus, « aucun », « ＋ ») ----
-  function attribuerCollaborateur(indices, nom) {
+  // ---- clic droit : collaborateurs et demandeur, en rangées de cases ----
+  // modifier : (dossier) => change le dossier ; renvoie le nombre de dossiers changés, avec Annuler
+  function appliquerAuxDossiers(indices, modifier, message, annulerAussi = null) {
     const avant = [];
     for (const i of indices) {
       const d = donnees.dossiers[i];
-      if (!d || (d.collaborateur || "") === nom) continue;
+      if (!d) continue;
       const copie = { ...d };
-      d.collaborateur = nom;
-      noterHistorique(d, copie);
-      avant.push([i, copie.collaborateur || ""]);
+      modifier(d);
+      if (JSON.stringify(copie) !== JSON.stringify(d)) { noterHistorique(d, copie); avant.push([i, copie]); }
     }
-    if (!avant.length) { informer(nom ? `Déjà attribués à ${nom}.` : "Aucun collaborateur à retirer."); return; }
+    if (!avant.length) { informer("Rien à changer."); return; }
     sauver(); afficherTout();
-    informer(`${avant.length} dossier${avant.length > 1 ? "s" : ""} ${nom ? "attribué" + (avant.length > 1 ? "s" : "") + " à " + nom : "sans collaborateur"}.`, { texte: "Annuler", faire: () => {
-      for (const [i, ancien] of avant) donnees.dossiers[i].collaborateur = ancien;
+    informer(message(avant.length), { texte: "Annuler", faire: () => {
+      for (const [i, copie] of avant) donnees.dossiers[i] = { ...copie, historique: donnees.dossiers[i].historique };
+      if (annulerAussi) annulerAussi();
       sauver(); afficherTout(); informer("Annulé.");
     } });
   }
+  const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
   function rangeeCollaborateurs(indices) {
-    const connus = [...new Set(donnees.dossiers.map((d) => String(d.collaborateur || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
-    const actuels = new Set(indices.map((i) => donnees.dossiers[i] && (donnees.dossiers[i].collaborateur || "")));
-    const unSeul = actuels.size === 1 ? [...actuels][0] : null;
-    const puce = (lib, nom, classe = "") => el("button", { type: "button", class: "puce-collab " + classe + (unSeul !== null && unSeul === nom ? " choisi" : ""),
-      onclick: () => { fermerMenuSelection(); attribuerCollaborateur(indices, nom); } }, lib);
-    return [el("div", { class: "sep" }), el("div", { class: "titre" }, "👥 Collaborateur"),
-      el("div", { class: "rangee-collab" },
-        ...connus.map((n) => puce(n, n)),
-        puce("aucun", "", "aucun"),
-        el("button", { type: "button", class: "puce-collab ajout", onclick: () => {
-          const nom = (prompt("Nom du nouveau collaborateur :") || "").replace(/\s+/g, " ").trim();
+    const ds = indices.map((i) => donnees.dossiers[i]).filter(Boolean);
+    const chez = (n) => ds.filter((d) => collabsDe(d).includes(n)).length;
+    const puce = (n) => {
+      const tous = chez(n) === ds.length, certains = chez(n) > 0;
+      return el("button", { type: "button", class: "puce-collab" + (tous ? " choisi" : certains ? " partiel" : ""), title: tous ? "Retirer de la sélection" : "Ajouter à la sélection",
+        onclick: () => {
           fermerMenuSelection();
-          if (nom) attribuerCollaborateur(indices, nom);
+          // présent partout : on le retire ; sinon on l'ajoute là où il manque
+          appliquerAuxDossiers(indices, (d) => { const c = collabsDe(d); d.collaborateur = (tous ? c.filter((x) => x !== n) : [...new Set([...c, n])]).join(", "); },
+            (k) => `${n} ${tous ? "retiré de" : "ajouté à"} ${pluriel(k, "dossier")}.`);
+        } }, tous ? "✓ " : "", n);
+    };
+    return [el("div", { class: "sep" }), el("div", { class: "titre" }, "👥 Collaborateurs"),
+      el("div", { class: "rangee-collab" }, ...tousCollabs().map(puce),
+        el("button", { type: "button", class: "puce-collab aucun", onclick: () => { fermerMenuSelection(); appliquerAuxDossiers(indices, (d) => { d.collaborateur = ""; }, (k) => `${pluriel(k, "dossier")} sans collaborateur.`); } }, "aucun"),
+        el("button", { type: "button", class: "puce-collab ajout", onclick: () => {
+          const nom = (prompt("Nom du collaborateur à ajouter :") || "").replace(/\s+/g, " ").trim();
+          fermerMenuSelection();
+          if (nom) appliquerAuxDossiers(indices, (d) => { d.collaborateur = [...new Set([...collabsDe(d), nom])].join(", "); }, (k) => `${nom} ajouté à ${pluriel(k, "dossier")}.`);
         } }, "＋"))];
+  }
+  // le demandeur est commun à tous les dossiers d'un client : on le change dans la fiche client et dans ses dossiers
+  function attribuerDemandeur(indices, nom) {
+    const clients = [...new Set(indices.map((i) => donnees.dossiers[i] && donnees.dossiers[i].client).filter(Boolean))];
+    const tous = donnees.dossiers.map((d, i) => i).filter((i) => clients.some((c) => cleClient(c) === cleClient(donnees.dossiers[i].client)));
+    const fiches = clients.map((c) => [c, fiche(c).notaire || ""]);
+    clients.forEach((c) => { fiche(c).notaire = nom; });
+    appliquerAuxDossiers(tous, (d) => { d.notaire = nom; }, (k) => `${pluriel(clients.length, "client")} (${pluriel(k, "dossier")}) : demandeur ${nom}.`,
+      () => fiches.forEach(([c, ancien]) => { fiche(c).notaire = ancien; }));
+  }
+  function rangeeDemandeurs(indices) {
+    const ds = indices.map((i) => donnees.dossiers[i]).filter(Boolean);
+    const actuel = new Set(ds.map((d) => d.notaire || "")).size === 1 ? ds[0].notaire : null;
+    const connus = [...new Set(donnees.dossiers.map((d) => String(d.notaire || "").trim()).filter(Boolean))].sort((a, b) => nbDossiersDemandeur(b) - nbDossiersDemandeur(a));
+    const zone = el("div", { class: "rangee-collab" });
+    let tout = false;
+    const dessiner = () => zone.replaceChildren(
+      ...(tout ? connus : [...new Set([actuel, ...connus.slice(0, 6)].filter(Boolean))]).map((n) => el("button", { type: "button", class: "puce-collab" + (n === actuel ? " choisi" : ""),
+        title: etudeDe(n) !== AUTRES_ETUDES ? etudeDe(n) : "", onclick: () => { fermerMenuSelection(); attribuerDemandeur(indices, n); } }, n)),
+      connus.length > 6 ? el("button", { type: "button", class: "puce-collab aucun", onclick: (e) => { e.stopPropagation(); tout = !tout; dessiner(); } }, tout ? "moins" : `… tous (${connus.length})`) : null,
+      el("button", { type: "button", class: "puce-collab ajout", onclick: () => {
+        const nom = (prompt("Nom du demandeur :") || "").replace(/\s+/g, " ").trim();
+        fermerMenuSelection();
+        if (nom) attribuerDemandeur(indices, nom);
+      } }, "＋"));
+    dessiner();
+    return [el("div", { class: "sep" }), el("div", { class: "titre" }, "🏛 Demandeur"), zone];
   }
 
   function archiverSelection(archiver) {
@@ -4554,6 +4600,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       el("div", { class: "titre" }, n > 1 ? `${n} dossiers sélectionnés` : (tous[0] ? tous[0].client : "")),
       action(`✎  Modifier${n > 1 ? ` les ${n}` : ""} (demandeur, société…)`, () => modifierEnLot([...selectionMulti])),
       rangeeCollaborateurs([...selectionMulti]),
+      rangeeDemandeurs([...selectionMulti]),
       tous.some((d) => !d.archives) ? action(`🗄  Archiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(true)) : null,
       tous.some((d) => d.archives) ? action(`↩  Désarchiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(false)) : null,
       el("div", { class: "sep" }),
@@ -4879,27 +4926,59 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     return el("div", { class: "aide-client-cadre" }, entree, liste, etat);
   }
 
-  // ---- collaborateur : des cases à toucher (ceux déjà connus), plus une case pour en ajouter un ----
-  function choixCollaborateur(valeur) {
-    const cache = el("input", { type: "hidden", name: "collaborateur", value: valeur || "" });
+  // ---- des cases à toucher au lieu d'une liste : les valeurs déjà connues, + une case pour en ajouter une ----
+  //   nom      : nom du champ (collaborateur, notaire)     multiple : plusieurs choix possibles (séparés par « , »)
+  //   valeurs  : () => la liste des valeurs connues       groupes  : (v) => nom du groupe d'une valeur (demandeur → société)
+  //   premiers : nombre de cases montrées d'emblée (les plus utilisées), les autres derrière « … tous »
+  function choixCases({ nom, valeur, multiple = false, valeurs, groupes = null, premiers = 0, compter = null }) {
+    const cache = el("input", { type: "hidden", name: nom, value: valeur || "" });
     const zone = el("div", { class: "collabs" });
-    const connus = () => [...new Set([...donnees.dossiers.map((d) => String(d.collaborateur || "").trim()), cache.value].filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
-    const dessiner = () => {
-      zone.replaceChildren(
-        ...connus().map((n) => el("button", { type: "button", class: "collab" + (n === cache.value ? " choisi" : ""), "aria-pressed": String(n === cache.value),
-          onclick: () => { cache.value = cache.value === n ? "" : n; dessiner(); } }, n === cache.value ? "✓ " : "", n)),
-        el("button", { type: "button", class: "collab ajout", onclick: () => {
-          const champ = el("input", { type: "text", class: "collab-saisie", placeholder: "Nom du collaborateur", autocomplete: "off" });
-          const valider = () => { const v = champ.value.replace(/\s+/g, " ").trim(); if (v) cache.value = v; dessiner(); };
-          champ.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); valider(); } if (e.key === "Escape") { e.stopPropagation(); dessiner(); } });
-          champ.addEventListener("blur", valider);
-          zone.lastChild.replaceWith(champ);
-          champ.focus();
-        } }, "＋ Ajouter"));
+    let tout = false;
+    const choisis = () => cache.value.split(/\s*,\s*/).filter(Boolean);
+    const ecrire = (liste) => { cache.value = multiple ? liste.join(", ") : (liste[0] || ""); cache.dispatchEvent(new Event("change", { bubbles: true })); dessiner(); };
+    const basculer = (v) => {
+      const c = choisis();
+      if (multiple) ecrire(c.includes(v) ? c.filter((x) => x !== v) : [...c, v]);
+      else ecrire(c[0] === v ? [] : [v]);
     };
+    const caseDe = (v) => el("button", { type: "button", class: "collab" + (choisis().includes(v) ? " choisi" : ""), "aria-pressed": String(choisis().includes(v)),
+      onclick: () => basculer(v) }, choisis().includes(v) ? "✓ " : "", v);
+    function dessiner() {
+      const connues = [...new Set([...valeurs(), ...choisis()])];
+      let montrees = connues;
+      // beaucoup de valeurs (demandeurs) : d'abord les plus utilisées et celles déjà choisies
+      if (premiers && !tout && connues.length > premiers) {
+        const tri = compter ? [...connues].sort((a, b) => compter(b) - compter(a)) : connues;
+        montrees = [...new Set([...choisis(), ...tri.slice(0, premiers)])];
+      }
+      const enfants = [];
+      if (groupes && tout) {
+        // tous, rangés par groupe (société)
+        const parGroupe = new Map();
+        for (const v of montrees) { const g = groupes(v) || "Autres"; if (!parGroupe.has(g)) parGroupe.set(g, []); parGroupe.get(g).push(v); }
+        for (const [g, vs] of [...parGroupe.entries()].sort((a, b) => a[0].localeCompare(b[0], "fr")))
+          enfants.push(el("div", { class: "cases-groupe" }, el("span", null, g), ...vs.sort((a, b) => a.localeCompare(b, "fr")).map(caseDe)));
+      } else enfants.push(...montrees.sort((a, b) => a.localeCompare(b, "fr")).map(caseDe));
+      if (premiers && connues.length > premiers) enfants.push(el("button", { type: "button", class: "collab plus", onclick: () => { tout = !tout; dessiner(); } }, tout ? "moins ▴" : `… tous (${connues.length})`));
+      enfants.push(el("button", { type: "button", class: "collab ajout", onclick: () => {
+        const champ = el("input", { type: "text", class: "collab-saisie", placeholder: nom === "notaire" ? "Nouveau demandeur" : "Nom du collaborateur", autocomplete: "off" });
+        const valider = () => { const v = champ.value.replace(/\s+/g, " ").trim(); if (v) { if (multiple) ecrire([...choisis().filter((x) => x !== v), v]); else ecrire([v]); } else dessiner(); };
+        champ.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); valider(); } if (e.key === "Escape") { e.stopPropagation(); dessiner(); } });
+        champ.addEventListener("blur", valider);
+        zone.lastChild.replaceWith(champ);
+        champ.focus();
+      } }, "＋ Ajouter"));
+      zone.replaceChildren(...enfants);
+    }
+    // si le programme change la valeur (reprise depuis la fiche du client), on redessine
+    cache.addEventListener("maj", dessiner);
     dessiner();
     return [zone, cache];
   }
+  const choixCollaborateur = (valeur) => choixCases({ nom: "collaborateur", valeur, multiple: true, valeurs: tousCollabs });
+  const nbDossiersDemandeur = (n) => donnees.dossiers.filter((d) => d.notaire === n).length;
+  const choixDemandeur = (valeur) => choixCases({ nom: "notaire", valeur, valeurs: () => [...new Set(donnees.dossiers.map((d) => String(d.notaire || "").trim()).filter(Boolean))],
+    groupes: (v) => (etudeDe(v) === AUTRES_ETUDES ? "Autres" : etudeDe(v)), premiers: 8, compter: nbDossiersDemandeur });
 
   function calculetteFiche(d) {
     const choix = choixActes(acteProbable(`${d.tache || ""} ${sansNumero(d.type)}`));
@@ -5025,7 +5104,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     return [...vals].sort((a, b) => a.localeCompare(b, "fr"));
   }
   document.addEventListener("change", (e) => {
-    if (e.target.name !== "notaire") return;
+    if (!e.target || e.target.name !== "notaire") return;
     const soc = e.target.closest(".feuille-corps") && e.target.closest(".feuille-corps").querySelector("[name=societe]");
     if (soc && e.target.value.trim()) { const x = etudeDe(e.target.value); soc.value = x === AUTRES_ETUDES ? "" : x; }
   });
@@ -5081,7 +5160,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       zoneComm._majLiens && zoneComm._majLiens(); zoneNotes._majLiens && zoneNotes._majLiens();
       cleAffichee = cle;
       titreEncart.textContent = encartTitre(entreeClient.value, -1);
-      for (const c of COMMUNS) { const ch = $("corpsDossier").querySelector(`[name="${c}"]`); if (ch && !ch.value && nf[c]) ch.value = nf[c]; }
+      for (const c of COMMUNS) { const ch = $("corpsDossier").querySelector(`[name="${c}"]`); if (ch && !ch.value && nf[c]) { ch.value = nf[c]; ch.dispatchEvent(new Event("maj")); } }
       // la société suit le demandeur repris de la fiche du client
       const soc = $("corpsDossier").querySelector("[name=societe]"), dem = $("corpsDossier").querySelector("[name=notaire]");
       if (soc && dem && dem.value && !soc.value && etudeDe(dem.value) !== AUTRES_ETUDES) soc.value = etudeDe(dem.value);
@@ -5093,7 +5172,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       champ("Collaborateur", choixCollaborateur(d.collaborateur)),
       champ("Statut", [boutonsStatut, champStatut]),
       el("div", { class: "deux" }, champ("Nature du dossier", [champNature, listeNatures]), champ("Précision", [champPrecision, listePrecisions])),
-      el("div", { class: "deux" }, champ("Demandeur", avecListe("notaire", d.notaire, "notaire"), true), champ("Société", [saisie("societe", (d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
+      champ("Demandeur", choixDemandeur(d.notaire), true),
+      el("div", { class: "deux" }, champ("Société", [saisie("societe", (d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
       champ("Partenaire", avecListe("partenaire", d.partenaire, "partenaire"), true),
       el("h4", { class: "rubrique" }, "Honoraires"),
       el("div", { class: "trois" },
@@ -5687,7 +5767,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       blocTaches(nom),
-      el("div", { class: "deux" }, champ("Demandeur", avecListe("notaire", f.notaire, "notaire"), true), champ("Société", [saisie("societe", (f.notaire && etudeDe(f.notaire) !== AUTRES_ETUDES ? etudeDe(f.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
+      champ("Demandeur", choixDemandeur(f.notaire), true),
+      el("div", { class: "deux" }, champ("Société", [saisie("societe", (f.notaire && etudeDe(f.notaire) !== AUTRES_ETUDES ? etudeDe(f.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
       champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true),
       champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true),
       champ("Commentaire client", avecLiens(el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || ""))),
