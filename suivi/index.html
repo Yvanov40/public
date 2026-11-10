@@ -3698,6 +3698,51 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     afficherTout();
     informer(`Rendez-vous ${client} : ${fmtDate(changes.date || avant.date)}${(changes.heure ?? avant.heure) ? " à " + (changes.heure ?? avant.heure) : ""}.${resume}`);
   }
+  // supprimer une tâche ou un rendez-vous depuis l'agenda (avec Annuler)
+  function supprimerEvenement(e) {
+    const r = e.ref || {};
+    const nom = e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "");
+    if (!confirm(`Supprimer ${e.type === "tache" ? "la tâche" : "le rendez-vous"} « ${nom} » ?`)) return;
+    let annuler = null;
+    if (r.tache) {
+      const avant = tachesDe(r.client).map((x) => ({ ...x }));
+      majTaches(r.client, (l) => l.filter((x) => x.id !== r.tache));
+      annuler = () => majTaches(r.client, () => avant);
+    } else if (r.rdvClient) {
+      const avant = rdvsDe(r.client).map((x) => ({ ...x }));
+      majRdvs(r.client, (l) => l.filter((x) => x.id !== r.rdvClient));
+      annuler = () => majRdvs(r.client, () => avant);
+    } else if (r.dossier !== undefined) {
+      // rendez-vous d'un dossier : on retire seulement le rendez-vous, le dossier reste
+      const i = donnees.dossiers.findIndex((d, k) => (d.id || k) === r.dossier);
+      if (i < 0) return;
+      const d = donnees.dossiers[i], avant = { ...d };
+      d.rdv = ""; d.rdv_heure = ""; d.rdv_duree = "";
+      noterHistorique(d, avant);
+      sauver();
+      annuler = () => { Object.assign(donnees.dossiers[i], { rdv: avant.rdv, rdv_heure: avant.rdv_heure, rdv_duree: avant.rdv_duree }); sauver(); };
+    } else return;
+    const resume = apresAgenda([e.date]);  // le créneau libéré profite aux tâches suivantes
+    afficherTout();
+    informer(`${e.type === "tache" ? "Tâche supprimée" : "Rendez-vous supprimé"}.${resume}`, { texte: "Annuler", faire: () => { annuler(); afficherTout(); informer("Rétabli."); } });
+  }
+
+  // ---- clic droit dans une zone vide de l'agenda (ordinateur) : nouvelle tâche ou nouveau rendez-vous à cet endroit ----
+  function menuCreation(x, y, iso, heure) {
+    fermerMenuSelection();
+    const action = (texte, faire) => el("button", { type: "button", onclick: () => { fermerMenuSelection(); faire(); } }, texte);
+    const jour = versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    const menu = el("div", { class: "menu-contextuel", role: "menu" },
+      el("div", { class: "titre" }, jour + (heure ? " · " + heure : "")),
+      action("☐  Nouvelle tâche", () => nouvelleTache({ pour: iso, heure })),
+      action("📅  Nouveau rendez-vous", () => ouvrirRdv("", null, { date: iso, heure })));
+    document.body.append(menu);
+    const b = menu.getBoundingClientRect();
+    menu.style.left = Math.min(x, window.innerWidth - b.width - 8) + "px";
+    menu.style.top = Math.min(y, window.innerHeight - b.height - 8) + "px";
+    setTimeout(() => document.addEventListener("pointerdown", fermerSiDehors, true), 0);
+  }
+
   function changerHeureEvenement(e, heure) {
     if (e.ref && e.ref.rdvClient) return modifierRdvClient(e, { heure: heure || "" });
     const r = e.ref || {};
@@ -3930,6 +3975,13 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const marge = compacte ? 2 : 44;      // place laissée aux heures à gauche
     const frise = el("div", { class: "frise" + (compacte ? " compacte" : ""), "data-jour": iso, style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` });
     // double-clic dans un endroit libre : nouvelle tâche ce jour-là, à l'heure visée (arrondie au quart d'heure)
+    frise.addEventListener("contextmenu", (ev) => {
+      if (estTel() || ev.target.closest(".frise-bloc")) return;
+      ev.preventDefault();
+      const y = ev.clientY - frise.getBoundingClientRect().top;
+      const minute = Math.min(FIN_FRISE - 15, Math.max(DEBUT_FRISE, DEBUT_FRISE + Math.floor(y / pxMin / 15) * 15));
+      menuCreation(ev.clientX, ev.clientY, iso, enHeure(minute));
+    });
     frise.addEventListener("dblclick", (ev) => {
       if (estTel() || ev.target.closest(".frise-bloc")) return;
       const y = ev.clientY - frise.getBoundingClientRect().top;
@@ -4061,6 +4113,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       actions.push({ ic: "✓", lib: "Faite", angle: 90, faire: () => { cocherTache(e.ref.client, t.id, true); afficherTout(); informer(`« ${t.texte} » est faite.`); } });
     }
     actions.push({ ic: "↗", lib: "Ouvrir", angle: t ? 135 : -90, faire: () => e.ouvrir() });
+    if (e.type !== "dutreil") actions.push({ ic: "🗑", lib: "Supprimer", angle: t ? 45 : 90, faire: () => supprimerEvenement(e) });
     return actions;
   }
   // ouvre la roue autour du point (x, y) ; avec un doigt encore posé, on glisse vers le choix et on lâche
@@ -4198,7 +4251,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
           el("span", null, d.toLocaleDateString("fr-FR", { weekday: "short" })), el("b", null, d.getDate()),
           congeDu(iso) ? el("em", { class: "conge" }, congeDu(iso).libelle || "Congé") : null),
         el("div", { class: "semaine-sans-heure", title: "Double-clic pour ajouter une tâche ce jour-là",
-          ondblclick: (ev) => { if (!ev.target.closest(".ev")) nouvelleTache({ pour: iso }); } }, sansHeure.map((e) => {
+          ondblclick: (ev) => { if (!ev.target.closest(".ev")) nouvelleTache({ pour: iso }); },
+          oncontextmenu: (ev) => { if (ev.target.closest(".ev")) return; ev.preventDefault(); menuCreation(ev.clientX, ev.clientY, iso, ""); } }, sansHeure.map((e) => {
           const puce = el("button", { type: "button", class: `ev ${e.type}${e.retard ? " retard" : ""}`, title: e.sous, onclick: e.ouvrir }, e.titre);
           puce.addEventListener("contextmenu", (x) => { x.preventDefault(); ouvrirRoue(x.clientX, x.clientY, e, false); });
           return puce;
@@ -4303,7 +4357,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       if (iso === auj) classes.push("aujourdhui");
       if (iso === jourCalendrier) classes.push("choisi");
       cellules.push(el("button", { type: "button", class: classes.join(" "), "data-jour": iso,
-        ondblclick: (ev) => { if (!estTel() && !ev.target.closest(".ev")) nouvelleTache({ pour: iso }); }, "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
+        ondblclick: (ev) => { if (!estTel() && !ev.target.closest(".ev")) nouvelleTache({ pour: iso }); },
+        oncontextmenu: (ev) => { if (estTel() || ev.target.closest(".ev")) return; ev.preventDefault(); menuCreation(ev.clientX, ev.clientY, iso, ""); }, "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
         onclick: (ev) => { if (ev.currentTarget.dataset.bloque) return; jourCalendrier = iso; afficherCalendrier(); if (estTel()) $("calPanneau").scrollIntoView({ behavior: "smooth", block: "start" }); } },
         el("span", { class: "num" }, jour.getDate()),
         ...liste.map((e) => {  // tous les éléments du jour : la case s'agrandit
@@ -5790,12 +5845,13 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   function ouvrirRdv(nom, id, proposition = {}) {
     const r = id ? rdvsDe(nom).find((x) => x.id === id) : null;
     if (id && !r) { informer("Ce rendez-vous n’existe plus."); return; }
-    rdvEnCours = { nom, id: id || null };
+    rdvEnCours = { nom: nom || "", id: id || null };
     $("titreRdv").textContent = r ? "Rendez-vous" : "Nouveau rendez-vous";
     const dossiers = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => cleClient(d.client) === cleClient(nom));
     const demain = new Date(); demain.setDate(demain.getDate() + 1);
     $("corpsRdv").replaceChildren(
-      el("div", { class: "tache-liens" }, el("button", { type: "button", onclick: () => ouvrirClient(nom) }, "👤 ", nom)),
+      nom ? el("div", { class: "tache-liens" }, el("button", { type: "button", onclick: () => ouvrirClient(nom) }, "👤 ", nom))
+        : champ("Client", aideClient(el("input", { name: "client", type: "text", autocomplete: "off", placeholder: "Nom du client" }))),
       el("div", { class: "deux" },
         champ("Le", el("input", { name: "date", type: "date", value: r ? r.date : (proposition.date || enIso(demain)) })),
         champ("À", el("input", { name: "heure", type: "time", value: r ? (r.heure || "") : (proposition.heure || "") }))),
@@ -5818,7 +5874,13 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     if (!rdvEnCours) return;
     const v = lireFormulaire($("corpsRdv"));
     if (!v.date) { informer("Indiquez la date du rendez-vous."); return; }
-    const { nom, id } = rdvEnCours;
+    const { id } = rdvEnCours;
+    let nom = rdvEnCours.nom;
+    if (!nom) {  // rendez-vous créé depuis l'agenda : le client vient de la fiche
+      const saisi = (v.client || "").replace(/\s+/g, " ").trim();
+      if (!saisi) { informer("Indiquez le client."); return; }
+      nom = nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi;
+    }
     const ancien = id ? rdvsDe(nom).find((x) => x.id === id) : null;
     const d = donnees.dossiers.find((x) => x.id && x.id === v.dossier);
     const rdv = { id: id || nouvelId(), date: v.date, heure: v.heure || "", duree: v.duree || "", objet: (v.objet || "").trim(), note: v.note || "",
