@@ -1322,6 +1322,11 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .encart-client .bloc-tuiles { margin-top: 8px; }
 #impression .petit { font-size: 10px; color: #666; white-space: pre-wrap; }
 #impression td.inter { font-weight: 600; background: #f3efe7; }
+
+/* fiche : 4 tuiles par rangée sur ordinateur ; petits liens sous le client et la tâche */
+@media (min-width: 901px) { .feuille .tuiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.lien-sous-champ { border: 0; background: none; color: var(--bleu); font-size: 12.5px; padding: 4px 0 0; cursor: pointer; text-align: left; }
+.lien-sous-champ:hover { text-decoration: underline; text-decoration-color: var(--or); }
 </style>
 </head>
 <body>
@@ -5424,17 +5429,15 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const historique = (d.historique || []).slice().reverse();
     $("corpsDossier").replaceChildren(
       el("h4", { class: "rubrique" }, "Le dossier"),
-      el("div", { class: "deux" }, champ("Client", [aideClient(entreeClient), listeClients]), champ("Tâche", saisie("tache", d.tache))),
+      el("div", { class: "deux" },
+        champ("Client", [aideClient(entreeClient), listeClients,
+          i >= 0 && d.client ? el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirClient(d.client) }, "👤 Fiche client",
+            tachesOuvertes(d.client).length ? ` · ☐ ${tachesOuvertes(d.client).length} tâche(s)` : "") : null]),
+        champ("Tâche", [saisie("tache", d.tache),
+          i >= 0 ? el("button", { type: "button", class: "lien-sous-champ", onclick: () => preparerRelance(d) }, "✉ Préparer une relance") : null])),
       champ("Statut", [boutonsStatut, champStatut]),
-      tuiles([
-        { libelle: "Nature", choix: choixNature(sansNumero(d.type) === "Sans type" ? "" : sansNumero(d.type)) },
-        { libelle: "Précision", choix: choixPrecision(d.precision) },
-        { libelle: "Collaborateurs", choix: choixCollaborateur(d.collaborateur) },
-        { libelle: "Demandeur", commun: true, choix: choixDemandeur(d.notaire) },
-        { libelle: "Société", choix: choixSociete(d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : "") },
-        { libelle: "Partenaire", commun: true, choix: choixPartenaire(d.partenaire) }]),
-      // honoraires et exercice : deux tuiles de même taille, qui s'ouvrent pour remplir
       (() => {
+        // honoraires et exercice rejoignent les caractéristiques : 8 tuiles, 2 rangées de 4
         const honos = el("div", null, el("div", { class: "trois" },
           champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
           champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
@@ -5447,6 +5450,12 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
           champ("Fin", saisie("fin", d.fin, "date")));
         const lire = (n) => dates.querySelector(`[name=${n}]`).value;
         return tuiles([
+          { libelle: "Nature", choix: choixNature(sansNumero(d.type) === "Sans type" ? "" : sansNumero(d.type)) },
+          { libelle: "Précision", choix: choixPrecision(d.precision) },
+          { libelle: "Collaborateurs", choix: choixCollaborateur(d.collaborateur) },
+          { libelle: "Demandeur", commun: true, choix: choixDemandeur(d.notaire) },
+          { libelle: "Société", choix: choixSociete(d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : "") },
+          { libelle: "Partenaire", commun: true, choix: choixPartenaire(d.partenaire) },
           { libelle: "Honoraires", contenu: honos, resume: () => {
             const pr = val("honos_regl") + val("honos_art4"), enc = val("ca");
             return pr || enc ? `${euros(pr)} · encaissé ${euros(enc)}` : "";
@@ -5460,7 +5469,9 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
           // le rendez-vous du dossier : en bas, dans une tuile (les rendez-vous du client sont dans sa fiche)
           const rdv = el("div", null,
             el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)),
-            d.client ? el("button", { type: "button", class: "bouton-discret", style: "margin-top:8px", onclick: () => ouvrirClient(d.client) }, "Tous les rendez-vous du client ›") : null);
+            el("div", { class: "actions-fiche", style: "margin-top:8px" },
+              d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure, d.rdv_duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
+              d.client ? el("button", { type: "button", onclick: () => ouvrirClient(d.client) }, "Tous les rendez-vous du client ›") : null));
           const lireRdv = (n) => rdv.querySelector(`[name=${n}]`).value;
           const lot = [];
           if (i >= 0 && d.client) lot.push({ libelle: "Tâches du client", contenu: blocTaches(d.client, { id: d.id, libelle: [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") }), resume: () => resumeTaches(d.client) });
@@ -5471,11 +5482,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
           return tuiles(lot);
         })()),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
-      i >= 0 ? el("div", { class: "actions-fiche" },
-        d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure, d.rdv_duree || DUREE_RDV) }, "📅 Ajouter le RDV à l’agenda") : null,
-        el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
-        el("button", { type: "button", onclick: () => ouvrirClient(d.client) }, "👤 Fiche client",
-          tachesOuvertes(d.client).length ? ` · ☐ ${tachesOuvertes(d.client).length} tâche(s)` : "")) : "",
+
       historique.length ? el("details", { class: "repli" }, el("summary", null, `Historique (${historique.length})`),
         el("div", { class: "historique" }, historique.map((h) => el("div", null,
           el("b", null, `${new Date(h.le).toLocaleDateString("fr-FR")} ${new Date(h.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`),
