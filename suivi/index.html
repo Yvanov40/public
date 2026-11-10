@@ -1301,6 +1301,21 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .rdv-ligne.passe .quand { color: var(--discret); }
 .rdv-passes summary { cursor: pointer; font-size: 13.5px; color: var(--bleu); margin: 8px 2px 6px; }
 @media (max-width: 900px) { .rdv-ligne { grid-template-columns: 112px 1fr; } }
+
+/* ---------- tuiles « Libellé / valeur » qui s'ouvrent pour choisir ---------- */
+.bloc-tuiles { margin: 6px 0 12px; }
+.tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.tuile { text-align: left; border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 7px 11px; cursor: pointer; min-width: 0;
+  display: grid; gap: 1px; transition: border-color .12s, box-shadow .12s; }
+.tuile small { font-size: 11px; color: var(--discret); text-transform: uppercase; letter-spacing: .04em; }
+.tuile b { font-size: 14.5px; color: var(--bleu); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tuile.vide b { color: var(--discret); font-weight: 400; }
+.tuile:hover { border-color: var(--or); }
+.tuile.ouverte { border-color: var(--bleu); box-shadow: 0 0 0 1px var(--bleu) inset; background: var(--bleu-doux); }
+.tuile-panneau { margin-top: 8px; border: 1px solid var(--bordure); border-radius: 12px; padding: 10px 12px; background: var(--fond); animation: eclair .12s ease-out; }
+.tuile-panneau[hidden] { display: none; }
+.tuile-panneau-titre { font-size: 12px; color: var(--discret); margin-bottom: 8px; }
+@media (max-width: 900px) { .tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
@@ -5108,7 +5123,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const basculer = (v) => {
       const c = choisis();
       if (multiple) ecrire(c.includes(v) ? c.filter((x) => x !== v) : [...c, v]);
-      else ecrire(c[0] === v ? [] : [v]);
+      else { ecrire(c[0] === v ? [] : [v]); const t = zone.closest(".bloc-tuiles"); if (t) { const o = t.querySelector(".tuile.ouverte"); if (o) o.click(); } }
     };
     const caseDe = (v) => el("button", { type: "button", class: "collab" + (choisis().includes(v) ? " choisi" : ""), "aria-pressed": String(choisis().includes(v)),
       onclick: () => basculer(v) }, choisis().includes(v) ? "✓ " : "", v);
@@ -5132,6 +5147,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       enfants.push(el("button", { type: "button", class: "collab ajout", onclick: () => {
         const champ = el("input", { type: "text", class: "collab-saisie", placeholder: nom === "notaire" ? "Nouveau demandeur" : "Nom du collaborateur", autocomplete: "off" });
         const valider = () => { const v = champ.value.replace(/\s+/g, " ").trim(); if (v) { if (multiple) ecrire([...choisis().filter((x) => x !== v), v]); else ecrire([v]); } else dessiner(); };
+        const libelleAjout = { notaire: "Nouveau demandeur", societe: "Nouvelle société", partenaire: "Nouveau partenaire", nature: "Nouvelle nature", precision: "Nouvelle précision", millionnaire: "Valeur" }[nom];
+        if (libelleAjout) champ.placeholder = libelleAjout;
         champ.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); valider(); } if (e.key === "Escape") { e.stopPropagation(); dessiner(); } });
         champ.addEventListener("blur", valider);
         zone.lastChild.replaceWith(champ);
@@ -5144,7 +5161,48 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     dessiner();
     return [zone, cache];
   }
+  // ---- tuiles : un rang de petites cases « Libellé / valeur » ; un clic en ouvre une, avec ses choix, juste en dessous ----
+  //   champs : [{ libelle, commun, choix: [zone, cacheInput] }]  (commun : ◆ champ partagé par tous les dossiers du client)
+  function tuiles(champs) {
+    const panneau = el("div", { class: "tuile-panneau", hidden: true });
+    let ouverte = null;
+    const rangee = el("div", { class: "tuiles" });
+    for (const c of champs) {
+      const [zone, cache] = c.choix;
+      const valeur = el("b");
+      const majValeur = () => {
+        const v = String(cache.value || "").trim();
+        valeur.textContent = v || "—";
+        tuile.classList.toggle("vide", !v);
+      };
+      const tuile = el("button", { type: "button", class: "tuile", "aria-expanded": "false",
+        onclick: () => {
+          const meme = ouverte === tuile;
+          rangee.querySelectorAll(".tuile").forEach((t) => { t.classList.remove("ouverte"); t.setAttribute("aria-expanded", "false"); });
+          if (meme) { ouverte = null; panneau.hidden = true; return; }
+          ouverte = tuile;
+          tuile.classList.add("ouverte"); tuile.setAttribute("aria-expanded", "true");
+          panneau.replaceChildren(el("div", { class: "tuile-panneau-titre" }, c.libelle + (c.commun ? " · commun à tous les dossiers du client" : "")), zone);
+          panneau.hidden = false;
+        } },
+        el("small", null, (c.commun ? "◆ " : "") + c.libelle), valeur);
+      // la valeur suit les choix (et les remplissages automatiques)
+      cache.addEventListener("change", majValeur);
+      cache.addEventListener("maj", majValeur);
+      majValeur();
+      rangee.append(tuile, cache);
+    }
+    return el("div", { class: "bloc-tuiles" }, rangee, panneau);
+  }
+
   const choixCollaborateur = (valeur) => choixCases({ nom: "collaborateur", valeur, multiple: true, valeurs: tousCollabs });
+  const valeursDe = (cle) => [...new Set(donnees.dossiers.map((d) => String(d[cle] || "").trim()).filter(Boolean))];
+  const frequence = (cle) => { const m = new Map(); for (const d of donnees.dossiers) { const v = String(d[cle] || "").trim(); if (v) m.set(v, (m.get(v) || 0) + 1); } return (v) => m.get(v) || 0; };
+  const choixSociete = (valeur) => choixCases({ nom: "societe", valeur, valeurs: listeSocietes });
+  const choixPartenaire = (valeur) => choixCases({ nom: "partenaire", valeur, valeurs: () => valeursDe("partenaire"), premiers: 10, compter: frequence("partenaire") });
+  const choixMillionnaire = (valeur) => choixCases({ nom: "millionnaire", valeur, valeurs: () => valeursDe("millionnaire") });
+  const choixNature = (valeur) => choixCases({ nom: "nature", valeur, valeurs: naturesConnues });
+  const choixPrecision = (valeur) => choixCases({ nom: "precision", valeur, valeurs: () => [...new Set([...PRECISIONS, ...valeursDe("precision")])] });
   const nbDossiersDemandeur = (n) => donnees.dossiers.filter((d) => d.notaire === n).length;
   const choixDemandeur = (valeur) => choixCases({ nom: "notaire", valeur, valeurs: () => [...new Set(donnees.dossiers.map((d) => String(d.notaire || "").trim()).filter(Boolean))],
     groupes: (v) => (etudeDe(v) === AUTRES_ETUDES ? "Autres" : etudeDe(v)), premiers: 8, compter: nbDossiersDemandeur });
@@ -5275,7 +5333,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   document.addEventListener("change", (e) => {
     if (!e.target || e.target.name !== "notaire") return;
     const soc = e.target.closest(".feuille-corps") && e.target.closest(".feuille-corps").querySelector("[name=societe]");
-    if (soc && e.target.value.trim()) { const x = etudeDe(e.target.value); soc.value = x === AUTRES_ETUDES ? "" : x; }
+    if (soc && e.target.value.trim()) { const x = etudeDe(e.target.value); soc.value = x === AUTRES_ETUDES ? "" : x; soc.dispatchEvent(new Event("maj")); }
   });
   function avecListe(nom, valeur, cle) {
     const id = "liste-" + cle + "-" + nom;
@@ -5332,18 +5390,20 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       for (const c of COMMUNS) { const ch = $("corpsDossier").querySelector(`[name="${c}"]`); if (ch && !ch.value && nf[c]) { ch.value = nf[c]; ch.dispatchEvent(new Event("maj")); } }
       // la société suit le demandeur repris de la fiche du client
       const soc = $("corpsDossier").querySelector("[name=societe]"), dem = $("corpsDossier").querySelector("[name=notaire]");
-      if (soc && dem && dem.value && !soc.value && etudeDe(dem.value) !== AUTRES_ETUDES) soc.value = etudeDe(dem.value);
+      if (soc && dem && dem.value && !soc.value && etudeDe(dem.value) !== AUTRES_ETUDES) { soc.value = etudeDe(dem.value); soc.dispatchEvent(new Event("maj")); }
     });
     const historique = (d.historique || []).slice().reverse();
     $("corpsDossier").replaceChildren(
       el("h4", { class: "rubrique" }, "Le dossier"),
       el("div", { class: "deux" }, champ("Client", [aideClient(entreeClient), listeClients]), champ("Tâche", saisie("tache", d.tache))),
-      champ("Collaborateur", choixCollaborateur(d.collaborateur)),
       champ("Statut", [boutonsStatut, champStatut]),
-      el("div", { class: "deux" }, champ("Nature du dossier", [champNature, listeNatures]), champ("Précision", [champPrecision, listePrecisions])),
-      champ("Demandeur", choixDemandeur(d.notaire), true),
-      el("div", { class: "deux" }, champ("Société", [saisie("societe", (d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
-      champ("Partenaire", avecListe("partenaire", d.partenaire, "partenaire"), true),
+      tuiles([
+        { libelle: "Nature", choix: choixNature(sansNumero(d.type) === "Sans type" ? "" : sansNumero(d.type)) },
+        { libelle: "Précision", choix: choixPrecision(d.precision) },
+        { libelle: "Collaborateurs", choix: choixCollaborateur(d.collaborateur) },
+        { libelle: "Demandeur", commun: true, choix: choixDemandeur(d.notaire) },
+        { libelle: "Société", choix: choixSociete(d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : "") },
+        { libelle: "Partenaire", commun: true, choix: choixPartenaire(d.partenaire) }]),
       el("h4", { class: "rubrique" }, "Honoraires"),
       el("div", { class: "trois" },
         champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
@@ -5352,7 +5412,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       calculetteFiche(d),
       el("h4", { class: "rubrique" }, "Dates"),
       el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV (date, heure, durée)", el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)))),
-      el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date")), champ("A-vie", saisie("a_vie", d.a_vie), true), champ("Millionnaire", avecListe("millionnaire", d.millionnaire, "millionnaire"), true)),
+      el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date"))),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       el("h4", { class: "rubrique" }, "Client"),
       i >= 0 && d.client ? blocTaches(d.client, { id: d.id, libelle: [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") }) : "",
@@ -5983,7 +6043,9 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     Object.assign(d, {
       client: v.client, tache: v.tache, collaborateur: (v.collaborateur || "").trim(), type: `${v.statut || "2"}. ${natureNormale(v.nature)}`, precision: v.precision || "", notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
-      exercice: exerciceNormal(v.exercice || (v.debut ? v.debut.slice(0, 4) : "")), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", rdv_duree: v.rdv ? (v.rdv_duree || "") : "", fin: v.fin, a_vie: v.a_vie, millionnaire: v.millionnaire,
+      exercice: exerciceNormal(v.exercice || (v.debut ? v.debut.slice(0, 4) : "")), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", rdv_duree: v.rdv ? (v.rdv_duree || "") : "", fin: v.fin,
+      // A-vie et Millionnaire ne sont plus dans la fiche dossier : on garde la valeur du dossier, sinon celle du client
+      a_vie: "a_vie" in v ? v.a_vie : (d.a_vie ?? fiche(v.client).a_vie ?? ""), millionnaire: "millionnaire" in v ? v.millionnaire : (d.millionnaire ?? fiche(v.client).millionnaire ?? ""),
       archives: v.archives, commentaire: v.commentaire
     });
     if (!d.id) d.id = nouvelId();
@@ -6032,10 +6094,11 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       blocTaches(nom),
       blocRdvClient(nom),
-      champ("Demandeur", choixDemandeur(f.notaire), true),
-      el("div", { class: "deux" }, champ("Société", [saisie("societe", (f.notaire && etudeDe(f.notaire) !== AUTRES_ETUDES ? etudeDe(f.notaire) : ""), "text", { list: "liste-societes-fiche" }), el("datalist", { id: "liste-societes-fiche" }, listeSocietes().map((x) => el("option", { value: x })))])),
-      champ("Partenaire", avecListe("partenaire", f.partenaire, "partenaire"), true),
-      champ("Millionnaire", avecListe("millionnaire", f.millionnaire, "millionnaire"), true),
+      tuiles([
+        { libelle: "Demandeur", choix: choixDemandeur(f.notaire) },
+        { libelle: "Société", choix: choixSociete(f.notaire && etudeDe(f.notaire) !== AUTRES_ETUDES ? etudeDe(f.notaire) : "") },
+        { libelle: "Partenaire", choix: choixPartenaire(f.partenaire) },
+        { libelle: "Millionnaire", choix: choixMillionnaire(f.millionnaire) }]),
       champ("Commentaire client", avecLiens(el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || ""))),
       champ("Notes client", avecLiens(el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || ""))),
       el("div", { class: "actions-fiche" },
