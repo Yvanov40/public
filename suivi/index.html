@@ -1316,6 +1316,12 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .tuile-panneau[hidden] { display: none; }
 .tuile-panneau-titre { font-size: 12px; color: var(--discret); margin-bottom: 8px; }
 @media (max-width: 900px) { .tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.tuile.large { grid-column: 1 / -1; }
+.tuile-page[hidden] { display: none; }
+.encart-client .bloc-tuiles { margin-top: 8px; }
+#impression .petit { font-size: 10px; color: #666; white-space: pre-wrap; }
+#impression td.inter { font-weight: 600; background: #f3efe7; }
 </style>
 </head>
 <body>
@@ -5164,35 +5170,58 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   // ---- tuiles : un rang de petites cases « Libellé / valeur » ; un clic en ouvre une, avec ses choix, juste en dessous ----
   //   champs : [{ libelle, commun, choix: [zone, cacheInput] }]  (commun : ◆ champ partagé par tous les dossiers du client)
   function tuiles(champs) {
+    //   chaque champ : { libelle, commun?, choix: [zone, cacheInput] }   → la valeur choisie s'affiche dans la tuile
+    //               ou { libelle, contenu, resume: () => texte }       → un bloc entier, résumé dans la tuile
+    // Tous les contenus restent dans la page (cachés quand fermés) : rien n'est perdu à l'enregistrement.
     const panneau = el("div", { class: "tuile-panneau", hidden: true });
     let ouverte = null;
     const rangee = el("div", { class: "tuiles" });
     for (const c of champs) {
-      const [zone, cache] = c.choix;
+      const zone = c.contenu || c.choix[0];
+      const cache = c.choix ? c.choix[1] : null;
+      const page = el("div", { class: "tuile-page", hidden: true },
+        el("div", { class: "tuile-panneau-titre" }, c.libelle + (c.commun ? " · commun à tous les dossiers du client" : "")), zone);
+      panneau.append(page);
       const valeur = el("b");
       const majValeur = () => {
-        const v = String(cache.value || "").trim();
+        const v = String(c.resume ? c.resume() : (cache.value || "")).trim();
         valeur.textContent = v || "—";
         tuile.classList.toggle("vide", !v);
       };
-      const tuile = el("button", { type: "button", class: "tuile", "aria-expanded": "false",
+      const tuile = el("button", { type: "button", class: "tuile" + (c.large ? " large" : ""), "aria-expanded": "false",
         onclick: () => {
           const meme = ouverte === tuile;
           rangee.querySelectorAll(".tuile").forEach((t) => { t.classList.remove("ouverte"); t.setAttribute("aria-expanded", "false"); });
+          panneau.querySelectorAll(".tuile-page").forEach((x) => { x.hidden = true; });
           if (meme) { ouverte = null; panneau.hidden = true; return; }
           ouverte = tuile;
           tuile.classList.add("ouverte"); tuile.setAttribute("aria-expanded", "true");
-          panneau.replaceChildren(el("div", { class: "tuile-panneau-titre" }, c.libelle + (c.commun ? " · commun à tous les dossiers du client" : "")), zone);
-          panneau.hidden = false;
+          page.hidden = false; panneau.hidden = false;
+          const champ = page.querySelector("textarea, input:not([type=hidden])");
+          if (champ && c.contenu && champ.tagName === "TEXTAREA") champ.focus();
         } },
         el("small", null, (c.commun ? "◆ " : "") + c.libelle), valeur);
-      // la valeur suit les choix (et les remplissages automatiques)
-      cache.addEventListener("change", majValeur);
-      cache.addEventListener("maj", majValeur);
+      // la valeur suit les choix, la saisie, et les remplissages automatiques
+      if (cache) { cache.addEventListener("change", majValeur); cache.addEventListener("maj", majValeur); rangee.append(cache); }
+      if (c.contenu) for (const ev of ["input", "change", "click"]) zone.addEventListener(ev, () => setTimeout(majValeur, 0));
       majValeur();
-      rangee.append(tuile, cache);
+      rangee.insertBefore(tuile, cache && cache.parentNode === rangee ? cache : null);
     }
     return el("div", { class: "bloc-tuiles" }, rangee, panneau);
+  }
+  // résumés des tuiles
+  const premiereLigne = (t) => { const l = String(t || "").split("\n").map((x) => x.trim()).find(Boolean) || ""; return l.length > 60 ? l.slice(0, 58) + "…" : l; };
+  function resumeTaches(nom) {
+    const l = tachesOuvertes(nom).slice().sort(triTaches);
+    if (!l.length) return "";
+    const p = l.find((t) => t.pour);
+    return `${l.length} à faire${p ? " · " + etatEcheance(p)[0] : ""}`;
+  }
+  function resumeRdv(nom) {
+    const auj = enIso(aujourdhui());
+    const tous = rendezVousDuClient(nom), r = tous.find((x) => x.date >= auj), passes = tous.filter((x) => x.date < auj).length;
+    if (r) return "Prochain : " + versDate(r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (r.heure ? " " + r.heure : "");
+    return passes ? `aucun à venir · ${passes} passé${passes > 1 ? "s" : ""}` : "";
   }
 
   const choixCollaborateur = (valeur) => choixCases({ nom: "collaborateur", valeur, multiple: true, valeurs: tousCollabs });
@@ -5404,20 +5433,34 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         { libelle: "Demandeur", commun: true, choix: choixDemandeur(d.notaire) },
         { libelle: "Société", choix: choixSociete(d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : "") },
         { libelle: "Partenaire", commun: true, choix: choixPartenaire(d.partenaire) }]),
-      el("h4", { class: "rubrique" }, "Honoraires"),
-      el("div", { class: "trois" },
-        champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
-        champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
-        champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
-      calculetteFiche(d),
+      (() => {
+        // honoraires : une tuile qui résume « prévu · encaissé », et s'ouvre sur les trois montants et la calculette
+        const contenu = el("div", null, el("div", { class: "trois" },
+          champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
+          champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
+          champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
+          calculetteFiche(d));
+        const val = (n) => Number(String(contenu.querySelector(`[name=${n}]`).value || "").replace(",", ".")) || 0;
+        return tuiles([{ libelle: "Honoraires", large: true, contenu, resume: () => {
+          const pr = val("honos_regl") + val("honos_art4"), enc = val("ca");
+          return pr || enc ? `${euros(pr)} prévus · ${euros(enc)} encaissés` : "";
+        } }]);
+      })(),
       el("h4", { class: "rubrique" }, "Dates"),
       el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV (date, heure, durée)", el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)))),
       el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date"))),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       el("h4", { class: "rubrique" }, "Client"),
-      i >= 0 && d.client ? blocTaches(d.client, { id: d.id, libelle: [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") }) : "",
-      el("div", { class: "encart-client" }, titreEncart, champ("Commentaire client", avecLiens(zoneComm)), champ("Notes client", avecLiens(zoneNotes))),
-      champ("Commentaire propre à ce dossier", avecLiens(el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || ""))),
+      el("div", { class: "encart-client" }, titreEncart,
+        (() => {
+          const zoneDossier = el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "");
+          const lot = [];
+          if (i >= 0 && d.client) lot.push({ libelle: "Tâches du client", contenu: blocTaches(d.client, { id: d.id, libelle: [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") }), resume: () => resumeTaches(d.client) });
+          lot.push({ libelle: "◆ Commentaire client", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
+            { libelle: "◆ Notes client", contenu: el("div", null, ...avecLiens(zoneNotes)), resume: () => premiereLigne(zoneNotes.value) },
+            { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) });
+          return tuiles(lot);
+        })()),
       i >= 0 ? el("div", { class: "actions-fiche" },
         d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure, d.rdv_duree || DUREE_RDV) }, "📅 Ajouter le RDV à l’agenda") : null,
         el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
@@ -6018,6 +6061,31 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       el("table", null, el("tr", null, ...["Tâche", "Étape", "Début", "Prévu", "Encaissé"].map((t) => el("th", null, t))),
         ...ds.map((d) => el("tr", null, el("td", null, d.tache || ""), el("td", null, sansNumero(d.type)), el("td", null, fmtDate(d.debut)),
           el("td", { class: "n" }, prevu(d) ? euros(prevu(d)) : ""), el("td", { class: "n" }, d.ca ? euros(d.ca) : "")))),
+      // les tâches : à faire (par échéance), puis faites
+      (() => {
+        const toutes = tachesDe(nom);
+        if (!toutes.length) return "";
+        const ouvertes = toutes.filter((t) => !t.fait).sort(triTaches), faites = toutes.filter((t) => t.fait).sort((a, b) => String(b.fait).localeCompare(String(a.fait)));
+        const ligne = (t) => el("tr", null, el("td", null, t.fait ? "✓" : "☐"), el("td", null, t.texte, t.note ? el("div", { class: "petit" }, t.note) : null),
+          el("td", null, t.pour ? fmtDate(t.pour) + (t.heure ? " " + plage(t.heure, t.duree || DUREE_TACHE) : "") : "—"),
+          el("td", null, t.fait ? "faite le " + new Date(t.fait).toLocaleDateString("fr-FR") : (t.dossier_libelle || "")));
+        return el("div", null, el("h2", null, `Tâches (${ouvertes.length} à faire, ${faites.length} faites)`),
+          el("table", null, el("tr", null, ...["", "Tâche", "Échéance", ""].map((x) => el("th", null, x))), ...ouvertes.map(ligne), ...faites.map(ligne)));
+      })(),
+      // les rendez-vous : ceux du client et ceux de ses dossiers, à venir puis passés
+      (() => {
+        const tous = rendezVousDuClient(nom);
+        if (!tous.length) return "";
+        const auj = enIso(aujourdhui());
+        const avenir = tous.filter((r) => r.date >= auj), passes = tous.filter((r) => r.date < auj).reverse();
+        const ligne = (r) => el("tr", null, el("td", null, versDate(r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" })),
+          el("td", null, r.heure ? plage(r.heure, r.duree || DUREE_RDV) : "—"), el("td", null, r.objet || "Rendez-vous", r.note ? el("div", { class: "petit" }, r.note) : null),
+          el("td", null, r.source === "dossier" ? "dossier" : (r.dossier_libelle || "client")));
+        return el("div", null, el("h2", null, `Rendez-vous (${avenir.length} à venir, ${passes.length} passés)`),
+          el("table", null, el("tr", null, ...["Date", "Heure", "Objet", "Origine"].map((x) => el("th", null, x))),
+            avenir.length ? el("tr", null, el("td", { colspan: "4", class: "inter" }, "À venir")) : null, ...avenir.map(ligne),
+            passes.length ? el("tr", null, el("td", { colspan: "4", class: "inter" }, "Passés")) : null, ...passes.map(ligne)));
+      })(),
       f.commentaire ? el("div", null, el("h2", null, "Commentaire"), el("pre", null, f.commentaire)) : "",
       f.notes ? el("div", null, el("h2", null, "Notes"), el("pre", null, f.notes)) : "");
     window.print();
@@ -6092,15 +6160,20 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         el("div", null, el("span", null, "Prévu"), el("b", null, euros(p))),
         el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
-      blocTaches(nom),
-      blocRdvClient(nom),
+      (() => {
+        const zoneComm = el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || "");
+        const zoneNotes = el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || "");
+        return tuiles([
+          { libelle: "Tâches", contenu: blocTaches(nom), resume: () => resumeTaches(nom) },
+          { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
+          { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
+          { libelle: "Notes", contenu: el("div", null, ...avecLiens(zoneNotes)), resume: () => premiereLigne(zoneNotes.value) }]);
+      })(),
       tuiles([
         { libelle: "Demandeur", choix: choixDemandeur(f.notaire) },
         { libelle: "Société", choix: choixSociete(f.notaire && etudeDe(f.notaire) !== AUTRES_ETUDES ? etudeDe(f.notaire) : "") },
         { libelle: "Partenaire", choix: choixPartenaire(f.partenaire) },
         { libelle: "Millionnaire", choix: choixMillionnaire(f.millionnaire) }]),
-      champ("Commentaire client", avecLiens(el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || ""))),
-      champ("Notes client", avecLiens(el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || ""))),
       el("div", { class: "actions-fiche" },
         el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
         el("button", { type: "button", onclick: () => renommerClient(clientEnCours) }, "✎ Renommer"),
