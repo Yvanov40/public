@@ -206,6 +206,26 @@ main#main { position: relative; }
 .dp-grid button small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
 .dp-grid button.sel small { color: inherit; opacity: .8; }
 .dp-grid .dow { text-align: center; font-size: 11.5px; color: var(--muted); font-weight: 700; padding: 2px 0; }
+.btn.petit { padding: 5px 10px; font-size: 13px; }
+.dutreil { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--soft); }
+.dutreil .dq { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dutreil .dq span { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.dutreil .dq strong { font-family: var(--serif); font-size: 18px; margin-right: auto; }
+.dutreil .calc { margin-top: 10px; }
+.clause { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+.onglets { display: flex; gap: 4px; margin-bottom: 10px; }
+.onglets button { font: 600 13px var(--sans); border: 1px solid var(--line); background: var(--paper); color: var(--muted); border-radius: 16px; padding: 5px 12px; cursor: pointer; }
+.onglets button.on { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.ligne-clause { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 10px 0; display: flex; flex-direction: column; gap: 8px; }
+.ligne-clause .grid { margin: 0; }
+.nus > span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.nus > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.np { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; border: 1px solid var(--line); border-radius: 14px; padding: 4px 10px; cursor: pointer; }
+.np input { accent-color: var(--brand); }
+.lien-suppr { align-self: flex-start; background: none; border: 0; color: var(--warn); font: 600 12.5px var(--sans); cursor: pointer; padding: 0; }
+.clause-bas { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.clause-bas .ok { color: var(--gain); font-weight: 700; font-size: 13px; } .clause-bas .ko { color: var(--warn); font-weight: 700; font-size: 13px; }
+.note.resume { font-style: italic; }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -291,6 +311,7 @@ var FISC = {
   baremeLD: [[8072, 0.05], [12109, 0.10], [15932, 0.15], [552324, 0.20], [902838, 0.30], [1805677, 0.40], [Infinity, 0.45]],
   baremeFS: [[24430, 0.35], [Infinity, 0.45]],   // frères et sœurs (et neveux par représentation)
   baremeNV: [[Infinity, 0.55]],                  // neveux et nièces de leur propre chef
+  baremeTI: [[Infinity, 0.60]],                  // tiers (au-delà du 4e degré et non-parents)
   abatFrere: 15932,
   abatNeveu: 7967,
   abatEnfant: 100000,
@@ -406,9 +427,16 @@ var REGIMES = {
   rural: { label: 'Biens ruraux loués à long terme, GFA (art. 793 bis)', taux: 0.75, plafond: true }
 };
 // montant exonéré sur une valeur transmise ; nb = nombre de bénéficiaires (plafond rural par bénéficiaire)
-function exoneration(regime, valeur, nb) {
+// quote-part de la valeur éligible au Dutreil (actifs affectés à l'activité / actif total)
+function quoteDutreil(a) {
+  if (!a || (a.regime !== 'dutreil' && a.regime !== 'dutreilEI')) return 1;
+  var e = +a.dutreilEligible || 0, t = +a.dutreilTotal || 0;
+  if (e > 0 && t > 0) return Math.min(1, e / t);
+  var q = a.dutreilQuotePart; return (q === undefined || q === null || q === '') ? 1 : Math.max(0, Math.min(1, +q));
+}
+function exoneration(regime, valeur, nb, quote) {
   var R = REGIMES[regime]; if (!R || valeur <= 0) return 0;
-  if (!R.plafond) return valeur * R.taux;
+  if (!R.plafond) return valeur * R.taux * (quote === undefined ? 1 : quote);
   var pl = FISC.plafondRural * Math.max(1, nb || 1);
   return 0.75 * Math.min(valeur, pl) + 0.5 * Math.max(0, valeur - pl);
 }
@@ -479,6 +507,13 @@ function prepare(d) {
   ctx.enfants.forEach(function (e) { e.lienType = 'enfant'; ctx.persons[e.id] = e; });
   ctx.petitsEnfants.forEach(function (p) { p.lienType = 'pe'; ctx.persons[p.id] = p; });
   ctx.freres.forEach(function (f) { ctx.persons[f.id] = f; });
+  (d.av || []).forEach(function (c) {
+    ['clauseActuelle', 'clausePlan'].forEach(function (cl) {
+      ((c[cl] || {}).lignes || []).forEach(function (l) {
+        if (l.beneficiaire === 'tiers' || l.usufruitier === 'tiers') ctx.persons['tiers_' + l.id] = { id: 'tiers_' + l.id, label: l.nomTiers || 'Tiers', prenom: l.nomTiers || 'Tiers', lienType: 'tiers', naissance: l.naissanceTiers || '' };
+      });
+    });
+  });
   ctx.neveux.forEach(function (n) { ctx.persons[n.id] = n; });
   return ctx;
 }
@@ -518,6 +553,8 @@ function regimeTiers(p) {
   if (p.lienType === 'pe') return { abat: FISC.abatDefaut, bareme: 'LD' };
   if (p.lienType === 'neveu') return { abat: FISC.abatNeveu, bareme: 'NV' };
   if (p.lienType === 'frere') return { abat: FISC.abatFrere, bareme: 'FS' };
+  if (p.lienType === 'tiers') return { abat: FISC.abatDefaut, bareme: 'TI' };
+  if (p.lienType === 'parent') return { abat: FISC.abatEnfant, bareme: 'LD' };
   return { abat: FISC.abatDefaut, bareme: 'LD' };
 }
 function autre(k) { return k === 'c1' ? 'c2' : 'c1'; }
@@ -571,6 +608,56 @@ function usufruitTotalPossible(ctx, k) {
   if (!enfantsDe(ctx, k).length) return false;
   if (ctx.d.ddv) return true;
   return ctx.enfants.every(function (e) { return e.parent === 'commun' || e.parent === autre(k); });
+}
+
+/* ---------------- Clauses bénéficiaires personnalisées ----------------
+   clause = { type: 'personnalisee', lignes: [ { id, mode: 'PP' | 'DEM', part (%),
+     beneficiaire (PP) | usufruitier + nus [ids] (DEM), nomTiers } ] }
+   'conjoint' désigne l'autre client ; un bénéficiaire prédécédé est remplacé « à défaut » par les héritiers de l'assuré. */
+function resoudre(ctx, id, k, l) { if (id === 'conjoint') return autre(k); if (id === 'tiers') return 'tiers_' + l.id; return id; }
+function vivantPersonne(ctx, id, date, spouse) {
+  if (id === 'c1' || id === 'c2') return id === spouse;
+  var p = ctx.persons[id]; if (!p) return false;
+  if (p.decede) return false;
+  if (p.lienType === 'parent' && p.deces && p.deces <= date) return false;
+  return true;
+}
+function lignesClause(ctx, clause, k, spouse, date, heirs) {
+  var P = ctx.P, out = [], tot = (clause.lignes || []).reduce(function (s, l) { return s + (+l.part || 0); }, 0) || 1;
+  function aDefaut(part) { heirs.forEach(function (e) { out.push({ id: e.id, cap: part * e.part, f: part * e.part, abatF: 1, exo: false, type: 'PP' }); }); }
+  function ageUsuf(id) {
+    if (id === spouse) return Math.max(ageAt(ctx.persons[id].naissance, date), P.ageMinPremierDeces);
+    var p = ctx.persons[id]; return p && p.naissance ? ageAt(p.naissance, date) : 60;
+  }
+  (clause.lignes || []).forEach(function (l) {
+    var part = (+l.part || 0) / tot; if (part <= 0) return;
+    if (l.mode === 'DEM') {
+      var u = resoudre(ctx, l.usufruitier, k, l);
+      var nus = (l.nus || []).map(function (x) { return resoudre(ctx, x, k, l); }).filter(function (x) { return vivantPersonne(ctx, x, date, spouse); });
+      if (!nus.length) { if (vivantPersonne(ctx, u, date, spouse)) out.push({ id: u, cap: part, f: part, abatF: 1, exo: u === spouse, type: 'PP' }); else aDefaut(part); return; }
+      if (!vivantPersonne(ctx, u, date, spouse)) { nus.forEach(function (n) { out.push({ id: n, cap: part / nus.length, f: part / nus.length, abatF: 1, exo: n === spouse, type: 'PP' }); }); return; }
+      var us = usufruitPct(ageUsuf(u));
+      out.push({ id: u, cap: part, f: part * us, abatF: us * nus.length, exo: u === spouse, type: 'Usufruit' });
+      nus.forEach(function (n) { out.push({ id: n, cap: 0, f: part * (1 - us) / nus.length, abatF: 1 - us, exo: n === spouse, type: 'Nue-propriété' }); });
+    } else {
+      var b = resoudre(ctx, l.beneficiaire, k, l);
+      if (vivantPersonne(ctx, b, date, spouse)) out.push({ id: b, cap: part, f: part, abatF: 1, exo: b === spouse, type: 'PP' });
+      else aDefaut(part);
+    }
+  });
+  return out;
+}
+function nomPersonne(ctx, id, k) {
+  if (id === 'conjoint') return 'le conjoint';
+  var p = ctx.persons[id]; return p ? (p.prenom || p.label) : '?';
+}
+function resumeClause(ctx, clause, k) {
+  var tot = (clause.lignes || []).reduce(function (s, l) { return s + (+l.part || 0); }, 0) || 1;
+  return (clause.lignes || []).map(function (l) {
+    var pc = Math.round((+l.part || 0) / tot * 100) + ' % : ';
+    if (l.mode === 'DEM') return pc + (l.usufruitier === 'tiers' ? (l.nomTiers || 'un tiers') : nomPersonne(ctx, l.usufruitier, k)) + ' en usufruit, ' + (l.nus || []).map(function (x) { return nomPersonne(ctx, x, k); }).join(', ') + ' en nue-propriété';
+    return pc + (l.beneficiaire === 'tiers' ? (l.nomTiers || 'un tiers') : nomPersonne(ctx, l.beneficiaire, k));
+  }).join(' ; ') + ' ; à défaut, les héritiers';
 }
 
 /* ---------------- Simulation d'un scénario ----------------
@@ -801,7 +888,7 @@ function simulate(d, scen) {
           (npDonne[a.id] = npDonne[a.id] || {})[k] = { date: dateDon, societe: viaSoc, existante: existante };
           heirs.forEach(function (e) {
             var v0 = valNP * e.part;
-            var exo = exoneration(a.regime, v0, 1);
+            var exo = exoneration(a.regime, v0, 1, quoteDutreil(a));
             var v = v0 - exo;
             var rp = rappel(k, e.id, dateDon, 'LD');
             var dr = droitsLD(v, rp, e.abatDon, e.baremeDon);
@@ -865,7 +952,7 @@ function simulate(d, scen) {
       v = v * coefNP(ctx, a, date);                       // nue-propriété reçue encore grevée de l'usufruit d'un parent
       if (dptFait[a.id]) v = v * (1 - dptFait[a.id]);     // part réattribuée hors succession
       var rp = (a.type === 'rp' && P.abattementRP && spouse && ctx.marie) ? 0.2 * v : 0;
-      var ex = exoneration(a.regime, v - rp, nbHer);
+      var ex = exoneration(a.regime, v - rp, nbHer, quoteDutreil(a));
       brut += v; abattRP += rp; exoTot += ex;
       if (!P.dettesRembourseesAuDeces && a.type !== 'societe') passif += a.passif * pk;
       D.lignes.push({ libelle: a.libelle, valeur: v, abattRP: rp });
@@ -909,14 +996,21 @@ function simulate(d, scen) {
 
     // Assurance-vie de l'assuré k
     var benef = {}; // id -> {f990, abatAlloc, f757}
-    var creance = 0, recuConjointPP = 0;
+    var creance = 0, recuConjointPP = 0, creanceClause = 0;
     function addB(id, f990, abat, f757) { var b = benef[id] = benef[id] || { f990: 0, abat: 0, f757: 0 }; b.f990 += f990; b.abat += abat; b.f757 += f757; }
     var contratsK = avs.filter(function (c) { return c.souscripteur === k; });
     contratsK.forEach(function (c) {
       var v990 = Math.max(0, c.valeur - c.valeurApres70), p757 = c.primesApres70;
       var demembre = plan.av && P.clauseDemembree;
       var lines = [];
-      if (spouse && !demembre) {
+      var clause = plan.av ? (c.clausePlan && c.clausePlan.type === 'personnalisee' ? c.clausePlan : null) : (c.clauseActuelle && c.clauseActuelle.type === 'personnalisee' ? c.clauseActuelle : null);
+      if (clause) {
+        lines = lignesClause(ctx, clause, k, spouse, date, heirs);
+        lines.forEach(function (l) {
+          if (l.exo && l.type === 'PP') recuConjointPP += c.valeur * l.f;
+          if (l.exo && l.type === 'Usufruit') creanceClause += c.valeur * l.cap;
+        });
+      } else if (spouse && !demembre) {
         lines.push({ id: spouse, cap: 1, f: 1, abatF: 1, exo: true, type: 'PP' });
       } else if (spouse && demembre) {
         var aU = Math.max(ageAt(ctx.persons[spouse].naissance, date), P.ageMinPremierDeces);
@@ -944,10 +1038,10 @@ function simulate(d, scen) {
         addB(l.id, v990 * l.f, l.exo ? 0 : FISC.av990Abat * l.abatF, p757 * l.f);
         if (l.exo) benef[l.id].exo = true;
       });
-      if (spouse && !demembre) recuConjointPP += c.valeur;
+      if (!clause && spouse && !demembre) recuConjointPP += c.valeur;
       var collat = heirs.length && heirs[0].lien !== 'enfant';
       var G1 = collat ? 'frères et sœurs' : 'enfants', G2 = collat ? 'neveux et nièces' : 'petits-enfants';
-      D.av.push({ contrat: c.libelle, valeur: c.valeur, clause: spouse ? (demembre ? 'Conjoint usufruitier / ' + G1 + (P.inclurePetitsEnfantsClause ? ' et ' + G2 : '') + ' nus-propriétaires' : 'Conjoint, à défaut les héritiers') : (plan.av && P.clauseDemembree && P.inclurePetitsEnfantsClause ? G1.charAt(0).toUpperCase() + G1.slice(1) + ' usufruitiers / ' + G2 + ' nus-propriétaires' : 'Héritiers par parts égales'), lignes: lines.map(function (l) { return { id: l.id, type: l.type, part: l.f }; }) });
+      D.av.push({ contrat: c.libelle, valeur: c.valeur, personnalisee: !!clause, clause: clause ? resumeClause(ctx, clause, k) : spouse ? (demembre ? 'Conjoint usufruitier / ' + G1 + (P.inclurePetitsEnfantsClause ? ' et ' + G2 : '') + ' nus-propriétaires' : 'Conjoint, à défaut les héritiers') : (plan.av && P.clauseDemembree && P.inclurePetitsEnfantsClause ? G1.charAt(0).toUpperCase() + G1.slice(1) + ' usufruitiers / ' + G2 + ' nus-propriétaires' : 'Héritiers par parts égales'), lignes: lines.map(function (l) { return { id: l.id, type: l.type, part: l.f }; }) });
     });
     // 990 I
     var tot990 = 0, avBenef = {};
@@ -966,7 +1060,8 @@ function simulate(d, scen) {
       b.base757 = (!b.exo && tot757 > 0) ? Math.max(0, b.f757 - FISC.av757Abat * b.f757 / tot757) : 0;
     });
     // créance de restitution (quasi-usufruit du conjoint sur les capitaux démembrés)
-    if (spouse && plan.av && P.clauseDemembree) creance = contratsK.reduce(function (s, c) { return s + c.valeur; }, 0) - tot990;
+    if (spouse && plan.av && P.clauseDemembree) creance = contratsK.filter(function (c) { return !(c.clausePlan && c.clausePlan.type === 'personnalisee'); }).reduce(function (s, c) { return s + c.valeur; }, 0) - tot990;
+    creance += creanceClause;
     if (spouse && recuConjointPP > 0) extras[spouse] += recuConjointPP;
     D.avBenef = avBenef; D.tax990 = tot990; D.creance = creance; D.avRecuConjoint = recuConjointPP;
 
@@ -1250,7 +1345,7 @@ function etatAbattements(d) {
 }
 
 if (typeof module !== 'undefined') module.exports = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
-var CALC = { FISC: FISC, REGIMES: REGIMES, DISPOSITIFS: DISPOSITIFS, sousEngagement: sousEngagement, plusValue: plusValue, rendements: rendements, moitiesDPT: moitiesDPT, fractionGrevee: fractionGrevee, grevement: grevement, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
+var CALC = { FISC: FISC, REGIMES: REGIMES, quoteDutreil: quoteDutreil, resumeClause: resumeClause, DISPOSITIFS: DISPOSITIFS, sousEngagement: sousEngagement, plusValue: plusValue, rendements: rendements, moitiesDPT: moitiesDPT, fractionGrevee: fractionGrevee, grevement: grevement, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
 if (typeof module !== 'undefined') module.exports = CALC;
 
 </script>
@@ -1622,7 +1717,7 @@ var PPTX = (function () {
       var S = new Slide(M);
       S.title('Patrimoine', 'Vos contrats d’assurance-vie');
       var b = [['Contrat', 'Assuré', 'Valeur', 'dont primes après 70 ans', 'Clause actuelle']];
-      d.av.forEach(function (c) { b.push([c.libelle, ctx.persons[c.souscripteur] ? ctx.persons[c.souscripteur].label : '', eur(+c.valeur), +c.valeurApres70 ? eur(+c.valeurApres70) : '–', { t: c.clause || (ctx.clients.length === 2 ? 'Conjoint, à défaut enfants' : 'Enfants'), algn: 'l' }]); });
+      d.av.forEach(function (c) { b.push([c.libelle, ctx.persons[c.souscripteur] ? ctx.persons[c.souscripteur].label : '', eur(+c.valeur), +c.valeurApres70 ? eur(+c.valeurApres70) : '–', { t: c.clauseActuelle && c.clauseActuelle.type === 'personnalisee' ? CALC.resumeClause(ctx, c.clauseActuelle, c.souscripteur) : (ctx.clients.length === 2 ? 'Conjoint, à défaut enfants' : 'Enfants'), algn: 'l', sz: 900 }]); });
       b.push(['Total', '', eur(avTot), '', '']);
       S.table(Z.x, Z.y, Z.w, [3, 2.4, 1.6, 2, 3], b, { totalLast: true, band: true, sz: 1100, rowH: Math.round(EMU * 0.34), algn: ['l', 'l', 'r', 'r', 'l'] });
       S.text(Z.x, Z.y + Z.h * 0.78, Z.w, Z.h * 0.2, [{ runs: [{ t: 'L’assurance-vie est hors succession, avec un traitement civil et fiscal à part : abattement de 152 500 € par bénéficiaire pour les primes versées avant 70 ans (art. 990 I CGI), abattement global de 30 500 € pour les primes versées après 70 ans (art. 757 B CGI).', i: true }] }], { sz: 1100 });
@@ -1850,6 +1945,8 @@ var PPTX = (function () {
     var nbNP = 0; r1.deces.forEach(function (D) { Object.keys(D.avBenef || {}).forEach(function (k) { if (!D.avBenef[k].exo) nbNP++; }); });
     kp.push([String(nbNP), 'Abattements de 152 500 € (au prorata) mobilisés']);
     kp.forEach(function (k, j) { S.box(x2, Z.y + j * (ch + g), w2, ch, { round: 10000, fill: j === 0 ? 'accent1' : { s: 'accent1', tint: 0.12 }, color: j === 0 ? 'bg1' : 'tx1', paras: [{ runs: [{ t: k[0], b: true, sz: 2000 }] }, { runs: [{ t: k[1], sz: 1050 }] }] }); });
+    var perso = (d.av || []).filter(function (c) { return c.clausePlan && c.clausePlan.type === 'personnalisee'; });
+    if (perso.length) S.text(Z.x, Z.y + Z.h * 0.74, Z.w, Z.h * 0.12, perso.map(function (c) { return { runs: [{ t: c.libelle + ' : ', b: true }, { t: CALC.resumeClause(ctx, c.clausePlan, c.souscripteur) }] }; }), { sz: 1000 });
     S.text(Z.x, Z.y + Z.h * 0.86, Z.w, Z.h * 0.14, [{ runs: [{ t: 'La créance de restitution née d’une clause démembrée reste déductible de la succession de l’usufruitier : l’art. 774 bis CGI ne vise que les donations de sommes d’argent avec réserve de quasi-usufruit.', i: true }] }], { sz: 1000 });
     return S;
   }
@@ -2387,7 +2484,7 @@ var XLSXOUT = (function () {
       lignesValeur.push(rr);
     });
     bloc('Financier (assurance-vie)', ['Versements', 'Clause bénéf.', '', 'Assuré', 'Valeur'], d.av || [], function (c, rr) {
-      put(ws, 'B' + rr, c.libelle); put(ws, 'C' + rr, +c.valeurApres70 ? 'dont après 70 ans' : 'avant 70 ans'); put(ws, 'D' + rr, ctx.couple ? 'Conjoint' : 'Héritiers');
+      put(ws, 'B' + rr, c.libelle); put(ws, 'C' + rr, +c.valeurApres70 ? 'dont après 70 ans' : 'avant 70 ans'); put(ws, 'D' + rr, c.clauseActuelle && c.clauseActuelle.type === 'personnalisee' ? 'Personnalisée' : (ctx.couple ? 'Conjoint' : 'Héritiers'));
       put(ws, 'F' + rr, c.souscripteur === 'c2' ? (court(ctx, 'c2') === 'Mme' ? 'Madame' : 'Monsieur') : (court(ctx, 'c1') === 'Mme' ? 'Madame' : 'Monsieur')); put(ws, 'G' + rr, +c.valeur || 0, { fmt: EUR, input: true });
       lignesAV.push(rr);
     });
@@ -2650,6 +2747,19 @@ var XLSXOUT = (function () {
     }
     feuilleDetail('Détail sans action', A.sans, false);
     feuilleDetail('Détail après stratégie', A.plan, true);
+
+    /* ================= Clauses bénéficiaires ================= */
+    var wc = wb.addWorksheet('Clauses AV', { views: [{ showGridLines: false }] });
+    [28, 18, 14, 60, 60].forEach(function (z, i) { wc.getColumn(i + 1).width = z; });
+    put(wc, 'A1', 'Clauses bénéficiaires des contrats d’assurance-vie', { b: true, sz: 13 });
+    ['Contrat', 'Assuré', 'Valeur', 'Clause actuelle', 'Clause préconisée'].forEach(function (z, i) { put(wc, String.fromCharCode(65 + i) + '3', z, { navy: true }); });
+    (d.av || []).forEach(function (c, i) {
+      var y = 4 + i;
+      put(wc, 'A' + y, c.libelle); put(wc, 'B' + y, court(ctx, c.souscripteur)); put(wc, 'C' + y, +c.valeur || 0, { fmt: EUR });
+      var ca = put(wc, 'D' + y, c.clauseActuelle && c.clauseActuelle.type === 'personnalisee' ? CALC.resumeClause(ctx, c.clauseActuelle, c.souscripteur) : 'Le conjoint, à défaut les enfants');
+      var cp = put(wc, 'E' + y, c.clausePlan && c.clausePlan.type === 'personnalisee' ? CALC.resumeClause(ctx, c.clausePlan, c.souscripteur) : (P.clauseDemembree ? 'Démembrée : conjoint usufruitier, ' + (P.inclurePetitsEnfantsClause ? 'enfants et petits-enfants' : 'enfants') + ' nus-propriétaires' : 'Inchangée'));
+      ca.alignment = { wrapText: true, vertical: 'top' }; cp.alignment = { wrapText: true, vertical: 'top' };
+    });
 
     /* ================= Levier société ================= */
     var wl = wb.addWorksheet('Levier société', { views: [{ showGridLines: false }] });
@@ -2990,7 +3100,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var tags = [];
     if (+a.passif) tags.push((a.type === 'societe' ? 'Dettes ' : 'Passif ') + eur(a.passif));
     if (a.type === 'societe' && +a.cca) tags.push('dont CCA ' + eur(a.cca));
-    if (a.regime && CALC.REGIMES[a.regime]) tags.push(CALC.REGIMES[a.regime].label.split(' (')[0]);
+    if (a.regime && CALC.REGIMES[a.regime]) tags.push(CALC.REGIMES[a.regime].label.split(' (')[0] + ((a.regime === 'dutreil' || a.regime === 'dutreilEI') && CALC.quoteDutreil(a) < 1 ? ' ' + Math.round(CALC.quoteDutreil(a) * 100) + ' %' : ''));
     if (a.origine === 'donation') {
       var don = state.parentsClients.filter(function (p) { return p.id === a.donateurId; })[0];
       tags.push('Reçu en ' + (a.droitRecu === 'NP' ? 'nue-propriété' : 'donation') + (don ? ' de ' + (don.prenom || (don.lien === 'mere' ? 'la mère' : 'le père')) : ''));
@@ -3013,6 +3123,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     return '<button class="chip t-av' + (editeur && editeur.kind === 'av' && editeur.id === c.id ? ' open' : '') + '" data-act="edit-av" data-id="' + h(c.id) + '" aria-haspopup="dialog">' +
       '<span class="ico">' + icone('av') + '</span><span class="body"><span class="nm">' + h(c.libelle || 'Contrat') + '</span><span class="val">' + eur(c.valeur) + '</span>' +
       '<span class="meta">Assuré : ' + h(c.souscripteur === 'c2' ? nomClient('c2') : nomClient('c1')) + '</span>' +
+      ((c.clauseActuelle && c.clauseActuelle.type === 'personnalisee') || (c.clausePlan && c.clausePlan.type === 'personnalisee') ? '<span class="tags"><em>Clause personnalisée</em></span>' : '') +
       (+c.valeurApres70 ? '<span class="tags"><em>dont ' + eur(c.valeurApres70) + ' après 70 ans</em></span>' : '') + '</span></button>';
   }
   function bulle() {
@@ -3099,6 +3210,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
           field('Droit reçu', 'actifs.' + i + '.droitRecu', 'select', { options: [['PP', 'Pleine propriété'], ['NP', 'Nue-propriété']] }) +
           (a.droitRecu === 'NP' ? field('Usufruitier', 'actifs.' + i + '.usufruitierId', 'select', { cls: 'span2', options: [['', 'Le donateur']].concat(state.parentsClients.map(function (p) { return [p.id, p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')]; })), hint: 'L’usufruit s’éteindra sans droits au décès de l’usufruitier.' }) : '') : '') +
         (a.type !== 'financier' && a.type !== 'rp' ? field('Revenu net annuel', 'actifs.' + i + '.revenu', 'money') + field('Catégorie de revenus', 'actifs.' + i + '.categorieRevenu', 'select', { options: [['', '–'], ['foncier', 'Revenus fonciers'], ['bic', 'Location meublée (BIC)'], ['dividendes', 'Dividendes'], ['interets', 'Intérêts'], ['autre', 'Autre']] }) : '') +
+        ((a.regime === 'dutreil' || a.regime === 'dutreilEI') ? dutreilBloc(a, i) : '') +
         (a.type !== 'financier' ? field('Exonération partielle', 'actifs.' + i + '.regime', 'select', { cls: 'span2', options: [['', 'Aucune']].concat(Object.keys(CALC.REGIMES).map(function (k) { return [k, CALC.REGIMES[k].label]; })), hint: a.regime ? (a.regime === 'rural' ? '75 % jusqu’à 600 000 € par bénéficiaire, 50 % au-delà ; conservation 5 ans.' : '75 % de la valeur exonérée, en donation comme en succession ; engagements de conservation à respecter.') : '' }) : '') +
         (couple() ? field('Part ' + (state.c1.civ === 'Mme' ? 'de Madame' : 'de Monsieur') + ' (%)', 'actifs.' + i + '.partC1', 'num', { hint: state.situation === 'marie' && state.regime === 'communaute' ? '50 = bien commun' : '' }) : '') + '</div>';
       if (soc) html += '<p class="note">Société déjà endettée : la valeur des parts transmises est l’actif moins les dettes, avec la décote retenue (' + Math.round(P().decoteSociete * 100) + ' %). Le remboursement des dettes par la société profite ensuite aux nus-propriétaires.</p>';
@@ -3133,10 +3245,58 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       var assures = [['c1', nomClient('c1')]].concat(couple() ? [['c2', nomClient('c2')]] : []);
       html = '<div class="grid g2">' + field('Contrat', 'av.' + j + '.libelle', 'text', { cls: 'span2' }) + field('Assuré', 'av.' + j + '.souscripteur', 'select', { options: assures, cls: 'span2' }) +
         field('Valeur de rachat', 'av.' + j + '.valeur', 'money') + field('dont valeur issue de primes après 70 ans', 'av.' + j + '.valeurApres70', 'money') +
-        field('Primes versées après 70 ans', 'av.' + j + '.primesApres70', 'money', { hint: 'Assiette 757 B (intérêts exonérés).', cls: 'span2' }) + '</div>' +
+        field('Primes versées après 70 ans', 'av.' + j + '.primesApres70', 'money', { hint: 'Assiette 757 B (intérêts exonérés).', cls: 'span2' }) + clauseEditeur(state.av[j], j) + '</div>' +
         '<div class="bactions"><button class="btn ghost danger" data-act="del-av" data-i="' + j + '">Supprimer ce contrat</button><button class="btn" data-act="fermer">Valider</button></div>';
     }
     return enveloppe(titre, html);
+  }
+  var calcOuverte = {};
+  function dutreilBloc(a, i) {
+    var q = CALC.quoteDutreil(a), auto = +a.dutreilEligible > 0 && +a.dutreilTotal > 0;
+    var html = '<div class="span2 dutreil"><div class="dq"><span>Quote-part éligible au Dutreil</span><strong>' + Math.round(q * 1000) / 10 + ' %</strong>' +
+      '<button type="button" class="btn ghost petit" data-act="calc-dutreil" data-id="' + h(a.id) + '">' + (calcOuverte[a.id] ? 'Fermer la calculatrice' : 'Calculer le prorata') + '</button></div>';
+    if (calcOuverte[a.id]) {
+      html += '<div class="calc"><div class="grid g2">' + field('Actifs éligibles (affectés à l’activité)', 'actifs.' + i + '.dutreilEligible', 'money') + field('Actif total de la société', 'actifs.' + i + '.dutreilTotal', 'money') + '</div>' +
+        '<p class="note">Quote-part = actifs éligibles ÷ actif total' + (auto ? ' = ' + eur(a.dutreilEligible) + ' ÷ ' + eur(a.dutreilTotal) + ' = <strong>' + Math.round(q * 1000) / 10 + ' %</strong>' : '') + '. Excluez les actifs non affectés à l’activité (trésorerie excédentaire, immobilier de placement, participations non éligibles d’une holding passive) et, depuis la loi de finances pour 2026, les biens somptuaires.</p></div>';
+    } else if (!auto) html += field('Quote-part saisie directement', 'actifs.' + i + '.dutreilQuotePart', 'pct', { hint: '100 % par défaut.' });
+    return html + '</div>';
+  }
+  /* ---- éditeur de clause bénéficiaire ---- */
+  var ongletClause = {};
+  function personnesClause() {
+    var o = [];
+    if (couple()) o.push(['conjoint', 'Le conjoint']);
+    state.enfants.forEach(function (e) { o.push([e.id, (e.prenom || 'Enfant') + ' (enfant)']); });
+    state.petitsEnfants.forEach(function (p) { o.push([p.id, (p.prenom || 'Petit-enfant') + ' (petit-enfant)']); });
+    state.freres.filter(function (f) { return !f.decede; }).forEach(function (f) { o.push([f.id, (f.prenom || 'Frère / sœur') + ' (frère / sœur)']); });
+    state.neveux.forEach(function (n) { o.push([n.id, (n.prenom || 'Neveu / nièce') + ' (neveu / nièce)']); });
+    o.push(['tiers', 'Une autre personne (tiers)']);
+    return o;
+  }
+  function clauseEditeur(c, j) {
+    var onglet = ongletClause[c.id] || 'clauseActuelle';
+    var cl = c[onglet] || { type: onglet === 'clauseActuelle' ? 'standard' : 'auto', lignes: [] };
+    var base = 'av.' + j + '.' + onglet + '.';
+    var html = '<div class="span2 clause"><div class="onglets"><button type="button" data-act="onglet-clause" data-id="' + h(c.id) + '" data-o="clauseActuelle"' + (onglet === 'clauseActuelle' ? ' class="on"' : '') + '>Clause actuelle</button><button type="button" data-act="onglet-clause" data-id="' + h(c.id) + '" data-o="clausePlan"' + (onglet === 'clausePlan' ? ' class="on"' : '') + '>Clause préconisée</button></div>';
+    html += field('Type de clause', base + 'type', 'select', { options: onglet === 'clauseActuelle' ? [['standard', 'Standard : le conjoint, à défaut les enfants'], ['personnalisee', 'Personnalisée']] : [['auto', 'Automatique (démembrée selon la stratégie)'], ['personnalisee', 'Personnalisée']] });
+    if (cl.type === 'personnalisee') {
+      var pers = personnesClause(), tot = 0;
+      (cl.lignes || []).forEach(function (l, n) {
+        tot += +l.part || 0;
+        var b2 = base + 'lignes.' + n + '.';
+        html += '<div class="ligne-clause"><div class="grid g3">' + field('Part (%)', b2 + 'part', 'num') + field('Attribution', b2 + 'mode', 'select', { options: [['PP', 'Pleine propriété'], ['DEM', 'Démembrée']], cls: 'span2' }) + '</div>';
+        if (l.mode === 'DEM') {
+          html += field('Usufruitier', b2 + 'usufruitier', 'select', { options: [['', 'Choisir…']].concat(pers) });
+          html += '<div class="nus"><span>Nus-propriétaires (parts égales)</span><div>' + pers.filter(function (x) { return x[0] !== l.usufruitier && x[0] !== 'tiers'; }).map(function (x) { return '<label class="np"><input type="checkbox" data-nus="' + b2 + 'nus" data-np="' + h(x[0]) + '"' + ((l.nus || []).indexOf(x[0]) >= 0 ? ' checked' : '') + '>' + h(x[1]) + '</label>'; }).join('') + '</div></div>';
+        } else html += field('Bénéficiaire', b2 + 'beneficiaire', 'select', { options: [['', 'Choisir…']].concat(pers) });
+        if (l.beneficiaire === 'tiers' || l.usufruitier === 'tiers') html += field('Nom du tiers', b2 + 'nomTiers', 'text', { hint: 'Hors famille : 60 % sur la part taxable en succession (primes après 70 ans).' });
+        html += '<button type="button" class="lien-suppr" data-act="suppr-ligne" data-path="' + base + 'lignes" data-n="' + n + '">Retirer cette ligne</button></div>';
+      });
+      html += '<div class="clause-bas"><button type="button" class="btn ghost petit" data-act="ajout-ligne" data-path="' + base + 'lignes">+ Ajouter un bénéficiaire</button><span class="' + (Math.abs(tot - 100) < 0.01 ? 'ok' : 'ko') + '">Total ' + tot + ' %' + (Math.abs(tot - 100) < 0.01 ? '' : ' (les parts seront ramenées à 100 %)') + '</span></div>';
+      var ctx0 = CALC.prepare(normaliser(clone(state)));
+      if ((cl.lignes || []).length) html += '<p class="note resume">« ' + h(CALC.resumeClause(ctx0, cl, c.souscripteur || 'c1')) + ' »</p>';
+    }
+    return html + '</div>';
   }
   function optParents() { return state.parentsClients.map(function (p) { return [p.id, (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')) + ' (' + (p.lien === 'mere' ? 'mère' : 'père') + ' de ' + nomClient(p.de || 'c1') + ')' + (p.decede ? ' – décédé(e)' : '')]; }); }
   function pct1(x) { return (Math.round(x * 1000) / 10).toLocaleString('fr-FR') + ' %'; }
@@ -3382,12 +3542,17 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   /* ---------- Événements ---------- */
   document.addEventListener('change', function (ev) {
     var el = ev.target;
+    if (el.dataset && el.dataset.nus) {
+      var arr = (get(el.dataset.nus) || []).slice(), idx = arr.indexOf(el.dataset.np);
+      if (el.checked && idx < 0) arr.push(el.dataset.np); if (!el.checked && idx >= 0) arr.splice(idx, 1);
+      set(el.dataset.nus, arr); planifier(true); return;
+    }
     if (el.dataset && el.dataset.path) {
       if (el.dataset.type === 'date' && lire(el) === (get(el.dataset.path) || '')) { var d1 = get(el.dataset.path); el.value = d1 ? CALC.parseDate(d1).toLocaleDateString('fr-FR') : ''; return; }
       set(el.dataset.path, lire(el));
       var structural = /^(situation|regime|c1\.naissance|c2\.naissance|c1\.sexe|c2\.sexe|c1\.civ|c2\.civ|dateEtude|actifs\.\d+\.type|enfants\.\d+\.prenom|freres\.\d+\.(prenom|decede))$/.test(el.dataset.path);
       if (el.dataset.type === 'date') { var dd0 = get(el.dataset.path); el.value = dd0 ? CALC.parseDate(dd0).toLocaleDateString('fr-FR') : ''; if (!dd0 && !el.value) return; }
-      planifier(structural || courante() === 'strategie' || (!!editeur && el.closest('.bulle') && el.tagName !== 'INPUT') || (!!editeur && (el.type === 'checkbox' || el.dataset.type === 'date')));
+      planifier(structural || !!el.closest('.clause') || !!el.closest('.dutreil') || courante() === 'strategie' || (!!editeur && el.closest('.bulle') && el.tagName !== 'INPUT') || (!!editeur && (el.type === 'checkbox' || el.dataset.type === 'date')));
       if (el.dataset.type === 'num' && el.closest('.money')) el.value = Number(get(el.dataset.path) || 0).toLocaleString('fr-FR');
       return;
     }
@@ -3439,6 +3604,16 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'del-actif') { state.actifs.splice(i, 1); editeur = null; }
     if (a === 'add-av') { var nc = { id: uid('v'), libelle: 'Contrat', souscripteur: 'c1', valeur: 0, valeurApres70: 0, primesApres70: 0 }; state.av.push(nc); editeur = { kind: 'av', id: nc.id }; }
     if (a === 'del-av') { state.av.splice(i, 1); editeur = null; }
+    if (a === 'calc-dutreil') { calcOuverte[b.dataset.id] = !calcOuverte[b.dataset.id]; rendre(); return; }
+    if (a === 'onglet-clause') { ongletClause[b.dataset.id] = b.dataset.o; rendre(); return; }
+    if (a === 'ajout-ligne' || a === 'suppr-ligne') {
+      var pth = b.dataset.path, parent = pth.replace(/\.lignes$/, ''), obj = get(parent) || {};
+      if (!obj.type) obj.type = 'personnalisee';
+      obj.lignes = obj.lignes || [];
+      if (a === 'ajout-ligne') obj.lignes.push({ id: uid('l'), mode: 'PP', part: obj.lignes.length ? 0 : 100, beneficiaire: '' });
+      else obj.lignes.splice(+b.dataset.n, 1);
+      set(parent, obj); planifier(true); return;
+    }
     if (a === 'noeud') {
       var nk = b.dataset.kind, nid = b.dataset.id;
       if (nk === 'client' || nk === 'parent') editeur = editeur && editeur.kind === 'menu' && editeur.id === nid ? null : { kind: 'menu', id: nid };
