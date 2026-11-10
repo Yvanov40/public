@@ -5433,34 +5433,44 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         { libelle: "Demandeur", commun: true, choix: choixDemandeur(d.notaire) },
         { libelle: "Société", choix: choixSociete(d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : "") },
         { libelle: "Partenaire", commun: true, choix: choixPartenaire(d.partenaire) }]),
+      // honoraires et exercice : deux tuiles de même taille, qui s'ouvrent pour remplir
       (() => {
-        // honoraires : une tuile qui résume « prévu · encaissé », et s'ouvre sur les trois montants et la calculette
-        const contenu = el("div", null, el("div", { class: "trois" },
+        const honos = el("div", null, el("div", { class: "trois" },
           champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
           champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
           champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
           calculetteFiche(d));
-        const val = (n) => Number(String(contenu.querySelector(`[name=${n}]`).value || "").replace(",", ".")) || 0;
-        return tuiles([{ libelle: "Honoraires", large: true, contenu, resume: () => {
-          const pr = val("honos_regl") + val("honos_art4"), enc = val("ca");
-          return pr || enc ? `${euros(pr)} prévus · ${euros(enc)} encaissés` : "";
-        } }]);
+        const val = (n) => Number(String(honos.querySelector(`[name=${n}]`).value || "").replace(",", ".")) || 0;
+        const dates = el("div", { class: "trois" },
+          champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })),
+          champ("Début", saisie("debut", d.debut, "date")),
+          champ("Fin", saisie("fin", d.fin, "date")));
+        const lire = (n) => dates.querySelector(`[name=${n}]`).value;
+        return tuiles([
+          { libelle: "Honoraires", contenu: honos, resume: () => {
+            const pr = val("honos_regl") + val("honos_art4"), enc = val("ca");
+            return pr || enc ? `${euros(pr)} · encaissé ${euros(enc)}` : "";
+          } },
+          { libelle: "Exercice", contenu: dates, resume: () => [lire("exercice"), lire("debut") ? "début " + fmtDate(lire("debut")) : "", lire("fin") ? "fin " + fmtDate(lire("fin")) : ""].filter(Boolean).join(" · ") }]);
       })(),
-      el("h4", { class: "rubrique" }, "Dates"),
-      el("div", { class: "trois" }, champ("Exercice", saisie("exercice", d.exercice, "text", { inputmode: "numeric" })), champ("Début", saisie("debut", d.debut, "date")), champ("RDV (date, heure, durée)", el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)))),
-      el("div", { class: "trois" }, champ("Fin", saisie("fin", d.fin, "date"))),
-      el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       el("h4", { class: "rubrique" }, "Client"),
       el("div", { class: "encart-client" }, titreEncart,
         (() => {
           const zoneDossier = el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "");
+          // le rendez-vous du dossier : en bas, dans une tuile (les rendez-vous du client sont dans sa fiche)
+          const rdv = el("div", null,
+            el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)),
+            d.client ? el("button", { type: "button", class: "bouton-discret", style: "margin-top:8px", onclick: () => ouvrirClient(d.client) }, "Tous les rendez-vous du client ›") : null);
+          const lireRdv = (n) => rdv.querySelector(`[name=${n}]`).value;
           const lot = [];
           if (i >= 0 && d.client) lot.push({ libelle: "Tâches du client", contenu: blocTaches(d.client, { id: d.id, libelle: [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") }), resume: () => resumeTaches(d.client) });
           lot.push({ libelle: "◆ Commentaire client", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
             { libelle: "◆ Notes client", contenu: el("div", null, ...avecLiens(zoneNotes)), resume: () => premiereLigne(zoneNotes.value) },
-            { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) });
+            { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) },
+            { libelle: "Rendez-vous", contenu: rdv, resume: () => lireRdv("rdv") ? versDate(lireRdv("rdv")).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (lireRdv("rdv_heure") ? " " + lireRdv("rdv_heure") : "") : "" });
           return tuiles(lot);
         })()),
+      el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
       i >= 0 ? el("div", { class: "actions-fiche" },
         d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure, d.rdv_duree || DUREE_RDV) }, "📅 Ajouter le RDV à l’agenda") : null,
         el("button", { type: "button", onclick: () => preparerRelance(d) }, "✉ Préparer une relance"),
