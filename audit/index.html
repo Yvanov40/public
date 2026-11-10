@@ -226,6 +226,8 @@ main#main { position: relative; }
 .clause-bas { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .clause-bas .ok { color: var(--gain); font-weight: 700; font-size: 13px; } .clause-bas .ko { color: var(--warn); font-weight: 700; font-size: 13px; }
 .note.resume { font-style: italic; }
+.mini-titre { font-size: 13px; margin: 10px 0 4px; color: var(--muted); }
+.mini small { font-weight: 400; }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -3023,7 +3025,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var cotes = cp ? ['c1', 'c2'] : ['c1'];
     function parentsDe(k) { return state.parentsClients.filter(function (p) { return (p.de || 'c1') === k; }); }
     function freresDe(k) { return state.freres.filter(function (f) { return (f.de || 'c1') === k; }); }
-    var r0 = '<div class="rang">' + cotes.map(function (k) { return '<div class="grp">' + parentsDe(k).map(function (p) { return noeud(p.id, 'parent', (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')), (p.lien === 'mere' ? 'mère' : 'père') + ' · ' + (p.decede ? 'décédé(e)' : age2(p.naissance)), { decede: p.decede }); }).join('') + '</div>'; }).join('<div class="sep"></div>') + '</div>';
+    function nbDonnes(p) { var n = state.actifs.filter(function (a) { return a.origine === 'donation' && (a.donateurId === p.id || a.donateur2Id === p.id); }).length; return n ? ' · ' + n + ' bien' + (n > 1 ? 's' : '') + ' donné' + (n > 1 ? 's' : '') : ''; }
+    var r0 = '<div class="rang">' + cotes.map(function (k) { return '<div class="grp">' + parentsDe(k).map(function (p) { return noeud(p.id, 'parent', (p.prenom || (p.lien === 'mere' ? 'Mère' : 'Père')), (p.lien === 'mere' ? 'mère' : 'père') + ' · ' + (p.decede ? 'décédé(e)' : age2(p.naissance)) + nbDonnes(p), { decede: p.decede }); }).join('') + '</div>'; }).join('<div class="sep"></div>') + '</div>';
     var c = function (k) { var x = state[k]; return noeud(k, 'client', ((x.prenom || '') + ' ' + (x.nom || '')).trim() || (k === 'c1' ? 'Client' : 'Conjoint'), age2(x.naissance)); };
     var r1 = '<div class="rang">' + '<div class="grp">' + freresDe('c1').map(function (f) { return noeud(f.id, 'frere', f.prenom || 'Frère / sœur', f.decede ? 'prédécédé(e)' : age2(f.naissance), { decede: f.decede }); }).join('') + '</div>' +
       c('c1') + (cp ? '<span class="union-place"></span>' + c('c2') : '') +
@@ -3153,10 +3156,12 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       var avs = state.av.filter(function (c) { return c.souscripteur === kc; });
       var tot = biens.reduce(function (sm, a) { return sm + ((+a.valeur || 0) - (+a.passif || 0)) * partUI(a, kc); }, 0) + avs.reduce(function (sm, c) { return sm + (+c.valeur || 0); }, 0);
       html = '<p class="note">Part nette de ' + h(nomClient(kc)) + ' : <strong>' + eur(tot) + '</strong></p><div class="minilist">' +
-        biens.map(function (a) { return '<button class="mini" data-act="ouvrir" data-k="actif" data-id="' + h(a.id) + '" data-anchor="' + kc + '"><span class="ico">' + icone(a.type) + '</span><span>' + h(a.libelle) + '</span><em>' + eur(((+a.valeur || 0) - (+a.passif || 0)) * partUI(a, kc)) + (partUI(a, kc) < 1 ? ' (' + Math.round(partUI(a, kc) * 100) + ' %)' : '') + '</em></button>'; }).join('') +
+        biens.map(function (a) { var dn = a.origine === 'donation' ? state.parentsClients.filter(function (p) { return p.id === a.donateurId; })[0] : null; return '<button class="mini" data-act="ouvrir" data-k="actif" data-id="' + h(a.id) + '" data-anchor="' + kc + '"><span class="ico">' + icone(a.type) + '</span><span>' + h(a.libelle) + (a.origine === 'donation' ? '<small class="muted"> · reçu' + (dn ? ' de ' + h(dn.prenom || (dn.lien === 'mere' ? 'la mère' : 'le père')) : '') + '</small>' : a.origine === 'succession' ? '<small class="muted"> · hérité</small>' : '') + '</span><em>' + eur(((+a.valeur || 0) - (+a.passif || 0)) * partUI(a, kc)) + (partUI(a, kc) < 1 ? ' (' + Math.round(partUI(a, kc) * 100) + ' %)' : '') + '</em></button>'; }).join('') +
         avs.map(function (c) { return '<button class="mini" data-act="ouvrir" data-k="av" data-id="' + h(c.id) + '" data-anchor="' + kc + '"><span class="ico">' + icone('av') + '</span><span>' + h(c.libelle) + '</span><em>' + eur(c.valeur) + '</em></button>'; }).join('') +
         (biens.length + avs.length ? '' : '<p class="empty">Aucun bien pour l’instant.</p>') + '</div>' +
-        '<div class="bactions wrap"><button class="btn ghost" data-act="bien-propre" data-id="' + kc + '">+ Bien propre</button>' + (couple() ? '<button class="btn ghost" data-act="bien-commun" data-id="' + kc + '">+ Bien commun</button>' : '') + '<button class="btn ghost" data-act="av-client" data-id="' + kc + '">+ Assurance-vie</button><button class="btn" data-act="fermer">Fermer</button></div>';
+        '<div class="bactions wrap"><button class="btn ghost" data-act="bien-propre" data-id="' + kc + '">+ Bien propre</button>' + (couple() ? '<button class="btn ghost" data-act="bien-commun" data-id="' + kc + '">+ Bien commun</button>' : '') + '<button class="btn ghost" data-act="av-client" data-id="' + kc + '">+ Assurance-vie</button>' +
+        state.parentsClients.filter(function (p) { return (p.de || 'c1') === kc; }).map(function (p) { return '<button class="btn ghost" data-act="bien-recu" data-id="' + h(p.id) + '" data-anchor="' + kc + '">+ Reçu de ' + h(p.prenom || (p.lien === 'mere' ? 'sa mère' : 'son père')) + '</button>'; }).join('') +
+        '<button class="btn" data-act="fermer">Fermer</button></div>';
       return enveloppe(titre, html);
     }
     if (editeur.kind === 'patparent') {
@@ -3165,7 +3170,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       titre = 'Patrimoine estimé de ' + (state.parentsClients[ip].prenom || 'ce parent');
       html = '<div class="grid g2">' + field('Immobilier', bp + 'patImmo', 'money') + field('Financier', bp + 'patFin', 'money') + field('Assurance-vie et autres', bp + 'patAutre', 'money') +
         field('Nombre d’enfants', bp + 'nbEnfants', 'num', { ph: String(1 + state.freres.filter(function (f) { return f.de === (state.parentsClients[ip].de || 'c1'); }).length) }) + '</div>' +
-        '<p class="note">Hors biens déjà donnés. Total : ' + eur((+state.parentsClients[ip].patImmo || 0) + (+state.parentsClients[ip].patFin || 0) + (+state.parentsClients[ip].patAutre || 0) || +state.parentsClients[ip].patrimoine || 0) + '</p><div class="bactions"><span></span><button class="btn" data-act="fermer">Valider</button></div>';
+        '<p class="note">Hors biens déjà donnés. Total : ' + eur((+state.parentsClients[ip].patImmo || 0) + (+state.parentsClients[ip].patFin || 0) + (+state.parentsClients[ip].patAutre || 0) || +state.parentsClients[ip].patrimoine || 0) + '</p>' +
+        biensDonnesPar(state.parentsClients[ip], editeur.id) +
+        '<div class="bactions wrap"><button class="btn ghost" data-act="bien-recu" data-id="' + h(editeur.id) + '" data-anchor="' + h(editeur.id) + '">+ Bien donné par ' + h(state.parentsClients[ip].prenom || 'ce parent') + '</button><button class="btn" data-act="fermer">Valider</button></div>';
       return enveloppe(titre, html);
     }
     if (editeur.kind === 'lien') {
@@ -3309,6 +3316,14 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (+a.revenu > 0) { var dette = a.type === 'societe' ? 0 : (+a.passif || 0), nv = Math.max(0, v - dette - pv.impot); rd = '<br>Rendement : <strong>' + pct1(+a.revenu / v) + '</strong> sur la valeur, <strong>' + pct1(nv ? +a.revenu / nv : 0) + '</strong> sur le net de vente (' + eur(nv) + ' après impôt et remboursement du passif)'; }
     return '<p class="note span2 pvbox">Plus-value latente : <strong>' + eur(pv.pvBrute) + '</strong> · impôt si cession aujourd’hui : <strong>' + eur(pv.impot) + '</strong>' + rd + '<br><small>' + h(pv.regime) + '</small></p>';
   }
+  function biensDonnesPar(p, ancre) {
+    var biens = state.actifs.filter(function (a) { return a.origine === 'donation' && (a.donateurId === p.id || a.donateur2Id === p.id); });
+    if (!biens.length) return '<p class="empty">Aucun bien donné aux clients n’est encore rattaché à ' + h(p.prenom || 'ce parent') + '.</p>';
+    return '<h4 class="mini-titre">Biens donnés à ' + h(nomClient(p.de || 'c1')) + '</h4><div class="minilist">' + biens.map(function (a) {
+      var dt = CALC.parseDate(a.dateOrigine);
+      return '<button class="mini" data-act="ouvrir" data-k="actif" data-id="' + h(a.id) + '" data-anchor="' + h(ancre) + '"><span class="ico">' + icone(a.type) + '</span><span>' + h(a.libelle) + '<small class="muted"> · ' + (a.droitRecu === 'NP' ? 'nue-propriété' : 'pleine propriété') + (dt ? ' en ' + dt.getFullYear() : '') + (a.donateur2Id ? ' · conjointe' : '') + '</small></span><em>' + eur(a.valeur) + '</em></button>';
+    }).join('') + '</div>';
+  }
   function enveloppe(titre, html) { return '<div class="bulle" role="dialog" aria-label="' + h(titre) + '"><span class="fleche"></span><div class="bhead"><strong>' + h(titre) + '</strong><button class="x" data-act="fermer" aria-label="Fermer">×</button></div>' + html + '</div>'; }
   function partUI(a, k) { if (!couple()) return k === 'c1' ? 1 : 0; var p = +a.partC1; if (isNaN(p)) p = 50; return k === 'c1' ? p / 100 : 1 - p / 100; }
   function rPatrimoine() {
@@ -3321,7 +3336,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     html += '<div class="chips">' + state.av.map(pastilleAV).join('') + (state.av.length ? '' : '<p class="empty">Aucun contrat d’assurance-vie.</p>') + '</div>';
     return html + bulle();
   }
-  function placerBulle() {
+  function placerBulle(apresRendu) {
     var mainEl = $('#main'); if (mainEl) mainEl.style.minHeight = '';
     var b = $('.bulle'); if (!b || !editeur) return;
     var chip = $('[data-id="' + (editeur.anchor || editeur.id) + '"]'), main = $('#main');
@@ -3505,11 +3520,24 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var cur = courante();
     $('#nav').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '"' + (s.id === cur ? ' aria-current="page"' : '') + '>' + h(s.t) + '</a>'; }).join('');
     var sec = SECTIONS.filter(function (s) { return s.id === cur; })[0];
-    if (cur !== rendre.derniere) editeur = null;
+    var memeOnglet = cur === rendre.derniere;
+    if (!memeOnglet) editeur = null;
     rendre.derniere = cur;
-    $('#main').innerHTML = '<h2>' + h(sec.t) + '</h2>' + sec.r();
+    // conserver la position de défilement et le champ en cours de saisie
+    var main = $('#main'), y = window.scrollY, act = document.activeElement;
+    var actPath = act && act.dataset && act.dataset.path && main.contains(act) ? act.dataset.path : null, selS = null, selE = null;
+    try { if (actPath) { selS = act.selectionStart; selE = act.selectionEnd; } } catch (e) { }
+    main.style.minHeight = main.offsetHeight + 'px';
+    main.innerHTML = '<h2>' + h(sec.t) + '</h2>' + sec.r();
     dessinerArbre();
-    placerBulle();
+    placerBulle(true);
+    if (memeOnglet) {
+      window.scrollTo(0, y);
+      if (actPath) {
+        var n = main.querySelector('[data-path="' + actPath + '"]');
+        if (n && n.dataset.type !== 'bool') { try { n.focus({ preventScroll: true }); if (selS !== null && n.setSelectionRange) n.setSelectionRange(selS, selE); } catch (e) { } }
+      }
+    }
     rendreBandeau();
     var act = $('#nav a[aria-current]'); if (act && act.scrollIntoView) { try { act.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { } }
   }
@@ -3625,6 +3653,12 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'add-conjoint') { state.situation = 'marie'; editeur = { kind: 'client', id: 'c2' }; }
     if (a === 'retirer-conjoint') { if (!confirm('Retirer le conjoint ? Les biens restent saisis.')) return; state.situation = 'seul'; editeur = null; }
     if (a === 'bien-propre' || a === 'bien-commun') { var kb = b.dataset.id; var nb2 = { id: uid('a'), libelle: 'Nouveau bien', type: 'immo', partC1: a === 'bien-commun' ? 50 : (kb === 'c1' ? 100 : 0), valeur: 0, passif: 0, planVague: 0, planSociete: false }; state.actifs.push(nb2); editeur = { kind: 'actif', id: nb2.id, anchor: kb }; }
+    if (a === 'bien-recu') {
+      var donateur = state.parentsClients.filter(function (p) { return p.id === b.dataset.id; })[0]; if (!donateur) return;
+      var kd = donateur.de || 'c1';
+      var nr = { id: uid('a'), libelle: 'Bien reçu de ' + (donateur.prenom || (donateur.lien === 'mere' ? 'la mère' : 'le père')), type: 'immo', partC1: couple() ? (kd === 'c1' ? 100 : 0) : 100, valeur: 0, passif: 0, planVague: 0, planSociete: false, origine: 'donation', donateurId: donateur.id, droitRecu: 'NP', dateOrigine: '' };
+      state.actifs.push(nr); editeur = { kind: 'actif', id: nr.id, anchor: b.dataset.anchor || kd };
+    }
     if (a === 'av-client') { var kv = b.dataset.id; var nv = { id: uid('v'), libelle: 'Contrat', souscripteur: kv, valeur: 0, valeurApres70: 0, primesApres70: 0 }; state.av.push(nv); editeur = { kind: 'av', id: nv.id, anchor: kv }; }
     if (/^edit-/.test(a)) { var kind = a.slice(5); editeur = editeur && editeur.id === b.dataset.id ? null : { kind: kind, id: b.dataset.id }; rendre(); var f = $('.bulle input, .bulle select'); if (f && editeur) f.focus({ preventScroll: true }); return; }
     if (a === 'fermer') { editeur = null; planifier(true); return; }
