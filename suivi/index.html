@@ -1252,6 +1252,12 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .collab.ajout { border-style: dashed; color: var(--discret); }
 .collab-saisie { border: 1px solid var(--or); border-radius: 16px; padding: 6px 12px; font-size: 13.5px; min-width: 180px; background: var(--carte); }
 .collab-carte { display: inline-block; margin-left: 6px; font-size: 10.5px; background: var(--section); color: var(--bleu); border-radius: 8px; padding: 0 6px; vertical-align: 1px; }
+
+.rangee-collab { display: flex; flex-wrap: wrap; gap: 5px; padding: 2px 8px 6px; max-width: 280px; }
+.puce-collab { border: 1px solid var(--bordure) !important; background: var(--fond) !important; border-radius: 14px !important; padding: 4px 10px !important; font-size: 13px !important; }
+.puce-collab.choisi { background: var(--bleu) !important; color: var(--carte) !important; border-color: var(--bleu) !important; }
+.puce-collab.aucun, .puce-collab.ajout { color: var(--discret) !important; border-style: dashed !important; }
+.puce-collab.aucun.choisi { color: var(--carte) !important; border-style: solid !important; }
 </style>
 </head>
 <body>
@@ -3044,6 +3050,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const menu = el("div", { class: "menu-contextuel", role: "menu" },
       el("div", { class: "titre" }, noms.length > 1 ? `${noms.length} clients · ${indices.length} dossiers` : `${noms[0]} · ${indices.length} dossier${indices.length > 1 ? "s" : ""}`),
       action("✎  Modifier demandeur, société, partenaire…", () => modifierEnLot(indices, noms)),
+      indices.length ? rangeeCollaborateurs(indices) : null,
       indices.length ? action("🗄  Archiver leurs dossiers", () => { selectionMulti.clear(); indices.forEach((i) => selectionMulti.add(i)); archiverSelection(true); selectionMulti.clear(); }) : null,
       noms.length === 1 ? action("👤  Ouvrir la fiche", () => ouvrirClient(noms[0])) : null,
       noms.length > 1 ? [el("div", { class: "sep" }), action("✕  Tout désélectionner", () => { clientsChoisis.clear(); majChoixClients(); })] : null);
@@ -4485,6 +4492,41 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       sauver(); afficherTout(); informer("Déplacement annulé.");
     } });
   }
+  // ---- collaborateur depuis le clic droit : une rangée de cases (les connus, « aucun », « ＋ ») ----
+  function attribuerCollaborateur(indices, nom) {
+    const avant = [];
+    for (const i of indices) {
+      const d = donnees.dossiers[i];
+      if (!d || (d.collaborateur || "") === nom) continue;
+      const copie = { ...d };
+      d.collaborateur = nom;
+      noterHistorique(d, copie);
+      avant.push([i, copie.collaborateur || ""]);
+    }
+    if (!avant.length) { informer(nom ? `Déjà attribués à ${nom}.` : "Aucun collaborateur à retirer."); return; }
+    sauver(); afficherTout();
+    informer(`${avant.length} dossier${avant.length > 1 ? "s" : ""} ${nom ? "attribué" + (avant.length > 1 ? "s" : "") + " à " + nom : "sans collaborateur"}.`, { texte: "Annuler", faire: () => {
+      for (const [i, ancien] of avant) donnees.dossiers[i].collaborateur = ancien;
+      sauver(); afficherTout(); informer("Annulé.");
+    } });
+  }
+  function rangeeCollaborateurs(indices) {
+    const connus = [...new Set(donnees.dossiers.map((d) => String(d.collaborateur || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+    const actuels = new Set(indices.map((i) => donnees.dossiers[i] && (donnees.dossiers[i].collaborateur || "")));
+    const unSeul = actuels.size === 1 ? [...actuels][0] : null;
+    const puce = (lib, nom, classe = "") => el("button", { type: "button", class: "puce-collab " + classe + (unSeul !== null && unSeul === nom ? " choisi" : ""),
+      onclick: () => { fermerMenuSelection(); attribuerCollaborateur(indices, nom); } }, lib);
+    return [el("div", { class: "sep" }), el("div", { class: "titre" }, "👥 Collaborateur"),
+      el("div", { class: "rangee-collab" },
+        ...connus.map((n) => puce(n, n)),
+        puce("aucun", "", "aucun"),
+        el("button", { type: "button", class: "puce-collab ajout", onclick: () => {
+          const nom = (prompt("Nom du nouveau collaborateur :") || "").replace(/\s+/g, " ").trim();
+          fermerMenuSelection();
+          if (nom) attribuerCollaborateur(indices, nom);
+        } }, "＋"))];
+  }
+
   function archiverSelection(archiver) {
     const changes = [];
     for (const i of selectionMulti) {
@@ -4511,6 +4553,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const menu = el("div", { class: "menu-contextuel", role: "menu" },
       el("div", { class: "titre" }, n > 1 ? `${n} dossiers sélectionnés` : (tous[0] ? tous[0].client : "")),
       action(`✎  Modifier${n > 1 ? ` les ${n}` : ""} (demandeur, société…)`, () => modifierEnLot([...selectionMulti])),
+      rangeeCollaborateurs([...selectionMulti]),
       tous.some((d) => !d.archives) ? action(`🗄  Archiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(true)) : null,
       tous.some((d) => d.archives) ? action(`↩  Désarchiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(false)) : null,
       el("div", { class: "sep" }),
