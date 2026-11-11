@@ -102,9 +102,16 @@
     const rvb = (h) => { const n = parseInt(String(h).replace("#", ""), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
     const melange = (a, b, part) => "#" + rvb(a).map((v, i) => Math.round(v * (1 - part) + rvb(b)[i] * part).toString(16).padStart(2, "0")).join("");
     const DEFAUT = { principale: "#0c2d39", accent: "#a77d2f", fond: "creme", texte: "plex", titres: "garamond" };
+    // couleurs de l'agenda (rendez-vous, tâches, Dutreil, perso, retard) : d'origine tant qu'on n'y touche pas
+    const CAL_DEFAUT = { rdv: "#7d9c7c", tache: "#c9a45c", dutreil: "#6b77b0", perso: "#8b68c1", retard: "#c0504d" };
+    window.CAL_DEFAUT = CAL_DEFAUT;
     window.APPARENCE_DEFAUT = DEFAUT;
     window.POLICES_APPARENCE = POLICES;
-    window.lireApparence = () => { try { return { ...DEFAUT, ...(JSON.parse(localStorage.getItem("suivi-gp-apparence")) || {}) }; } catch (e) { return { ...DEFAUT }; } };
+    window.lireApparence = () => {
+      let a = {};
+      try { a = JSON.parse(localStorage.getItem("suivi-gp-apparence")) || {}; } catch (e) {}
+      return { ...DEFAUT, ...a, cal: { ...CAL_DEFAUT, ...(a.cal || {}) } };
+    };
     window.appliquerApparence = () => {
       const a = window.lireApparence(), r = document.documentElement, st = r.style;
       const theme = r.getAttribute("data-theme");
@@ -139,6 +146,11 @@
         }
         if (cle === DEFAUT.texte && variable === "--ui" || cle === DEFAUT.titres && variable === "--titre") st.removeProperty(variable); else st.setProperty(variable, pol[0]);
       }
+      // agenda : variables --cal-… ; la classe agenda-perso active les règles qui s'en servent
+      const calPerso = Object.keys(CAL_DEFAUT).some((k) => String(a.cal[k]).toLowerCase() !== CAL_DEFAUT[k]);
+      r.classList.toggle("agenda-perso", calPerso);
+      for (const k of Object.keys(CAL_DEFAUT)) { if (calPerso) st.setProperty("--cal-" + k, a.cal[k]); else st.removeProperty("--cal-" + k); }
+      if (window.majCouleursAgenda) window.majCouleursAgenda(a.cal);
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute("content", perso ? (sombre ? melange(a.principale, "#000000", 0.55) : a.principale) : "#0c2d39");
     };
@@ -1684,6 +1696,28 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .case-perso.choisi { background: #8b68c1 !important; border-color: #8b68c1 !important; color: #fff !important; }
 :root[data-theme="dark"] .frise-bloc.perso, :root[data-theme="dark"] .ev.perso, :root[data-theme="dark"] .t-tuile.perso { background: #2d2342 !important; border-color: #5d4689 !important; color: #dccdf5 !important; }
 :root[data-theme="dark"] .t-tuile.perso .t-quand, :root[data-theme="dark"] .jr-ligne.perso .jr-heure, :root[data-theme="dark"] .case-perso { color: #c9b3ee; }
+
+/* ---------- couleurs de l'agenda choisies (Apparence) : teintes calculées à partir de chaque couleur ---------- */
+:root.agenda-perso .ev.rdv, :root.agenda-perso .frise-bloc.f-rdv {
+  background: color-mix(in srgb, var(--cal-rdv) 20%, var(--carte)) !important; border-color: color-mix(in srgb, var(--cal-rdv) 60%, var(--carte)) !important; color: color-mix(in srgb, var(--cal-rdv) 55%, var(--texte)) !important; }
+:root.agenda-perso .frise-bloc.f-tache { background: color-mix(in srgb, var(--cal-tache) 16%, var(--carte)) !important; border-color: color-mix(in srgb, var(--cal-tache) 60%, var(--carte)) !important; color: color-mix(in srgb, var(--cal-tache) 55%, var(--texte)) !important; }
+:root.agenda-perso .ev.tache { color: color-mix(in srgb, var(--cal-tache) 55%, var(--texte)) !important; border-color: color-mix(in srgb, var(--cal-tache) 65%, var(--carte)) !important; }
+:root.agenda-perso .ev.dutreil, :root.agenda-perso .frise-bloc.f-dutreil {
+  background: color-mix(in srgb, var(--cal-dutreil) 18%, var(--carte)) !important; border-color: color-mix(in srgb, var(--cal-dutreil) 60%, var(--carte)) !important; color: color-mix(in srgb, var(--cal-dutreil) 55%, var(--texte)) !important; }
+:root.agenda-perso .frise-bloc.perso, :root.agenda-perso .ev.perso {
+  background: color-mix(in srgb, var(--cal-perso) 18%, var(--carte)) !important; border-color: color-mix(in srgb, var(--cal-perso) 60%, var(--carte)) !important; color: color-mix(in srgb, var(--cal-perso) 55%, var(--texte)) !important; }
+:root.agenda-perso .frise-bloc.perso, :root.agenda-perso .t-tuile.perso { border-left-color: var(--cal-perso) !important; }
+:root.agenda-perso .frise-bloc.f-tache.retard, :root.agenda-perso .ev.tache.retard {
+  background: color-mix(in srgb, var(--cal-retard) 20%, var(--carte)) !important; border-color: color-mix(in srgb, var(--cal-retard) 60%, var(--carte)) !important; color: color-mix(in srgb, var(--cal-retard) 60%, var(--texte)) !important; border-style: solid !important; }
+:root.agenda-perso .t-tuile { border-left-color: var(--cal-tache); }
+:root.agenda-perso .t-tuile.retard { border-left-color: var(--cal-retard); }
+:root.agenda-perso .t-tuile.perso .t-quand, :root.agenda-perso .jr-ligne.perso .jr-heure { color: color-mix(in srgb, var(--cal-perso) 75%, var(--texte)); }
+:root.agenda-perso .jr-ligne.perso .jr-texte b::before { color: var(--cal-perso); }
+:root.agenda-perso .jr-ligne.rdv .jr-heure { color: color-mix(in srgb, var(--cal-rdv) 70%, var(--texte)); }
+.app-agenda { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.app-apercu { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 4px; padding: 10px; border: 1px dashed var(--bordure); border-radius: 10px; background: var(--fond); }
+.app-apercu .ev { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; border-width: 1px; border-style: solid; }
+@media (min-width: 901px) { .app-agenda { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
@@ -4221,8 +4255,13 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   let moisCalendrier = (() => { const d = aujourdhui(); d.setDate(1); return d; })();
   let jourCalendrier = enIso(aujourdhui());
   let typesCalendrier = new Set(["rdv", "tache", "dutreil"]);
-  const COULEUR_PERSO = "#8b68c1";  // violet : ce qui est personnel, sans client
   const COULEURS_CAL = { rdv: "#7d9c7c", tache: "#c9a45c", dutreil: "#6b77b0" };
+  let couleurPerso = "#8b68c1";
+  window.majCouleursAgenda = (c) => {
+    Object.assign(COULEURS_CAL, { rdv: c.rdv, tache: c.tache, dutreil: c.dutreil });
+    couleurPerso = c.perso;
+  };
+  window.majCouleursAgenda(window.lireApparence().cal);
   const NOMS_CAL = { rdv: "Rendez-vous", tache: "Tâches", dutreil: "Échéances Dutreil" };
 
   // tous les événements, par date : { iso: [ { type, titre, sous, ouvrir, retard } ] }
@@ -5051,7 +5090,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         el("b", null, e.titre.replace(/^(📌 )?\d\d:\d\d(–\d\d:\d\d)? /, "$1")),
         el("span", null, e.type === "tache" ? e.sous.replace(/^Tâche · /, "") : e.sous));
       activerRoue(ouvrir, e);
-      return el("div", { class: "cal-element" + (e.perso ? " perso" : ""), style: `--c:${e.perso ? COULEUR_PERSO : COULEURS_CAL[e.type]}` }, el("span"), el("div", { class: "cal-contenu" }, ouvrir));
+      return el("div", { class: "cal-element" + (e.perso ? " perso" : ""), style: `--c:${e.perso ? couleurPerso : COULEURS_CAL[e.type]}` }, el("span"), el("div", { class: "cal-contenu" }, ouvrir));
     };
     const client = el("input", { type: "text", list: "liste-clients-cal", placeholder: "Client" });
     const texte = el("input", { type: "text", placeholder: "Tâche à faire ce jour-là" });
@@ -7623,6 +7662,16 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
           onclick: () => garder({ principale: p1, accent: p2 }) }, el("i", { style: `background:linear-gradient(135deg, ${p1} 0 62%, ${p2} 62%)` }), nom))),
         el("h4", { class: "rubrique" }, "Vos couleurs"),
         el("div", { class: "deux" }, couleur("principale", "Couleur principale"), couleur("accent", "Couleur d’accent")),
+        el("h4", { class: "rubrique" }, "Couleurs de l’agenda"),
+        el("div", { class: "app-agenda" },
+          [["rdv", "Rendez-vous"], ["tache", "Tâches"], ["perso", "Perso"], ["retard", "Retards"], ["dutreil", "Échéances Dutreil"]].map(([k, lib]) => {
+            const c = el("input", { type: "color", value: a.cal[k], "aria-label": lib });
+            c.addEventListener("input", () => { garder({ cal: { ...a.cal, [k]: c.value } }); if (donnees) afficherTout(); });
+            return el("label", { class: "app-couleur" }, c, el("span", null, lib, el("small", null, a.cal[k])));
+          })),
+        el("div", { class: "app-apercu" }, el("span", { class: "ev rdv" }, "10:00 Rendez-vous"), el("span", { class: "ev tache" }, "11:00 Tâche"),
+          el("span", { class: "ev tache perso" }, "12:30 Perso"), el("span", { class: "ev tache retard" }, "En retard"), el("span", { class: "ev dutreil" }, "Dutreil")),
+        el("button", { type: "button", class: "lien-sous-champ", onclick: () => { garder({ cal: { ...window.CAL_DEFAUT } }); if (donnees) afficherTout(); } }, "↺ Couleurs d’origine de l’agenda"),
         el("h4", { class: "rubrique" }, "Fond"),
         el("div", { class: "collabs" }, [["creme", "Crème"], ["blanc", "Blanc"], ["gris", "Gris perle"]].map(([k, lib]) =>
           el("button", { type: "button", class: "collab" + (a.fond === k ? " choisi" : ""), onclick: () => garder({ fond: k }) }, lib))),
@@ -7631,7 +7680,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         el("h4", { class: "rubrique" }, "Police des titres"),
         casesPolice("titres", ["garamond", "playfair", "lora", "georgia", "inter", "nunito"]),
         el("p", { class: "aide" }, "Tout s’applique tout de suite, sur cet appareil seulement. Le fond choisi vaut pour le thème clair ; en thème sombre, les couleurs sont éclaircies pour rester lisibles. Les polices autres que celles d’origine demandent une connexion la première fois."),
-        el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => { try { localStorage.removeItem("suivi-gp-apparence"); } catch (e) {} window.appliquerApparence(); dessiner(); informer("Apparence d’origine rétablie."); } }, "↺ Rétablir l’apparence d’origine")));
+        el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => { try { localStorage.removeItem("suivi-gp-apparence"); } catch (e) {} window.appliquerApparence(); dessiner(); if (donnees) afficherTout(); informer("Apparence d’origine rétablie."); } }, "↺ Rétablir l’apparence d’origine")));
     };
     dessiner();
     ouvrirFeuille("feuilleApparence", ouvrirApparence);
