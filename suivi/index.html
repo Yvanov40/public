@@ -1653,6 +1653,25 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   button, .tuile, .m-onglet, .nature-tuile, .t-tuile, .m-rdv, .m-client, .d-carte, .cal-element, .frise-bloc, .jr-ligne, .section-titre, .collab, .puce-collab, summary {
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 }
+
+/* ---------- personnalisation des actes ---------- */
+.emol-perso-lien { display: block; margin: -4px 0 6px auto; }
+.perso-actes { display: grid; gap: 6px; }
+.perso-acte { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: stretch; }
+.perso-acte.masque .perso-ouvrir { opacity: .45; }
+.perso-ouvrir { display: flex; align-items: center; gap: 10px; text-align: left; border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 8px 10px; cursor: pointer; color: var(--texte); min-width: 0; }
+.perso-ouvrir .ic { font-size: 20px; flex: none; }
+.perso-ouvrir b { display: block; font-weight: 600; color: var(--bleu); }
+.perso-ouvrir em { font-style: normal; font-weight: 400; font-size: 10.5px; background: var(--or-doux); color: var(--or); border-radius: 6px; padding: 0 5px; margin-left: 6px; }
+.perso-ouvrir small { display: block; color: var(--discret); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+.perso-oeil { width: 40px; border: 1px solid var(--bordure); background: var(--fond); border-radius: 10px; cursor: pointer; font-size: 15px; }
+.perso-taux { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.perso-taux label { display: grid; gap: 2px; }
+.perso-taux small { font-size: 10.5px; color: var(--discret); }
+.perso-taux input { width: 100%; min-width: 0; }
+.perso-icones { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.perso-icones button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; width: 34px; height: 34px; font-size: 17px; cursor: pointer; padding: 0; }
+@media (max-width: 900px) { .perso-taux { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
@@ -1892,6 +1911,18 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   </div>
 </div>
 
+<!-- personnaliser les actes des émoluments -->
+<div class="feuille feuille-petite" id="feuillePersoEmol" role="dialog" aria-modal="true" aria-labelledby="titrePersoEmol">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titrePersoEmol">Actes des émoluments</h3>
+      <button class="valider" id="enregistrerPersoEmol" hidden>Enregistrer</button>
+    </div>
+    <div class="feuille-corps" id="corpsPersoEmol"></div>
+  </div>
+</div>
+
 <!-- apparence -->
 <div class="feuille feuille-petite" id="feuilleApparence" role="dialog" aria-modal="true" aria-labelledby="titreApparence">
   <div class="feuille-boite">
@@ -2020,8 +2051,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     <h4>Outils</h4>
     <div class="menu-grille">
       <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Émoluments</button>
-      <button class="menu-tuile" id="btnOutilAudit"><span>⚖</span>Audit civil et fiscal</button>
-      <button class="menu-tuile" id="btnOutilRevision"><span>📚</span>Révision</button>
+      <button class="menu-tuile" id="btnPersoEmol"><span>✎</span>Personnaliser les actes</button>
     </div>
     <h4>Réglages</h4>
     <div class="menu-grille">
@@ -2559,10 +2589,12 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 
   // ---- un seul fichier : dossiers, clients, pactes Dutreil, horaires de l'agenda et sociétés ----
   // modèles de tâches par nature de dossier : { "Donation": [{ texte, delai (jours après la création) }] }
+  // actes des émoluments personnalisés : { cle: { …définition } } pour un acte modifié ou ajouté, { cle: null } pour un acte masqué
+  let emolPerso = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-emoluments")) || {}; } catch (e) { return {}; } })();
   let modelesTaches = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-modeles")) || {}; } catch (e) { return {}; } })();
   function sectionsAnnexes() {
     const { sha: _s, ...agenda } = reglagesAgenda || {};
-    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches };
+    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso };
   }
   function contenuComplet() {
     return JSON.stringify({ version: 3, dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }, null, 1);
@@ -2574,6 +2606,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (contenu.agenda) { reglagesAgenda = { ...AGENDA_DEFAUT, ...contenu.agenda }; localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda)); }
     if (contenu.societes) { societes = contenu.societes; INDEX_ETUDES = null; localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes)); }
     if (contenu.modeles) { modelesTaches = contenu.modeles; localStorage.setItem("suivi-gp-donnees-modeles", JSON.stringify(modelesTaches)); }
+    if (contenu.emoluments) { emolPerso = contenu.emoluments; localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso)); if (typeof reconstruireBaremes === "function") reconstruireBaremes(); }
   }
   // ancien format (dutreil.json, agenda.json, societes.json à part) : on les reprend une fois dans le fichier principal
   async function reprendreFichiersSepares(contenu) {
@@ -2860,7 +2893,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     // Dutreil, agenda, sociétés : on garde la version de cet appareil s'il l'a changée, sinon celle de GitHub
     const ici = sectionsAnnexes();
     const pris = {};
-    for (const k of ["dutreil", "agenda", "societes", "modeles"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
+    for (const k of ["dutreil", "agenda", "societes", "modeles", "emoluments"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
     appliquerAnnexes(pris);
     shaDistant = sha;
     localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
@@ -5531,7 +5564,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   //   seuil    : en dessous de ce montant, c'est le forfait « fixe » qui s'applique (contrat de mariage)
   //   donateurs: l'émolument se calcule par donateur (on peut en saisir deux)
   const T60 = [6500, 17000, 60000], T30 = [6500, 17000, 30000];
-  const BAREMES_EMOL = {
+  const BAREMES_BASE = {
     // ventes et sociétés
     vente:      { ic: "🏠", court: "Vente", groupe: "Ventes et sociétés", nom: "Vente ou cession de gré à gré", ref: "art. A444-91", taux: [3.870, 1.596, 1.064, 0.799] },
     apport:     { ic: "🏢", court: "Apport en société", groupe: "Ventes et sociétés", nom: "Apport en société (biens soumis à publicité foncière)", ref: "art. A444-158", taux: [1.935, 0.798, 0.532, 0.399] },
@@ -5558,6 +5591,16 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     declaration:{ ic: "🧾", court: "Déclaration de succession", groupe: "Successions", nom: "Déclaration de succession", ref: "art. A444-63", taux: [1.548, 0.851, 0.580, 0.426], tranches: T30,
                   aide: "Sur l’actif brut total, biens de communauté compris." }
   };
+  // la liste utilisée par l'appli : les actes d'origine, modifiés, masqués ou complétés par les vôtres
+  let BAREMES_EMOL = {};
+  function reconstruireBaremes() {
+    const tous = {};
+    for (const [k, b] of Object.entries(BAREMES_BASE)) if (emolPerso[k] !== null) tous[k] = emolPerso[k] ? { ...emolPerso[k] } : b;
+    for (const [k, b] of Object.entries(emolPerso)) if (b && !BAREMES_BASE[k]) tous[k] = { ...b };
+    if (!Object.keys(tous).length) tous.vente = BAREMES_BASE.vente;  // jamais de liste vide
+    BAREMES_EMOL = tous;
+  }
+  reconstruireBaremes();
   const SEUIL_REMISE = 100000;  // une remise (20 % au plus) peut porter sur l'émolument de la part d'assiette au-delà de 100 000 €
   // émolument proportionnel d'un montant, tranche par tranche
   function emolumentBareme(assiette, taux, tranches = T60) {
@@ -5576,9 +5619,10 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // calcul complet pour un acte : montants = [un montant] ou [donateur 1, donateur 2]
   // renvoie { forfait, parts: [{ lignes, total, remise }], total, remise, ht, tva, ttc }
   function calculerEmoluments(acte, montants, remisePct = 0) {
-    const b = BAREMES_EMOL[acte];
+    const b = BAREMES_EMOL[acte] || Object.values(BAREMES_EMOL)[0];
     const pct = Math.min(20, Math.max(0, Number(remisePct) || 0));
-    const liste = (Array.isArray(montants) ? montants : [montants]).map((m) => Math.round(Number(m) || 0));
+    const coef = Number(b.coef) > 0 ? Number(b.coef) / 100 : 1;  // règle d'assiette : part du montant retenue (100 % par défaut)
+    const liste = (Array.isArray(montants) ? montants : [montants]).map((m) => Math.round((Number(m) || 0) * coef));
     let parts, forfait = false;
     if (b.fixe !== undefined && (!b.taux || (liste[0] || 0) <= (b.seuil || 0))) {
       forfait = true;
@@ -5601,7 +5645,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // le choix de l'acte : un bouton qui ouvre une liste légère, rangée par groupe (au lieu de la longue liste du téléphone).
   // Il se comporte comme une liste classique pour le reste du code : .value pour lire, évènement « input » au changement.
   function choixActes(selectionne) {
-    let valeur = BAREMES_EMOL[selectionne] ? selectionne : "vente";
+    let valeur = BAREMES_EMOL[selectionne] ? selectionne : Object.keys(BAREMES_EMOL)[0];
     const bouton = el("button", { type: "button", class: "choix-acte", "aria-haspopup": "dialog" });
     const dessiner = () => {
       const b = BAREMES_EMOL[valeur];
@@ -5872,6 +5916,111 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       sortie);
   }
 
+  // ---- personnaliser les actes : nom, icône, groupe, barème ou forfait, règle d'assiette ----
+  let acteEdite = null;  // null : la liste ; sinon la clé de l'acte en cours de modification ("" : nouvel acte)
+  const garderEmolPerso = () => {
+    localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso));
+    reconstruireBaremes();
+    annexeModifiee();
+  };
+  function ouvrirPersoEmol(cle) {
+    acteEdite = cle === undefined ? null : cle;
+    $("enregistrerPersoEmol").hidden = acteEdite === null;
+    $("titrePersoEmol").textContent = acteEdite === null ? "Actes des émoluments" : acteEdite ? "Modifier l’acte" : "Nouvel acte";
+    if (acteEdite === null) {
+      // la liste : tous les actes (y compris ceux masqués), par groupe
+      const tous = { ...BAREMES_BASE };
+      for (const [k, b] of Object.entries(emolPerso)) if (b) tous[k] = b;
+      const groupes = [...new Set(Object.values(tous).map((b) => b.groupe || "Autres"))];
+      const resume = (b) => b.fixe !== undefined && !b.taux ? `forfait ${fmtEuros(Number(b.fixe))} HT` : `${b.seuil ? "forfait puis " : ""}barème ${b.taux.map((t) => String(t).replace(".", ",")).join(" / ")} %${b.donateurs ? " · par donateur" : ""}${Number(b.coef) > 0 && Number(b.coef) !== 100 ? ` · assiette ${b.coef} %` : ""}`;
+      $("corpsPersoEmol").replaceChildren(
+        el("p", { class: "aide" }, "Touchez un acte pour changer son nom, son icône, son calcul ou sa règle d’assiette. L’œil le retire de la liste sans le supprimer. Ces réglages sont partagés entre vos appareils."),
+        el("button", { type: "button", class: "bouton", style: "margin-bottom:10px", onclick: () => ouvrirPersoEmol("") }, "＋ Nouvel acte"),
+        ...groupes.map((g) => el("div", null, el("h4", { class: "rubrique" }, g),
+          el("div", { class: "perso-actes" }, Object.entries(tous).filter(([, b]) => (b.groupe || "Autres") === g).map(([k, b]) => {
+            const masque = emolPerso[k] === null, modifie = !!emolPerso[k] && !!BAREMES_BASE[k], ajoute = !!emolPerso[k] && !BAREMES_BASE[k];
+            return el("div", { class: "perso-acte" + (masque ? " masque" : "") },
+              el("button", { type: "button", class: "perso-ouvrir", onclick: () => ouvrirPersoEmol(k) }, el("span", { class: "ic" }, b.ic || "📄"),
+                el("span", null, el("b", null, b.court || b.nom, modifie ? el("em", null, "modifié") : ajoute ? el("em", null, "ajouté") : null), el("small", null, resume(b)))),
+              el("button", { type: "button", class: "perso-oeil", title: masque ? "Remettre dans la liste" : "Retirer de la liste", "aria-label": masque ? "Remettre dans la liste" : "Retirer de la liste",
+                onclick: () => {
+                  if (masque) delete emolPerso[k];
+                  else if (BAREMES_BASE[k] && !emolPerso[k]) emolPerso[k] = null;
+                  else if (ajoute) { if (!confirm(`Supprimer l’acte « ${b.court || b.nom} » ?`)) return; delete emolPerso[k]; }
+                  else { if (!confirm(`Revenir au réglage d’origine pour « ${b.court || b.nom} » ?`)) return; delete emolPerso[k]; }
+                  garderEmolPerso(); ouvrirPersoEmol();
+                } }, masque ? "＋" : ajoute ? "🗑" : modifie ? "↺" : "👁"));
+          })))));
+      if (!$("feuillePersoEmol").classList.contains("ouverte")) ouvrirFeuille("feuillePersoEmol", () => ouvrirPersoEmol());
+      return;
+    }
+    // la fiche d'un acte
+    const tousActes = { ...BAREMES_BASE, ...Object.fromEntries(Object.entries(emolPerso).filter(([, b]) => b)) };
+    const b = acteEdite ? tousActes[acteEdite] : { ic: "📄", court: "", nom: "", groupe: "Ventes et sociétés", taux: [3.870, 1.596, 1.064, 0.799], coef: 100 };
+    const mode0 = b.fixe !== undefined && !b.taux ? "forfait" : b.seuil ? "mixte" : "bareme";
+    const taux0 = b.taux || [0, 0, 0, 0];
+    const groupesConnus = [...new Set(Object.values(tousActes).map((x) => x.groupe || "Autres"))];
+    const casesMode = el("div", { class: "collabs" });
+    let mode = mode0;
+    const blocBareme = el("div", null,
+      el("div", { class: "champ" }, el("label", null, "Taux HT par tranche (%)"),
+        el("div", { class: "perso-taux" }, taux0.map((t, k) => el("label", null, el("small", null, ["jusqu’à 6 500 €", "6 500 à 17 000 €", "17 000 à T3", "au-delà"][k]),
+          el("input", { type: "number", step: "0.001", min: "0", name: "taux" + k, value: t }))))),
+      champ("3ᵉ tranche jusqu’à", el("select", { name: "t3" }, el("option", { value: "60000", selected: !(b.tranches && b.tranches[2] === 30000) }, "60 000 € (ventes, donations)"), el("option", { value: "30000", selected: !!(b.tranches && b.tranches[2] === 30000) }, "30 000 € (successions)"))));
+    const blocForfait = el("div", { class: "deux" },
+      champ("Forfait HT (€)", el("input", { type: "number", step: "0.01", min: "0", name: "fixe", value: b.fixe !== undefined ? b.fixe : "" })),
+      champ("Forfait jusqu’à (€ d’assiette)", el("input", { type: "number", step: "1", min: "0", name: "seuil", value: b.seuil || "" })));
+    const majMode = () => {
+      casesMode.replaceChildren(...[["bareme", "Barème par tranches"], ["forfait", "Forfait"], ["mixte", "Forfait, puis barème"]].map(([v, lib]) =>
+        el("button", { type: "button", class: "collab" + (mode === v ? " choisi" : ""), onclick: () => { mode = v; majMode(); } }, lib)));
+      blocBareme.hidden = mode === "forfait";
+      blocForfait.hidden = mode === "bareme";
+      blocForfait.querySelector("[name=seuil]").closest(".champ").hidden = mode !== "mixte";
+    };
+    const icone = el("input", { name: "ic", type: "text", value: b.ic || "", maxlength: "4", style: "width:64px;text-align:center;font-size:20px" });
+    $("corpsPersoEmol").replaceChildren(
+      el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirPersoEmol() }, "‹ Tous les actes"),
+      el("div", { class: "champ" }, el("label", null, "Icône"),
+        el("div", { class: "perso-icones" }, icone, ...["🏠", "🏢", "🎁", "🧩", "💶", "💍", "💒", "🤝", "🛡", "📜", "🧾", "🏛", "📋", "⚖", "🔑", "🌳", "🚜", "🏦", "✍", "📄"].map((x) =>
+          el("button", { type: "button", onclick: () => { icone.value = x; } }, x)))),
+      el("div", { class: "deux" }, champ("Nom court (sur les cases)", el("input", { name: "court", type: "text", value: b.court || "", placeholder: "ex. Bail commercial" })),
+        champ("Nom complet", el("input", { name: "nom", type: "text", value: b.nom || "", placeholder: "ex. Bail commercial de 9 ans" }))),
+      champ("Groupe", [el("input", { name: "groupe", type: "text", value: b.groupe || "", list: "liste-groupes-emol" }), el("datalist", { id: "liste-groupes-emol" }, groupesConnus.map((g) => el("option", { value: g })))]),
+      el("div", { class: "champ" }, el("label", null, "Calcul"), casesMode),
+      blocBareme, blocForfait,
+      el("h4", { class: "rubrique" }, "Règle d’assiette"),
+      el("div", { class: "deux" },
+        champ("Part du montant retenue (%)", el("input", { name: "coef", type: "number", min: "1", max: "1000", step: "0.01", value: b.coef || 100 })),
+        el("label", { class: "case", style: "margin-top:22px" }, el("input", { type: "checkbox", name: "donateurs", checked: !!b.donateurs }), "Calcul par donateur")),
+      champ("Rappel affiché sous le résultat", el("textarea", { name: "aide", style: "min-height:58px", placeholder: "ex. Sur la valeur en pleine propriété, même avec réserve d’usufruit." }, b.aide || "")),
+      champ("Référence (facultatif)", el("input", { name: "ref", type: "text", value: b.ref || "", placeholder: "ex. art. A444-103" })));
+    majMode();
+    $("enregistrerPersoEmol").onclick = () => {
+      const v = lireFormulaire($("corpsPersoEmol"));
+      const court = (v.court || v.nom || "").trim();
+      if (!court) { informer("Donnez un nom à l’acte."); return; }
+      const def = { ic: (v.ic || "📄").trim(), court, nom: (v.nom || court).trim(), groupe: (v.groupe || "Autres").trim(), ref: (v.ref || "").trim(), aide: (v.aide || "").trim(),
+        coef: Number(String(v.coef).replace(",", ".")) || 100, donateurs: !!v.donateurs };
+      const nb = (x) => Number(String(x).replace(",", ".")) || 0;
+      if (mode !== "forfait") {
+        def.taux = [nb(v.taux0), nb(v.taux1), nb(v.taux2), nb(v.taux3)];
+        if (!def.taux.some((t) => t > 0)) { informer("Indiquez au moins un taux."); return; }
+        if (v.t3 === "30000") def.tranches = [6500, 17000, 30000];
+      }
+      if (mode !== "bareme") {
+        if (v.fixe === "" || v.fixe === undefined) { informer("Indiquez le montant du forfait."); return; }
+        def.fixe = nb(v.fixe);
+        if (mode === "mixte") def.seuil = nb(v.seuil);
+      }
+      const cle = acteEdite || ("perso_" + nouvelId());
+      emolPerso[cle] = def;
+      garderEmolPerso();
+      informer(`Acte « ${court} » enregistré.`);
+      ouvrirPersoEmol();
+    };
+    if (!$("feuillePersoEmol").classList.contains("ouverte")) ouvrirFeuille("feuillePersoEmol", () => ouvrirPersoEmol(acteEdite));
+  }
+
   // ---- la grande calculatrice (onglet Outils, menu ⋯, recherche éclair) ----
   function ouvrirEmoluments(acteDepart, montantsDepart) {
     const choixActe = choixActes(typeof acteDepart === "string" ? acteDepart : "vente");
@@ -5905,7 +6054,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
           el("thead", null, el("tr", null, el("th", null, "Tranche"), el("th", null, "Taux HT"), el("th", null, "Émolument HT"))),
           el("tbody", null, lignesTable),
           el("tfoot", null, el("tr", null, el("td", { colspan: "2" }, "Total HT"), el("td", null, fmtEuros(r.ht))))),
-        el("p", { class: "aide" }, `Barème : ${b.ref} (tarif en vigueur jusqu’au 29 février 2028). ${b.aide || ""}`),
+        Number(b.coef) > 0 && Number(b.coef) !== 100 ? el("p", { class: "aide" }, `Assiette retenue : ${b.coef} % du montant saisi, soit ${r.assiette.toLocaleString("fr-FR")} €.`) : null,
+        el("p", { class: "aide" }, `${b.ref ? "Barème : " + b.ref + (BAREMES_BASE[choixActe.value] && !emolPerso[choixActe.value] ? " (tarif en vigueur jusqu’au 29 février 2028). " : ". ") : ""}${b.aide || ""}`),
         el("p", { class: "aide" }, "Émoluments de l’acte seulement : hors émoluments de formalités, débours, droits d’enregistrement, taxe de publicité foncière et contribution de sécurité immobilière. Estimation indicative."));
     };
     const saisie = champsMontants(calculer);
@@ -5915,6 +6065,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     }
     for (const c of [choixActe, champRemise]) c.addEventListener("input", calculer);
     $("corpsEmoluments").replaceChildren(
+      el("button", { type: "button", class: "lien-sous-champ emol-perso-lien", onclick: () => ouvrirPersoEmol() }, "✎ Personnaliser les actes"),
       champ("Acte", choixActe),
       el("div", { class: "emol-saisie" }, saisie.nb, saisie.m1, saisie.m2),
       blocRemise,
@@ -7374,10 +7525,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   $("enregistrerLot").addEventListener("click", enregistrerLot);
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
-  // Audit et Révision : chacune dans sa propre fenêtre (ou son appli installée)
-  const ouvrirAppli = (dossier) => { fermerMenu(); window.open(`../${dossier}/`, "appli-" + dossier); };
-  $("btnOutilAudit").addEventListener("click", () => ouvrirAppli("audit"));
-  $("btnOutilRevision").addEventListener("click", () => ouvrirAppli("revision"));
+  $("btnPersoEmol").addEventListener("click", () => { fermerMenu(); ouvrirPersoEmol(); });
   $("outilRetour").addEventListener("click", fermerOutil);
   $("btnEmoluments").addEventListener("click", () => { fermerMenu(); ouvrirEmoluments(); });
   $("btnModeles").addEventListener("click", () => ouvrirModeles());
@@ -7602,8 +7750,6 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
     ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", () => { const nom = (prompt("Pour quel client ?") || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
     ["🧮", "Émoluments du notaire", "calculatrice frais notaire tarif vente donation apport", () => ouvrirEmoluments()],
-    ["⚖", "Audit civil et fiscal", "outil appli transmission succession", () => window.open("../audit/", "appli-audit")],
-    ["📚", "Révision de la base", "outil appli qcm fiches", () => window.open("../revision/", "appli-revision")],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
     ["☰", "Aller aux clients", "liste", () => { location.hash = "#clients"; }],
