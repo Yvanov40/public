@@ -1937,7 +1937,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       </div>
       <div class="outils ordi">
         
-        <span class="aide">Cliquez sur les statuts et les natures pour les ouvrir (plusieurs à la fois) · glissez une carte sur un statut ou une nature pour la déplacer · Ctrl+clic, Maj+clic : sélection · clic droit : actions</span>
+        <span class="aide">Clic sur un statut ou une nature : l’ouvrir seul · Ctrl+clic : en ouvrir plusieurs · glissez une carte sur un statut ou une nature pour la déplacer · Ctrl+clic, Maj+clic sur les cartes : sélection · clic droit : actions</span>
         <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
         <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
         <button class="bouton-discret" id="toutReplier">Tout replier</button>
@@ -3772,6 +3772,13 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   const garderKanbanOrdi = () => {
     try { localStorage.setItem("suivi-gp-kanban-statuts", JSON.stringify([...statutsOuvertsOrdi])); localStorage.setItem("suivi-gp-kanban-natures", JSON.stringify([...naturesOuvertesOrdi])); } catch (e) {}
   };
+  // un clic sur une tuile : elle seule est ouverte (un second clic la referme) ;
+  // Ctrl+clic (⌘+clic) ou Maj+clic : on l'ajoute aux tuiles ouvertes, ou on l'en retire
+  function choisirTuile(ouvertes, v, e) {
+    const l = new Set(ouvertes);
+    if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { l.has(v) ? l.delete(v) : l.add(v); return l; }
+    return l.has(v) && l.size === 1 ? new Set() : new Set([v]);
+  }
   function afficherKanbanOrdi(liste) {
     const recherche = texteRecherche();
     if (recherche !== derniereRecherche) { derniereRecherche = recherche; bascules = new Set(); }
@@ -3787,8 +3794,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const ids = typesEtape(n, parType).flatMap((t) => parType[t] || []);
       const [pe, ca] = somme(ids);
       return el("button", { type: "button", class: "k-statut cible-statut" + (ouverts.has(n) ? " ouverte" : ""), "data-statut": n, style: `--c:${COULEURS[n]}`, "aria-pressed": String(ouverts.has(n)),
-        title: "Cliquer pour ouvrir ou fermer · déposer une carte ici pour changer son statut",
-        onclick: () => { if (recherche) return; statutsOuvertsOrdi.has(n) ? statutsOuvertsOrdi.delete(n) : statutsOuvertsOrdi.add(n); garderKanbanOrdi(); afficherKanbanOrdi(visibles()); } },
+        title: "Clic : ouvrir ce statut seul · Ctrl+clic : l’ajouter aux statuts ouverts · déposer une carte ici pour changer son statut",
+        onclick: (e) => { if (recherche) return; statutsOuvertsOrdi = choisirTuile(statutsOuvertsOrdi, n, e); garderKanbanOrdi(); afficherKanbanOrdi(visibles()); } },
         el("span", null, nom), el("b", null, ids.length), el("small", null, pe ? `${euros(pe)} prévus` : "", ca ? el("em", null, ` · ${euros(ca)} encaissés`) : null));
     }));
     // 2. pour chaque statut ouvert : ses natures en tuiles, puis les dossiers des natures ouvertes
@@ -3804,8 +3811,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
           const l = parType[t] || [];
           const [pt, ct] = somme(l);
           return el("button", { type: "button", class: "k-nature section" + (natOuverte(t) ? " ouverte" : ""), "data-type": t, "aria-expanded": String(natOuverte(t)),
-            title: "Cliquer pour ouvrir ou fermer · déposer une carte ici pour lui donner cette nature",
-            onclick: () => { naturesOuvertesOrdi.has(t) ? naturesOuvertesOrdi.delete(t) : naturesOuvertesOrdi.add(t); garderKanbanOrdi(); afficherKanbanOrdi(visibles()); } },
+            title: "Clic : ouvrir cette nature seule · Ctrl+clic : l’ajouter aux natures ouvertes · déposer une carte ici pour lui donner cette nature",
+            onclick: (e) => { naturesOuvertesOrdi = choisirTuile(naturesOuvertesOrdi, t, e); garderKanbanOrdi(); afficherKanbanOrdi(visibles()); } },
             el("b", null, sansNumero(t) || "Sans type"), el("i", null, l.length), el("small", null, pt ? euros(pt) : "", ct ? el("em", null, " · " + euros(ct)) : null));
         })) : el("p", { class: "m-vide" }, "Aucun dossier dans ce statut."),
         ...types.filter(natOuverte).map((t) => el("div", { class: "k-groupe section ouverte", "data-type": t },
