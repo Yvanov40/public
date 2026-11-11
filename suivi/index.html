@@ -1500,6 +1500,15 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   #dutreilContenu .d-carte .detail { font-size: 10px; }
 }
 :root[data-theme="dark"] .t-quand { color: #ecd9a4; }
+
+/* ---------- clients découpés par demandeur (filtre Demandeur actif) ---------- */
+tr.groupe-demandeur td { background: var(--section); padding: 7px 10px; border-top: 2px solid var(--bordure); cursor: default; }
+tr.groupe-demandeur b { font: 600 15px var(--titre); color: var(--bleu); margin-right: 8px; }
+tr.groupe-demandeur span, .clients-groupe span { background: var(--carte); border: 1px solid var(--bordure); border-radius: 8px; padding: 1px 7px; font-size: 11.5px; margin-right: 8px; }
+tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-size: 12px; }
+.clients-groupe { grid-column: 1 / -1; margin: 10px 0 2px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; border-bottom: 1px solid var(--bordure); padding-bottom: 4px; }
+.clients-groupe b { font: 600 16px var(--titre); color: var(--bleu); }
+.clients-groupe:first-of-type { margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -3340,6 +3349,23 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     sauver(); terminerFeuille(); afficherTout(); informer("Client supprimé.");
   }
 
+  // Filtre Demandeur actif : les clients sont découpés par demandeur (dans l'ordre des sociétés), chacun avec ses dossiers
+  // chez ce demandeur. Sinon un seul groupe, sans titre. Renvoie [[demandeur ou null, clients], …].
+  function decouperParDemandeur(tries) {
+    if (!selections.notaire.size) return [[null, tries]];
+    const demandeurs = [...selections.notaire].sort((a, b) => (etudeDe(a) || "").localeCompare(etudeDe(b) || "", "fr") || a.localeCompare(b, "fr"));
+    return demandeurs.map((dem) => [dem, tries
+      .map((c) => ({ nom: c.nom, liste: c.liste.filter((d) => (String(d.notaire || "").trim() || "(vide)") === dem) }))
+      .filter((c) => c.liste.length || (!tries.find((x) => x.nom === c.nom).liste.length && (fiche(c.nom).notaire || "(vide)") === dem))])
+      .filter(([, clients]) => clients.length);
+  }
+  const titreDemandeur = (dem, clients) => {
+    const prevus = clients.reduce((t, c) => t + c.liste.reduce((x, d) => x + prevu(d), 0), 0);
+    const soc = dem !== "(vide)" && etudeDe(dem) !== AUTRES_ETUDES ? etudeDe(dem) : "";
+    return [el("b", null, dem === "(vide)" ? "Sans demandeur" : dem), soc ? el("span", null, soc) : null,
+      el("small", null, `${clients.length} client${clients.length > 1 ? "s" : ""}${prevus ? " · " + euros(prevus) + " prévus" : ""}`)];
+  };
+
   function afficherClientsTel(liste) {
     const groupes = new Map();
     for (const [d] of liste) {
@@ -3350,15 +3376,17 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     for (const nom of clientsSansDossier()) groupes.set(cleClient(nom), { nom, liste: [] });
     const tries = [...groupes.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
     const max = 150;
-    $("mClients").replaceChildren(el("button", { class: "bouton-discret", type: "button", style: "margin:0 0 10px", onclick: nouveauClient }, "＋ Nouveau client"),
-      ...tries.slice(0, max).map(({ nom, liste: ds }) => {
+    const tuileClient = ({ nom, liste: ds }) => {
       const p = ds.reduce((s, d) => s + prevu(d), 0);
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       return el("button", { class: "m-client", type: "button", onclick: () => ouvrirClient(nom) },
         el("b", null, nom, badgeTaches(nom)), el("span", { class: "r" }, p ? euros(p - ca) : ""),
         el("span", null, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""} · ${etapes}` : "Sans dossier"), el("span", { class: "r or" }, ca ? euros(ca) : ""));
-    }), ...(tries.length > max ? [el("p", { class: "plus-de" }, `${tries.length - max} autres clients : affinez avec la recherche.`)] : []),
+    };
+    $("mClients").replaceChildren(el("button", { class: "bouton-discret", type: "button", style: "margin:0 0 10px", onclick: nouveauClient }, "＋ Nouveau client"),
+      ...decouperParDemandeur(tries.slice(0, max)).flatMap(([dem, clients]) => [dem ? el("h4", { class: "clients-groupe" }, ...titreDemandeur(dem, clients)) : null, ...clients.map(tuileClient)]),
+      ...(tries.length > max ? [el("p", { class: "plus-de" }, `${tries.length - max} autres clients : affinez avec la recherche.`)] : []),
       ...(!tries.length ? [el("p", { class: "m-vide" }, "Aucun client ne correspond.")] : []));
   }
 
@@ -3556,7 +3584,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const max = 300;
     $("aideClients").textContent = `${tries.length} client(s) pour ${liste.length} dossier(s) affiché(s). Cliquez sur un client pour ouvrir sa fiche${estTel() ? "" : " · Ctrl+clic ou Maj+clic pour en sélectionner plusieurs, puis clic droit"}.`;
     document.querySelectorAll(".nb-clients").forEach((n) => { n.textContent = tries.length; });
-    $("clientsListe").replaceChildren(...tries.slice(0, max).map(({ nom, liste: ds }) => {
+    const ligneClient = ({ nom, liste: ds }) => {
       const p = ds.reduce((s, d) => s + prevu(d), 0);
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
@@ -3572,7 +3600,9 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         el("td", { class: "n or" }, ca ? euros(ca) : ""),
         el("td", { class: "n" }, p ? euros(p - ca) : ""));
       return tr;
-    }));
+    };
+    $("clientsListe").replaceChildren(...decouperParDemandeur(tries.slice(0, max)).flatMap(([dem, clients]) => [
+      dem ? el("tr", { class: "groupe-demandeur" }, el("td", { colspan: "6" }, ...titreDemandeur(dem, clients))) : null, ...clients.map(ligneClient)]));
     majChoixClients();
     $("plusDe").hidden = tries.length <= max;
     $("plusDe").textContent = `${tries.length - max} autres clients : affinez avec la recherche ou les filtres.`;
