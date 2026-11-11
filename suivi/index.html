@@ -1795,6 +1795,44 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 /* réglages de l'agenda : listes et champs à la même allure que le reste */
 .auto-choix select, .auto-choix input { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 14px; color: var(--texte); }
 .auto-reglages > .bouton-discret { justify-self: start; }
+
+/* ---------- tâches prioritaires ---------- */
+.case-prio { color: #9a3d12; font-weight: 600; }
+.case-prio input { accent-color: #c4531d; }
+.cases-nouvelle { display: grid; gap: 4px; }
+.frise-bloc.f-tache b, .ev.tache { }
+
+/* ---------- clients de l'ordinateur en tuiles ---------- */
+@media (min-width: 901px) {
+  .table-clients { display: block; border: 0; }
+  .table-clients thead { display: none; }
+  .table-clients tbody#clientsListe { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  #clientsListe tr.ligne { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "nom nom" "dossiers dossiers" "dem dem" "prevu reste" "encaisse encaisse";
+    align-content: start; gap: 2px 10px; border: 1px solid var(--bordure); background: var(--carte); border-radius: 12px; padding: 10px 12px; cursor: pointer; min-width: 0; position: relative;
+    transition: border-color .12s, box-shadow .12s; }
+  #clientsListe tr.ligne:hover { border-color: var(--or); box-shadow: 0 4px 14px rgba(12, 45, 57, .08); }
+  #clientsListe tr.ligne td { display: block; padding: 0 !important; border: 0 !important; background: none !important; min-width: 0; text-align: left; }
+  #clientsListe tr.ligne td:nth-child(1) { grid-area: nom; }
+  #clientsListe tr.ligne td:nth-child(1) b { font-size: 15px; color: var(--bleu); }
+  #clientsListe tr.ligne td:nth-child(1) small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; font-size: 12px; color: var(--discret); }
+  #clientsListe tr.ligne td:nth-child(2) { grid-area: dossiers; font-size: 12.5px; }
+  #clientsListe tr.ligne td:nth-child(2) small { display: inline; margin-left: 4px; }
+  #clientsListe tr.ligne td:nth-child(3) { grid-area: dem; font-size: 12.5px; color: var(--discret); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #clientsListe tr.ligne td:nth-child(4) { grid-area: prevu; font-size: 13px; font-weight: 600; margin-top: 4px; }
+  #clientsListe tr.ligne td:nth-child(4):not(:empty)::before { content: "prévu "; font-weight: 400; color: var(--discret); font-size: 11.5px; }
+  #clientsListe tr.ligne td:nth-child(5) { grid-area: encaisse; font-size: 12px; }
+  #clientsListe tr.ligne td:nth-child(5):not(:empty)::before { content: "encaissé "; color: var(--discret); font-size: 11.5px; }
+  #clientsListe tr.ligne td:nth-child(6) { grid-area: reste; font-size: 13px; font-weight: 600; margin-top: 4px; text-align: right; }
+  #clientsListe tr.ligne td:nth-child(6):not(:empty)::before { content: "reste "; font-weight: 400; color: var(--discret); font-size: 11.5px; }
+  #clientsListe tr.ligne .renommer { position: absolute; top: 8px; right: 8px; opacity: 0; }
+  #clientsListe tr.ligne:hover .renommer { opacity: 1; }
+  #clientsListe tr.ligne.multi { background: var(--or-doux) !important; border-color: var(--or); box-shadow: 0 0 0 1px var(--or) inset; }
+  #clientsListe tr.ligne.a-faire { background: #fdf3d8; border-color: #d9b45c; border-left: 4px solid var(--or); }
+  #clientsListe tr.ligne td:first-child, #clientsListe tr.ligne.multi td, #clientsListe tr.ligne.a-faire td:first-child { box-shadow: none !important; }
+  #clientsListe tr.groupe-demandeur { display: block; grid-column: 1 / -1; }
+  #clientsListe tr.groupe-demandeur td { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; border-radius: 10px; margin-top: 8px; }
+  :root[data-theme="dark"] #clientsListe tr.ligne.a-faire { background: #2f2610; border-color: #6a5522; }
+}
 </style>
 </head>
 <body>
@@ -4420,7 +4458,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         }
         for (const t of f.taches || []) {
           if (t.fait || !t.pour || !tacheRetenue(f.nom, t, retenus)) continue;
-          ajouter(t.pour, { perso: estPerso(f.nom), type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
+          ajouter(t.pour, { perso: estPerso(f.nom), prio: !!t.prio, type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + (t.prio ? "⚡ " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
             retard: tacheEnRetard(t), id: t.id, client: f.nom, date: t.pour, ref: { client: f.nom, tache: t.id } });
         }
       }
@@ -4949,6 +4987,10 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     }
     actions.push({ ic: "↗", lib: "Ouvrir", angle: t ? 135 : -90, faire: () => e.ouvrir() });
     if (e.type !== "dutreil") actions.push({ ic: "🗑", lib: "Supprimer", angle: t ? 45 : 90, faire: () => supprimerEvenement(e) });
+    if (t && !t.fixe) actions.push({ ic: "⚡", lib: t.prio ? "Plus prioritaire" : "Prioritaire", angle: -135, faire: () => {
+      const r = rendrePrioritaire(e.ref.client, e.ref.tache, !t.prio); afficherTout();
+      informer(t.prio ? "Tâche prioritaire : placée au premier créneau libre." + r : "La tâche n’est plus prioritaire.");
+    } });
     return actions;
   }
   // ouvre la roue autour du point (x, y) ; avec un doigt encore posé, on glisse vers le choix et on lâche
@@ -5368,7 +5410,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
           const quand = (classe === "retard" ? "retard · " : "") + (jj === 0 ? "auj." : jj === 1 ? "demain" : fmtDate(t.pour).slice(0, 5)) + (t.heure ? " " + t.heure : "");
           return el("div", { class: "t-tuile " + classe + (estPerso(nom) ? " perso" : "") },
             el("button", { type: "button", class: "t-ouvrir", onclick: () => ouvrirTache(nom, t.id) },
-              el("b", null, (t.repete ? "🔁 " : "") + t.texte), el("small", null, nom), el("span", { class: "t-quand" }, quand)),
+              el("b", null, (t.prio ? "⚡ " : "") + (t.repete ? "🔁 " : "") + t.texte), el("small", null, nom), el("span", { class: "t-quand" }, quand)),
             el("button", { type: "button", class: "t-fait", "aria-label": "Fait", title: "Fait",
               onclick: () => { cocherTache(nom, t.id, true); informer(`« ${t.texte} » est fait.`); afficherTout(); } }, "✓"));
         }),
@@ -6730,7 +6772,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         const c = el("input", { type: "checkbox", checked: !!t.fait, "aria-label": "Fait" });
         c.addEventListener("change", () => { cocherTache(nom, t.id, c.checked); dessiner(); afficherTout(); });
         return el("div", { class: "tache" + (t.fait ? " faite" : "") }, c,
-          el("div", { class: "texte cliquable", title: "Ouvrir la tâche", onclick: () => ouvrirTache(nom, t.id) }, t.repete ? "🔁 " : "", ...texteAvecLiens(t.texte),
+          el("div", { class: "texte cliquable", title: "Ouvrir la tâche", onclick: () => ouvrirTache(nom, t.id) }, t.prio ? "⚡ " : "", t.repete ? "🔁 " : "", ...texteAvecLiens(t.texte),
             t.fait ? el("small", null, `fait le ${new Date(t.fait).toLocaleDateString("fr-FR")}`)
               : t.dossier_libelle && !(dossier && t.dossier === dossier.id) ? el("small", null, `dossier : ${t.dossier_libelle}`)
               : dossier && t.dossier === dossier.id ? el("small", null, "ce dossier") : null),
@@ -6969,6 +7011,16 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     return crees;
   }
 
+  // passe une tâche en prioritaire (ou non) : elle prend le premier créneau libre, devant les autres tâches qui se décalent
+  function premierJourTravaille() { const a = enIso(aujourdhui()); return jourTravaille(a) ? a : jourOuvreSuivant(a); }
+  function rendrePrioritaire(nom, id, oui) {
+    const t = trouverTache(id);
+    if (!t) return "";
+    const avant = t.pour;
+    majTaches(nom, (l) => l.map((x) => (x.id !== id ? x : { ...x, prio: oui, ...(oui && !x.fixe ? { pour: premierJourTravaille(), heure: "" } : {}) })));
+    return oui && !t.fixe ? apresAgenda([avant, premierJourTravaille()], null, [id]) : "";
+  }
+
   // après toute modification de l'agenda : on replanifie les jours concernés, on enregistre, on résume
   function apresAgenda(jours, ancre, aCaser = []) {
     let deplacees = 0;
@@ -7042,6 +7094,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         champ("Répéter", el("select", { name: "repete" }, REPETITIONS.map(([v, lib]) => el("option", { value: v, selected: (t.repete || "") === v }, lib))))),
       el("div", { class: "deux cases-tache" },
         el("label", { class: "case" }, el("input", { type: "checkbox", name: "fixe", checked: !!t.fixe }), "📌 Heure fixe"),
+        el("label", { class: "case case-prio" }, el("input", { type: "checkbox", name: "prio", checked: !!t.prio }), "⚡ Prioritaire"),
         el("label", { class: "case tache-fait" }, el("input", { type: "checkbox", name: "fait", checked: !!t.fait }), `Faite${t.fait ? " le " + new Date(t.fait).toLocaleDateString("fr-FR") : ""}`)),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:90px", placeholder: "Détails, numéro à appeler, lien…" }, t.note || ""))),
       el("div", { class: "actions-fiche" },
@@ -7326,7 +7379,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         champ("Pour le", el("input", { name: "pour", type: "date", value: jourPropose })),
         champ("À", el("input", { name: "heure", type: "time", value: proposition.heure || "" }))),
       el("div", { class: "deux" }, champ("Durée", choixDuree("duree", "")),
-        el("label", { class: "case", style: "margin-top:22px" }, el("input", { type: "checkbox", name: "fixe" }), "📌 Heure fixe")),
+        el("div", { class: "cases-nouvelle", style: "margin-top:22px" },
+          el("label", { class: "case" }, el("input", { type: "checkbox", name: "fixe" }), "📌 Heure fixe"),
+          el("label", { class: "case case-prio" }, el("input", { type: "checkbox", name: "prio" }), "⚡ Prioritaire"))),
       champ("Répéter", el("select", { name: "repete" }, REPETITIONS.map(([v, lib]) => el("option", { value: v }, lib)))),
       el("p", { class: "aide" }, "Sans date ni heure, la tâche se range à la suite, au prochain créneau libre. Avec une date sans heure, elle prend le premier créneau libre de ce jour-là. Les rendez-vous et les tâches 📌 ne bougent pas."),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Détails, numéro à appeler, lien…" }, ""))));
@@ -7343,9 +7398,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const nom = estPerso(saisi) ? NOM_PERSO : (nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi);
       const existe = estPerso(saisi) || nomsClients().some((n) => cleClient(n) === cleClient(saisi));
       const id = nouvelId();
-      // ni date ni heure : la tâche se range à la suite, au prochain créneau libre
-      if (!v.pour) { const [jour, h] = premierCreneau(v.duree); if (jour) { v.pour = jour; v.heure = h; } }
-      majTaches(nom, (l) => [...l, { id, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", fixe: !!v.fixe, repete: v.repete || "",
+      // ni date ni heure : la tâche se range à la suite (ou, prioritaire, au premier créneau libre devant les autres)
+      if (!v.pour) { if (v.prio) { v.pour = premierJourTravaille(); v.heure = ""; } else { const [jour, h] = premierCreneau(v.duree); if (jour) { v.pour = jour; v.heure = h; } } }
+      majTaches(nom, (l) => [...l, { id, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", fixe: !!v.fixe, repete: v.repete || "", prio: !!v.prio,
         note: v.note || "", fait: null, cree: new Date().toISOString() }]);
       const resume = apresAgenda([v.pour], v.heure ? id : null, v.heure ? [] : [id]);
       const t = trouverTache(id);
@@ -7358,10 +7413,16 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const avant = { ...(trouverTache(id) || {}) };
     majTaches(nom, (l) => l.map((t) => t.id !== id ? t : {
       ...t, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", note: v.note || "",
-      fait: v.fait ? (t.fait || new Date().toISOString()) : null, fixe: !!v.fixe, repete: v.repete || ""
+      fait: v.fait ? (t.fait || new Date().toISOString()) : null, fixe: !!v.fixe, repete: v.repete || "", prio: !!v.prio
     }));
     const suite = v.fait && !avant.fait ? prochaineOccurrence(nom, trouverTache(id)) : "";
     let resume = "";
+    // vient d'être passée prioritaire : elle part au premier créneau libre (sauf si on vient de lui donner une heure à la main)
+    if (v.prio && !avant.prio && !v.fait && !v.fixe && (avant.heure || "") === (v.heure || "") && (avant.pour || "") === (v.pour || "")) {
+      const r = rendrePrioritaire(nom, id, true);
+      terminerFeuille(); afficherTout(); informer("Tâche prioritaire : placée au premier créneau libre." + r);
+      return;
+    }
     if (avant.pour !== (v.pour || "") || (avant.heure || "") !== (v.heure || "") || String(avant.duree || "") !== String(v.duree || "") || !!avant.fait !== !!v.fait) {
       resume = apresAgenda([avant.pour, v.pour], v.heure ? id : null, v.pour && !v.heure ? [id] : []);
     }
