@@ -1421,6 +1421,11 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .choix-ligne i { font-style: normal; }
 .choix-ligne:disabled { opacity: .45; }
 :root[data-theme="dark"] .choix-ligne.choisi { color: #0f1b20; }
+
+.choix-contenu { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 9px 12px; margin-bottom: 6px; cursor: pointer; }
+.choix-contenu input { margin-top: 3px; accent-color: var(--bleu); }
+.choix-contenu b { display: block; font-weight: 600; color: var(--bleu); }
+.choix-contenu small { color: var(--discret); font-size: 12.5px; }
 </style>
 </head>
 <body>
@@ -1660,6 +1665,18 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   </div>
 </div>
 
+<!-- créer un nouveau fichier -->
+<div class="feuille feuille-petite" id="feuilleNouveauFichier" role="dialog" aria-modal="true" aria-labelledby="titreNouveauFichier">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreNouveauFichier">Nouveau fichier</h3>
+      <button class="valider" id="creerNouveauFichier">Créer</button>
+    </div>
+    <div class="feuille-corps" id="corpsNouveauFichier"></div>
+  </div>
+</div>
+
 <!-- modèles de tâches -->
 <div class="feuille feuille-petite" id="feuilleModeles" role="dialog" aria-modal="true" aria-labelledby="titreModeles">
   <div class="feuille-boite">
@@ -1782,6 +1799,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       <button class="menu-tuile" id="btnGithub"><span>☁</span>Réglages GitHub</button>
       <button class="menu-tuile" id="btnExporter"><span>⤓</span>Exporter une copie</button>
       <button class="menu-tuile" id="btnImporter"><span>📂</span>Ouvrir un autre fichier</button>
+      <button class="menu-tuile" id="btnNouveauFichier"><span>＋</span>Créer un nouveau fichier</button>
     </div>
   </div>
 </div>
@@ -2698,6 +2716,64 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     if (!r.ok) { afficherErreurGithub(`<b>Création impossible</b> (code ${r.status}) : vérifiez que la clé a l’autorisation « Contents : Read and write ».`); return; }
     informer(`« ${g.chemin} » créé dans le dépôt.`);
     connecter();
+  }
+
+  // ---- créer un nouveau fichier de suivi : vide, ou copie du suivi actuel ; sur GitHub si l'appli y est reliée, sinon sur l'appareil ----
+  function ouvrirNouveauFichier() {
+    fermerMenu();
+    const nom = el("input", { name: "nom", type: "text", value: "", placeholder: "ex. suivi_2027.json", autocomplete: "off", spellcheck: "false" });
+    const choix = (v, titre, detail, coche) => el("label", { class: "choix-contenu" }, el("input", { type: "radio", name: "contenu", value: v, checked: coche }), el("span", null, el("b", null, titre), el("small", null, detail)));
+    $("corpsNouveauFichier").replaceChildren(
+      el("p", { class: "aide" }, github
+        ? `Le fichier sera créé dans votre dépôt GitHub « ${github.depot} », à côté de « ${github.chemin} ». L’appli basculera ensuite dessus ; l’ancien fichier reste intact et vous pourrez y revenir (Réglages GitHub, nom du fichier).`
+        : "L’appli n’est pas reliée à GitHub : le nouveau suivi remplacera celui de cet appareil. Exportez d’abord une copie si vous voulez garder l’actuel."),
+      champ("Nom du fichier", nom),
+      el("div", { class: "champ" }, el("label", null, "Contenu"),
+        choix("vide", "Vide", "Aucun dossier ni client : pour repartir de zéro.", true),
+        choix("reglages", "Vide, avec mes réglages", "Horaires, congés, sociétés et modèles de tâches sont repris ; pas les dossiers.", false),
+        donnees && donnees.dossiers.length ? choix("copie", "Copie du suivi actuel", `Les ${donnees.dossiers.length} dossiers et tout le reste : pour un essai ou une archive.`, false) : null));
+    ouvrirFeuille("feuilleNouveauFichier", ouvrirNouveauFichier);
+    setTimeout(() => nom.focus(), 60);
+  }
+  async function creerNouveauFichier() {
+    const zone = $("corpsNouveauFichier");
+    let nom = zone.querySelector("[name=nom]").value.trim().replace(/^\/+/, "");
+    const mode = (zone.querySelector("[name=contenu]:checked") || {}).value || "vide";
+    if (!nom) { informer("Donnez un nom au fichier."); return; }
+    if (!/\.json$/i.test(nom)) nom += ".json";
+    if (/[\\:*?"<>|]/.test(nom)) { informer("Ce nom contient un caractère interdit."); return; }
+    const annexes = sectionsAnnexes();
+    const contenu = mode === "copie" ? { version: 3, dossiers: donnees.dossiers, clients: donnees.clients, ...annexes }
+      : mode === "reglages" ? { version: 3, dossiers: [], clients: {}, dutreil: { pactes: [] }, agenda: annexes.agenda, societes: annexes.societes, modeles: annexes.modeles }
+      : { version: 3, dossiers: [], clients: {}, dutreil: { pactes: [] }, agenda: { ...AGENDA_DEFAUT }, societes: {}, modeles: {} };
+    if (github) {
+      // sur GitHub : dans le même dossier que le fichier actuel
+      const chemin = nom.includes("/") ? nom : [...github.chemin.split("/").slice(0, -1), nom].join("/");
+      try {
+        if (donnees && donnees.modifie) await envoyerGithub();  // rien ne doit rester en attente dans l'ancien fichier
+        const existe = await fetch(adresseDe(chemin) + "?ref=" + encodeURIComponent(github.branche), { headers: entetes(), cache: "no-store" });
+        if (existe.ok) { informer(`« ${chemin} » existe déjà dans le dépôt : choisissez un autre nom.`); return; }
+        const r = await fetch(adresseDe(chemin), { method: "PUT", headers: { ...entetes(), "Content-Type": "application/json" },
+          body: JSON.stringify({ message: `Création de ${chemin}`, content: versBase64(JSON.stringify(contenu, null, 1)), branch: github.branche }) });
+        if (!r.ok) { informer(`Création impossible (code ${r.status}) : vérifiez les droits de la clé GitHub.`); return; }
+      } catch (e) { informer("GitHub est injoignable : réessayez avec une connexion."); return; }
+      github = { ...github, chemin };
+      localStorage.setItem(CLE_GITHUB, JSON.stringify(github));
+      pileAnnuler.length = 0;
+      terminerFeuille();
+      await chargerDepuisGithub(true);
+      afficherTout();
+      informer(`« ${chemin} » créé sur GitHub. L’appli travaille maintenant sur ce fichier.`);
+      return;
+    }
+    // sans GitHub : le nouveau suivi remplace celui de l'appareil
+    if (donnees && donnees.dossiers.length && mode !== "copie" && !confirm("Le suivi actuel de cet appareil sera remplacé. L’avez-vous exporté ? Continuer ?")) return;
+    donnees = { version: 2, dossiers: contenu.dossiers, clients: contenu.clients, importe: new Date().toISOString(), modifie: new Date().toISOString(), fichier: nom };
+    appliquerAnnexes({ dutreil: contenu.dutreil, agenda: contenu.agenda || AGENDA_DEFAUT, societes: contenu.societes || societes, modeles: contenu.modeles || {} });
+    pileAnnuler.length = 0;
+    sauver(false);
+    terminerFeuille(); afficherTout(); montrerVue();
+    informer(`Nouveau suivi « ${nom} » créé sur cet appareil. Pensez à « Exporter une copie » pour en garder le fichier.`);
   }
 
   async function connecter() {
@@ -6786,6 +6862,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     $("fichier").click();
   };
   $("btnImporter").addEventListener("click", choisirFichier);
+  $("btnNouveauFichier").addEventListener("click", ouvrirNouveauFichier);
+  $("creerNouveauFichier").addEventListener("click", creerNouveauFichier);
   $("btnImporterVide").addEventListener("click", choisirFichier);
   $("btnSuiviVide").addEventListener("click", () => {
     donnees = { version: 2, dossiers: [], clients: {}, importe: new Date().toISOString(), modifie: new Date().toISOString(), fichier: "suivi_gp.json" };
