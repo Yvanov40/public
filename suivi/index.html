@@ -7113,6 +7113,49 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerFeuilles));
   // toucher le fond assombri referme la fenêtre : sur ordinateur, et sur téléphone pour les petites fenêtres (qui ne couvrent pas tout l'écran)
   document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && (window.innerWidth > 900 || f.classList.contains("feuille-petite"))) fermerFeuilles(); }));
+  // téléphone : une petite fenêtre (feuille du bas) redescend quand on la tire vers le bas
+  document.querySelectorAll(".feuille-petite .feuille-boite").forEach((boite) => {
+    let tire = null;
+    boite.addEventListener("touchstart", (e) => {
+      tire = null;
+      if (!estTel() || e.touches.length !== 1) return;
+      const corps = boite.querySelector(".feuille-corps");
+      const surEntete = !!e.target.closest(".feuille-entete");
+      // depuis l'en-tête, ou depuis le contenu s'il est tout en haut (sinon le geste fait défiler) ; pas depuis une zone de texte
+      if (!surEntete && ((corps && corps.scrollTop > 0) || e.target.closest("textarea, .horloge-cadran"))) return;
+      tire = { x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0, parti: false };
+    }, { passive: true });
+    boite.addEventListener("touchmove", (e) => {
+      if (!tire) return;
+      const dx = e.touches[0].clientX - tire.x, dy = e.touches[0].clientY - tire.y;
+      if (!tire.parti) {
+        if (dy < 8 && Math.abs(dx) < 8) return;
+        if (dy <= 0 || Math.abs(dx) > dy) { tire = null; return; }   // vers le haut ou de côté : ce n'est pas ce geste
+        tire.parti = true;
+        boite.style.transition = "none";
+      }
+      tire.dy = Math.max(0, dy);
+      boite.style.transform = `translateY(${tire.dy}px)`;
+    }, { passive: true });
+    const lacher = () => {
+      if (!tire) return;
+      const assez = tire.parti && tire.dy > 110;
+      const etait = tire.parti;
+      tire = null;
+      if (!etait) return;
+      boite.style.transition = "transform .18s ease-out";
+      if (assez) {
+        boite.style.transform = "translateY(100%)";
+        avalerClic();
+        setTimeout(() => { boite.style.transition = ""; boite.style.transform = ""; const f = boite.querySelector("[data-fermer]"); if (f) { avaleJusqua = 0; f.click(); } }, 170);
+      } else {
+        boite.style.transform = "";
+        setTimeout(() => { boite.style.transition = ""; }, 200);
+      }
+    };
+    boite.addEventListener("touchend", lacher, { passive: true });
+    boite.addEventListener("touchcancel", lacher, { passive: true });
+  });
   // glisser le doigt vers la droite dans une fiche : retour
   document.querySelectorAll(".feuille-boite").forEach((boite) => {
     let depart = null;
