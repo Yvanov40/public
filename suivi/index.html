@@ -1672,6 +1672,18 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .perso-icones { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .perso-icones button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; width: 34px; height: 34px; font-size: 17px; cursor: pointer; padding: 0; }
 @media (max-width: 900px) { .perso-taux { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- « Perso » : une couleur à part (violet) ---------- */
+.frise-bloc.perso, .ev.perso { background: #ece4f7 !important; border-color: #b9a2dd !important; color: #45296f !important; }
+.frise-bloc.perso { border-left: 3px solid #8b68c1 !important; }
+.t-tuile.perso { border-left-color: #8b68c1; background: #f4effa; }
+.t-tuile.perso .t-quand { color: #6a4aa3; }
+.jr-ligne.perso .jr-heure { color: #6a4aa3; font-weight: 600; }
+.jr-ligne.perso .jr-texte b::before { content: "● "; color: #8b68c1; }
+.case-perso { margin-top: 6px; border-color: #b9a2dd; color: #6a4aa3; }
+.case-perso.choisi { background: #8b68c1 !important; border-color: #8b68c1 !important; color: #fff !important; }
+:root[data-theme="dark"] .frise-bloc.perso, :root[data-theme="dark"] .ev.perso, :root[data-theme="dark"] .t-tuile.perso { background: #2d2342 !important; border-color: #5d4689 !important; color: #dccdf5 !important; }
+:root[data-theme="dark"] .t-tuile.perso .t-quand, :root[data-theme="dark"] .jr-ligne.perso .jr-heure, :root[data-theme="dark"] .case-perso { color: #c9b3ee; }
 </style>
 </head>
 <body>
@@ -3477,10 +3489,14 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   }
 
   // ---- clients sans dossier (prospects…) : ils n'existent que par leur fiche client ----
+  // « Perso » : les tâches et rendez-vous personnels, rattachés à aucun client. Rangés dans une fiche à part,
+  // qui n'apparaît ni dans la liste des clients ni dans les propositions de saisie, et qui a sa couleur dans l'agenda.
+  const NOM_PERSO = "Perso";
+  const estPerso = (nom) => cleClient(nom) === cleClient(NOM_PERSO);
   function nomsClients() {
     const noms = new Map();
     for (const d of donnees ? donnees.dossiers : []) if (d.client) noms.set(cleClient(d.client), d.client);
-    for (const [cle, f] of Object.entries(donnees ? donnees.clients : {})) if (f.nom && !noms.has(cle)) noms.set(cle, f.nom);
+    for (const [cle, f] of Object.entries(donnees ? donnees.clients : {})) if (f.nom && !noms.has(cle) && !estPerso(f.nom)) noms.set(cle, f.nom);
     return [...noms.values()].sort((a, b) => a.localeCompare(b, "fr"));
   }
   function clientsSansDossier() {
@@ -3489,7 +3505,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const avecDossier = new Set(donnees.dossiers.map((d) => cleClient(d.client)));
     const t = texteRecherche();
     return Object.entries(donnees.clients)
-      .filter(([cle, f]) => f.nom && !avecDossier.has(cle) && !f.supprime)
+      .filter(([cle, f]) => f.nom && !avecDossier.has(cle) && !f.supprime && !estPerso(f.nom))
       .filter(([, f]) => !t || [f.nom, f.commentaire, f.notes, ...(f.taches || []).map((x) => x.texte)].join(" ").toLocaleLowerCase("fr").includes(t))
       .map(([, f]) => f.nom);
   }
@@ -4205,6 +4221,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   let moisCalendrier = (() => { const d = aujourdhui(); d.setDate(1); return d; })();
   let jourCalendrier = enIso(aujourdhui());
   let typesCalendrier = new Set(["rdv", "tache", "dutreil"]);
+  const COULEUR_PERSO = "#8b68c1";  // violet : ce qui est personnel, sans client
   const COULEURS_CAL = { rdv: "#7d9c7c", tache: "#c9a45c", dutreil: "#6b77b0" };
   const NOMS_CAL = { rdv: "Rendez-vous", tache: "Tâches", dutreil: "Échéances Dutreil" };
 
@@ -4225,12 +4242,12 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         // rendez-vous du client (hors dossier)
         for (const r of f.rdvs || []) {
           if (recherche && !sansAccents(`${f.nom} ${r.objet || ""}`).includes(sansAccents(recherche))) continue;
-          ajouter(r.date, { type: "rdv", titre: (r.heure ? plage(r.heure, r.duree || DUREE_RDV) + " " : "") + f.nom, duree: r.duree || DUREE_RDV, heure: r.heure || "",
-            sous: ["RDV client", r.objet].filter(Boolean).join(" · "), ouvrir: () => ouvrirRdv(f.nom, r.id), date: r.date, ref: { client: f.nom, rdvClient: r.id } });
+          ajouter(r.date, { perso: estPerso(f.nom), type: "rdv", titre: (r.heure ? plage(r.heure, r.duree || DUREE_RDV) + " " : "") + (estPerso(f.nom) && r.objet ? r.objet : f.nom), duree: r.duree || DUREE_RDV, heure: r.heure || "",
+            sous: estPerso(f.nom) ? "Rendez-vous perso" : ["RDV client", r.objet].filter(Boolean).join(" · "), ouvrir: () => ouvrirRdv(f.nom, r.id), date: r.date, ref: { client: f.nom, rdvClient: r.id } });
         }
         for (const t of f.taches || []) {
           if (t.fait || !t.pour || !tacheRetenue(f.nom, t, retenus)) continue;
-          ajouter(t.pour, { type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
+          ajouter(t.pour, { perso: estPerso(f.nom), type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
             retard: tacheEnRetard(t), id: t.id, client: f.nom, date: t.pour, ref: { client: f.nom, tache: t.id } });
         }
       }
@@ -4302,7 +4319,10 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const menu = el("div", { class: "menu-contextuel", role: "menu" },
       el("div", { class: "titre" }, jour + (heure ? " · " + heure : "")),
       action("☐  Nouvelle tâche", () => nouvelleTache({ pour: iso, heure })),
-      action("📅  Nouveau rendez-vous", () => ouvrirRdv("", null, { date: iso, heure })));
+      action("📅  Nouveau rendez-vous", () => ouvrirRdv("", null, { date: iso, heure })),
+      el("div", { class: "sep" }),
+      action("🟣  Tâche perso", () => nouvelleTache({ pour: iso, heure, perso: true })),
+      action("🟣  Rendez-vous perso", () => ouvrirRdv("", null, { date: iso, heure, perso: true })));
     document.body.append(menu);
     const b = menu.getBoundingClientRect();
     menu.style.left = Math.min(x, window.innerWidth - b.width - 8) + "px";
@@ -4662,7 +4682,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     fermerGroupe();
     for (const p of places) {
       const largeur = 100 / Math.max(1, p.nbCol);
-      const bloc = el("div", { class: `frise-bloc f-${p.e.type}${p.e.retard ? " retard" : ""}${p.e.fixe ? " fixe" : ""}`,
+      const bloc = el("div", { class: `frise-bloc f-${p.e.type}${p.e.retard ? " retard" : ""}${p.e.fixe ? " fixe" : ""}${p.e.perso ? " perso" : ""}`,
         style: `top:${(p.a - DEBUT_FRISE) * pxMin}px;height:${Math.max(16, (p.b - p.a) * pxMin - 2)}px;left:calc(${marge}px + (100% - ${marge + 4}px) * ${p.col * largeur / 100});width:calc((100% - ${marge + 4}px) * ${largeur / 100} - 3px)` },
         el("b", null, `${p.e.fixe ? "📌 " : ""}${p.e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "")}`),
         el("small", null, `${plage(p.e.heure, p.b - p.a)} · ${p.e.type === "tache" ? p.e.client || "" : p.e.sous}`),
@@ -4895,7 +4915,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         el("div", { class: "semaine-sans-heure", title: "Double-clic pour ajouter une tâche ce jour-là",
           ondblclick: (ev) => { if (!ev.target.closest(".ev")) nouvelleTache({ pour: iso }); },
           oncontextmenu: (ev) => { if (ev.target.closest(".ev")) return; ev.preventDefault(); menuCreation(ev.clientX, ev.clientY, iso, ""); } }, sansHeure.map((e) => {
-          const puce = el("button", { type: "button", class: `ev ${e.type}${e.retard ? " retard" : ""}`, title: e.sous, onclick: e.ouvrir }, e.titre);
+          const puce = el("button", { type: "button", class: `ev ${e.type}${e.retard ? " retard" : ""}${e.perso ? " perso" : ""}`, title: e.sous, onclick: e.ouvrir }, e.titre);
           puce.addEventListener("contextmenu", (x) => { x.preventDefault(); ouvrirRoue(x.clientX, x.clientY, e, false); });
           return puce;
         })),
@@ -5006,7 +5026,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         ...liste.map((e) => {  // tous les éléments du jour : la case s'agrandit
           const cle = `${e.type}-${iso}-${indexEvenements.size}`;
           indexEvenements.set(cle, e);
-          const puce = el("span", { class: `ev ${e.type}${e.retard ? " retard" : ""}`, "data-cle": cle, title: `${e.titre} · ${e.sous}\nGlissez sur un autre jour pour le déplacer` },
+          const puce = el("span", { class: `ev ${e.type}${e.retard ? " retard" : ""}${e.perso ? " perso" : ""}`, "data-cle": cle, title: `${e.titre} · ${e.sous}\nGlissez sur un autre jour pour le déplacer` },
             e.titre, e.type === "tache" && e.client ? el("small", null, e.client) : null);
           activerGlisserEvenement(puce, e);
           puce.addEventListener("click", (ev) => { ev.stopPropagation(); e.ouvrir(); });  // ouvre la tâche, le rendez-vous ou le pacte
@@ -5031,7 +5051,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         el("b", null, e.titre.replace(/^(📌 )?\d\d:\d\d(–\d\d:\d\d)? /, "$1")),
         el("span", null, e.type === "tache" ? e.sous.replace(/^Tâche · /, "") : e.sous));
       activerRoue(ouvrir, e);
-      return el("div", { class: "cal-element", style: `--c:${COULEURS_CAL[e.type]}` }, el("span"), el("div", { class: "cal-contenu" }, ouvrir));
+      return el("div", { class: "cal-element" + (e.perso ? " perso" : ""), style: `--c:${e.perso ? COULEUR_PERSO : COULEURS_CAL[e.type]}` }, el("span"), el("div", { class: "cal-contenu" }, ouvrir));
     };
     const client = el("input", { type: "text", list: "liste-clients-cal", placeholder: "Client" });
     const texte = el("input", { type: "text", placeholder: "Tâche à faire ce jour-là" });
@@ -5122,7 +5142,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
           // échéance en version courte, pour tenir dans la tuile : « auj. 15:00 », « demain 10:00 », « 14/11 9:30 »
           const jj = Math.round((versDate(t.pour) - aujourdhui()) / 86400000);
           const quand = (classe === "retard" ? "retard · " : "") + (jj === 0 ? "auj." : jj === 1 ? "demain" : fmtDate(t.pour).slice(0, 5)) + (t.heure ? " " + t.heure : "");
-          return el("div", { class: "t-tuile " + classe },
+          return el("div", { class: "t-tuile " + classe + (estPerso(nom) ? " perso" : "") },
             el("button", { type: "button", class: "t-ouvrir", onclick: () => ouvrirTache(nom, t.id) },
               el("b", null, (t.repete ? "🔁 " : "") + t.texte), el("small", null, nom), el("span", { class: "t-quand" }, quand)),
             el("button", { type: "button", class: "t-fait", "aria-label": "Fait", title: "Fait",
@@ -6462,6 +6482,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         const t = texte.value.trim();
         if (!t) { texte.focus(); return; }
         const id = nouvelId();
+        if (!date.value) { const [jour, h] = premierCreneau(); if (jour) { date.value = jour; heure.value = h; } }  // sans date : prochain créneau libre
         majTaches(nom, (l) => [...l, { id, texte: t, pour: date.value || "", heure: date.value ? (heure.value || "") : "", fait: null, cree: new Date().toISOString(),
           ...(dossier ? { dossier: dossier.id, dossier_libelle: dossier.libelle } : {}) }]);
         if (date.value) {
@@ -6544,6 +6565,15 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     return liste.sort((a, b) => a[0] - b[0]);
   }
   // premier créneau libre assez long (aujourd'hui : pas avant l'heure qu'il est)
+  // le premier créneau libre à partir de maintenant, sur les jours travaillés : [jour, heure] (ou ["", ""] si rien sous 60 jours)
+  function premierCreneau(duree) {
+    let iso = enIso(aujourdhui());
+    for (let k = 0; k < 60; k++) {
+      if (jourTravaille(iso)) { const h = prochainCreneau(iso, duree); if (h) return [iso, h]; }
+      iso = jourOuvreSuivant(iso);
+    }
+    return ["", ""];
+  }
   function prochainCreneau(iso, duree, sauf) {
     const besoin = Number(duree) || DUREE_TACHE;
     const maintenant = iso === enIso(aujourdhui()) ? Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / 15) * 15 : -1;
@@ -6834,7 +6864,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const estTache = e.type === "tache";
       const client = estTache ? e.client : e.ref && e.ref.client ? e.ref.client : e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "");
       const tel = telephoneDe(client);
-      return el("div", { class: "jr-ligne " + (estTache ? "tache" : "rdv") + (e.retard ? " retard" : "") },
+      return el("div", { class: "jr-ligne " + (estTache ? "tache" : "rdv") + (e.retard ? " retard" : "") + (e.perso ? " perso" : "") },
         el("span", { class: "jr-heure" }, e.heure ? plage(e.heure, e.duree) : "—"),
         el("button", { type: "button", class: "jr-texte", onclick: e.ouvrir }, el("b", null, (estTache ? "" : "📅 ") + e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "").replace(/^📌 /, "")),
           el("small", null, estTache ? e.client : e.sous)),
@@ -6902,11 +6932,30 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   }
   function creerTacheRapide(p) {
     const id = nouvelId();
+    if (!p.pour) { const [jour, h] = premierCreneau(); if (jour) p = { ...p, pour: jour, heure: h }; }  // sans date : prochain créneau libre
     majTaches(p.client, (l) => [...l, { id, texte: p.texte, pour: p.pour, heure: p.heure, fait: null, cree: new Date().toISOString() }]);
     const resume = p.pour ? apresAgenda([p.pour], p.heure ? id : null, p.heure ? [] : [id]) : "";
     const t = trouverTache(id);
     afficherTout();
     informer(`Tâche créée pour ${p.client}${t && t.pour ? " : " + fmtDate(t.pour) + (t.heure ? " à " + t.heure : "") : ""}.${resume}`);
+  }
+
+  // la case « Perso » sous un champ Client : elle remplit le champ avec « Perso » (aucun client), ou le vide
+  function casePerso(idCorps) {
+    const b = el("button", { type: "button", class: "collab case-perso", onclick: () => {
+      const champ = $(idCorps).querySelector("[name=client]");
+      champ.value = estPerso(champ.value) ? "" : NOM_PERSO;
+      champ.dispatchEvent(new Event("input", { bubbles: true }));
+      maj();
+    } });
+    const maj = () => {
+      const champ = $(idCorps).querySelector("[name=client]");
+      const oui = !!champ && estPerso(champ.value);
+      b.classList.toggle("choisi", oui);
+      b.textContent = (oui ? "✓ " : "") + "Perso (sans client)";
+    };
+    setTimeout(() => { maj(); const champ = $(idCorps).querySelector("[name=client]"); if (champ) champ.addEventListener("input", maj); }, 0);
+    return b;
   }
 
   // ---- fiche d'un rendez-vous client (nouveau : id vide) ----
@@ -6920,7 +6969,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const demain = new Date(); demain.setDate(demain.getDate() + 1);
     $("corpsRdv").replaceChildren(
       nom ? el("div", { class: "tache-liens" }, el("button", { type: "button", onclick: () => ouvrirClient(nom) }, "👤 ", nom))
-        : champ("Client", aideClient(el("input", { name: "client", type: "text", autocomplete: "off", placeholder: "Nom du client" }))),
+        : champ("Client", [aideClient(el("input", { name: "client", type: "text", autocomplete: "off", placeholder: "Nom du client", value: proposition.perso ? NOM_PERSO : "" })), casePerso("corpsRdv")]),
       el("div", { class: "deux" },
         champ("Le", el("input", { name: "date", type: "date", value: r ? r.date : (proposition.date || enIso(demain)) })),
         champ("À", el("input", { name: "heure", type: "time", value: r ? (r.heure || "") : (proposition.heure || "") }))),
@@ -6948,7 +6997,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (!nom) {  // rendez-vous créé depuis l'agenda : le client vient de la fiche
       const saisi = (v.client || "").replace(/\s+/g, " ").trim();
       if (!saisi) { informer("Indiquez le client."); return; }
-      nom = nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi;
+      nom = estPerso(saisi) ? NOM_PERSO : (nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi);
     }
     const ancien = id ? rdvsDe(nom).find((x) => x.id === id) : null;
     const d = donnees.dossiers.find((x) => x.id && x.id === v.dossier);
@@ -6964,9 +7013,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     tacheEnCours = { nouveau: true };
     $("titreTache").textContent = "Nouvelle tâche";
     const demain = new Date(); demain.setDate(demain.getDate() + 1);
-    const jourPropose = proposition.pour || (vueCourante() === "calendrier" && jourCalendrier ? jourCalendrier : enIso(demain));
+    const jourPropose = proposition.pour || (vueCourante() === "calendrier" && jourCalendrier ? jourCalendrier : "");  // vide : prochain créneau libre
     $("corpsTache").replaceChildren(
-      champ("Client", [aideClient(el("input", { name: "client", type: "text", list: "liste-clients-tache", autocomplete: "off", placeholder: "Nom du client" })),
+      champ("Client", [aideClient(el("input", { name: "client", type: "text", list: "liste-clients-tache", autocomplete: "off", placeholder: "Nom du client", value: proposition.perso ? NOM_PERSO : "" })), casePerso("corpsTache"),
         el("datalist", { id: "liste-clients-tache" }, nomsClients().map((n) => el("option", { value: n })))]),
       champ("Tâche", el("input", { name: "texte", type: "text", autocomplete: "off", placeholder: "Appeler, relancer, envoyer…" })),
       el("div", { class: "deux" },
@@ -6975,7 +7024,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       el("div", { class: "deux" }, champ("Durée", choixDuree("duree", "")),
         el("label", { class: "case", style: "margin-top:22px" }, el("input", { type: "checkbox", name: "fixe" }), "📌 Heure fixe")),
       champ("Répéter", el("select", { name: "repete" }, REPETITIONS.map(([v, lib]) => el("option", { value: v }, lib)))),
-      el("p", { class: "aide" }, "Sans heure, la tâche prend le premier créneau libre. Les autres tâches se décalent si besoin ; les rendez-vous et les tâches 📌 ne bougent pas."),
+      el("p", { class: "aide" }, "Sans date ni heure, la tâche se range à la suite, au prochain créneau libre. Avec une date sans heure, elle prend le premier créneau libre de ce jour-là. Les rendez-vous et les tâches 📌 ne bougent pas."),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Détails, numéro à appeler, lien…" }, ""))));
     ouvrirFeuille("feuilleTache", () => nouvelleTache(proposition));
     setTimeout(() => $("corpsTache").querySelector("[name=client]").focus(), 60);
@@ -6987,16 +7036,18 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (tacheEnCours.nouveau) {
       const saisi = (v.client || "").replace(/\s+/g, " ").trim();
       if (!saisi) { informer("Indiquez le client."); return; }
-      const nom = nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi;
-      const existe = nomsClients().some((n) => cleClient(n) === cleClient(saisi));
+      const nom = estPerso(saisi) ? NOM_PERSO : (nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi);
+      const existe = estPerso(saisi) || nomsClients().some((n) => cleClient(n) === cleClient(saisi));
       const id = nouvelId();
+      // ni date ni heure : la tâche se range à la suite, au prochain créneau libre
+      if (!v.pour) { const [jour, h] = premierCreneau(v.duree); if (jour) { v.pour = jour; v.heure = h; } }
       majTaches(nom, (l) => [...l, { id, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", fixe: !!v.fixe, repete: v.repete || "",
         note: v.note || "", fait: null, cree: new Date().toISOString() }]);
       const resume = apresAgenda([v.pour], v.heure ? id : null, v.heure ? [] : [id]);
       const t = trouverTache(id);
       terminerFeuille(); afficherTout();
       const ou = t && t.heure ? ` ${t.pour !== v.pour ? "Reportée au " + fmtDate(t.pour) + ", " : "Placée "}${plage(t.heure, dureeTache(t))}.` : "";
-      informer((existe ? `Tâche ajoutée pour ${nom}.` : `Tâche ajoutée, et nouveau client « ${nom} » créé.`) + ou + resume);
+      informer((estPerso(nom) ? "Tâche perso ajoutée." : existe ? `Tâche ajoutée pour ${nom}.` : `Tâche ajoutée, et nouveau client « ${nom} » créé.`) + ou + resume);
       return;
     }
     const { nom, id } = tacheEnCours;
