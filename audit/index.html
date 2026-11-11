@@ -228,6 +228,63 @@ main#main { position: relative; }
 .note.resume { font-style: italic; }
 .mini-titre { font-size: 13px; margin: 10px 0 4px; color: var(--muted); }
 .mini small { font-weight: 400; }
+/* ---- leviers ---- */
+.alerte { border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); background: color-mix(in srgb, var(--warn) 8%, var(--paper)); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; }
+.alerte a { color: var(--brand-text); font-weight: 700; }
+.filtres { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.filtres button { font: 600 13.5px var(--sans); border: 1px solid var(--line); background: var(--paper); color: var(--muted); border-radius: 18px; padding: 7px 14px; cursor: pointer; }
+.filtres button.on { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.leviers { display: flex; flex-direction: column; gap: 8px; }
+.levier { border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.levier[open] { border-color: color-mix(in srgb, var(--brand) 50%, var(--line)); }
+.levier summary { display: flex; align-items: center; gap: 12px; padding: 11px 14px; cursor: pointer; list-style: none; }
+.levier summary::-webkit-details-marker { display: none; }
+.levier .lt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.levier .lt strong { font-size: 14.5px; } .levier .lt small { color: var(--muted); font-size: 12.5px; }
+.levier .lg { font-family: var(--serif); font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--gain); }
+.levier.s-na .lg, .levier.s-info .lg { color: var(--muted); }
+.levier .ld { padding: 0 14px 12px; }
+.levier .ld p { margin: 0 0 6px; }
+.levier .la { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.levier .la a.btn { text-decoration: none; }
+.estim { min-height: 38px; display: flex; align-items: center; font-weight: 600; }
+nav#nav .ni { display: none; }
+/* ---- téléphone et tablette ---- */
+.voile { display: none; }
+@media (pointer: coarse) { .poignee { width: 30px; height: 30px; margin: -4px 0 0 -4px; font-size: 14px; } .btn, .pill, .mini, .filtres button { min-height: 42px; } }
+@media (max-width: 980px) {
+  body { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+  nav#nav { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 15; flex-direction: row; gap: 0; padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px)); background: var(--paper); border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  nav#nav::-webkit-scrollbar { display: none; }
+  nav#nav a { flex: 1 0 auto; min-width: 68px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px; font-size: 11.5px; border-radius: 10px; }
+  nav#nav .ni { display: grid; place-items: center; } nav#nav .ni svg { width: 21px; height: 21px; }
+  nav#nav .nl { font-size: 0; } nav#nav .nl::after { content: attr(data-court); font-size: 11.5px; }
+  nav#nav a[aria-current="page"] { background: color-mix(in srgb, var(--brand) 12%, var(--paper)); color: var(--brand-text); }
+  .layout { padding-bottom: 12px; }
+  #toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .brand small { display: none; }
+  .top-in { padding: 8px 14px; gap: 6px; }
+}
+@media (max-width: 700px) {
+  input[type=text], select, textarea { font-size: 16px; }  /* évite le zoom automatique d'iOS à la saisie */
+  .mini-sel { font-size: 15px !important; }
+  table.t.edit thead { display: none; }
+  table.t.edit, table.t.edit tbody { display: block; }
+  table.t.edit tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 12px; border-bottom: 1px solid var(--line); }
+  table.t.edit td { display: flex; flex-direction: column; gap: 2px; padding: 0; border: 0; text-align: left !important; white-space: normal; }
+  table.t.edit td:first-child { grid-column: 1 / -1; font-size: 15px; }
+  table.t.edit td::before { content: attr(data-l); font-size: 11.5px; color: var(--muted); font-weight: 700; }
+  table.t.edit td:first-child::before { content: none; }
+  table.t.edit td input[type=checkbox] { width: 22px; height: 22px; }
+  .voile.on { display: block; position: fixed; inset: 0; background: rgba(10, 20, 26, .35); z-index: 5; }
+  .bulle.sheet { z-index: 20; max-height: 86vh; }
+  .bulle.sheet .bhead { position: sticky; top: -14px; background: var(--paper); padding: 6px 0; z-index: 1; margin-top: -6px; }
+  .bulle.sheet .bactions { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom, 0px)); background: var(--paper); padding: 10px 0 calc(8px + env(safe-area-inset-bottom, 0px)); margin-bottom: -8px; }
+  .levier summary { flex-wrap: wrap; } .levier .lt { flex-basis: 100%; }
+  .kpi .k { font-size: 11px; } .kpi .v { font-size: 16px; }
+  main h2 { font-size: 23px; margin-bottom: 12px; }
+  .arbre { padding: 20px 14px 22px; gap: 40px; }
+}
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -264,7 +321,6 @@ label.file { position: relative; }
 @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
 @media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
-  nav#nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
   nav#nav a { white-space: nowrap; }
   #bandeau { margin-left: 0; width: 100%; }
   .kpi { padding: 2px 12px; min-width: 0; flex: 1; }
@@ -300,6 +356,7 @@ label.file { position: relative; }
   <nav id="nav" aria-label="Étapes du dossier"></nav>
   <main id="main"></main>
 </div>
+<div class="voile" id="voile"></div>
 <div id="toast" role="status"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -480,6 +537,7 @@ function prepare(d) {
   var T0 = parseDate(d.dateEtude) || new Date();
   var couple = d.situation === 'marie' || d.situation === 'pacs';
   var ctx = { d: d, T0: T0, couple: couple, marie: d.situation === 'marie', persons: {}, clients: ['c1'], P: Object.assign(defaultParams(), d.params || {}) };
+  if (d.foyer && +d.foyer.revenus > 0) { var ff = foyerFiscal(d); if (ff.tmi > 0) ctx.P.tmi = ff.tmi; }
   if (couple && d.c2) ctx.clients.push('c2');
   ctx.clients.forEach(function (k) {
     var c = d[k];
@@ -1225,6 +1283,7 @@ function analyseComplete(d) {
   A.gain = A.sans.moyenne - A.plan.moyenne;
   A.economiesFlux = A.plan.economies || 0;
   A.gainGlobal = A.gain + A.economiesFlux;
+  try { var dg = diagnosticLeviers(d, A); A.leviers = dg.leviers; A.foyer = dg.foyer; A.tauxMarginal = dg.tauxMarginal; } catch (e) { A.leviers = []; A.foyer = foyerFiscal(d); A.erreurLeviers = String(e); }
   return A;
 }
 
@@ -1327,6 +1386,152 @@ function analyseFBO(d) {
   return out.sort(function (x, y) { return y.ratio - x.ratio; });
 }
 
+/* ---------------- Impôt sur le revenu (barème 2026, revenus 2025) ---------------- */
+var BAREME_IR = [[11600, 0], [29579, 0.11], [84577, 0.30], [181917, 0.41], [Infinity, 0.45]];
+function impotRevenu(revenu, parts) {
+  parts = Math.max(1, +parts || 1);
+  var q = Math.max(0, revenu) / parts, t = 0, prev = 0, tmi = 0;
+  for (var i = 0; i < BAREME_IR.length; i++) { var lim = BAREME_IR[i][0], r = BAREME_IR[i][1]; if (q > prev) { t += (Math.min(q, lim) - prev) * r; tmi = r; } prev = lim; }
+  return { ir: t * parts, tmi: tmi };
+}
+function foyerFiscal(d) {
+  var f = d.foyer || {}, couple = (d.situation === 'marie' || d.situation === 'pacs') && d.c2;
+  var parts = +f.parts > 0 ? +f.parts : (couple ? 2 : 1);
+  var revBiens = (d.actifs || []).reduce(function (s, a) { return s + ((a.categorieRevenu === 'dividendes' || a.categorieRevenu === 'interets') ? 0 : (+a.revenu || 0)); }, 0);
+  var autres = +f.revenus || 0, total = autres + revBiens;
+  var ir = impotRevenu(total, parts);
+  return { renseigne: autres > 0, autres: autres, revenusBiens: revBiens, total: total, parts: parts, ir: ir.ir, tmi: ir.tmi };
+}
+function tauxMarginalLD(taxable) { for (var i = 0; i < FISC.baremeLD.length; i++) if (taxable <= FISC.baremeLD[i][0]) return FISC.baremeLD[i][1]; return 0.45; }
+
+/* ---------------- Panorama des leviers (succession, IFI, impôt sur le revenu) ---------------- */
+function diagnosticLeviers(d, A) {
+  var ctx = A.ctx, P = ctx.P, T0 = ctx.T0, L = [];
+  var r0 = A.plan.resultats[0], s0 = A.sans.resultats[0];
+  var foyer = foyerFiscal(d);
+  // taux marginal de succession des héritiers (dernier décès, sans action)
+  var der = s0.deces[s0.deces.length - 1], hs = der.heirs.filter(function (h) { return !h.petitEnfant; });
+  var tm = hs.length ? tauxMarginalLD(Math.max(0, hs[0].base + hs[0].base757 - hs[0].abatDispo)) : 0.2;
+  if (hs.length && hs[0].lien === 'frere') tm = 0.45; if (hs.length && hs[0].lien === 'neveu') tm = 0.55;
+  var enfants = ctx.enfants, pes = ctx.petitsEnfants, clients = ctx.clients;
+  var liquidites = (d.actifs || []).filter(function (a) { return a.type === 'financier'; }).reduce(function (s, a) { return s + (+a.valeur || 0); }, 0);
+  function add(o) { L.push(o); }
+  var S = 'Succession', I = 'IFI', R = 'Impôt sur le revenu';
+
+  /* ----- Succession ----- */
+  add({ id: 'np', impot: S, titre: 'Donner la nue-propriété', statut: r0.donations.length ? 'utilise' : 'possible', gain: r0.donations.length ? A.etapes[1].moyenne - A.etapes[2].moyenne : null, onglet: 'strategie',
+    detail: 'Seule la nue-propriété est taxée (art. 669), selon l’âge du donateur ; l’usufruit s’éteint sans droits au décès. Abattements de 100 000 € par parent et par enfant, renouvelés tous les 15 ans.', source: 'CGI art. 669, 779, 784, 1133' });
+  add({ id: 'av', impot: S, titre: 'Clauses bénéficiaires démembrées', statut: P.clauseDemembree ? 'utilise' : 'possible', gain: A.etapes[0].moyenne - A.etapes[1].moyenne, onglet: 'strategie', param: 'clauseDemembree',
+    detail: 'Le conjoint reçoit les capitaux en quasi-usufruit ; enfants et petits-enfants, nus-propriétaires, les récupèrent au second décès par une créance déductible. L’abattement de 152 500 € joue pour chaque nu-propriétaire.', source: 'CGI art. 990 I, 757 B' });
+  clients.forEach(function (k) {
+    var p = ctx.persons[k], nb = heritiersDe(ctx, k).length + (P.inclurePetitsEnfantsClause ? pes.length : 0);
+    var avant70 = (d.av || []).filter(function (c) { return c.souscripteur === k; }).reduce(function (s, c) { return s + Math.max(0, (+c.valeur || 0) - (+c.valeurApres70 || 0)); }, 0);
+    if (p.age < 70) {
+      var cap = Math.max(0, nb * FISC.av990Abat - avant70);
+      add({ id: 'av70_' + k, impot: S, titre: 'Verser en assurance-vie avant 70 ans (' + p.label + ')', statut: +(((d.plan || {}).versementAV || {})[k]) > 0 ? 'utilise' : cap > 0 ? 'possible' : 'na', gain: Math.min(cap, liquidites / clients.length) * tm, onglet: 'strategie',
+        detail: 'Capacité restante hors droits : ' + Math.round(cap).toLocaleString('fr-FR') + ' € (' + nb + ' bénéficiaires × 152 500 €, moins les ' + Math.round(avant70).toLocaleString('fr-FR') + ' € déjà placés). ' + (70 - p.age) + ' an(s) avant le seuil des 70 ans.', source: 'CGI art. 990 I' });
+    } else {
+      add({ id: 'av70p_' + k, impot: S, titre: 'Assurance-vie après 70 ans (' + p.label + ')', statut: 'possible', gain: FISC.av757Abat * tm, onglet: 'strategie',
+        detail: 'Abattement global de 30 500 € sur les primes ; les intérêts et plus-values du contrat sont totalement exonérés de droits.', source: 'CGI art. 757 B' });
+    }
+  });
+  var donateurs80 = clients.filter(function (k) { return ctx.persons[k].age < 80; });
+  var enfMaj = enfants.filter(function (e) { return e.age >= 18; }).length, peMaj = pes.filter(function (p) { return p.age >= 18; }).length;
+  if (enfants.length) add({ id: '790g', impot: S, titre: 'Dons familiaux de sommes d’argent aux enfants', statut: P.don790GEnfants ? 'utilise' : (donateurs80.length && enfMaj ? 'possible' : 'na'), gain: Math.min(donateurs80.length * enfMaj * FISC.abat790G, liquidites) * tm, onglet: 'strategie', param: 'don790GEnfants',
+    detail: '31 865 € par donateur de moins de 80 ans et par enfant majeur, en plus de l’abattement de 100 000 €. Soit jusqu’à ' + (donateurs80.length * enfMaj * FISC.abat790G).toLocaleString('fr-FR') + ' € ; renouvelable tous les 15 ans.', source: 'CGI art. 790 G' });
+  if (pes.length) {
+    add({ id: '790b', impot: S, titre: 'Donner aux petits-enfants', statut: P.don790BPetitsEnfants ? 'utilise' : 'possible', gain: Math.min(clients.length * pes.length * FISC.abatPetitEnfant, liquidites) * tm, onglet: 'strategie', param: 'don790BPetitsEnfants',
+      detail: 'Abattement de 31 865 € par grand-parent et par petit-enfant, soit jusqu’à ' + (clients.length * pes.length * FISC.abatPetitEnfant).toLocaleString('fr-FR') + ' €. Une génération de droits est économisée.', source: 'CGI art. 790 B' });
+    if (peMaj) add({ id: '790gpe', impot: S, titre: 'Dons familiaux aux petits-enfants majeurs', statut: P.don790GPetitsEnfants ? 'utilise' : (donateurs80.length ? 'possible' : 'na'), gain: Math.min(donateurs80.length * peMaj * FISC.abat790G, liquidites) * tm, onglet: 'strategie', param: 'don790GPetitsEnfants',
+      detail: '31 865 € supplémentaires par donateur de moins de 80 ans et par petit-enfant majeur.', source: 'CGI art. 790 G' });
+  }
+  if (T0 <= new Date(2026, 11, 31) && enfants.length) add({ id: '790abis', impot: S, titre: 'Don pour une résidence principale neuve ou une rénovation énergétique', statut: P.don790ABis ? 'utilise' : 'possible', gain: Math.min(clients.length * enfants.length * FISC.don790ABis, liquidites) * tm, onglet: 'strategie', param: 'don790ABis', urgent: true,
+    detail: '100 000 € par donateur et par donataire (300 000 € par donataire), exonérés. Dispositif ouvert jusqu’au 31 décembre 2026 : fonds à affecter dans les 6 mois.', source: 'CGI art. 790 A bis' });
+  (A.dptPossibles || []).forEach(function (x) {
+    var a = (d.actifs || []).filter(function (y) { return y.id === x.id; })[0];
+    add({ id: 'dpt_' + x.id, impot: S, titre: 'Réincorporer « ' + x.actif + ' » dans une donation-partage transgénérationnelle', statut: x.retenu ? 'utilise' : 'possible', gain: (+a.valeur || 0) * tm * 0.6, onglet: 'strategie',
+      detail: 'Donation reçue il y a plus de 15 ans : vos enfants reçoivent la nue-propriété au seul droit de partage de 2,5 %, vous conservez l’usufruit.', source: 'CGI art. 776 A ; C. civ. art. 1078-4' });
+  });
+  var herit = (s0.heritages || []).filter(function (h) { return h.avantClient; });
+  if (herit.length) add({ id: 'saut', impot: S, titre: 'Saut de génération sur l’héritage de vos parents', statut: P.sautGeneration ? 'utilise' : 'possible', gain: herit.reduce(function (s, h) { return s + h.montant; }, 0) * tm, onglet: 'strategie', param: 'sautGeneration',
+    detail: 'Donation-partage transgénérationnelle de vos parents ou renonciation à leur succession : ' + Math.round(herit.reduce(function (s, h) { return s + h.montant; }, 0)).toLocaleString('fr-FR') + ' € ne repassent pas par votre succession.', source: 'C. civ. art. 754, 805, 1078-4' });
+  (d.actifs || []).forEach(function (a) {
+    if ((a.type === 'pro' || (a.type === 'societe' && !/SCI/i.test(a.forme || 'SCI'))) && !a.regime) add({ id: 'dutreil_' + a.id, impot: S, titre: 'Pacte Dutreil sur « ' + a.libelle + ' »', statut: 'etudier', gain: Math.max(0, (+a.valeur || 0) - (a.type === 'societe' ? (+a.passif || 0) : 0)) * 0.75 * tm, onglet: 'patrimoine',
+      detail: 'Exonération de 75 % de la valeur transmise, sous engagement collectif (2 ans) puis individuel (4 ans) de conservation et fonction de direction. Paiement différé de 5 ans puis fractionné sur 10 ans possible.', source: 'CGI art. 787 B, 787 C ; CGI ann. III art. 397 A' });
+  });
+  var propres = ctx.marie && d.regime !== 'universelle' ? (d.actifs || []).filter(function (a) { return (+a.partC1 === 100 || +a.partC1 === 0) && a.type !== 'financier'; }) : [];
+  if (propres.length) add({ id: 'communaute', impot: S, titre: 'Mettre des biens propres en communauté', statut: propres.some(function (a) { return a.planCommunaute; }) ? 'utilise' : 'etudier', gain: null, onglet: 'strategie',
+    detail: propres.length + ' bien(s) propre(s). Chaque époux donne ensuite sa moitié avec ses propres abattements. Jamais un bien seul suivi d’une donation immédiate.', source: 'C. civ. art. 1397 ; LPF art. L 64' });
+  add({ id: 'sci', impot: S, titre: 'Transmettre par une société (SCI)', statut: r0.societe.length ? 'utilise' : 'etudier', gain: Math.max(0, A.etapes[2].moyenne - A.etapes[3].moyenne) || null, onglet: 'strategie',
+    detail: 'Valeur des parts nette du passif avec décote, contrôle conservé par la gérance. L’apport d’un immeuble déclenche la plus-value : à chiffrer bien par bien.', source: 'CGI art. 150 U ; Fidroit « Société civile »' });
+  if (r0.droitsDonations > 0) add({ id: 'differe', impot: S, titre: 'Paiement différé ou fractionné des droits', statut: 'etudier', gain: null, onglet: 'analyse',
+    detail: 'Les droits de succession sur une nue-propriété peuvent être différés jusqu’à 6 mois après la réunion de l’usufruit ; les droits de donation d’entreprise peuvent être différés 5 ans puis fractionnés sur 10 ans.', source: 'CGI ann. III art. 397 A, 404 B' });
+  add({ id: 'usage', impot: S, titre: 'Présents d’usage', statut: 'possible', gain: null, onglet: 'strategie',
+    detail: 'Cadeaux faits à l’occasion d’un événement (anniversaire, mariage, Noël), proportionnés à vos revenus et à votre patrimoine : ni droits, ni rappel fiscal, ni rapport à la succession.', source: 'CGI art. 784 ; C. civ. art. 852' });
+  if (enfants.length) {
+    var qd = enfants.length === 1 ? 1 / 2 : enfants.length === 2 ? 1 / 3 : 1 / 4;
+    add({ id: 'qd', impot: S, titre: 'Rester dans la quotité disponible', statut: 'info', gain: null, onglet: 'famille',
+      detail: 'Avec ' + enfants.length + ' enfant(s), la quotité disponible est de ' + (qd === 0.5 ? 'la moitié' : qd === 1 / 3 ? 'un tiers' : 'un quart') + ' de la succession. Les donations aux petits-enfants ou à des tiers s’y imputent ; au-delà, elles sont réductibles.', source: 'C. civ. art. 912, 913' });
+  }
+
+  /* ----- IFI ----- */
+  var ifi = A.ifi.avant;
+  if (ifi.net >= 800000) {
+    add({ id: 'ifi', impot: I, titre: 'IFI actuel', statut: 'info', gain: null, onglet: 'analyse',
+      detail: 'Patrimoine immobilier net taxable de ' + Math.round(ifi.net).toLocaleString('fr-FR') + ' € ; IFI de ' + Math.round(ifi.ifi).toLocaleString('fr-FR') + ' € par an' + (ifi.assujetti ? '' : ' (sous le seuil de 1 300 000 €)') + '. Les donations en nue-propriété avec réserve d’usufruit ne le réduisent pas.', source: 'CGI art. 964, 968, 977' });
+  }
+  if (ifi.assujetti) {
+    var loc = (d.actifs || []).filter(function (a) { return a.type === 'immo' && +a.revenu > 0 && !a.planFBO; }).sort(function (x, y) { return y.valeur - x.valeur; })[0];
+    if (loc) {
+      var d2 = JSON.parse(JSON.stringify(d)); d2.actifs = d2.actifs.filter(function (a) { return a.id !== loc.id; });
+      var ecoIFI = ifi.ifi - calculIFI(d2, false).ifi, ecoIR = (+loc.revenu) * (P.tmi + P.psFonciers);
+      add({ id: 'dtu', impot: I + ' et impôt sur le revenu', titre: 'Donation temporaire d’usufruit de « ' + loc.libelle + ' »', statut: 'etudier', gain: ecoIFI + ecoIR, parAn: true, onglet: 'patrimoine',
+        detail: 'Donner l’usufruit pour 3 ans au moins à un enfant majeur (ou à un organisme d’intérêt général) sort le bien de votre IFI et lui transfère les revenus : ' + Math.round(ecoIFI).toLocaleString('fr-FR') + ' € d’IFI et ' + Math.round(ecoIR).toLocaleString('fr-FR') + ' € d’impôt sur le revenu par an. Droits de donation calculés sur 23 % de la valeur par tranche de 10 ans.', source: 'CGI art. 669 II, 968 ; BOI-PAT-IFI-20-20-30-10 § 280' });
+    }
+    add({ id: 'donifi', impot: I, titre: 'Dons aux organismes d’intérêt général', statut: 'possible', gain: Math.min(ifi.ifi, 50000), parAn: true, onglet: 'analyse',
+      detail: '75 % du don s’impute sur l’IFI, dans la limite de 50 000 € par an : un don de ' + Math.round(Math.min(ifi.ifi, 50000) / 0.75).toLocaleString('fr-FR') + ' € efface ' + Math.round(Math.min(ifi.ifi, 50000)).toLocaleString('fr-FR') + ' € d’IFI.', source: 'CGI art. 978' });
+    if (foyer.renseigne) {
+      var ps = foyer.revenusBiens * P.psFonciers, plaf = Math.max(0, ifi.ifi + foyer.ir + ps - 0.75 * foyer.total);
+      add({ id: 'plaf', impot: I, titre: 'Plafonnement de l’IFI', statut: plaf > 0 ? 'utilise' : 'na', gain: Math.min(plaf, ifi.ifi), parAn: true, onglet: 'hypotheses',
+        detail: 'IFI, impôt sur le revenu et prélèvements sociaux ne peuvent dépasser 75 % des revenus (' + Math.round(foyer.total).toLocaleString('fr-FR') + ' €). ' + (plaf > 0 ? 'L’excédent de ' + Math.round(Math.min(plaf, ifi.ifi)).toLocaleString('fr-FR') + ' € vient en réduction de l’IFI.' : 'Le plafond n’est pas atteint.') + ' Capitaliser les revenus (assurance-vie, société à l’IS) abaisse ce plafond.', source: 'CGI art. 979' });
+    }
+    add({ id: 'ifiinv', impot: I, titre: 'Réorienter vers des actifs peu ou pas taxés', statut: 'etudier', gain: null, onglet: 'patrimoine',
+      detail: 'Nue-propriété acquise (imposée chez l’usufruitier), bois et forêts ou groupements forestiers (75 % exonérés), biens ruraux loués à long terme, actifs financiers et biens professionnels (hors IFI).', source: 'CGI art. 965, 968, 975, 976' });
+  }
+  (A.fbo || []).slice(0, 2).forEach(function (f) {
+    add({ id: 'fbo_' + f.actifId, impot: 'Succession, IFI et impôt sur le revenu', titre: 'Family buy out de « ' + f.actif + ' »', statut: f.retenu ? 'utilise' : (f.gainGlobal > 0 ? 'possible' : 'na'), gain: f.gainGlobal, onglet: 'strategie',
+      detail: 'Vente à une société à l’IS de vos enfants, financée par les revenus du bien : ' + Math.round(f.economieRevenus).toLocaleString('fr-FR') + ' € d’impôt sur le revenu et ' + Math.round(f.economieIFI).toLocaleString('fr-FR') + ' € d’IFI économisés sur ' + Math.round(f.horizon) + ' ans, effet sur les droits ' + Math.round(f.gain).toLocaleString('fr-FR') + ' €.', source: 'CGI art. 150 U, 206, 219' });
+  });
+
+  /* ----- Impôt sur le revenu ----- */
+  if (foyer.renseigne) {
+    add({ id: 'ir', impot: R, titre: 'Impôt sur le revenu estimé', statut: 'info', gain: null, onglet: 'hypotheses',
+      detail: 'Revenus imposables de ' + Math.round(foyer.total).toLocaleString('fr-FR') + ' € pour ' + foyer.parts + ' part(s) : impôt d’environ ' + Math.round(foyer.ir).toLocaleString('fr-FR') + ' €, tranche marginale à ' + Math.round(foyer.tmi * 100) + ' %.', source: 'CGI art. 197 (barème des revenus 2025)' });
+    var plafPER = Math.min(0.1 * foyer.autres, 37680);
+    if (foyer.tmi >= 0.3 && plafPER > 0) add({ id: 'per', impot: R, titre: 'Verser sur un plan d’épargne retraite', statut: 'possible', gain: plafPER * foyer.tmi, parAn: true, onglet: 'hypotheses',
+      detail: 'Versements déductibles jusqu’à 10 % des revenus professionnels, soit environ ' + Math.round(plafPER).toLocaleString('fr-FR') + ' € par an et par personne (plafonds non utilisés des 3 dernières années reportables). En cas de décès, le PER assurance suit le régime de l’assurance-vie.', source: 'CGI art. 163 quatervicies' });
+  }
+  if ((d.actifs || []).some(function (a) { return a.categorieRevenu === 'foncier' && +a.revenu > 0; })) add({ id: 'foncier', impot: R, titre: 'Alléger les revenus fonciers', statut: 'etudier', gain: null, onglet: 'patrimoine',
+    detail: 'Déficit foncier imputable sur le revenu global jusqu’à 10 700 € par an (travaux), location meublée avec amortissement, ou détention par une société à l’IS : les revenus fonciers supportent aujourd’hui ' + Math.round((P.tmi + P.psFonciers) * 100) + ' % d’impôt.', source: 'CGI art. 156 I 3°, 31, 39 C' });
+  if ((d.av || []).length) add({ id: 'rachat', impot: R, titre: 'Compléter ses revenus par des rachats d’assurance-vie', statut: 'possible', gain: null, onglet: 'patrimoine',
+    detail: 'Après 8 ans, seuls les gains compris dans le rachat sont imposés, après un abattement annuel de ' + (ctx.couple ? '9 200' : '4 600') + ' €. À privilégier sur des revenus fonciers ou des dividendes supplémentaires.', source: 'CGI art. 125-0 A' });
+  (d.actifs || []).forEach(function (a) {
+    if (!(a.type === 'pro' || (a.type === 'societe' && !/SCI/i.test(a.forme || 'SCI')))) return;
+    var v = a.type === 'societe' ? Math.max(0, (+a.valeur || 0) - (+a.passif || 0)) : (+a.valeur || 0), pv = plusValue(a, v, 1, T0);
+    if (!pv.renseigne || pv.impot <= 0) return;
+    add({ id: 'apport_' + a.id, impot: R, titre: 'Apport-cession de « ' + a.libelle + ' » à une holding', statut: 'etudier', gain: pv.impot, onglet: 'patrimoine',
+      detail: 'En cas de vente : apporter d’abord les titres à une holding contrôlée place la plus-value (' + Math.round(pv.pvBrute).toLocaleString('fr-FR') + ' €) en report d’imposition ; 60 % du prix à réinvestir dans les 2 ans si la holding vend avant 3 ans. Donner les titres de la holding purge ensuite le report sous conditions.', source: 'CGI art. 150-0 B ter' });
+    if (clients.some(function (k) { return ctx.persons[k].age >= 60; })) add({ id: 'retraite_' + a.id, impot: R, titre: 'Abattement de départ en retraite sur « ' + a.libelle + ' »', statut: 'etudier', gain: Math.min(pv.pvBrute, 500000) * 0.128, onglet: 'patrimoine',
+      detail: 'Abattement fixe de 500 000 € sur la plus-value du dirigeant qui cède sa société et part en retraite dans les 2 ans (prélèvements sociaux dus).', source: 'CGI art. 150-0 D ter' });
+  });
+  add({ id: 'dons', impot: R, titre: 'Dons aux œuvres', statut: 'possible', gain: null, onglet: 'hypotheses',
+    detail: 'Réduction d’impôt de 66 % du don (75 % jusqu’à 1 000 € pour l’aide aux personnes en difficulté), dans la limite de 20 % du revenu imposable.', source: 'CGI art. 200' });
+
+  var ordre = { utilise: 0, possible: 1, etudier: 2, info: 3, na: 4 };
+  L.sort(function (x, y) { return (ordre[x.statut] - ordre[y.statut]) || ((y.gain || 0) - (x.gain || 0)); });
+  return { leviers: L, foyer: foyer, tauxMarginal: tm };
+}
+
 /* ---------------- Situation des abattements à date ---------------- */
 function etatAbattements(d) {
   var ctx = prepare(d), out = [];
@@ -1347,7 +1552,7 @@ function etatAbattements(d) {
 }
 
 if (typeof module !== 'undefined') module.exports = { FISC: FISC, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
-var CALC = { FISC: FISC, REGIMES: REGIMES, quoteDutreil: quoteDutreil, resumeClause: resumeClause, DISPOSITIFS: DISPOSITIFS, sousEngagement: sousEngagement, plusValue: plusValue, rendements: rendements, moitiesDPT: moitiesDPT, fractionGrevee: fractionGrevee, grevement: grevement, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
+var CALC = { FISC: FISC, REGIMES: REGIMES, foyerFiscal: foyerFiscal, impotRevenu: impotRevenu, quoteDutreil: quoteDutreil, resumeClause: resumeClause, DISPOSITIFS: DISPOSITIFS, sousEngagement: sousEngagement, plusValue: plusValue, rendements: rendements, moitiesDPT: moitiesDPT, fractionGrevee: fractionGrevee, grevement: grevement, calculIFI: calculIFI, analyseFBO: analyseFBO, eligibleDPT: eligibleDPT, usufruitParent: usufruitParent, exoneration: exoneration, EV_TABLE: EV_TABLE, esperanceVie: esperanceVie, usufruitPct: usufruitPct, bareme: bareme, droitsLD: droitsLD, taxe990: taxe990, simulate: simulate, analyseComplete: analyseComplete, optimiserPlan: optimiserPlan, prepare: prepare, defaultParams: defaultParams, etatAbattements: etatAbattements, heritiersDe: heritiersDe, enfantsDe: enfantsDe, generationSuivante: generationSuivante, petitsEnfantsDe: petitsEnfantsDe, ageAt: ageAt, parseDate: parseDate, addYears: addYears, PLAN_FULL: PLAN_FULL, PLAN_NONE: PLAN_NONE };
 if (typeof module !== 'undefined') module.exports = CALC;
 
 </script>
@@ -1812,6 +2017,21 @@ var PPTX = (function () {
     S.text(Z.x, Z.y + Z.h * 0.72, Z.w, Z.h * 0.1, [{ runs: [{ t: 'Sur ' + Math.round(f.horizon) + ' ans : ' + eur(f.economieRevenus) + ' d’impôt sur les revenus et ' + eur(f.economieIFI) + ' d’IFI économisés ; gain global ' + eur(f.gainGlobal) + '.', b: true }] }], { sz: 1300, color: 'accent1' });
     S.text(Z.x, Z.y + Z.h * 0.84, Z.w, Z.h * 0.16, [{ runs: [{ t: 'Intérêts et amortissement effacent presque tout l’impôt de la société pendant le crédit ; vous consommez un capital au lieu de revenus imposés ; à terme, la société distribue des dividendes au prélèvement forfaitaire, plus favorable que les revenus fonciers.', i: true }] }], { sz: 1000 });
     return S;
+  }
+  function sLeviers(M, A) {
+    var Z = M.zone, out = [];
+    var LIB = { utilise: 'Retenu', possible: 'Possible', etudier: 'À étudier' };
+    var L = (A.leviers || []).filter(function (l) { return LIB[l.statut]; });
+    chunk(L, 10).forEach(function (pg, i, all) {
+      var S = new Slide(M);
+      S.title('Panorama des leviers', all.length > 1 ? 'Succession, IFI, impôt sur le revenu (' + (i + 1) + '/' + all.length + ')' : 'Succession, IFI, impôt sur le revenu');
+      var b = [['Levier', 'Impôt visé', 'Gain estimé', 'Statut']];
+      pg.forEach(function (l) { b.push([{ t: l.titre, algn: 'l' }, { t: l.impot, algn: 'l' }, l.gain === null || l.gain === undefined ? '–' : eur(l.gain) + (l.parAn ? ' / an' : ''), { t: LIB[l.statut], algn: 'ctr', fill: l.statut === 'utilise' ? { s: 'accent1', tint: 0.3 } : null }]); });
+      S.table(Z.x, Z.y, Z.w, [5, 2.6, 1.6, 1.2], b, { sz: 1000, rowH: Math.round(EMU * 0.33), algn: ['l', 'l', 'r', 'ctr'] });
+      if (i === all.length - 1) S.text(Z.x, Z.y + Z.h * 0.9, Z.w, Z.h * 0.1, [{ runs: [{ t: 'Gains estimés au taux marginal de succession des héritiers et à la tranche marginale d’impôt sur le revenu ; ils ne s’additionnent pas tous entre eux.', i: true }] }], { sz: 950 });
+      out.push(S);
+    });
+    return out;
   }
   function sDonationsAnterieures(M, A) {
     var ctx = A.ctx, d = ctx.d, Z = M.zone, S = new Slide(M);
@@ -2290,6 +2510,7 @@ var PPTX = (function () {
     sPlan(M, A).forEach(function (s) { seq.push({ gen: s }); });
     seq.push({ gen: sSituation(M, A, false) });
     seq.push({ gen: sDetailHeritiers(M, A, false) });
+    sLeviers(M, A).forEach(function (s) { seq.push({ gen: s }); });
     seq.push({ gen: sSynthese(M, A) });
     var plusLoin = trouver(M, ['pour aller plus loin', 'il y a plus de 15 ans']);
     var vieilles = (d.donations || []).some(function (x) { var dt = CALC.parseDate(x.date); return dt && CALC.addYears(dt, 15) <= ctx.T0; }) || (A.dptPossibles || []).length > 0;
@@ -2749,6 +2970,20 @@ var XLSXOUT = (function () {
     }
     feuilleDetail('Détail sans action', A.sans, false);
     feuilleDetail('Détail après stratégie', A.plan, true);
+
+    /* ================= Panorama des leviers ================= */
+    var wv = wb.addWorksheet('Leviers', { views: [{ showGridLines: false }] });
+    [52, 26, 14, 16, 10, 90, 34].forEach(function (z, i) { wv.getColumn(i + 1).width = z; });
+    put(wv, 'A1', 'Panorama des leviers : succession, IFI, impôt sur le revenu', { b: true, sz: 13 });
+    ['Levier', 'Impôt visé', 'Statut', 'Gain estimé', 'Par an', 'Détail', 'Source'].forEach(function (z, i) { put(wv, String.fromCharCode(65 + i) + '3', z, { navy: true }); });
+    var LST = { utilise: 'Retenu', possible: 'Possible', etudier: 'À étudier', info: 'Repère', na: 'Sans objet' };
+    (A.leviers || []).forEach(function (l, i) {
+      var y = 4 + i;
+      put(wv, 'A' + y, l.titre, { b: l.statut === 'utilise' }); put(wv, 'B' + y, l.impot); put(wv, 'C' + y, LST[l.statut] || '');
+      put(wv, 'D' + y, l.gain === null || l.gain === undefined ? '' : Math.round(l.gain), { fmt: EUR }); put(wv, 'E' + y, l.parAn ? 'oui' : '');
+      var cd = put(wv, 'F' + y, l.detail); cd.alignment = { wrapText: true, vertical: 'top' }; put(wv, 'G' + y, l.source, { i: true, sz: 9 });
+    });
+    if (A.foyer && A.foyer.renseigne) { var yf = 6 + (A.leviers || []).length; put(wv, 'A' + yf, 'Foyer fiscal : revenus imposables ' + Math.round(A.foyer.total).toLocaleString('fr-FR') + ' €, ' + A.foyer.parts + ' part(s), impôt estimé ' + Math.round(A.foyer.ir).toLocaleString('fr-FR') + ' €, tranche marginale ' + Math.round(A.foyer.tmi * 100) + ' %.', { i: true }); }
 
     /* ================= Clauses bénéficiaires ================= */
     var wc = wb.addWorksheet('Clauses AV', { views: [{ showGridLines: false }] });
@@ -3338,10 +3573,11 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   }
   function placerBulle(apresRendu) {
     var mainEl = $('#main'); if (mainEl) mainEl.style.minHeight = '';
+    var voile = $('#voile'); if (voile) voile.classList.remove('on');
     var b = $('.bulle'); if (!b || !editeur) return;
     var chip = $('[data-id="' + (editeur.anchor || editeur.id) + '"]'), main = $('#main');
     if (!chip) return;
-    if (window.matchMedia('(max-width: 600px)').matches) { b.classList.add('sheet'); return; }
+    if (window.matchMedia('(max-width: 700px)').matches) { b.classList.add('sheet'); if (voile) voile.classList.add('on'); return; }
     b.classList.remove('sheet');
     var mr = main.getBoundingClientRect(), cr = chip.getBoundingClientRect();
     var w = Math.min(460, mr.width - 32);
@@ -3361,7 +3597,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       html += '<div class="tablewrap"><table class="t edit"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Passif</th><th>Vague</th><th>Via SCI</th><th>FBO</th><th>DPT 2,5 %</th>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<th>Communauté</th>' : '') + '</tr></thead><tbody>';
       state.actifs.forEach(function (a, i) {
         if (a.type === 'financier') return;
-        html += '<tr><td>' + h(a.libelle) + '</td><td class="n">' + eur(a.valeur) + '</td><td class="n">' + (a.passif ? eur(a.passif) : '–') + '</td><td>' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td>' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + (a.dispositif && CALC.sousEngagement(a, CALC.parseDate(state.dateEtude) || new Date()) ? ' <span class="tip" tabindex="0" data-tip="' + h(CALC.DISPOSITIFS[a.dispositif] + ' en cours jusqu’au ' + CALC.parseDate(a.finEngagement).toLocaleDateString('fr-FR') + ' : la donation est reportée à la fin de l’engagement ; apport en société et vente impossibles avant.') + '">⚠</span>' : '') + '</td><td>' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="consomme"' + (!a.fboAffectation || a.fboAffectation === 'consomme' ? ' selected' : '') + '>prix consommé</option><option value="av"' + (a.fboAffectation === 'av' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td>' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '> <span class="tip" tabindex="0" data-tip="' + h(CALC.moitiesDPT(ctxS, a).map(function (m) { return 'Part de ' + m.donateur.prenom + ' (' + Math.round(m.part * 100) + ' %) : ' + (m.mode === 'dpt' ? 'donation-partage transgénérationnelle, droit de partage 2,5 %' : m.mode === 'directe' ? 'donateur décédé, donation directe par vous de la nue-propriété' : 'donation de moins de 15 ans : droits de donation'); }).join('\n') + '\nVous conservez l’usufruit (usufruit successif par rétention) : vos enfants ne reçoivent que la nue-propriété.') + '">ⓘ</span>' : '<span class="muted">–</span>') + '</td>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<td>' + ((+a.partC1 === 100 || +a.partC1 === 0) ? '<input type="checkbox" data-path="actifs.' + i + '.planCommunaute" data-type="bool" aria-label="Mettre en communauté"' + (a.planCommunaute ? ' checked' : '') + '>' : '<span class="muted" title="Bien déjà commun ou indivis">–</span>') + '</td>' : '') + '</tr>';
+        html += '<tr><td data-l="Bien"><strong>' + h(a.libelle) + '</strong></td><td class="n" data-l="Valeur">' + eur(a.valeur) + '</td><td class="n" data-l="Passif">' + (a.passif ? eur(a.passif) : '–') + '</td><td data-l="Donation">' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td data-l="Via SCI">' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + (a.dispositif && CALC.sousEngagement(a, CALC.parseDate(state.dateEtude) || new Date()) ? ' <span class="tip" tabindex="0" data-tip="' + h(CALC.DISPOSITIFS[a.dispositif] + ' en cours jusqu’au ' + CALC.parseDate(a.finEngagement).toLocaleDateString('fr-FR') + ' : la donation est reportée à la fin de l’engagement ; apport en société et vente impossibles avant.') + '">⚠</span>' : '') + '</td><td data-l="Family buy out">' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="consomme"' + (!a.fboAffectation || a.fboAffectation === 'consomme' ? ' selected' : '') + '>prix consommé</option><option value="av"' + (a.fboAffectation === 'av' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td data-l="DPT 2,5 %">' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '> <span class="tip" tabindex="0" data-tip="' + h(CALC.moitiesDPT(ctxS, a).map(function (m) { return 'Part de ' + m.donateur.prenom + ' (' + Math.round(m.part * 100) + ' %) : ' + (m.mode === 'dpt' ? 'donation-partage transgénérationnelle, droit de partage 2,5 %' : m.mode === 'directe' ? 'donateur décédé, donation directe par vous de la nue-propriété' : 'donation de moins de 15 ans : droits de donation'); }).join('\n') + '\nVous conservez l’usufruit (usufruit successif par rétention) : vos enfants ne reçoivent que la nue-propriété.') + '">ⓘ</span>' : '<span class="muted">–</span>') + '</td>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<td data-l="Communauté">' + ((+a.partC1 === 100 || +a.partC1 === 0) ? '<input type="checkbox" data-path="actifs.' + i + '.planCommunaute" data-type="bool" aria-label="Mettre en communauté"' + (a.planCommunaute ? ' checked' : '') + '>' : '<span class="muted" title="Bien déjà commun ou indivis">–</span>') + '</td>' : '') + '</tr>';
       });
       html += '</tbody></table></div>';
     }
@@ -3398,7 +3634,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       '<h3 class="sub">Family buy out</h3><div class="grid g3">' + field('Taux d’emprunt', 'params.fboTaux', 'pct') + field('Durée (années)', 'params.fboDuree', 'num') + field('Part des revenus affectée au crédit', 'params.fboPonderation', 'pct', { hint: '70 % par défaut, comme la pondération bancaire des loyers.' }) +
       field('Frais d’acquisition (immeubles)', 'params.fboFraisImmo', 'pct') + field('Frais d’acquisition (titres)', 'params.fboFraisTitres', 'pct') + '</div>' +
       '<h3 class="sub">Mise en communauté</h3><div class="grid g3">' + field('Délai avant donation (bien mis seul en communauté)', 'params.delaiCommunaute', 'num', { hint: 'En années.' }) + field('Frais fixes de l’acte', 'params.fraisCommunauteFixe', 'money') + field('Frais proportionnels (immeubles)', 'params.fraisCommunautePct', 'pct', { hint: 'Publicité foncière 0,715 % et émoluments.' }) + '</div>' +
-      '<h3 class="sub">Fiscalité des revenus</h3><div class="grid g3">' + field('Tranche marginale d’imposition des clients', 'params.tmi', 'pct') + field('Prélèvements sociaux sur revenus fonciers', 'params.psFonciers', 'pct', { hint: '17,2 % retenu, à vérifier.' }) + field('Flat tax sur dividendes', 'params.pfu', 'pct', { hint: '12,8 % + 18,6 % depuis 2026.' }) +
+      '<h3 class="sub">Foyer fiscal</h3><div class="grid g3">' + field('Revenus nets imposables du foyer', 'foyer.revenus', 'money', { hint: 'Salaires, pensions, bénéfices : hors revenus des biens saisis dans le patrimoine.' }) + field('Nombre de parts', 'foyer.parts', 'num', { ph: couple() ? '2' : '1' }) +
+      (function () { var f = CALC.foyerFiscal(normaliser(clone(state))); return '<div class="fld"><span>Estimation</span><div class="estim">' + (f.renseigne ? 'Impôt ' + eur(f.ir) + ' · tranche à ' + Math.round(f.tmi * 100) + ' %' : 'Saisissez les revenus') + '</div></div>'; })() + '</div>' +
+      '<h3 class="sub">Fiscalité des revenus</h3><div class="grid g3">' + field('Tranche marginale d’imposition des clients', 'params.tmi', 'pct', { hint: 'Remplacée par la tranche calculée quand les revenus du foyer sont saisis.' }) + field('Prélèvements sociaux sur revenus fonciers', 'params.psFonciers', 'pct', { hint: '17,2 % retenu, à vérifier.' }) + field('Flat tax sur dividendes', 'params.pfu', 'pct', { hint: '12,8 % + 18,6 % depuis 2026.' }) +
       field('Part du bâti amortissable', 'params.partBati', 'pct') + field('Durée d’amortissement (années)', 'params.dureeAmort', 'num') + '</div>';
   }
   function bar(v, mx, cls) { return '<span class="bar ' + (cls || '') + '" style="--w:' + Math.max(1, Math.round(100 * v / (mx || 1))) + '%"></span>'; }
@@ -3490,6 +3728,31 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (l.gainNet > 0) return { t: l.retenu ? 'Retenu' : 'Intéressant', cls: 'ok' };
     return { t: 'Écarté', cls: 'ko' };
   }
+  var filtreLeviers = 'tous';
+  function rLeviers() {
+    if (!analyse) return '<p class="empty">Complétez la famille et le patrimoine pour obtenir le panorama des leviers.</p>';
+    var L = analyse.leviers || [], F = analyse.foyer || {};
+    var LIB = { utilise: 'Utilisé', possible: 'Possible', etudier: 'À étudier', info: 'Repère', na: 'Sans objet ici' };
+    var cats = [['tous', 'Tous'], ['Succession', 'Succession'], ['IFI', 'IFI'], ['revenu', 'Impôt sur le revenu']];
+    var html = '<p class="lead">Chaque mécanisme de la documentation est testé sur ce dossier : ce qui est déjà utilisé, ce qui reste possible avec un gain estimé, et ce qui demande une étude. Touchez une ligne pour le détail.</p>';
+    if (!F.renseigne) html += '<div class="alerte">Renseignez les revenus du foyer dans <a href="#hypotheses">Hypothèses</a> pour chiffrer l’impôt sur le revenu, la tranche marginale, le plan d’épargne retraite et le plafonnement de l’IFI.</div>';
+    html += '<div class="filtres">' + cats.map(function (c) { return '<button type="button" data-act="filtre-leviers" data-f="' + c[0] + '"' + (filtreLeviers === c[0] ? ' class="on"' : '') + '>' + c[1] + '</button>'; }).join('') + '</div>';
+    var vus = L.filter(function (l) { return filtreLeviers === 'tous' || l.impot.toLowerCase().indexOf(filtreLeviers.toLowerCase()) >= 0; });
+    ['utilise', 'possible', 'etudier', 'info', 'na'].forEach(function (st) {
+      var g = vus.filter(function (l) { return l.statut === st; }); if (!g.length) return;
+      html += '<h3 class="sub">' + { utilise: 'Déjà dans la stratégie', possible: 'Possibles dès maintenant', etudier: 'À étudier avec le client', info: 'Repères', na: 'Sans objet sur ce dossier' }[st] + '</h3><div class="leviers">';
+      g.forEach(function (l) {
+        var gain = l.gain === null || l.gain === undefined ? '' : (l.gain >= 0 ? '' : '− ') + eur(Math.abs(l.gain)) + (l.parAn ? ' / an' : '');
+        html += '<details class="levier s-' + l.statut + '"><summary><span class="lt"><strong>' + h(l.titre) + '</strong><small>' + h(l.impot) + (l.urgent ? ' · avant le 31/12/2026' : '') + '</small></span>' + (gain ? '<span class="lg">' + gain + '</span>' : '') + '<span class="tag ' + (st === 'utilise' || st === 'possible' ? 'ok' : 'ko') + '">' + LIB[st] + '</span></summary>' +
+          '<div class="ld"><p>' + h(l.detail) + '</p><p class="note">Source : ' + h(l.source) + '</p><div class="la">' +
+          (l.param ? '<button type="button" class="btn ' + (P()[l.param] ? 'ghost' : '') + ' petit" data-act="bascule-param" data-p="' + l.param + '">' + (P()[l.param] ? 'Retirer de la stratégie' : 'Ajouter à la stratégie') + '</button>' : '') +
+          '<a class="btn ghost petit" href="#' + l.onglet + '">Ouvrir ' + ({ strategie: 'la stratégie', patrimoine: 'le patrimoine', hypotheses: 'les hypothèses', analyse: 'l’analyse', famille: 'la famille' }[l.onglet] || '') + '</a></div></div></details>';
+      });
+      html += '</div>';
+    });
+    html += '<p class="note">Gains estimés à partir du taux marginal de succession des héritiers (' + Math.round((analyse.tauxMarginal || 0) * 100) + ' %) et de la tranche marginale d’impôt sur le revenu (' + Math.round(P().tmi * 100) + ' %) ; ils ne s’additionnent pas tous entre eux.</p>';
+    return html;
+  }
   function rExports() {
     var html = '<h3>Modèle PowerPoint</h3>';
     if (modeleInfo) {
@@ -3513,12 +3776,15 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     { id: 'strategie', t: 'Stratégie', r: rStrategie },
     { id: 'hypotheses', t: 'Hypothèses', r: rHypotheses },
     { id: 'analyse', t: 'Analyse', r: rAnalyse },
+    { id: 'leviers', t: 'Leviers', r: rLeviers },
     { id: 'exports', t: 'Exports', r: rExports }
   ];
   function courante() { var x = (location.hash || '').slice(1); if (x === 'clients') return 'famille'; return SECTIONS.some(function (s) { return s.id === x; }) ? x : 'famille'; }
   function rendre() {
     var cur = courante();
-    $('#nav').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '"' + (s.id === cur ? ' aria-current="page"' : '') + '>' + h(s.t) + '</a>'; }).join('');
+    var ICO = { famille: 'frere', donations: 'don', patrimoine: 'rp', strategie: 'societe', hypotheses: 'autre', analyse: 'financier', leviers: 'av', exports: 'pro' };
+    var COURT = { donations: 'Donations', hypotheses: 'Réglages' };
+    $('#nav').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '"' + (s.id === cur ? ' aria-current="page"' : '') + '><span class="ni">' + icone(ICO[s.id]) + '</span><span class="nl" data-court="' + h(COURT[s.id] || s.t) + '">' + h(s.t) + '</span></a>'; }).join('');
     var sec = SECTIONS.filter(function (s) { return s.id === cur; })[0];
     var memeOnglet = cur === rendre.derniere;
     if (!memeOnglet) editeur = null;
@@ -3528,7 +3794,10 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var actPath = act && act.dataset && act.dataset.path && main.contains(act) ? act.dataset.path : null, selS = null, selE = null;
     try { if (actPath) { selS = act.selectionStart; selE = act.selectionEnd; } } catch (e) { }
     main.style.minHeight = main.offsetHeight + 'px';
+    var aw = main.querySelector('.arbre-wrap'), awX = aw && memeOnglet ? aw.scrollLeft : null;
     main.innerHTML = '<h2>' + h(sec.t) + '</h2>' + sec.r();
+    var aw2 = main.querySelector('.arbre-wrap');
+    if (aw2) aw2.scrollLeft = awX !== null ? awX : Math.max(0, (aw2.scrollWidth - aw2.clientWidth) / 2);   // arbre centré sur les clients
     dessinerArbre();
     placerBulle(true);
     if (memeOnglet) {
@@ -3578,7 +3847,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (el.dataset && el.dataset.path) {
       if (el.dataset.type === 'date' && lire(el) === (get(el.dataset.path) || '')) { var d1 = get(el.dataset.path); el.value = d1 ? CALC.parseDate(d1).toLocaleDateString('fr-FR') : ''; return; }
       set(el.dataset.path, lire(el));
-      var structural = /^(situation|regime|c1\.naissance|c2\.naissance|c1\.sexe|c2\.sexe|c1\.civ|c2\.civ|dateEtude|actifs\.\d+\.type|enfants\.\d+\.prenom|freres\.\d+\.(prenom|decede))$/.test(el.dataset.path);
+      var structural = /^(foyer\.revenus|foyer\.parts|situation|regime|c1\.naissance|c2\.naissance|c1\.sexe|c2\.sexe|c1\.civ|c2\.civ|dateEtude|actifs\.\d+\.type|enfants\.\d+\.prenom|freres\.\d+\.(prenom|decede))$/.test(el.dataset.path);
       if (el.dataset.type === 'date') { var dd0 = get(el.dataset.path); el.value = dd0 ? CALC.parseDate(dd0).toLocaleDateString('fr-FR') : ''; if (!dd0 && !el.value) return; }
       planifier(structural || !!el.closest('.clause') || !!el.closest('.dutreil') || courante() === 'strategie' || (!!editeur && el.closest('.bulle') && el.tagName !== 'INPUT') || (!!editeur && (el.type === 'checkbox' || el.dataset.type === 'date')));
       if (el.dataset.type === 'num' && el.closest('.money')) el.value = Number(get(el.dataset.path) || 0).toLocaleString('fr-FR');
@@ -3632,6 +3901,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'del-actif') { state.actifs.splice(i, 1); editeur = null; }
     if (a === 'add-av') { var nc = { id: uid('v'), libelle: 'Contrat', souscripteur: 'c1', valeur: 0, valeurApres70: 0, primesApres70: 0 }; state.av.push(nc); editeur = { kind: 'av', id: nc.id }; }
     if (a === 'del-av') { state.av.splice(i, 1); editeur = null; }
+    if (a === 'filtre-leviers') { filtreLeviers = b.dataset.f; rendre(); return; }
+    if (a === 'bascule-param') { state.params = state.params || {}; state.params[b.dataset.p] = !P()[b.dataset.p]; calculer(); sauver(); rendre(); toast(state.params[b.dataset.p] ? 'Ajouté à la stratégie.' : 'Retiré de la stratégie.'); return; }
     if (a === 'calc-dutreil') { calcOuverte[b.dataset.id] = !calcOuverte[b.dataset.id]; rendre(); return; }
     if (a === 'onglet-clause') { ongletClause[b.dataset.id] = b.dataset.o; rendre(); return; }
     if (a === 'ajout-ligne' || a === 'suppr-ligne') {
@@ -3762,6 +4033,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     d.plan = Object.assign({ versementAV: { c1: 0, c2: 0 } }, d.plan || {});
     d.plan.versementAV = Object.assign({ c1: 0, c2: 0 }, d.plan.versementAV || {});
     d.freres = d.freres || []; d.neveux = d.neveux || []; d.parentsClients = d.parentsClients || [];
+    d.foyer = d.foyer || {};
     d.params = d.params || {};
     var defs = CALC.defaultParams();
     Object.keys(defs).forEach(function (k) { if (d.params[k] === undefined || d.params[k] === null) d.params[k] = defs[k]; });
