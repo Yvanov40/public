@@ -1889,6 +1889,12 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   const estTel = () => requeteTel.matches;
 
   const $ = (id) => document.getElementById(id);
+  // Sécurité d'affichage : quand un morceau de page est absent (« rien à montrer ici »), le navigateur écrivait le mot « null ».
+  // On retire ces vides une fois pour toutes, partout où l'appli remplit une zone.
+  for (const methode of ["replaceChildren", "append", "prepend"]) {
+    const origine = Element.prototype[methode];
+    Element.prototype[methode] = function (...morceaux) { return origine.apply(this, morceaux.filter((m) => m !== null && m !== undefined && m !== false)); };
+  }
   const el = (tag, attrs, ...enfants) => {
     const n = document.createElement(tag);
     if (attrs) for (const [k, v] of Object.entries(attrs)) {
