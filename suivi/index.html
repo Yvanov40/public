@@ -6938,9 +6938,12 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const jours = [], ids = [];
     try {
       for (const d of donnees.dossiers) {
-        if (d.archives || etapeDe(d) !== "2" || !d.client || !d.id) continue;
-        if (!collabsDe(d).some((c) => cleClient(c) === moi)) continue;
-        if (tachesDe(d.client).some((t) => !t.fait && t.dossier === d.id)) continue;   // il a déjà sa tâche
+        const concerne = !d.archives && etapeDe(d) === "2" && d.client && d.id && collabsDe(d).some((c) => cleClient(c) === moi);
+        // un dossier qui sort de « À faire » (ou qui ne m'est plus attribué) pourra de nouveau recevoir une tâche s'il y revient
+        if (!concerne) { if (d.tache_agenda) delete d.tache_agenda; continue; }
+        // une seule tâche automatique par passage en « À faire » : si vous la supprimez ou la cochez, elle ne revient pas
+        if (d.tache_agenda) continue;
+        if (tachesDe(d.client).some((t) => !t.fait && t.dossier === d.id)) { d.tache_agenda = "existante"; continue; }   // il a déjà une tâche
         const nature = sansNumero(d.type) === "Sans type" ? "Dossier" : sansNumero(d.type);
         const regle = (A.regles || []).find((r) => r.nature && sansAccents(r.nature) === sansAccents(nature));
         if (!regle && A.autres === "non") continue;            // nature sans règle : pas dans l'agenda
@@ -6953,6 +6956,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         if (prio) { jour = jourTravaille(enIso(aujourdhui())) ? enIso(aujourdhui()) : jourOuvreSuivant(enIso(aujourdhui())); heure = ""; }
         else [jour, heure] = premierCreneau(duree);
         const id = nouvelId();
+        d.tache_agenda = id;
         majTaches(d.client, (l) => [...l, { id, texte, pour: jour, heure, duree, fait: null, cree: new Date().toISOString(), ...(prio ? { prio: true } : {}),
           dossier: d.id, dossier_libelle: [d.tache, nature].filter(Boolean).join(" – "), auto: true }]);
         if (jour) jours.push(jour);
