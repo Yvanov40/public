@@ -1644,6 +1644,15 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 
 .cases-tache { margin: 2px 0 8px; align-items: center; }
 .cases-tache .case { margin: 0; }
+
+/* ---------- pas de sélection de texte sur les menus, boutons et tuiles (un appui long ne doit pas surligner le texte) ---------- */
+.menu-contextuel, .menu-contextuel *, .roue-voile, .roue-voile *, .fab, .fab *, .fab-voile, nav.bas, nav.bas *, .actes-boite, .actes-boite *,
+.horloge-boite, .horloge-boite *, .choix-date-boite, .choix-date-boite *, .menu-panneau button, .tirer-eclair {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+@media (max-width: 900px) {
+  button, .tuile, .m-onglet, .nature-tuile, .t-tuile, .m-rdv, .m-client, .d-carte, .cal-element, .frise-bloc, .jr-ligne, .section-titre, .collab, .puce-collab, summary {
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+}
 </style>
 </head>
 <body>
@@ -5394,6 +5403,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // téléphone : un voile derrière le menu (toucher à côté le ferme) et une étape d'historique (la touche retour le ferme)
   function menuOuvertTel() {
     if (!estTel()) return;
+    // le doigt est encore posé quand le menu apparaît : pas de sélection de texte sous le doigt
+    try { window.getSelection().removeAllRanges(); } catch (e) {}
     const menu = document.querySelector(".menu-contextuel");
     document.body.insertBefore(el("div", { class: "menu-voile" }), menu);
     history.pushState({ ...(history.state || {}), menu: true }, "");
