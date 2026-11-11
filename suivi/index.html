@@ -1509,6 +1509,14 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .clients-groupe { grid-column: 1 / -1; margin: 10px 0 2px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; border-bottom: 1px solid var(--bordure); padding-bottom: 4px; }
 .clients-groupe b { font: 600 16px var(--titre); color: var(--bleu); }
 .clients-groupe:first-of-type { margin-top: 2px; }
+
+/* ---------- clients qui ont un dossier « À faire » : ils ressortent ---------- */
+.marque-a-faire { font-style: normal; font-weight: 700; color: #7a5510; background: #f6dfa6; border-radius: 6px; padding: 0 5px; }
+.m-client.a-faire { background: #fdf3d8 !important; border-color: #d9b45c !important; border-left: 4px solid var(--or) !important; }
+#clientsListe tr.a-faire td { background: #fdf6e3; }
+#clientsListe tr.a-faire td:first-child { box-shadow: inset 4px 0 0 var(--or); }
+:root[data-theme="dark"] .m-client.a-faire, :root[data-theme="dark"] #clientsListe tr.a-faire td { background: #2f2610 !important; border-color: #6a5522 !important; }
+:root[data-theme="dark"] .marque-a-faire { background: #6a5522; color: #f6e7bd; }
 </style>
 </head>
 <body>
@@ -3380,9 +3388,11 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const p = ds.reduce((s, d) => s + prevu(d), 0);
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
-      return el("button", { class: "m-client", type: "button", onclick: () => ouvrirClient(nom) },
+      const aFaire = ds.filter((d) => etapeDe(d) === "2").length;
+      return el("button", { class: "m-client" + (aFaire ? " a-faire" : ""), type: "button", onclick: () => ouvrirClient(nom) },
         el("b", null, nom, badgeTaches(nom)), el("span", { class: "r" }, p ? euros(p - ca) : ""),
-        el("span", null, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""} · ${etapes}` : "Sans dossier"), el("span", { class: "r or" }, ca ? euros(ca) : ""));
+        el("span", null, aFaire ? el("em", { class: "marque-a-faire" }, aFaire > 1 ? `${aFaire} à faire` : "À faire") : null,
+          ds.length ? `${aFaire ? " · " : ""}${ds.length} dossier${ds.length > 1 ? "s" : ""}${aFaire ? "" : " · " + etapes}` : "Sans dossier"), el("span", { class: "r or" }, ca ? euros(ca) : ""));
     };
     $("mClients").replaceChildren(el("button", { class: "bouton-discret", type: "button", style: "margin:0 0 10px", onclick: nouveauClient }, "＋ Nouveau client"),
       ...decouperParDemandeur(tries.slice(0, max)).flatMap(([dem, clients]) => [dem ? el("h4", { class: "clients-groupe" }, ...titreDemandeur(dem, clients)) : null, ...clients.map(tuileClient)]),
@@ -3589,12 +3599,14 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       const notaires = [...new Set(ds.map((d) => d.notaire).filter(Boolean))];
-      const tr = el("tr", { class: "ligne" + (clientsChoisis.has(nom) ? " multi" : ""), "data-nom": nom, onclick: (e) => clicClient(e, nom),
+      const aFaire = ds.filter((d) => etapeDe(d) === "2").length;
+      const tr = el("tr", { class: "ligne" + (clientsChoisis.has(nom) ? " multi" : "") + (aFaire ? " a-faire" : ""), "data-nom": nom, onclick: (e) => clicClient(e, nom),
         oncontextmenu: (e) => { if (estTel()) return; e.preventDefault(); if (!clientsChoisis.has(nom)) { clientsChoisis.clear(); clientsChoisis.add(nom); majChoixClients(); } menuClients(e.clientX, e.clientY); } },
         el("td", null, el("b", null, nom), badgeTaches(nom),
           el("button", { type: "button", class: "renommer", title: "Renommer ce client", "aria-label": `Renommer ${nom}`,
             onclick: (e) => { e.stopPropagation(); renommerClient(nom); } }, "✎"), el("small", null, (fiche(nom).commentaire || "").split("\n")[0].slice(0, 90))),
-        el("td", { class: "types" }, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""}` : "Sans dossier", el("small", null, etapes)),
+        el("td", { class: "types" }, ds.length ? `${ds.length} dossier${ds.length > 1 ? "s" : ""}` : "Sans dossier",
+          el("small", null, aFaire ? el("em", { class: "marque-a-faire" }, aFaire > 1 ? `${aFaire} à faire` : "À faire") : null, aFaire && etapes !== "À faire" ? " · " + etapes.replace(/(, )?À faire(, )?/, (m, a, b) => (a && b ? ", " : "")) : aFaire ? "" : etapes)),
         el("td", { class: "cache-tel" }, notaires.length === 1 ? notaires[0] : notaires.length ? `${notaires.length} demandeurs` : ""),
         el("td", { class: "n cache-tel" }, p ? euros(p) : ""),
         el("td", { class: "n or" }, ca ? euros(ca) : ""),
