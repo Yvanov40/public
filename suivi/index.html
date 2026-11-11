@@ -1718,6 +1718,40 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .app-apercu { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 4px; padding: 10px; border: 1px dashed var(--bordure); border-radius: 10px; background: var(--fond); }
 .app-apercu .ev { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; border-width: 1px; border-style: solid; }
 @media (min-width: 901px) { .app-agenda { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---------- Kanban de l'ordinateur en tuiles ---------- */
+@media (min-width: 901px) {
+  #kanban { display: block !important; overflow: visible !important; height: auto !important; padding: 0 0 30px; }
+  .k-statuts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; position: sticky; top: 0; z-index: 3; background: var(--fond); padding: 4px 0 8px; }
+  .k-statut { display: grid; gap: 2px; text-align: left; border: 1px solid var(--bordure); border-top: 5px solid var(--c); background: var(--carte); border-radius: 12px; padding: 10px 14px; cursor: pointer; color: var(--texte); transition: box-shadow .12s, border-color .12s; }
+  .k-statut:hover { box-shadow: 0 4px 14px rgba(12, 45, 57, .08); }
+  .k-statut span { font-weight: 600; font-size: 14px; }
+  .k-statut b { font: 600 30px var(--titre); color: var(--bleu); line-height: 1.05; }
+  .k-statut small { font-size: 12px; color: var(--discret); }
+  .k-statut em { font-style: normal; color: var(--or); }
+  .k-statut.ouverte { background: var(--bleu); border-color: var(--bleu); border-top-color: var(--c); color: var(--carte); }
+  .k-statut.ouverte b, .k-statut.ouverte small, .k-statut.ouverte em { color: var(--carte); }
+  .k-statut.cible { outline: 3px dashed var(--or); outline-offset: 2px; }
+  .k-bloc { border: 1px solid var(--bordure); border-left: 5px solid var(--c); background: var(--carte); border-radius: 14px; padding: 12px 16px 16px; margin-bottom: 16px; }
+  .k-bloc-tete { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .k-bloc-tete h2 { margin: 0; font: 600 21px var(--titre); color: var(--bleu); }
+  .k-bloc-tete p { margin: 0; font-size: 13px; color: var(--discret); }
+  .k-natures { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 6px; }
+  .k-nature { display: grid; gap: 1px; text-align: left; border: 1px solid var(--bordure); background: var(--section); border-radius: 10px; padding: 8px 11px; cursor: pointer; color: var(--texte); }
+  .k-nature b { font-size: 14px; font-weight: 600; color: var(--bleu); }
+  .k-nature i { font-style: normal; font: 600 21px var(--titre); color: var(--bleu); }
+  .k-nature small { font-size: 11.5px; color: var(--discret); }
+  .k-nature em { font-style: normal; color: var(--or); }
+  .k-nature.ouverte { background: var(--carte); border-color: var(--bleu); box-shadow: 0 0 0 1px var(--bleu) inset; }
+  .k-nature.cible, .k-groupe.cible { outline: 3px dashed var(--or); outline-offset: 2px; }
+  .k-groupe { margin-top: 14px; background: none !important; border: 0 !important; padding: 0 !important; }
+  .k-groupe h3 { margin: 0 0 8px; font: 600 16px var(--titre); color: var(--bleu); border-bottom: 1px solid var(--bordure); padding-bottom: 4px; }
+  .k-groupe h3 small { font: 400 12.5px var(--ui); color: var(--discret); }
+  .k-groupe .cartes { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .k-groupe .carte-dossier { margin: 0; min-width: 0; }
+  .k-aide { margin-top: 20px; }
+}
+:root[data-theme="dark"] .k-statut.ouverte, :root[data-theme="dark"] .k-statut.ouverte b, :root[data-theme="dark"] .k-statut.ouverte small, :root[data-theme="dark"] .k-statut.ouverte em { color: #0f1b20; }
 </style>
 </head>
 <body>
@@ -1822,7 +1856,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       </div>
       <div class="outils ordi">
         
-        <span class="aide">Glissez une carte pour la déplacer · Ctrl+clic : ajouter à la sélection · Maj+clic : sélectionner tout l’intervalle · clic droit : archiver, déplacer</span>
+        <span class="aide">Cliquez sur les statuts et les natures pour les ouvrir (plusieurs à la fois) · glissez une carte sur un statut ou une nature pour la déplacer · Ctrl+clic, Maj+clic : sélection · clic droit : actions</span>
         <div class="etapes-raccourcis" id="raccourcisEtapes"></div>
         <button class="bouton-discret" id="toutDeplier">Tout déplier</button>
         <button class="bouton-discret" id="toutReplier">Tout replier</button>
@@ -3648,7 +3682,59 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       ...(!tries.length ? [el("p", { class: "m-vide" }, "Aucun client ne correspond.")] : []));
   }
 
+  // ---- Kanban de l'ordinateur, en tuiles : statuts, puis natures, puis dossiers (3 par rangée).
+  //      Plusieurs statuts et plusieurs natures peuvent être ouverts en même temps (gardés d'une visite à l'autre).
+  const lireEnsemble = (cle, defaut) => { try { const v = JSON.parse(localStorage.getItem(cle)); return new Set(Array.isArray(v) ? v : defaut); } catch (e) { return new Set(defaut); } };
+  let statutsOuvertsOrdi = lireEnsemble("suivi-gp-kanban-statuts", ["2"]);
+  let naturesOuvertesOrdi = lireEnsemble("suivi-gp-kanban-natures", []);
+  const garderKanbanOrdi = () => {
+    try { localStorage.setItem("suivi-gp-kanban-statuts", JSON.stringify([...statutsOuvertsOrdi])); localStorage.setItem("suivi-gp-kanban-natures", JSON.stringify([...naturesOuvertesOrdi])); } catch (e) {}
+  };
+  function afficherKanbanOrdi(liste) {
+    const recherche = texteRecherche();
+    if (recherche !== derniereRecherche) { derniereRecherche = recherche; bascules = new Set(); }
+    $("vue-kanban").classList.toggle("recherche-active", !!recherche);
+    const parType = {};
+    for (const [d, i] of liste) (parType[d.type || ""] ||= []).push(i);
+    const somme = (ids) => [ids.reduce((t, i) => t + prevu(donnees.dossiers[i]), 0), ids.reduce((t, i) => t + (Number(donnees.dossiers[i].ca) || 0), 0)];
+    // pendant une recherche : on ouvre tout ce qui contient un résultat
+    const ouverts = recherche ? new Set(ETAPES.map(([n]) => n).filter((n) => liste.some(([d]) => etapeDe(d) === n))) : statutsOuvertsOrdi;
+    $("raccourcisEtapes").replaceChildren();
+    // 1. les quatre tuiles de statut (on peut y déposer une carte pour changer son statut)
+    const tuilesStatut = el("div", { class: "k-statuts" }, ETAPES.map(([n, nom]) => {
+      const ids = typesEtape(n, parType).flatMap((t) => parType[t] || []);
+      const [pe, ca] = somme(ids);
+      return el("button", { type: "button", class: "k-statut cible-statut" + (ouverts.has(n) ? " ouverte" : ""), "data-statut": n, style: `--c:${COULEURS[n]}`, "aria-pressed": String(ouverts.has(n)),
+        title: "Cliquer pour ouvrir ou fermer · déposer une carte ici pour changer son statut",
+        onclick: () => { if (recherche) return; statutsOuvertsOrdi.has(n) ? statutsOuvertsOrdi.delete(n) : statutsOuvertsOrdi.add(n); garderKanbanOrdi(); afficherKanbanOrdi(visibles()); } },
+        el("span", null, nom), el("b", null, ids.length), el("small", null, pe ? `${euros(pe)} prévus` : "", ca ? el("em", null, ` · ${euros(ca)} encaissés`) : null));
+    }));
+    // 2. pour chaque statut ouvert : ses natures en tuiles, puis les dossiers des natures ouvertes
+    const blocs = ETAPES.filter(([n]) => ouverts.has(n)).map(([n, nom]) => {
+      const types = typesEtape(n, parType).filter((t) => (parType[t] || []).length);
+      const ids = types.flatMap((t) => parType[t] || []);
+      const [pe, ca] = somme(ids);
+      const natOuverte = (t) => recherche || naturesOuvertesOrdi.has(t) || types.length === 1;
+      return el("div", { class: "k-bloc", style: `--c:${COULEURS[n]}` },
+        el("div", { class: "k-bloc-tete" }, el("h2", null, nom),
+          el("p", null, `${ids.length} dossier(s) · prévu `, el("b", null, euros(pe)), " · encaissé ", el("b", { class: "or" }, euros(ca)), " · reste ", el("b", null, euros(pe - ca)))),
+        types.length ? el("div", { class: "k-natures" }, types.map((t) => {
+          const l = parType[t] || [];
+          const [pt, ct] = somme(l);
+          return el("button", { type: "button", class: "k-nature section" + (natOuverte(t) ? " ouverte" : ""), "data-type": t, "aria-expanded": String(natOuverte(t)),
+            title: "Cliquer pour ouvrir ou fermer · déposer une carte ici pour lui donner cette nature",
+            onclick: () => { naturesOuvertesOrdi.has(t) ? naturesOuvertesOrdi.delete(t) : naturesOuvertesOrdi.add(t); garderKanbanOrdi(); afficherKanbanOrdi(visibles()); } },
+            el("b", null, sansNumero(t) || "Sans type"), el("i", null, l.length), el("small", null, pt ? euros(pt) : "", ct ? el("em", null, " · " + euros(ct)) : null));
+        })) : el("p", { class: "m-vide" }, "Aucun dossier dans ce statut."),
+        ...types.filter(natOuverte).map((t) => el("div", { class: "k-groupe section ouverte", "data-type": t },
+          el("h3", null, sansNumero(t) || "Sans type", el("small", null, ` · ${(parType[t] || []).length}`)),
+          el("div", { class: "cartes" }, (parType[t] || []).map(carteDossier)))));
+    });
+    $("kanban").replaceChildren(tuilesStatut, ...(blocs.length ? blocs : [el("p", { class: "m-vide k-aide" }, "Cliquez sur un statut pour voir ses dossiers. Vous pouvez en ouvrir plusieurs.")]));
+  }
+
   function afficherKanban(liste) {
+    if (!estTel()) return afficherKanbanOrdi(liste);  // l'ordinateur passe aux tuiles
     const recherche = texteRecherche();
     if (recherche !== derniereRecherche) { derniereRecherche = recherche; bascules = new Set(); }
     $("vue-kanban").classList.toggle("recherche-active", !!recherche);
@@ -3676,6 +3762,10 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 
   function toutDeplier(ouvrir) {
     if (!ouvrir) natureOuverteTel = null;
+    if (!estTel() && donnees) {
+      naturesOuvertesOrdi = ouvrir ? new Set(visibles().filter(([d]) => statutsOuvertsOrdi.has(etapeDe(d))).map(([d]) => d.type || "")) : new Set();
+      garderKanbanOrdi();
+    }
     bascules = new Set();
     for (const t of TYPES.concat(Object.keys(donnees ? groupesTypes() : {}))) { dejaVues.add(t); ouvrir ? repliees.delete(t) : repliees.add(t); }
     if (texteRecherche()) $("recherche").value = $("recherche").value; // l'ouverture automatique de la recherche reste prioritaire
@@ -5299,7 +5389,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     glisse.fantome.style.left = x - 30 + "px";
     glisse.fantome.style.top = y - 20 + "px";
     const sous = document.elementFromPoint(x, y);
-    let section = sous && sous.closest(".section");
+    let section = sous && sous.closest(".section, .cible-statut");
     if (!section && sous) { const col = sous.closest(".colonne"); if (col) section = col.querySelector(".section"); }
     if (glisse.cible && glisse.cible !== section) glisse.cible.classList.remove("cible");
     if (section) section.classList.add("cible");
@@ -5331,7 +5421,11 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     document.body.classList.remove("glisser");
     if (g.cible) g.cible.classList.remove("cible");
     if (!annule && g.cible) {
-      if (selectionMulti.has(g.i) && selectionMulti.size > 1) deplacerSelection(g.cible.dataset.type);
+      const statut = g.cible.dataset.statut;
+      if (statut) {  // déposée sur une tuile de statut : même nature, nouveau statut
+        if (selectionMulti.has(g.i) && selectionMulti.size > 1) deplacerSelection(`${statut}. `, true);
+        else changerType(g.i, `${statut}. ${sansNumero(donnees.dossiers[g.i].type)}`);
+      } else if (selectionMulti.has(g.i) && selectionMulti.size > 1) deplacerSelection(g.cible.dataset.type);
       else changerType(g.i, g.cible.dataset.type);
     }
   }
