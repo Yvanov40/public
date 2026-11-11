@@ -7077,6 +7077,44 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   $("btnEclair").addEventListener("click", () => ouvrirEclair());
   $("btnEclairPouce").addEventListener("click", () => ouvrirEclair());
 
+  // ---- tirer l'écran vers le bas, en haut de page : la recherche éclair (téléphone) ----
+  const indiceEclair = el("div", { class: "tirer-eclair", "aria-hidden": "true" }, el("span", null, "🔍"), el("b", null, "Recherche éclair"));
+  document.body.append(indiceEclair);
+  let tirerUn = null;
+  const enHautDePage = (cible) => {
+    if (window.scrollY > 2) return false;
+    for (let n = cible; n && n !== document.body; n = n.parentElement) if (n.scrollTop > 2) return false;  // une liste déjà défilée
+    return true;
+  };
+  document.addEventListener("touchstart", (e) => {
+    tirerUn = null;
+    if (!estTel() || e.touches.length !== 1) return;
+    const c = e.target instanceof Element ? e.target : null;
+    if (!c || c.closest("input, textarea, select, .feuille, .filtres, .fab, .fab-voile, .eclair, .choix-date, .horloge-voile, .roue-voile, .frise-bloc, .carte-dossier, .menu")) return;
+    if (document.querySelector(".feuille.ouverte, .eclair, .roue-voile") || document.body.classList.contains("filtres-ouverts")) return;
+    if (!enHautDePage(c)) return;
+    tirerUn = { x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0 };
+  }, { passive: true });
+  document.addEventListener("touchmove", (e) => {
+    if (!tirerUn) return;
+    if (e.touches.length !== 1) { tirerUn = null; indiceEclair.style.transform = ""; indiceEclair.style.opacity = ""; indiceEclair.classList.remove("pret"); return; }  // deux doigts : c'est « actualiser »
+    const t = e.touches[0];
+    const dx = t.clientX - tirerUn.x, dy = t.clientY - tirerUn.y;
+    if (dy < 0 || Math.abs(dx) > Math.max(30, dy * 0.6) || window.scrollY > 2) { tirerUn = null; indiceEclair.style.transform = ""; indiceEclair.classList.remove("pret"); return; }
+    tirerUn.dy = dy;
+    const avance = Math.min(1, dy / 90);
+    indiceEclair.style.transform = `translate(-50%, ${-60 + avance * 80}px)`;
+    indiceEclair.style.opacity = String(avance);
+    indiceEclair.classList.toggle("pret", dy >= 90);
+  }, { passive: true });
+  document.addEventListener("touchend", () => {
+    if (!tirerUn) return;
+    const assez = tirerUn.dy >= 90;
+    tirerUn = null;
+    indiceEclair.style.transform = ""; indiceEclair.style.opacity = ""; indiceEclair.classList.remove("pret");
+    if (assez) { avalerClic(); ouvrirEclair(); }
+  }, { passive: true });
+
   // ---- deux doigts glissés vers le bas : actualiser (recharge l'appli et relit les données sur GitHub) ----
   const indiceTirer = el("div", { class: "tirer-eclair", "aria-hidden": "true" }, el("span", null, "↻"), el("b", null, "Actualiser"));
   document.body.append(indiceTirer);
