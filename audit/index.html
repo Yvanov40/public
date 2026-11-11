@@ -3383,16 +3383,82 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     return fetch('api/' + chemin, o).then(function (r) { return r.json().then(function (j) { if (!r.ok || j.ok === false) throw new Error(j.erreur || ('erreur ' + r.status)); return j; }); });
   }
   function indicateurLocal(texte, erreur) { var e = $('#etat-local'); if (!e) return; e.hidden = false; e.textContent = texte; e.classList.toggle('ko', !!erreur); }
+  /* Travail à plusieurs sur le même dossier : chaque écriture porte la révision connue.
+     Si le fichier a changé entre-temps, les deux versions sont fusionnées champ par champ. */
+  var sync = { rev: null, base: null, enCours: false, presents: [] };
+  function estObjet(x) { return x && typeof x === 'object' && !Array.isArray(x); }
+  function listeAId(x) { return Array.isArray(x) && x.length > 0 && x.every(function (e) { return estObjet(e) && e.id; }); }
+  function fusion3(b, m, t) {
+    var jm = JSON.stringify(m), jb = JSON.stringify(b), jt = JSON.stringify(t);
+    if (jm === jb) return t === undefined ? t : JSON.parse(jt);   // je n'ai pas touché : version du collègue
+    if (jt === jb || jm === jt) return m;                         // lui n'a pas touché (ou même valeur)
+    if ((listeAId(m) || (Array.isArray(m) && !m.length)) && (listeAId(t) || (Array.isArray(t) && !t.length))) {
+      var B = {}, T = {}, out = [];
+      (Array.isArray(b) ? b : []).forEach(function (e) { if (e && e.id) B[e.id] = e; });
+      t.forEach(function (e) { T[e.id] = e; });
+      m.forEach(function (e) {
+        if (T[e.id]) out.push(fusion3(B[e.id], e, T[e.id]));       // présent des deux côtés : fusion de l'élément
+        else if (!B[e.id] || JSON.stringify(B[e.id]) !== JSON.stringify(e)) out.push(e);   // ajouté ou modifié par moi
+        // sinon : supprimé par le collègue et inchangé chez moi → supprimé
+      });
+      var miens = {}; m.forEach(function (e) { miens[e.id] = 1; });
+      t.forEach(function (e) { if (!miens[e.id] && !B[e.id]) out.push(e); });   // ajouté par le collègue
+      return out;
+    }
+    if (estObjet(m) && estObjet(t)) {
+      var o = {}, cles = {}; Object.keys(m).forEach(function (k) { cles[k] = 1; }); Object.keys(t).forEach(function (k) { cles[k] = 1; });
+      Object.keys(cles).forEach(function (k) { var v = fusion3(estObjet(b) ? b[k] : undefined, m[k], t[k]); if (v !== undefined) o[k] = v; });
+      return o;
+    }
+    return m;                                                      // même champ modifié des deux côtés : ma saisie l'emporte
+  }
+  function adopter(contenu, messageSiChange) {
+    var base = sync.base ? JSON.parse(sync.base) : null;
+    var avant = JSON.stringify(state);
+    var fusion = base ? fusion3(base, JSON.parse(avant), contenu.data) : contenu.data;
+    sync.rev = contenu.rev; sync.base = JSON.stringify(contenu.data);
+    var apres = JSON.stringify(fusion);
+    if (apres !== avant) {
+      state = normaliser(JSON.parse(apres)); dernier = JSON.stringify(state);
+      try { localStorage.setItem(STORE_KEY, dernier); dossiers.liste[dossiers.courant] = { nom: nomDossier(state), maj: new Date().toISOString(), data: state }; localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers)); } catch (e) { }
+      calculer(); rendre();
+      if (messageSiChange) toast(messageSiChange);
+    }
+    return apres !== JSON.stringify(contenu.data);                 // vrai s'il me reste des modifications à écrire
+  }
+  function ecrireLocal() {
+    var id = dossiers.courant; if (!id || sync.enCours) return;
+    sync.enCours = true;
+    var envoye = JSON.stringify(state);
+    api('PUT', 'dossiers/' + id, { nom: nomDossier(state), data: JSON.parse(envoye), base: sync.rev })
+      .then(function (r) {
+        sync.enCours = false;
+        if (r.conflit) { adopter(r.contenu, 'Modifications d’un autre poste intégrées' + (r.contenu.par ? ' (' + r.contenu.par + ')' : '') + '.'); return ecrireLocal(); }
+        sync.rev = r.rev; sync.base = envoye;
+        indicateurLocal('Fichier à jour · ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' · ' + r.fichier + (sync.presents.length ? ' · aussi ouvert par ' + sync.presents.join(', ') : ''));
+        if (JSON.stringify(state) !== envoye) pousserLocal();     // une saisie est arrivée pendant l'écriture
+      })
+      .catch(function (e) { sync.enCours = false; indicateurLocal('Écriture impossible : ' + e.message, true); });
+  }
   function pousserLocal() {
     if (!LOCAL) return;
     clearTimeout(tLocal);
     indicateurLocal('Écriture…');
-    tLocal = setTimeout(function () {
-      var id = dossiers.courant; if (!id) return;
-      api('PUT', 'dossiers/' + id, { nom: nomDossier(state), data: state })
-        .then(function (r) { indicateurLocal('Fichier à jour · ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' · ' + r.fichier); })
-        .catch(function (e) { indicateurLocal('Écriture impossible : ' + e.message, true); });
-    }, 300);
+    tLocal = setTimeout(ecrireLocal, 300);
+  }
+  // surveillance du fichier : toutes les 2 secondes, on regarde si un autre poste a écrit
+  function surveillerLocal() {
+    var id = dossiers.courant; if (!id || sync.enCours || document.hidden) return;
+    api('GET', 'dossiers/' + id + '/rev').then(function (r) {
+      var chg = JSON.stringify(r.presents) !== JSON.stringify(sync.presents); sync.presents = r.presents || [];
+      if (chg) indicateurLocal(sync.presents.length ? 'Dossier aussi ouvert par ' + sync.presents.join(', ') : 'Fichier à jour · vous êtes seul sur ce dossier');
+      if (sync.rev === null || r.rev <= sync.rev || sync.enCours) return;
+      return api('GET', 'dossiers/' + id).then(function (g) {
+        if (sync.enCours || dossiers.courant !== id) return;
+        var reste = adopter(g.contenu, 'Dossier mis à jour par ' + (g.contenu.par || 'un autre poste') + '.');
+        if (reste) pousserLocal();
+      });
+    }).catch(function () { });
   }
   var DOSS_KEY = 'audit-dossiers-v1';
   var dossiers = (function () { try { return JSON.parse(localStorage.getItem(DOSS_KEY)) || null; } catch (e) { return null; } })() || { courant: null, liste: {} };
@@ -4306,7 +4372,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     }
     if (el.dataset && el.dataset.act === 'modele' && el.files[0]) chargerModele(el.files[0]);
     if (el.dataset && el.dataset.act === 'ouvrir' && el.files[0]) {
-      el.files[0].text().then(function (t) { try { var nd = normaliser(JSON.parse(t)); sauver(); dossiers.courant = uid('D'); state = nd; planifier(true); toast('Dossier ouvert.'); } catch (e) { toast('Ce fichier n’est pas un dossier valide.'); } });
+      el.files[0].text().then(function (t) { try { var nd = normaliser(JSON.parse(t)); sauver(); dossiers.courant = uid('D'); sync.rev = null; sync.base = null; state = nd; planifier(true); toast('Dossier ouvert.'); } catch (e) { toast('Ce fichier n’est pas un dossier valide.'); } });
     }
   });
   document.addEventListener('input', function (ev) {
@@ -4362,6 +4428,11 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       if (a === 'dupliquer-dossier') { var nid2 = uid('D'); dossiers.liste[nid2] = { nom: src.nom + ' (copie)', maj: new Date().toISOString(), data: clone(src.data) }; dossiers.courant = nid2; }
       else dossiers.courant = b.dataset.id;
       state = normaliser(clone(dossiers.liste[dossiers.courant].data)); pile = []; dernier = JSON.stringify(state); editeur = null;
+      if (LOCAL) {
+        var idc = dossiers.courant; sync.rev = null; sync.base = null; sync.presents = [];
+        api('GET', 'dossiers/' + idc).then(function (g) { if (dossiers.courant !== idc) return; sync.rev = g.contenu.rev; sync.base = JSON.stringify(g.contenu.data); state = normaliser(clone(g.contenu.data)); dernier = JSON.stringify(state); calculer(); rendre(); }).catch(function () { sync.rev = 0; sync.base = JSON.stringify(state); pousserLocal(); });
+        calculer(); rendre(); toast(a === 'dupliquer-dossier' ? 'Dossier dupliqué et ouvert.' : 'Dossier ouvert.'); return;
+      }
       sauver(); calculer(); rendre(); toast(a === 'dupliquer-dossier' ? 'Dossier dupliqué et ouvert.' : 'Dossier ouvert.'); return;
     }
     if (a === 'suppr-dossier') { if (!confirm('Supprimer définitivement ce dossier de ce navigateur ?')) return; delete dossiers.liste[b.dataset.id]; try { localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers)); } catch (e) { } if (LOCAL) api('DELETE', 'dossiers/' + b.dataset.id).catch(function () { }); rendre(); return; }
@@ -4411,8 +4482,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (a === 'pptx') return genererPPTX(b);
     if (a === 'xlsx') return genererXLSX(b);
     if (a === 'json') return enregistrer(nomFichier('Dossier') + '.json', new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
-    if (a === 'exemple') { sauver(); dossiers.courant = uid('D'); state = clone(EXEMPLE); state.dateEtude = today(); toast('Exemple chargé dans un nouveau dossier.'); }
-    if (a === 'nouveau') { sauver(); dossiers.courant = uid('D'); state = clone(VIDE); state.dateEtude = today(); pile = []; dernier = null; location.hash = '#famille'; toast('Nouveau dossier créé ; le précédent reste dans la liste.'); }
+    if (a === 'exemple') { sauver(); dossiers.courant = uid('D'); sync.rev = null; sync.base = null; state = clone(EXEMPLE); state.dateEtude = today(); toast('Exemple chargé dans un nouveau dossier.'); }
+    if (a === 'nouveau') { sauver(); dossiers.courant = uid('D'); sync.rev = null; sync.base = null; state = clone(VIDE); state.dateEtude = today(); pile = []; dernier = null; location.hash = '#famille'; toast('Nouveau dossier créé ; le précédent reste dans la liste.'); }
     if (a === 'reset-all') {
       if (!confirm('Tout réinitialiser ? Le dossier en cours et le modèle PowerPoint mémorisé seront effacés de ce navigateur. Pensez à enregistrer le dossier (.json) avant.')) return;
       try { localStorage.removeItem(STORE_KEY); localStorage.removeItem(DOSS_KEY); } catch (e) { }
@@ -4668,14 +4739,16 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
         // les fichiers du disque font foi
         var courant = dossiers.courant && liste[dossiers.courant] ? dossiers.courant : ids.sort(function (x, y) { return (liste[y].maj || '').localeCompare(liste[x].maj || ''); })[0];
         dossiers = { courant: courant, liste: {} };
-        ids.forEach(function (id) { dossiers.liste[id] = { nom: liste[id].nom, maj: liste[id].maj, data: liste[id].data }; });
+        ids.forEach(function (id) { dossiers.liste[id] = { nom: liste[id].nom, maj: liste[id].maj, data: liste[id].data, rev: liste[id].rev }; });
         state = normaliser(clone(liste[courant].data)); pile = []; dernier = JSON.stringify(state);
+        sync.rev = liste[courant].rev || 0; sync.base = JSON.stringify(liste[courant].data);
         try { localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers)); localStorage.setItem(STORE_KEY, dernier); } catch (e) { }
         indicateurLocal('Mode local · ' + ids.length + ' dossier' + (ids.length > 1 ? 's' : '') + ' lu' + (ids.length > 1 ? 's' : '') + ' dans ' + LOCAL.dossiers);
       } else {
         dossiers = { courant: null, liste: {} }; sauver();   // premier lancement : le dossier affiché est écrit sur le disque
       }
       calculer(); rendre();
+      setInterval(surveillerLocal, 2000);
     }).catch(function (e) { indicateurLocal('Mode local indisponible : ' + e.message, true); });
   }
 })();
