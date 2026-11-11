@@ -256,9 +256,9 @@ nav#nav .ni { display: none; }
   body { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
   nav#nav { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 15; flex-direction: row; gap: 0; padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px)); background: var(--paper); border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
   nav#nav::-webkit-scrollbar { display: none; }
-  nav#nav a { flex: 1 0 auto; min-width: 68px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px; font-size: 11.5px; border-radius: 10px; }
+  nav#nav a { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 10.5px; border-radius: 10px; overflow: hidden; }
   nav#nav .ni { display: grid; place-items: center; } nav#nav .ni svg { width: 21px; height: 21px; }
-  nav#nav .nl { font-size: 0; } nav#nav .nl::after { content: attr(data-court); font-size: 11.5px; }
+  nav#nav .nl { font-size: 0; } nav#nav .nl::after { content: attr(data-court); font-size: 10.5px; }
   nav#nav a[aria-current="page"] { background: color-mix(in srgb, var(--brand) 12%, var(--paper)); color: var(--brand-text); }
   .layout { padding-bottom: 12px; }
   #toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
@@ -523,6 +523,8 @@ function defaultParams() {
     sautGeneration: false,          // stratégie : héritage des parents transmis directement aux petits-enfants
     fboTaux: 0.036, fboDuree: 20, fboPonderation: 0.7,
     fboFraisImmo: 0.075, fboFraisTitres: 0.03,  // frais d'acquisition supportés par la société des enfants
+    fboTauxVendeur: 0.02,      // taux du crédit vendeur consenti par les parents
+    fboPonderationVendeur: 1,  // part des revenus affectée au remboursement du crédit vendeur
     tmi: 0.30,                 // tranche marginale d'IR des clients
     psFonciers: 0.172,         // prélèvements sociaux sur revenus fonciers (à vérifier)
     pfu: 0.314,                // flat tax sur dividendes : 12,8 % + 18,6 % (depuis 2026)
@@ -846,7 +848,7 @@ function simulate(d, scen) {
     if (aMettre.length) res.coutsCommunaute += P.fraisFixesCommunaute || P.fraisCommunauteFixe;
     if (aMettre.length === 1) res.warnings.push(aMettre[0].libelle + ' : mis seul en communauté, la donation est différée de ' + P.delaiCommunaute + ' an(s) (une donation immédiate exposerait à l’abus de droit). Vous pouvez aussi mettre un autre bien en communauté dans le même acte.');
   }
-  /* ---- PLAN : family buy out (vente à une société des enfants) ---- */
+  /* ---- PLAN : family buy out (vente à une société des enfants, financée par la banque ou par un crédit vendeur) ---- */
   if (plan.donations) {
     actifs.slice().forEach(function (a) {
       if (!a.planFBO || a.type === 'financier' || a.type === 'rp' || fractionGrevee(ctx, a, T0) > 0) return;
@@ -859,23 +861,26 @@ function simulate(d, scen) {
         var dette = a.type === 'societe' ? 0 : a.passif * pk;
         var frais = prix * (a.type === 'societe' || a.type === 'pro' ? P.fboFraisTitres : P.fboFraisImmo);
         var net = Math.max(0, prix - dette - pv.impot);
-        var cap = 0, r = P.fboTaux / 12, n = P.fboDuree * 12, rev = (+a.revenu || 0) * pk * P.fboPonderation;
-        cap = r > 0 ? (rev / 12) * (1 - Math.pow(1 + r, -n)) / r : rev * P.fboDuree;
-        var aff = a.fboAffectation || 'consomme';
-        if (aff === 'consomme') {
+        var fin = financementFBO(P, a, prix, frais, (+a.revenu || 0) * pk, dette + pv.impot);
+        var aff = fin.mode === 'vendeur' ? 'vendeur' : (a.fboAffectation || 'consomme');
+        var idn = 'fbo_' + a.id + '_' + k, p1 = k === 'c1' ? 100 : 0;
+        if (aff === 'vendeur') {
+          // crédit vendeur : les parents détiennent une créance remboursée par les revenus du bien ; seul le solde restant dû entre dans la succession
+          actifs.push({ id: idn, libelle: 'Créance de crédit vendeur – ' + a.libelle, type: 'financier', partC1: p1, valeur: fin.capital, passif: 0, cca: 0, creance: { capital: fin.capital, taux: fin.taux, annuite: fin.annuite, pfu: P.pfu, consommation: (+a.revenu || 0) * pk * (1 - P.tmi - P.psFonciers) } });
+        } else if (aff === 'consomme') {
           // le prix remplace les revenus perdus : consommé chaque année à hauteur du revenu net qu'ils procuraient
           var conso = (+a.revenu || 0) * pk * (1 - P.tmi - P.psFonciers);
-          actifs.push({ id: 'fbo_' + a.id + '_' + k, libelle: 'Prix de vente de ' + a.libelle + ' (en cours de consommation)', type: 'financier', partC1: k === 'c1' ? 100 : 0, valeur: net, passif: 0, cca: 0, consoAnnuelle: conso, fboPrix: true });
+          actifs.push({ id: idn, libelle: 'Prix de vente de ' + a.libelle + ' (en cours de consommation)', type: 'financier', partC1: p1, valeur: net, passif: 0, cca: 0, consoAnnuelle: conso, fboPrix: true });
         } else if (aff === 'av') {
           var apres70 = ageAt(ctx.persons[k].naissance, T0) >= 70;
-          avs.push({ id: 'fbo_' + a.id + '_' + k, libelle: 'Assurance-vie (prix de ' + a.libelle + ')', souscripteur: k, valeur: net, valeurApres70: apres70 ? net : 0, primesApres70: apres70 ? net : 0, nouveau: true });
+          avs.push({ id: idn, libelle: 'Assurance-vie (prix de ' + a.libelle + ')', souscripteur: k, valeur: net, valeurApres70: apres70 ? net : 0, primesApres70: apres70 ? net : 0, nouveau: true });
         } else {
-          actifs.push({ id: 'fbo_' + a.id + '_' + k, libelle: 'Prix de vente de ' + a.libelle, type: 'financier', partC1: k === 'c1' ? 100 : 0, valeur: net, passif: 0, cca: 0 });
+          actifs.push({ id: idn, libelle: 'Prix de vente de ' + a.libelle, type: 'financier', partC1: p1, valeur: net, passif: 0, cca: 0 });
         }
-        res.fbo.push({ actif: a.libelle, actifId: a.id, client: k, prix: prix, dette: dette, impotPV: pv.impot, pv: pv, frais: frais, net: net, affectation: aff, financable: cap, apportNecessaire: Math.max(0, prix + frais - cap) });
+        res.fbo.push({ actif: a.libelle, actifId: a.id, client: k, prix: prix, dette: dette, impotPV: pv.impot, pv: pv, frais: frais, net: aff === 'vendeur' ? fin.capital : net, affectation: aff, financement: fin, financable: fin.capaciteBanque, apportNecessaire: fin.apport });
       });
     });
-    // économies annuelles cumulées jusqu'au dernier décès : impôt sur les revenus (et IS de la société) + IFI
+    // économies annuelles cumulées jusqu'au dernier décès : impôt sur les revenus (IS de la société et intérêts du crédit vendeur déduits) + IFI
     if (res.fbo.length) {
       var H = Math.max.apply(null, Object.keys(deaths).map(function (k) { return yearsBetween(T0, deaths[k]); }));
       var revEco = 0;
@@ -883,11 +888,9 @@ function simulate(d, scen) {
         if (!vendu[a.id]) return;
         var prixT = a.type === 'societe' ? Math.max(0, a.valeur - a.passif) : +a.valeur || 0;
         var fraisT = prixT * (a.type === 'societe' || a.type === 'pro' ? P.fboFraisTitres : P.fboFraisImmo);
-        var r = P.fboTaux / 12, n = P.fboDuree * 12, rev = (+a.revenu || 0) * P.fboPonderation;
-        var capT = r > 0 ? (rev / 12) * (1 - Math.pow(1 + r, -n)) / r : rev * P.fboDuree;
-        var fx = fiscaliteRevenusFBO(ctx, a, prixT, fraisT, capT, 0);
-        var dur = Math.min(H, P.fboDuree);
-        revEco += dur * (fx.impotDirect - fx.is1) + Math.max(0, H - P.fboDuree) * (fx.impotDirect - fx.isApres);
+        var pvT = plusValue(a, prixT, 1, T0), detteT = a.type === 'societe' ? 0 : (+a.passif || 0);
+        var finT = financementFBO(P, a, prixT, fraisT, +a.revenu || 0, detteT + pvT.impot);
+        revEco += fluxFBO(ctx, a, prixT, fraisT, finT, H).economie;
       });
       var ifi0 = calculIFI(d, false).ifi, ifi1 = calculIFI(d, true).ifi;
       res.economieRevenus = revEco; res.economieIFI = Math.max(0, ifi0 - ifi1) * H; res.horizonFBO = H;
@@ -1004,6 +1007,7 @@ function simulate(d, scen) {
       }
       var v = a.valeur * pk;
       if (a.consoAnnuelle) v = Math.max(0, a.valeur - a.consoAnnuelle * yearsBetween(T0, date)) * pk;
+      if (a.creance) v = patrimoineCredit(a.creance, yearsBetween(T0, date)) * pk;
       if (a.type === 'societe') {
         // parts de société : actif moins dettes restantes (emprunts, compte courant), décote de non-cotation
         var dettesBanque = Math.max(0, a.passif - a.cca);
@@ -1336,24 +1340,69 @@ function plusValuesLatentes(d) {
 }
 // Impôt sur les sociétés (taux réduit de 15 % jusqu'à 42 500 €)
 function impotIS(base) { if (base <= 0) return 0; return Math.min(base, 42500) * 0.15 + Math.max(0, base - 42500) * 0.25; }
+/* Financement du rachat par la société des enfants :
+   - banque si l'annuité supportable (part des revenus) finance prix + frais sur la durée retenue ;
+   - sinon crédit vendeur : la société règle comptant l'emprunt en cours et l'impôt de plus-value, le solde du prix est payé aux parents par annuités. */
+function financementFBO(P, a, prix, frais, revenu, comptant) {
+  var A = revenu * P.fboPonderation, r = P.fboTaux / 12, n = P.fboDuree * 12;
+  var cap = r > 0 ? (A / 12) * (1 - Math.pow(1 + r, -n)) / r : A * P.fboDuree;
+  var mode = a.fboFinancement || 'auto';
+  if (mode === 'auto') mode = cap >= prix + frais ? 'banque' : 'vendeur';
+  if (mode === 'banque') {
+    var cb = Math.min(prix + frais, cap);
+    var ann = cb > 0 ? (r > 0 ? cb * r / (1 - Math.pow(1 + r, -n)) * 12 : cb / P.fboDuree) : 0;
+    return { mode: 'banque', capital: cb, taux: P.fboTaux, annuite: ann, duree: P.fboDuree, apport: Math.max(0, prix + frais - cap), capaciteBanque: cap };
+  }
+  var capital = Math.max(0, prix - comptant), rv = P.fboTauxVendeur || 0;
+  A = revenu * (P.fboPonderationVendeur === undefined ? 1 : P.fboPonderationVendeur);
+  var duree = A <= 0 ? Infinity : rv > 0 ? (A > capital * rv ? Math.log(A / (A - capital * rv)) / Math.log(1 + rv) : Infinity) : capital / A;
+  return { mode: 'vendeur', capital: capital, taux: rv, annuite: A, duree: duree, apport: comptant + frais, capaciteBanque: cap };
+}
+// patrimoine laissé par un crédit vendeur à la date t : solde restant dû + annuités reçues non consommées
+// (les parents consomment chaque année l'équivalent du revenu net qu'ils percevaient auparavant)
+function patrimoineCredit(c, t) {
+  var solde = c.capital, epargne = 0;
+  for (var y = 0; y < Math.ceil(t); y++) {
+    var frac = Math.min(1, t - y), int = solde * c.taux, rem = Math.max(0, Math.min(solde, c.annuite - int));
+    var recu = rem + int * (1 - (c.pfu || 0));
+    epargne += frac * Math.max(0, recu - (c.consommation || 0));
+    solde -= frac * rem;
+  }
+  return Math.max(0, solde) + epargne;
+}
+function soldeCredit(c, t) {
+  if (!c || c.capital <= 0) return 0;
+  if (c.taux > 0) { var f = Math.pow(1 + c.taux, t); return Math.max(0, Math.min(c.capital, c.capital * f - c.annuite * (f - 1) / c.taux)); }
+  return Math.max(0, c.capital - c.annuite * t);
+}
+// Flux annuels jusqu'à l'horizon H : impôt économisé = impôt sur les revenus en direct − IS de la société − flat tax sur les intérêts reçus
+function fluxFBO(ctx, a, prix, frais, fin, H) {
+  var P = ctx.P, R = +a.revenu || 0, direct = R * (P.tmi + P.psFonciers);
+  var immo = a.type === 'immo' || a.type === 'autre', amort = immo ? (prix + frais) * P.partBati / P.dureeAmort : 0;
+  var eco = 0, solde = fin.capital, interets = 0, isTot = 0, pfuTot = 0;
+  for (var t = 0; t < Math.ceil(H); t++) {
+    var frac = Math.min(1, H - t), int = solde * fin.taux, rem = Math.max(0, Math.min(solde, fin.annuite - int));
+    var is = impotIS(R - int - (t < P.dureeAmort ? amort : 0)), pfu = fin.mode === 'vendeur' ? int * P.pfu : 0;
+    eco += frac * (direct - is - pfu); interets += frac * int; isTot += frac * is; pfuTot += frac * pfu; solde -= rem;
+  }
+  return { economie: eco, soldeFinal: Math.max(0, solde), interets: interets, is: isTot, pfu: pfuTot };
+}
 // Fiscalité des revenus : détention directe / vente à une société à l'IS des enfants
-function fiscaliteRevenusFBO(ctx, a, prix, frais, capacite, netVente) {
+function fiscaliteRevenusFBO(ctx, a, prix, frais, fin, netVente) {
   var P = ctx.P, R = +a.revenu || 0;
   var direct = R * (P.tmi + P.psFonciers);
-  var pret = Math.min(prix + frais, capacite);
-  var r = P.fboTaux / 12, n = P.fboDuree * 12;
-  var annuite = pret > 0 ? (r > 0 ? pret * r / (1 - Math.pow(1 + r, -n)) * 12 : pret / P.fboDuree) : 0;
-  var interets1 = pret * P.fboTaux;
+  var interets1 = fin.capital * fin.taux;
   var immo = a.type === 'immo' || a.type === 'autre';
   var amort = immo ? (prix + frais) * P.partBati / P.dureeAmort : 0;
-  var base1 = R - interets1 - amort, is1 = impotIS(base1);
-  var treso1 = R - is1 - annuite;
-  var baseApres = R - amort, isApres = impotIS(baseApres);
+  var is1 = impotIS(R - interets1 - amort), treso1 = R - is1 - fin.annuite;
+  var isApres = impotIS(R - amort);
   var dividendeBrut = Math.max(0, R - isApres), dividendeNet = dividendeBrut * (1 - P.pfu);
   var horizon = Math.max.apply(null, ctx.clients.map(function (k) { return ctx.persons[k].ev; })) || 15;
-  return { revenu: R, impotDirect: direct, netDirect: R - direct, pret: pret, annuite: annuite, interets1: interets1, amortissement: amort, is1: is1, treso1: treso1,
-    isApres: isApres, dividendeBrut: dividendeBrut, dividendeNet: dividendeNet, horizon: horizon, consommation: netVente / horizon,
-    gainAnnuel: (netVente / horizon) - (R - direct) };
+  var vendeur = fin.mode === 'vendeur';
+  return { revenu: R, impotDirect: direct, netDirect: R - direct, pret: fin.capital, annuite: fin.annuite, interets1: interets1, amortissement: amort, is1: is1, treso1: treso1,
+    isApres: isApres, dividendeBrut: dividendeBrut, dividendeNet: dividendeNet, horizon: horizon,
+    pfuInterets1: vendeur ? interets1 * P.pfu : 0, recuVendeur1: vendeur ? fin.annuite - interets1 * P.pfu : 0,
+    consommation: vendeur ? fin.annuite : netVente / horizon };
 }
 function analyseFBO(d) {
   var ctx = prepare(d), P = ctx.P, out = [];
@@ -1369,6 +1418,8 @@ function analyseFBO(d) {
     var prixV = a.type === 'societe' ? net : (+a.valeur || 0), dette = a.type === 'societe' ? 0 : (+a.passif || 0);
     var frais = prixV * (a.type === 'societe' || a.type === 'pro' ? P.fboFraisTitres : P.fboFraisImmo);
     var netVente = Math.max(0, prixV - dette - pv.impot);
+    var fin = financementFBO(P, a, prixV, frais, rev, dette + pv.impot);
+    var Hh = Math.max.apply(null, ctx.clients.map(function (k) { return ctx.persons[k].ev; })) || 15;
     // intérêt fiscal : droits et coûts du plan avec et sans cette vente
     var d0 = JSON.parse(JSON.stringify(d)), d1 = JSON.parse(JSON.stringify(d));
     d0.actifs.forEach(function (x) { if (x.id === a.id) x.planFBO = false; });
@@ -1377,13 +1428,13 @@ function analyseFBO(d) {
     var ecoRev = (M1.economies - M0.economies);
     out.push({ actifId: a.id, actif: a.libelle, type: a.type, categorie: a.categorieRevenu || '', revenu: rev, rendement: (+a.valeur ? rev / +a.valeur : 0), valeurNette: net, capacite: capacite, ratio: ratio,
       impotPV: pv.impot, pv: pv, gain: m0 - m1, retenu: !!a.planFBO, prix: prixV, dette: dette, frais: frais, netVente: netVente, rendementNet: netVente > 0 ? rev / netVente : 0,
-      apport: Math.max(0, prixV + frais - capacite), droitsAvec: m1, droitsSans: m0, fiscalite: fiscaliteRevenusFBO(ctx, a, prixV, frais, capacite, netVente),
+      apport: fin.apport, droitsAvec: m1, droitsSans: m0, fiscalite: fiscaliteRevenusFBO(ctx, a, prixV, frais, fin, netVente), financement: fin, soldeAuDeces: fin.mode === 'vendeur' ? soldeCredit(fin, Hh) : 0,
       economiesAnnuelles: ecoRev, economieRevenus: M1.resultats.reduce(function (s, r) { return s + (r.economieRevenus || 0); }, 0) / M1.resultats.length - M0.resultats.reduce(function (s, r) { return s + (r.economieRevenus || 0); }, 0) / M0.resultats.length,
       economieIFI: M1.resultats.reduce(function (s, r) { return s + (r.economieIFI || 0); }, 0) / M1.resultats.length - M0.resultats.reduce(function (s, r) { return s + (r.economieIFI || 0); }, 0) / M0.resultats.length,
       horizon: M1.resultats[0].horizonFBO || 0, gainGlobal: (m0 - m1) + ecoRev, affectation: a.fboAffectation || 'consomme',
-      verdict: ratio >= 0.6 ? 'Bon candidat' : ratio >= 0.3 ? 'Avec donation complémentaire' : 'Peu adapté' });
+      verdict: fin.mode === 'banque' ? 'Banque sur ' + P.fboDuree + ' ans' : (isFinite(fin.duree) ? 'Crédit vendeur, remboursé en ' + Math.ceil(fin.duree) + ' ans' + (fin.duree > Hh ? ' (au-delà de l’espérance de vie)' : '') : 'Crédit vendeur non amortissable : revenus inférieurs aux intérêts') });
   });
-  return out.sort(function (x, y) { return y.ratio - x.ratio; });
+  return out.sort(function (x, y) { return y.gainGlobal - x.gainGlobal; });
 }
 
 /* ---------------- Impôt sur le revenu (barème 2026, revenus 2025) ---------------- */
@@ -1990,14 +2041,14 @@ var PPTX = (function () {
     var lw = Z.w * 0.38;
     S.text(Z.x, Z.y, lw, Z.h * 0.85, [
       { runs: [{ t: 'Le principe', b: true, color: 'accent1', sz: 1300 }], spcAft: 4 },
-      { runs: ['Vos enfants créent une société qui rachète le bien à crédit.'], bullet: true, spcAft: 3 },
+      { runs: ['Vos enfants créent une société qui rachète le bien, à crédit bancaire ou par un crédit vendeur que vous lui consentez.'], bullet: true, spcAft: 3 },
       { runs: ['Les revenus du bien remboursent l’emprunt : la valeur passe à vos enfants sans droits de donation.'], bullet: true, spcAft: 3 },
       { runs: ['Vous consommez le prix au lieu de revenus imposés : impôt sur le revenu et IFI disparaissent.'], bullet: true, spcAft: 6 },
       { runs: [{ t: 'Hypothèses', b: true, color: 'accent1', sz: 1300 }], spcAft: 4 },
-      { runs: ['Crédit sur ' + P.fboDuree + ' ans à ' + (Math.round(P.fboTaux * 1000) / 10).toLocaleString('fr-FR') + ' %, ' + Math.round(P.fboPonderation * 100) + ' % des revenus nets affectés au remboursement.'], bullet: true, spcAft: 3 },
+      { runs: ['Banque : ' + P.fboDuree + ' ans à ' + (Math.round(P.fboTaux * 1000) / 10).toLocaleString('fr-FR') + ' %, ' + Math.round(P.fboPonderation * 100) + ' % des revenus. Crédit vendeur : ' + (Math.round(P.fboTauxVendeur * 1000) / 10).toLocaleString('fr-FR') + ' %, remboursé par les revenus ; le solde au décès reste dans la succession.'], bullet: true, spcAft: 3 },
       { runs: ['Gain global : droits, plus-value et frais d’acquisition inclus, plus l’impôt sur les revenus et l’IFI économisés jusqu’au dernier décès estimé.'], bullet: true }], { sz: 1100 });
-    var b = [['Bien', 'Impôt plus-value', 'Effet sur les droits', 'Impôts économisés', 'Gain global', '']];
-    A.fbo.slice(0, 8).forEach(function (f) { b.push([f.actif, f.pv.renseigne ? eur(f.impotPV) : 'à chiffrer', (f.gain >= 0 ? '+ ' : '− ') + eur(Math.abs(f.gain)), '+ ' + eur(f.economiesAnnuelles), { t: (f.gainGlobal >= 0 ? '+ ' : '− ') + eur(Math.abs(f.gainGlobal)), b: true }, { t: f.retenu ? 'Retenu' : 'Non retenu', algn: 'ctr', fill: f.retenu ? { s: 'accent1', tint: 0.3 } : null }]); });
+    var b = [['Bien', 'Financement', 'Effet sur les droits', 'Impôts économisés', 'Gain global', '']];
+    A.fbo.slice(0, 8).forEach(function (f) { b.push([f.actif, { t: f.financement.mode === 'banque' ? 'Banque, ' + f.financement.duree + ' ans' : 'Crédit vendeur' + (isFinite(f.financement.duree) ? ', ' + Math.ceil(f.financement.duree) + ' ans' : ''), algn: 'l' }, (f.gain >= 0 ? '+ ' : '− ') + eur(Math.abs(f.gain)), '+ ' + eur(f.economiesAnnuelles), { t: (f.gainGlobal >= 0 ? '+ ' : '− ') + eur(Math.abs(f.gainGlobal)), b: true }, { t: f.retenu ? 'Retenu' : 'Non retenu', algn: 'ctr', fill: f.retenu ? { s: 'accent1', tint: 0.3 } : null }]); });
     S.table(Z.x + lw + Z.w * 0.04, Z.y, Z.w - lw - Z.w * 0.04, [2.2, 1.3, 1.4, 1.4, 1.4, 1.2], b, { sz: 900, rowH: Math.round(EMU * 0.42) });
     S.text(Z.x + lw + Z.w * 0.04, Z.y + Z.h * 0.72, Z.w - lw - Z.w * 0.04, Z.h * 0.25, [{ runs: [{ t: 'Effet sur les droits : comparaison de la stratégie avec et sans la vente, plus-value et frais d’acquisition inclus. Le family buy out est retenu lorsqu’il réduit le coût global.', i: true }] }], { sz: 1000 });
     return S;
@@ -2008,7 +2059,7 @@ var PPTX = (function () {
     S.text(Z.x, Z.y, Z.w, Z.h * 0.08, [{ runs: [{ t: f.actif + ' : ' + eur(x.revenu) + ' de revenus nets par an', b: true }] }], { sz: 1400, color: 'accent1' });
     var cw = (Z.w - Z.w * 0.06) / 3, ch = Z.h * 0.55, y = Z.y + Z.h * 0.12;
     [['Aujourd’hui', 'Revenus fonciers chez vous', [['Impôt (TMI ' + Math.round(P.tmi * 100) + ' % + PS ' + (Math.round(P.psFonciers * 1000) / 10).toLocaleString('fr-FR') + ' %)', eur(x.impotDirect)], ['Revenu net', eur(x.netDirect)]]],
-     ['Pendant le crédit', 'Société à l’IS de vos enfants', [['Intérêts et amortissement', eur(x.interets1 + x.amortissement)], ['Impôt sur les sociétés', eur(x.is1)], ['Pour vous : capital consommé sans impôt', eur(x.consommation) + ' / an']]],
+     ['Pendant le crédit', 'Société à l’IS de vos enfants', [['Intérêts et amortissement', eur(x.interets1 + x.amortissement)], ['Impôt sur les sociétés', eur(x.is1)], [f.financement.mode === 'vendeur' ? 'Pour vous : annuité du crédit vendeur (flat tax sur les seuls intérêts : ' + eur(x.pfuInterets1) + ')' : 'Pour vous : capital consommé sans impôt', eur(x.consommation) + ' / an']]],
      ['Après le crédit', 'Dividendes à la flat tax', [['Impôt sur les sociétés', eur(x.isApres)], ['Dividende net (' + (Math.round(P.pfu * 1000) / 10).toLocaleString('fr-FR') + ' %)', eur(x.dividendeNet)], ['Même revenu en foncier', eur(x.netDirect)]]]].forEach(function (c, i) {
       var x0 = Z.x + i * (cw + Z.w * 0.03);
       S.box(x0, y, cw, Z.h * 0.12, { fill: i === 0 ? { s: 'tx1', tint: 0.45 } : 'accent1', color: 'bg1', paras: [{ runs: [{ t: c[0], b: true, sz: 1300 }] }, { runs: [{ t: c[1], sz: 1000 }] }] });
@@ -2896,13 +2947,13 @@ var XLSXOUT = (function () {
     put(wf, 'A5', 'Part des revenus affectée'); put(wf, 'B5', P.fboPonderation, { fmt: PCT, input: true });
     [32, 18, 14, 12, 16, 14, 24, 16, 16, 14].forEach(function (z, i) { wf.getColumn(i + 1).width = z; });
     for (var cw = 11; cw <= 19; cw++) wf.getColumn(cw).width = 15;
-    ['Bien', 'Catégorie', 'Revenu net', 'Rendement', 'Finançable', 'Part de la valeur', 'Verdict', 'Impôt plus-value', 'Effet sur les droits', 'Retenu', 'Net de vente', 'Rendement net de vente', 'Impôt sur revenus en direct', 'IS société (1re année)', 'Dividende net après crédit', 'Capital consommable par an', 'Impôt revenus économisé (cumul)', 'IFI économisé (cumul)', 'Gain global'].forEach(function (z, i) { put(wf, String.fromCharCode(65 + i) + '7', z, { navy: true }); });
+    ['Bien', 'Catégorie', 'Revenu net', 'Rendement', 'Finançable', 'Part de la valeur', 'Verdict', 'Impôt plus-value', 'Effet sur les droits', 'Retenu', 'Net de vente', 'Rendement net de vente', 'Impôt sur revenus en direct', 'IS société (1re année)', 'Dividende net après crédit', 'Capital consommable par an', 'Impôt revenus économisé (cumul)', 'IFI économisé (cumul)', 'Gain global', 'Financement', 'Durée de remboursement', 'Solde au décès'].forEach(function (z, i) { put(wf, String.fromCharCode(65 + i) + '7', z, { navy: true }); });
     var CAT = { foncier: 'Revenus fonciers', bic: 'Location meublée (BIC)', dividendes: 'Dividendes', interets: 'Intérêts', autre: 'Autre' };
     A.fbo.forEach(function (f, i) {
       var y = 8 + i;
       put(wf, 'A' + y, f.actif); put(wf, 'B' + y, CAT[f.categorie] || ''); put(wf, 'C' + y, f.revenu, { fmt: EUR, input: true }); put(wf, 'D' + y, f.rendement, { fmt: '0.0%' });
       put(wf, 'E' + y, { formula: 'PV($B$3/12,$B$4*12,-C' + y + '*$B$5/12)', result: f.capacite }, { fmt: EUR });
-      put(wf, 'F' + y, { formula: 'IFERROR(E' + y + '/' + Math.round(f.valeurNette) + ',0)', result: f.ratio }, { fmt: PCT }); put(wf, 'G' + y, f.verdict); put(wf, 'H' + y, Math.round(f.impotPV), { fmt: EUR }); put(wf, 'I' + y, Math.round(f.gain), { fmt: EUR }); put(wf, 'J' + y, f.retenu ? 'Oui' : 'Non', { b: f.retenu }); put(wf, 'K' + y, Math.round(f.netVente), { fmt: EUR }); put(wf, 'L' + y, { formula: 'IFERROR(C' + y + '/K' + y + ',0)', result: f.rendementNet }, { fmt: '0.0%' }); var fx = f.fiscalite || {}; put(wf, 'M' + y, { formula: 'C' + y + '*(' + P.tmi + '+' + P.psFonciers + ')', result: fx.impotDirect || 0 }, { fmt: EUR }); put(wf, 'N' + y, Math.round(fx.is1 || 0), { fmt: EUR }); put(wf, 'O' + y, Math.round(fx.dividendeNet || 0), { fmt: EUR }); put(wf, 'P' + y, Math.round(fx.consommation || 0), { fmt: EUR }); put(wf, 'Q' + y, Math.round(f.economieRevenus || 0), { fmt: EUR }); put(wf, 'R' + y, Math.round(f.economieIFI || 0), { fmt: EUR }); put(wf, 'S' + y, { formula: 'I' + y + '+Q' + y + '+R' + y, result: Math.round(f.gain) + Math.round(f.economieRevenus || 0) + Math.round(f.economieIFI || 0) }, { fmt: EUR, b: true });
+      put(wf, 'F' + y, { formula: 'IFERROR(E' + y + '/' + Math.round(f.valeurNette) + ',0)', result: f.ratio }, { fmt: PCT }); put(wf, 'G' + y, f.verdict); put(wf, 'H' + y, Math.round(f.impotPV), { fmt: EUR }); put(wf, 'I' + y, Math.round(f.gain), { fmt: EUR }); put(wf, 'J' + y, f.retenu ? 'Oui' : 'Non', { b: f.retenu }); put(wf, 'K' + y, Math.round(f.netVente), { fmt: EUR }); put(wf, 'L' + y, { formula: 'IFERROR(C' + y + '/K' + y + ',0)', result: f.rendementNet }, { fmt: '0.0%' }); var fx = f.fiscalite || {}; put(wf, 'M' + y, { formula: 'C' + y + '*(' + P.tmi + '+' + P.psFonciers + ')', result: fx.impotDirect || 0 }, { fmt: EUR }); put(wf, 'N' + y, Math.round(fx.is1 || 0), { fmt: EUR }); put(wf, 'O' + y, Math.round(fx.dividendeNet || 0), { fmt: EUR }); put(wf, 'P' + y, Math.round(fx.consommation || 0), { fmt: EUR }); put(wf, 'Q' + y, Math.round(f.economieRevenus || 0), { fmt: EUR }); put(wf, 'R' + y, Math.round(f.economieIFI || 0), { fmt: EUR }); wf.getColumn(20).width = 18; wf.getColumn(21).width = 14; wf.getColumn(22).width = 16; put(wf, 'T' + y, f.financement.mode === 'banque' ? 'Banque' : 'Crédit vendeur'); put(wf, 'U' + y, isFinite(f.financement.duree) ? Math.ceil(f.financement.duree) + ' ans' : 'non amortissable'); put(wf, 'V' + y, Math.round(f.soldeAuDeces || 0), { fmt: EUR }); put(wf, 'S' + y, { formula: 'I' + y + '+Q' + y + '+R' + y, result: Math.round(f.gain) + Math.round(f.economieRevenus || 0) + Math.round(f.economieIFI || 0) }, { fmt: EUR, b: true });
     });
     if (!A.fbo.length) put(wf, 'A8', 'Aucun bien productif de revenus saisi.', { i: true });
     var yp = 10 + A.fbo.length;
@@ -3597,7 +3648,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       html += '<div class="tablewrap"><table class="t edit"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Passif</th><th>Vague</th><th>Via SCI</th><th>FBO</th><th>DPT 2,5 %</th>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<th>Communauté</th>' : '') + '</tr></thead><tbody>';
       state.actifs.forEach(function (a, i) {
         if (a.type === 'financier') return;
-        html += '<tr><td data-l="Bien"><strong>' + h(a.libelle) + '</strong></td><td class="n" data-l="Valeur">' + eur(a.valeur) + '</td><td class="n" data-l="Passif">' + (a.passif ? eur(a.passif) : '–') + '</td><td data-l="Donation">' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td data-l="Via SCI">' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + (a.dispositif && CALC.sousEngagement(a, CALC.parseDate(state.dateEtude) || new Date()) ? ' <span class="tip" tabindex="0" data-tip="' + h(CALC.DISPOSITIFS[a.dispositif] + ' en cours jusqu’au ' + CALC.parseDate(a.finEngagement).toLocaleDateString('fr-FR') + ' : la donation est reportée à la fin de l’engagement ; apport en société et vente impossibles avant.') + '">⚠</span>' : '') + '</td><td data-l="Family buy out">' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="consomme"' + (!a.fboAffectation || a.fboAffectation === 'consomme' ? ' selected' : '') + '>prix consommé</option><option value="av"' + (a.fboAffectation === 'av' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td data-l="DPT 2,5 %">' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '> <span class="tip" tabindex="0" data-tip="' + h(CALC.moitiesDPT(ctxS, a).map(function (m) { return 'Part de ' + m.donateur.prenom + ' (' + Math.round(m.part * 100) + ' %) : ' + (m.mode === 'dpt' ? 'donation-partage transgénérationnelle, droit de partage 2,5 %' : m.mode === 'directe' ? 'donateur décédé, donation directe par vous de la nue-propriété' : 'donation de moins de 15 ans : droits de donation'); }).join('\n') + '\nVous conservez l’usufruit (usufruit successif par rétention) : vos enfants ne reçoivent que la nue-propriété.') + '">ⓘ</span>' : '<span class="muted">–</span>') + '</td>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<td data-l="Communauté">' + ((+a.partC1 === 100 || +a.partC1 === 0) ? '<input type="checkbox" data-path="actifs.' + i + '.planCommunaute" data-type="bool" aria-label="Mettre en communauté"' + (a.planCommunaute ? ' checked' : '') + '>' : '<span class="muted" title="Bien déjà commun ou indivis">–</span>') + '</td>' : '') + '</tr>';
+        html += '<tr><td data-l="Bien"><strong>' + h(a.libelle) + '</strong></td><td class="n" data-l="Valeur">' + eur(a.valeur) + '</td><td class="n" data-l="Passif">' + (a.passif ? eur(a.passif) : '–') + '</td><td data-l="Donation">' + (a.planFBO ? '<span class="tag ok">Vendu (FBO)</span>' : '<select data-path="actifs.' + i + '.planVague" data-type="num" aria-label="Vague de donation">' + [[0, 'Conserver'], [1, 'Aujourd’hui'], [2, 'Dans 15 ans'], [3, 'Dans 30 ans']].map(function (o) { return '<option value="' + o[0] + '"' + (+a.planVague === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</td><td data-l="Via SCI">' + (a.type === 'societe' ? '<span class="tag ok">Parts existantes</span>' : '<input type="checkbox" data-path="actifs.' + i + '.planSociete" data-type="bool" aria-label="Transmettre via une SCI"' + (a.planSociete ? ' checked' : '') + (a.type === 'pro' ? ' disabled' : '') + '>') + (a.dispositif && CALC.sousEngagement(a, CALC.parseDate(state.dateEtude) || new Date()) ? ' <span class="tip" tabindex="0" data-tip="' + h(CALC.DISPOSITIFS[a.dispositif] + ' en cours jusqu’au ' + CALC.parseDate(a.finEngagement).toLocaleDateString('fr-FR') + ' : la donation est reportée à la fin de l’engagement ; apport en société et vente impossibles avant.') + '">⚠</span>' : '') + '</td><td data-l="Family buy out">' + (+a.revenu > 0 && a.type !== 'rp' ? '<input type="checkbox" data-path="actifs.' + i + '.planFBO" data-type="bool" aria-label="Family buy out"' + (a.planFBO ? ' checked' : '') + '>' + (a.planFBO ? ' <select class="mini-sel" data-path="actifs.' + i + '.fboAffectation" aria-label="Affectation du prix"><option value="consomme"' + (!a.fboAffectation || a.fboAffectation === 'consomme' ? ' selected' : '') + '>prix consommé</option><option value="av"' + (a.fboAffectation === 'av' ? ' selected' : '') + '>prix en AV</option><option value="conserve"' + (a.fboAffectation === 'conserve' ? ' selected' : '') + '>prix conservé</option></select> <select class="mini-sel" data-path="actifs.' + i + '.fboFinancement" aria-label="Financement"><option value="auto"' + (!a.fboFinancement || a.fboFinancement === 'auto' ? ' selected' : '') + '>financement auto</option><option value="banque"' + (a.fboFinancement === 'banque' ? ' selected' : '') + '>banque</option><option value="vendeur"' + (a.fboFinancement === 'vendeur' ? ' selected' : '') + '>crédit vendeur</option></select>' : '') : '<span class="muted" title="Renseignez un revenu net pour envisager un family buy out">–</span>') + '</td><td data-l="DPT 2,5 %">' + (CALC.eligibleDPT(ctxS, a) ? '<input type="checkbox" data-path="actifs.' + i + '.planDPT" data-type="bool" aria-label="Réattribuer aux enfants par donation-partage transgénérationnelle"' + (a.planDPT ? ' checked' : '') + '> <span class="tip" tabindex="0" data-tip="' + h(CALC.moitiesDPT(ctxS, a).map(function (m) { return 'Part de ' + m.donateur.prenom + ' (' + Math.round(m.part * 100) + ' %) : ' + (m.mode === 'dpt' ? 'donation-partage transgénérationnelle, droit de partage 2,5 %' : m.mode === 'directe' ? 'donateur décédé, donation directe par vous de la nue-propriété' : 'donation de moins de 15 ans : droits de donation'); }).join('\n') + '\nVous conservez l’usufruit (usufruit successif par rétention) : vos enfants ne reçoivent que la nue-propriété.') + '">ⓘ</span>' : '<span class="muted">–</span>') + '</td>' + (state.situation === 'marie' && state.regime !== 'universelle' ? '<td data-l="Communauté">' + ((+a.partC1 === 100 || +a.partC1 === 0) ? '<input type="checkbox" data-path="actifs.' + i + '.planCommunaute" data-type="bool" aria-label="Mettre en communauté"' + (a.planCommunaute ? ' checked' : '') + '>' : '<span class="muted" title="Bien déjà commun ou indivis">–</span>') + '</td>' : '') + '</tr>';
       });
       html += '</tbody></table></div>';
     }
@@ -3632,6 +3683,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       field('Emprunts remboursés avant les décès', 'params.dettesRembourseesAuDeces', 'check') + '</div><div class="grid g3">' +
       field('Héritage attendu des parents dans les successions', 'params.heritageParents', 'check') + '</div>' +
       '<h3 class="sub">Family buy out</h3><div class="grid g3">' + field('Taux d’emprunt', 'params.fboTaux', 'pct') + field('Durée (années)', 'params.fboDuree', 'num') + field('Part des revenus affectée au crédit', 'params.fboPonderation', 'pct', { hint: '70 % par défaut, comme la pondération bancaire des loyers.' }) +
+      field('Taux du crédit vendeur', 'params.fboTauxVendeur', 'pct', { hint: 'Un taux nul expose à une requalification en avantage indirect.' }) + field('Part des revenus affectée au crédit vendeur', 'params.fboPonderationVendeur', 'pct') +
       field('Frais d’acquisition (immeubles)', 'params.fboFraisImmo', 'pct') + field('Frais d’acquisition (titres)', 'params.fboFraisTitres', 'pct') + '</div>' +
       '<h3 class="sub">Mise en communauté</h3><div class="grid g3">' + field('Délai avant donation (bien mis seul en communauté)', 'params.delaiCommunaute', 'num', { hint: 'En années.' }) + field('Frais fixes de l’acte', 'params.fraisCommunauteFixe', 'money') + field('Frais proportionnels (immeubles)', 'params.fraisCommunautePct', 'pct', { hint: 'Publicité foncière 0,715 % et émoluments.' }) + '</div>' +
       '<h3 class="sub">Foyer fiscal</h3><div class="grid g3">' + field('Revenus nets imposables du foyer', 'foyer.revenus', 'money', { hint: 'Salaires, pensions, bénéfices : hors revenus des biens saisis dans le patrimoine.' }) + field('Nombre de parts', 'foyer.parts', 'num', { ph: couple() ? '2' : '1' }) +
@@ -3663,7 +3715,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
           if (r.droitsDPT) s += '<tr><td>Droit de partage (DPT)</td><td class="n">' + eur(r.droitsDPT) + '</td></tr>';
           if (r.coutsCommunaute) s += '<tr><td>Mise en communauté (' + r.communaute.map(function (c) { return c.actif; }).join(', ') + ')</td><td class="n">' + eur(r.coutsCommunaute) + '</td></tr>';
           if (r.economiesFBO) s += '<tr><td>Impôts sur les revenus et IFI économisés (' + Math.round(r.horizonFBO) + ' ans)</td><td class="n">− ' + eur(r.economiesFBO) + '</td></tr>';
-          (r.fbo || []).forEach(function (f) { var tip = 'Prix : ' + eur(f.prix) + (f.dette ? '\n− Emprunt : ' + eur(f.dette) : '') + '\n− Impôt de plus-value : ' + eur(f.impotPV) + '\n= Net : ' + eur(f.net) + '\nFrais d’acquisition : ' + eur(f.frais) + '\nFinancé par les revenus : ' + eur(f.financable) + '\nApport à prévoir : ' + eur(f.apportNecessaire); s += '<tr><td colspan="2" class="opt"><span class="tip" tabindex="0" data-tip="' + h(tip) + '">Family buy out : ' + h(f.actif) + ' vendu ' + eur(f.prix) + ' par ' + h(nomClient(f.client)) + ', ' + eur(f.net) + ' net ' + (f.affectation === 'av' ? 'placés en assurance-vie' : 'conservés') + '</span></td></tr>'; });
+          (r.fbo || []).forEach(function (f) { if (f.affectation === 'vendeur') { s += '<tr><td colspan="2" class="opt">Family buy out : ' + h(f.actif) + ' vendu ' + eur(f.prix) + ' par ' + h(nomClient(f.client)) + ' avec un crédit vendeur de ' + eur(f.financement.capital) + (isFinite(f.financement.duree) ? ' remboursé en ' + Math.ceil(f.financement.duree) + ' ans' : '') + '</td></tr>'; return; } var tip = 'Prix : ' + eur(f.prix) + (f.dette ? '\n− Emprunt : ' + eur(f.dette) : '') + '\n− Impôt de plus-value : ' + eur(f.impotPV) + '\n= Net : ' + eur(f.net) + '\nFrais d’acquisition : ' + eur(f.frais) + '\nFinancé par les revenus : ' + eur(f.financable) + '\nApport à prévoir : ' + eur(f.apportNecessaire); s += '<tr><td colspan="2" class="opt"><span class="tip" tabindex="0" data-tip="' + h(tip) + '">Family buy out : ' + h(f.actif) + ' vendu ' + eur(f.prix) + ' par ' + h(nomClient(f.client)) + ', ' + eur(f.net) + ' net ' + (f.affectation === 'av' ? 'placés en assurance-vie' : 'conservés') + '</span></td></tr>'; });
         }
         s += '<tr class="tot"><td>Total</td><td class="n">' + eur(r.total) + '</td></tr></tbody></table>';
         if (r.warnings.length) s += '<ul class="warn">' + r.warnings.map(function (w) { return '<li>' + h(w) + '</li>'; }).join('') + '</ul>';
@@ -3689,8 +3741,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       '<div class="res card"><h4>Après la stratégie</h4><table class="t compact"><tbody><tr><td>Patrimoine net taxable</td><td class="n">' + eur(I.apres.net) + '</td></tr><tr class="tot"><td>IFI annuel</td><td class="n">' + eur(I.apres.ifi) + '</td></tr></tbody></table></div></div>';
     if ((A.rendements || []).length) html += '<h3>Rendement des biens</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Revenu net</th><th class="n">Valeur</th><th class="n">Rendement</th><th class="n">Net de vente</th><th class="n">Rendement sur le net de vente</th></tr></thead><tbody>' +
       A.rendements.map(function (x) { return '<tr><td>' + h(x.actif) + '</td><td class="n">' + eur(x.revenu) + '</td><td class="n">' + eur(x.valeur) + '</td><td class="n">' + pct1(x.brut) + '</td><td class="n"><span class="tip" tabindex="0" data-tip="' + h('Valeur : ' + eur(x.valeur) + '\n− Passif remboursé : ' + eur(x.dette) + '\n− Impôt de plus-value : ' + (x.pvRenseigne ? eur(x.impotPV) : 'non chiffré (prix d’acquisition manquant)') + '\n= Net de vente : ' + eur(x.netVente)) + '">' + eur(x.netVente) + '</span></td><td class="n"><strong>' + pct1(x.net) + '</strong></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Le rendement sur le net de vente compare le revenu à ce que vous percevriez réellement en vendant : il dit si conserver le bien rapporte plus que réinvestir le prix.</p>';
-    if (A.fbo.length) html += '<h3>Family buy out</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Revenu net</th><th class="n">Finançable</th><th class="n">Part de la valeur</th><th class="n">Impôt de plus-value</th><th class="n">Effet sur les droits</th><th class="n">Impôts économisés</th><th class="n">Gain global</th><th>Dans la stratégie</th></tr></thead><tbody>' +
-      A.fbo.map(function (f) { return '<tr><td>' + h(f.actif) + '<br><small class="muted">' + h(f.verdict) + '</small></td><td class="n">' + eur(f.revenu) + '</td><td class="n">' + eur(f.capacite) + '</td><td class="n">' + Math.round(f.ratio * 100) + ' %</td><td class="n">' + (f.pv.renseigne ? '<span class="tip" tabindex="0" data-tip="' + h(detailPV(f.pv)) + '">' + eur(f.impotPV) + '</span>' : '<span class="muted">prix d’achat ?</span>') + '</td><td class="n"><span class="tip" tabindex="0" data-tip="' + h(detailFBO(f, A.ctx.P)) + '">' + (f.gain >= 0 ? 'économie ' : 'surcoût ') + eur(Math.abs(f.gain)) + '</span></td><td class="n"><span class="tip" tabindex="0" data-tip="' + h(detailRevenus(f.fiscalite, A.ctx.P) + '\n\nCumul sur ' + Math.round(f.horizon) + ' ans (jusqu’au dernier décès estimé) :\nimpôt sur les revenus ' + eur(f.economieRevenus) + '\nIFI ' + eur(f.economieIFI)) + '">' + eur(f.economiesAnnuelles) + '</span></td><td class="n"><strong>' + (f.gainGlobal >= 0 ? '' : '− ') + eur(Math.abs(f.gainGlobal)) + '</strong></td><td><span class="tag ' + (f.retenu ? 'ok' : 'ko') + '">' + (f.retenu ? 'Utilisé' : 'Non utilisé') + '</span></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Gain global = effet sur les droits + impôt sur les revenus et IFI économisés jusqu’au dernier décès estimé. Hypothèse par défaut : le prix est consommé au rythme des revenus nets perdus. Une société à l’IS détenue par vos enfants rachète le bien à crédit. Intérêts et amortissement effacent presque tout l’impôt pendant le crédit. Vous ne percevez plus de revenus fonciers imposés à votre tranche marginale et aux prélèvements sociaux : vous consommez un capital, sans impôt. À terme, la société distribue des dividendes au prélèvement forfaitaire de ' + pct1(A.ctx.P.pfu) + ', plus favorable que les revenus fonciers. On transforme la nature fiscale des revenus.</p>';
+    if (A.fbo.length) html += '<h3>Family buy out</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Revenu net</th><th>Financement</th><th class="n">Impôt de plus-value</th><th class="n">Effet sur les droits</th><th class="n">Impôts économisés</th><th class="n">Gain global</th><th>Dans la stratégie</th></tr></thead><tbody>' +
+      A.fbo.map(function (f) { return '<tr><td>' + h(f.actif) + '<br><small class="muted">' + h(f.verdict) + '</small></td><td class="n">' + eur(f.revenu) + '</td><td><span class="tip" tabindex="0" data-tip="' + h(detailFinancement(f, A.ctx.P)) + '">' + (f.financement.mode === 'banque' ? 'Banque' : 'Crédit vendeur') + '</span></td><td class="n">' + (f.pv.renseigne ? '<span class="tip" tabindex="0" data-tip="' + h(detailPV(f.pv)) + '">' + eur(f.impotPV) + '</span>' : '<span class="muted">prix d’achat ?</span>') + '</td><td class="n"><span class="tip" tabindex="0" data-tip="' + h(detailFBO(f, A.ctx.P)) + '">' + (f.gain >= 0 ? 'économie ' : 'surcoût ') + eur(Math.abs(f.gain)) + '</span></td><td class="n"><span class="tip" tabindex="0" data-tip="' + h(detailRevenus(f.fiscalite, A.ctx.P) + '\n\nCumul sur ' + Math.round(f.horizon) + ' ans (jusqu’au dernier décès estimé) :\nimpôt sur les revenus ' + eur(f.economieRevenus) + '\nIFI ' + eur(f.economieIFI)) + '">' + eur(f.economiesAnnuelles) + '</span></td><td class="n"><strong>' + (f.gainGlobal >= 0 ? '' : '− ') + eur(Math.abs(f.gainGlobal)) + '</strong></td><td><span class="tag ' + (f.retenu ? 'ok' : 'ko') + '">' + (f.retenu ? 'Utilisé' : 'Non utilisé') + '</span></td></tr>'; }).join('') + '</tbody></table></div><p class="note">Gain global = effet sur les droits + impôt sur les revenus et IFI économisés jusqu’au dernier décès estimé. Un rendement élevé n’est pas nécessaire : il suffit que la durée de remboursement tienne dans l’espérance de vie. Si la banque ne finance pas tout, un crédit vendeur prend le relais : vos revenus fonciers lourdement imposés deviennent un capital remboursé, non imposé ; le solde restant dû au décès reste dans la succession. Hypothèse par défaut : le prix est consommé au rythme des revenus nets perdus. Une société à l’IS détenue par vos enfants rachète le bien à crédit. Intérêts et amortissement effacent presque tout l’impôt pendant le crédit. Vous ne percevez plus de revenus fonciers imposés à votre tranche marginale et aux prélèvements sociaux : vous consommez un capital, sans impôt. À terme, la société distribue des dividendes au prélèvement forfaitaire de ' + pct1(A.ctx.P.pfu) + ', plus favorable que les revenus fonciers. On transforme la nature fiscale des revenus.</p>';
     var pvs = (A.pvLatentes || []).filter(function (x) { return x.pv.renseigne; });
     if (pvs.length) html += '<h3>Plus-values latentes</h3><div class="tablewrap"><table class="t"><thead><tr><th>Bien</th><th class="n">Valeur</th><th class="n">Prix de revient</th><th class="n">Plus-value</th><th class="n">Impôt si cession ou apport</th><th>Régime</th></tr></thead><tbody>' +
       pvs.map(function (x) { return '<tr><td>' + h(x.actif) + '</td><td class="n">' + eur(x.valeur) + '</td><td class="n">' + eur(x.pv.acquisition) + '</td><td class="n">' + eur(x.pv.pvBrute) + '</td><td class="n">' + eur(x.pv.impot) + '</td><td><small>' + h(x.pv.regime) + '</small></td></tr>'; }).join('') + '</tbody></table></div><p class="note">L’apport d’un immeuble à une société est une cession : la plus-value est imposée au jour de l’apport. Elle est intégrée aux coûts du levier société et du family buy out.</p>';
@@ -3710,15 +3762,21 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       '\n\nSociété à l’IS des enfants, pendant le crédit :\nintérêts ' + eur(x.interets1) + ' et amortissement ' + eur(x.amortissement) + ' déduits\n= IS ' + eur(x.is1) + ' la 1re année ; trésorerie après annuité ' + eur(x.treso1) +
       '\n\nAprès le crédit :\nIS ' + eur(x.isApres) + ', dividende net de flat tax (' + pct1(P.pfu) + ') ' + eur(x.dividendeNet) + '\ncontre ' + eur(x.netDirect) + ' net en revenus fonciers';
   }
+  function detailFinancement(f, P) {
+    var x = f.financement, t;
+    if (x.mode === 'banque') t = 'Emprunt bancaire de ' + eur(x.capital) + ' sur ' + x.duree + ' ans à ' + pct1(x.taux) + '\nAnnuité ' + eur(x.annuite) + ' (' + Math.round(P.fboPonderation * 100) + ' % des revenus)\nApport des enfants : ' + eur(x.apport);
+    else t = 'Crédit vendeur de ' + eur(x.capital) + ' à ' + pct1(x.taux) + '\nAnnuité versée aux parents : ' + eur(x.annuite) + ' par an\n' + (isFinite(x.duree) ? 'Remboursé en ' + Math.ceil(x.duree) + ' ans' : 'Non amortissable à ce taux') + ' ; espérance de vie retenue : ' + Math.round(f.fiscalite.horizon) + ' ans\nSolde dans la succession au décès : ' + eur(f.soldeAuDeces) + '\nComptant à régler par la société (emprunt en cours, impôt de plus-value, frais) : ' + eur(x.apport) + '\n\nLes parents reçoivent un capital remboursé, non imposé ; seuls les intérêts supportent la flat tax.';
+    return t + '\n\nCapacité d’emprunt bancaire sur ' + P.fboDuree + ' ans : ' + eur(x.capaciteBanque);
+  }
   function detailFBO(f, P) {
     var t = 'Prix de vente : ' + eur(f.prix);
     if (f.dette) t += '\n− Emprunt remboursé : ' + eur(f.dette);
     t += '\n− Impôt de plus-value : ' + (f.pv.renseigne ? eur(f.impotPV) : 'non chiffré');
     t += '\n= Net perçu : ' + eur(f.netVente);
     t += '\n\nFrais d’acquisition (société des enfants) : ' + eur(f.frais);
-    t += '\nFinancé par les revenus : ' + eur(f.capacite) + ' (' + Math.round(P.fboPonderation * 100) + ' % de ' + eur(f.revenu) + ' par an, ' + P.fboDuree + ' ans à ' + pct1(P.fboTaux) + ')';
-    t += '\nApport à prévoir par les enfants : ' + eur(f.apport);
-    t += '\n\nPrix ' + (f.affectation === 'av' ? 'placé en assurance-vie' : f.affectation === 'conserve' ? 'conservé' : 'consommé au rythme des revenus perdus (' + eur(f.fiscalite.netDirect) + ' par an)');
+    t += '\nFinancement : ' + (f.financement.mode === 'banque' ? 'banque, ' + eur(f.financement.capital) + ' sur ' + f.financement.duree + ' ans' : 'crédit vendeur de ' + eur(f.financement.capital) + (isFinite(f.financement.duree) ? ', remboursé en ' + Math.ceil(f.financement.duree) + ' ans' : ''));
+    t += '\nComptant ou apport à prévoir : ' + eur(f.apport);
+    t += '\n\n' + (f.financement.mode === 'vendeur' ? 'Annuités consommées à hauteur des revenus perdus ; solde au décès ' + eur(f.soldeAuDeces) : 'Prix ' + (f.affectation === 'av' ? 'placé en assurance-vie' : f.affectation === 'conserve' ? 'conservé' : 'consommé au rythme des revenus perdus (' + eur(f.fiscalite.netDirect) + ' par an)'));
     t += '\n\nDroits et coûts de la stratégie :\nsans la vente ' + eur(f.droitsSans) + '\navec la vente ' + eur(f.droitsAvec) + '\n\nImpôts économisés sur ' + Math.round(f.horizon) + ' ans :\nrevenus ' + eur(f.economieRevenus) + ', IFI ' + eur(f.economieIFI) + '\n\nGain global : ' + eur(f.gainGlobal);
     return t;
   }
@@ -3783,7 +3841,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   function rendre() {
     var cur = courante();
     var ICO = { famille: 'frere', donations: 'don', patrimoine: 'rp', strategie: 'societe', hypotheses: 'autre', analyse: 'financier', leviers: 'av', exports: 'pro' };
-    var COURT = { donations: 'Donations', hypotheses: 'Réglages' };
+    var COURT = { donations: 'Dons', patrimoine: 'Biens', strategie: 'Plan', hypotheses: 'Réglages', exports: 'Export' };
     $('#nav').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '"' + (s.id === cur ? ' aria-current="page"' : '') + '><span class="ni">' + icone(ICO[s.id]) + '</span><span class="nl" data-court="' + h(COURT[s.id] || s.t) + '">' + h(s.t) + '</span></a>'; }).join('');
     var sec = SECTIONS.filter(function (s) { return s.id === cur; })[0];
     var memeOnglet = cur === rendre.derniere;
