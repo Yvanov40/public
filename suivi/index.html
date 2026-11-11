@@ -1627,6 +1627,23 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   #mResume { margin: 0 2px 8px; }
 }
 :root[data-theme="dark"] #mOnglets .m-onglet[aria-pressed="true"], :root[data-theme="dark"] #mOnglets .m-onglet[aria-pressed="true"] i, :root[data-theme="dark"] #mOnglets .m-onglet[aria-pressed="true"] small { color: #0f1b20; }
+
+/* ---------- téléphone : les petites fenêtres (tâche, rendez-vous, émoluments…) s'affichent par-dessus, en feuille du bas ---------- */
+@media (max-width: 900px) {
+  .feuille.feuille-petite { background: rgba(8, 20, 25, .38); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .feuille.feuille-petite.ouverte { align-items: flex-end; padding: 0; }
+  .feuille-petite .feuille-boite { height: auto; max-height: 86vh; border-radius: 20px 20px 0 0; padding-top: 0; box-shadow: 0 -14px 44px rgba(8, 20, 25, .35); animation: monte .18s ease-out; }
+  .feuille-petite .feuille-entete { border-radius: 20px 20px 0 0; padding-top: 10px; padding-bottom: 10px; position: relative; }
+  .feuille-petite .feuille-entete::before { content: ""; position: absolute; top: 5px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: rgba(255, 255, 255, .35); }
+  .feuille-petite .feuille-corps { padding-top: 12px; padding-bottom: 16px; overflow-y: auto; }
+  .feuille-petite .champ { margin-bottom: 9px; }
+  .feuille-petite textarea { min-height: 58px !important; }
+  /* la fiche tâche et la fiche rendez-vous : date, heure et durée sur une même ligne pour gagner de la hauteur */
+  #corpsTache .deux, #corpsRdv .deux { gap: 8px; }
+}
+
+.cases-tache { margin: 2px 0 8px; align-items: center; }
+.cases-tache .case { margin: 0; }
 </style>
 </head>
 <body>
@@ -6526,10 +6543,11 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         champ("Pour le", el("input", { name: "pour", type: "date", value: t.pour || "" })),
         champ("À", el("input", { name: "heure", type: "time", value: t.heure || "" }))),
       el("div", { class: "deux" }, champ("Durée", choixDuree("duree", t.duree)),
-        el("label", { class: "case", style: "margin-top:22px" }, el("input", { type: "checkbox", name: "fixe", checked: !!t.fixe }), "📌 Heure fixe")),
-      champ("Répéter", el("select", { name: "repete" }, REPETITIONS.map(([v, lib]) => el("option", { value: v, selected: (t.repete || "") === v }, lib)))),
+        champ("Répéter", el("select", { name: "repete" }, REPETITIONS.map(([v, lib]) => el("option", { value: v, selected: (t.repete || "") === v }, lib))))),
+      el("div", { class: "deux cases-tache" },
+        el("label", { class: "case" }, el("input", { type: "checkbox", name: "fixe", checked: !!t.fixe }), "📌 Heure fixe"),
+        el("label", { class: "case tache-fait" }, el("input", { type: "checkbox", name: "fait", checked: !!t.fait }), `Faite${t.fait ? " le " + new Date(t.fait).toLocaleDateString("fr-FR") : ""}`)),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:90px", placeholder: "Détails, numéro à appeler, lien…" }, t.note || ""))),
-      el("label", { class: "tache-fait" }, el("input", { type: "checkbox", name: "fait", checked: !!t.fait }), t.fait ? `Faite le ${new Date(t.fait).toLocaleDateString("fr-FR")}` : "Faite"),
       el("div", { class: "actions-fiche" },
         t.pour ? el("button", { type: "button", onclick: () => menuAgenda(`${t.texte} (${nom})`, t.pour, t.note || "", t.heure, t.duree || DUREE_TACHE) }, "📅 Ajouter à l’agenda") : null,
         el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
@@ -7093,7 +7111,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (n && history.state && history.state.fiche) { ignorerRetour = 1; history.go(-n); }
   }
   document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerFeuilles));
-  document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && window.innerWidth > 900) fermerFeuilles(); }));
+  // toucher le fond assombri referme la fenêtre : sur ordinateur, et sur téléphone pour les petites fenêtres (qui ne couvrent pas tout l'écran)
+  document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && (window.innerWidth > 900 || f.classList.contains("feuille-petite"))) fermerFeuilles(); }));
   // glisser le doigt vers la droite dans une fiche : retour
   document.querySelectorAll(".feuille-boite").forEach((boite) => {
     let depart = null;
