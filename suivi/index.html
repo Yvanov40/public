@@ -1385,6 +1385,18 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 :root[data-theme="dark"] .carte-dossier.multi, :root[data-theme="dark"] #clientsListe tr.multi td { background: #33290f !important; }
 :root[data-theme="dark"] #outilFrame { background: #fff; }
 :root[data-theme="dark"] .message { background: #e8e3d9; color: #0f1b20; }
+
+/* ---------- téléphone : horloge en feuille du bas, plus grande ; champs de date et d'heure comme des boutons ---------- */
+@media (max-width: 900px) {
+  .horloge-voile { align-items: flex-end; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .horloge-boite { width: 100%; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); animation: monte .18s ease-out; }
+  .horloge-entete { justify-content: center; font-size: 40px; }
+  .horloge-cadran { margin: 18px auto 10px; }
+  .horloge-boutons { padding: 6px 18px 16px; }
+  .horloge-boutons button { padding: 11px 16px; font-size: 15px; }
+  input[type="date"], input[type="time"] { caret-color: transparent; }
+  .choix-date-grille button { padding: 11px 0; font-size: 16px; }
+}
 </style>
 </head>
 <body>
@@ -3975,10 +3987,44 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     }, { effacer: true });
   }, true);
 
+  // ---- téléphone : nos sélecteurs (calendrier, horloge ronde) à la place de ceux du système ----
+  // Un toucher sur un champ de date ou d'heure ouvre le nôtre ; on annule le toucher pour que le système n'ouvre pas le sien.
+  let toucherChamp = null;
+  document.addEventListener("touchstart", (e) => {
+    const champ = e.target.closest && e.target.closest('input[type="date"], input[type="time"]');
+    toucherChamp = champ && estTel() ? { champ, x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { capture: true, passive: true });
+  document.addEventListener("touchend", (e) => {
+    const t = toucherChamp; toucherChamp = null;
+    if (!t) return;
+    const p = e.changedTouches[0];
+    if (Math.hypot(p.clientX - t.x, p.clientY - t.y) > 10) return;   // c'était un défilement
+    if (e.cancelable) e.preventDefault();                             // pas de sélecteur du système
+    ouvrirSelecteurPour(t.champ);
+  }, { capture: true, passive: false });
+  // (sécurité : si le système tente quand même d'ouvrir le sien au clic ou à la prise de focus)
+  document.addEventListener("click", (e) => {
+    const champ = e.target.closest && e.target.closest('input[type="date"], input[type="time"]');
+    if (champ && estTel()) { e.preventDefault(); champ.blur(); }
+  }, true);
+  function ouvrirSelecteurPour(champ) {
+    champ.blur();
+    const poser = (v) => {
+      champ.value = v;
+      champ.dispatchEvent(new Event("input", { bubbles: true }));
+      champ.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const etiquette = (champ.getAttribute("aria-label") || (champ.closest(".champ") && champ.closest(".champ").querySelector("label") ? champ.closest(".champ").querySelector("label").textContent : "") || "").replace(/\s*\(.*\)$/, "");
+    if (champ.type === "time") choisirHeureHorloge(champ.value, poser);
+    else choisirDate(champ.value, etiquette || "Date", poser, { effacer: true });
+  }
+
   function choisirHeureHorloge(valeur, choisi) {
     const m0 = /^(\d{1,2}):(\d{2})$/.exec(valeur || "");
     const maintenant = new Date();
-    const etat = { h: m0 ? +m0[1] : maintenant.getHours(), m: m0 ? +m0[2] : Math.floor(maintenant.getMinutes() / 5) * 5, mode: "h" };
+    // sans heure déjà saisie : l'heure qu'il est si on est en journée, sinon 9 h
+    const enJournee = maintenant.getHours() >= 8 && maintenant.getHours() < 19;
+    const etat = { h: m0 ? +m0[1] : (enJournee ? maintenant.getHours() : 9), m: m0 ? +m0[2] : (enJournee ? Math.floor(maintenant.getMinutes() / 5) * 5 : 0), mode: "h" };
     const T = 260, C = T / 2, R_EXT = T * 0.39, R_INT = T * 0.255;
     const voile = el("div", { class: "horloge-voile", role: "dialog", "aria-label": "Choisir l’heure" });
     const fermer = () => { voile.remove(); document.removeEventListener("keydown", clavier, true); };
