@@ -1752,6 +1752,16 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   .k-aide { margin-top: 20px; }
 }
 :root[data-theme="dark"] .k-statut.ouverte, :root[data-theme="dark"] .k-statut.ouverte b, :root[data-theme="dark"] .k-statut.ouverte small, :root[data-theme="dark"] .k-statut.ouverte em { color: #0f1b20; }
+
+/* ---------- gestion automatique de l'agenda ---------- */
+.auto-reglages { display: grid; gap: 8px; }
+.auto-ligne { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 9px 12px; cursor: pointer; }
+.auto-ligne input { margin-top: 3px; width: 18px !important; height: 18px; flex: none; accent-color: var(--bleu); }
+.auto-ligne b { display: block; font-weight: 600; color: var(--bleu); font-size: 14px; }
+.auto-ligne small { color: var(--discret); font-size: 12.5px; }
+.auto-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.auto-choix { display: grid; gap: 4px; font-size: 12.5px; color: var(--discret); }
+.auto-choix select, .auto-choix input { width: 100%; }
 </style>
 </head>
 <body>
@@ -2092,7 +2102,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   <div class="feuille-boite">
     <div class="feuille-entete">
       <button data-fermer>Fermer</button>
-      <h3 id="titreAgenda">Horaires et congés</h3>
+      <h3 id="titreAgenda">Agenda : horaires et réglages</h3>
       <button class="valider" id="enregistrerAgenda">Enregistrer</button>
     </div>
     <div class="feuille-corps" id="corpsAgenda"></div>
@@ -3230,6 +3240,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   }
   function sauver(marquer = true) {
     if (marquer) donnees.modifie = new Date().toISOString();
+    if (marquer && !planifEnCours && typeof planifierDossiersAFaire === "function") setTimeout(() => { if (planifierDossiersAFaire() && typeof afficherTout === "function") afficherTout(); }, 0);
     try {
       const photo = photographier();
       // plusieurs enregistrements coup sur coup (une action qui en déclenche d'autres) ne font qu'une seule étape à annuler
@@ -5084,6 +5095,29 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         el("h4", { class: "rubrique" }, "Horaires"),
         plage(0, "Matin"), plage(1, "Après-midi"),
         el("p", { class: "aide" }, "Laissez une plage vide pour la supprimer (journée continue, par exemple)."),
+        el("h4", { class: "rubrique" }, "Gestion automatique"),
+        (() => {
+          const A = { ...AUTO_DEFAUT, ...(b.auto || {}) };
+          const poser = (cle, val) => { b.auto = { ...A, [cle]: val }; dessiner(); };
+          const interrupteur = (cle, titre, detail) => el("label", { class: "auto-ligne" },
+            el("input", { type: "checkbox", checked: !!A[cle], onchange: (e) => poser(cle, e.target.checked) }), el("span", null, el("b", null, titre), el("small", null, detail)));
+          const choix = (cle, titre, valeurs, suffixe) => el("label", { class: "auto-choix" }, el("span", null, titre),
+            el("select", { onchange: (e) => poser(cle, Number(e.target.value)) }, valeurs.map((v) => el("option", { value: v, selected: Number(A[cle]) === v }, `${v} ${suffixe}`))));
+          return el("div", { class: "auto-reglages" },
+            interrupteur("actif", "Recaler les tâches automatiquement", "Quand un rendez-vous ou une tâche se pose, les tâches suivantes se décalent pour ne pas se chevaucher."),
+            interrupteur("reporter", "Reporter au lendemain ce qui ne tient pas", "Sinon, la tâche reste sur son jour, sans heure."),
+            interrupteur("combler", "Boucher les trous avec les tâches plus courtes", "Sinon, l’ordre des tâches est toujours respecté."),
+            el("div", { class: "auto-grille" },
+              choix("marge", "Marge entre deux éléments", [0, 5, 10, 15, 30], "min"),
+              choix("pas", "Arrondi des heures", [5, 10, 15, 30], "min"),
+              choix("dureeTache", "Durée d’une tâche", [15, 30, 45, 60, 90], "min"),
+              choix("dureeRdv", "Durée d’un rendez-vous", [30, 45, 60, 90, 120], "min")),
+            interrupteur("dossiers", "Mettre dans l’agenda les dossiers « À faire » qui me sont attribués", "Une tâche est créée à la suite (la tâche du dossier, ou « Analyse à faire », « Acte à faire »…). Elle n’est pas figée : elle se décale comme les autres."),
+            el("div", { class: "auto-grille" },
+              el("label", { class: "auto-choix" }, el("span", null, "Mon nom dans les collaborateurs"),
+                el("input", { type: "text", value: A.moi, onchange: (e) => poser("moi", e.target.value.trim() || "Moi") })),
+              choix("dureeDossier", "Durée pour une analyse ou un acte", [30, 60, 90, 120, 180, 240], "min")));
+        })(),
         el("h4", { class: "rubrique" }, "Congés et jours off"),
         el("div", { class: "agenda-conges" }, (b.conges || []).length ? b.conges.slice().sort((x, y) => x.du.localeCompare(y.du)).map((c) => el("div", { class: "agenda-conge" },
           el("span", null, el("b", null, c.au && c.au !== c.du ? `du ${fmtDate(c.du)} au ${fmtDate(c.au)}` : `le ${fmtDate(c.du)}`), c.libelle ? ` · ${c.libelle}` : ""),
@@ -5105,8 +5139,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const jours = [];
     for (let k = 0; k < 90; k++) { const d = aujourdhui(); d.setDate(d.getDate() + k); jours.push(enIso(d)); }
     const resume = apresAgenda(jours);
+    const nb = planifierDossiersAFaire(true);
     terminerFeuille(); afficherTout();
-    informer("Horaires et congés enregistrés." + resume);
+    informer("Réglages de l’agenda enregistrés." + resume + (nb ? ` · ${nb} dossier(s) à faire planifié(s)` : ""));
     enregistrerReglagesAgenda();
   }
 
@@ -5224,7 +5259,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   const tacheRetenue = (nom, t, clients) => !clients || clients.has(cleClient(nom))
     || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche()));
 
+  let premierePlanif = false;
   function afficherTout() {
+    if (!premierePlanif && donnees) { premierePlanif = true; setTimeout(() => { if (planifierDossiersAFaire()) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     const vide = !donnees;
@@ -6664,6 +6701,19 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // ---- horaires de travail, jours travaillés et congés : réglables (⚙ Horaires), partagés par GitHub (agenda.json) ----
   const CLE_AGENDA = "suivi-gp-donnees-agenda";
   const AGENDA_DEFAUT = { jours: [1, 2, 3, 4, 5], plages: [["09:00", "12:30"], ["14:00", "18:00"]], conges: [] };
+  // gestion automatique de l'agenda (réglable dans Horaires et congés)
+  const AUTO_DEFAUT = {
+    actif: true,          // les tâches se recalent toutes seules autour des rendez-vous et des tâches posées
+    reporter: true,       // ce qui ne tient plus dans la journée part au jour travaillé suivant
+    combler: true,        // une tâche plus courte peut passer devant pour boucher un trou
+    marge: 0,             // minutes laissées libres entre deux éléments
+    pas: 15,              // arrondi des heures proposées (minutes)
+    dureeTache: 30, dureeRdv: 60,
+    dossiers: true,       // un dossier « À faire » qui m'est attribué devient une tâche dans l'agenda
+    moi: "Moi",           // mon nom dans les collaborateurs
+    dureeDossier: 120     // durée de la tâche d'un dossier (analyse, acte…)
+  };
+  const auto = () => ({ ...AUTO_DEFAUT, ...((reglagesAgenda && reglagesAgenda.auto) || {}) });
   let reglagesAgenda = (() => { try { return { ...AGENDA_DEFAUT, ...JSON.parse(localStorage.getItem(CLE_AGENDA) || "{}") }; } catch (e) { return { ...AGENDA_DEFAUT }; } })();
   const congeDu = (iso) => (reglagesAgenda.conges || []).find((c) => c.du && c.du <= iso && iso <= (c.au || c.du));
   const jourTravaille = (iso) => (reglagesAgenda.jours || []).includes(versDate(iso).getDay()) && !congeDu(iso);
@@ -6740,7 +6790,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // la journée sans chevauchement : la tâche qu'on vient de poser (ou une tâche « 📌 heure fixe ») garde sa place,
   // les autres se décalent ; une tâche courte peut passer devant pour boucher un trou trop petit pour la suivante.
   // Ce qui ne tient plus dans la journée part au jour ouvré suivant.
-  const dureeTache = (t) => Number(t.duree) || DUREE_TACHE;
+  const dureeTache = (t) => Number(t.duree) || auto().dureeTache || DUREE_TACHE;
+  const dureeRdvDefaut = () => auto().dureeRdv || DUREE_RDV;
   function jourOuvreSuivant(iso) {
     const d = versDate(iso);
     let n = 0;
@@ -6756,19 +6807,23 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   function replanifier(iso, ancre, aCaser = [], profondeur = 0) {
     const bilan = { deplacees: 0, reportees: [] };
     if (!iso || !donnees || iso < enIso(aujourdhui())) return bilan;   // on ne réécrit pas le passé
-    const maintenant = iso === enIso(aujourdhui()) ? Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / 15) * 15 : -1;
+    const A = auto();
+    if (!A.actif && !aCaser.length) return bilan;                        // gestion automatique coupée : on ne place que les nouvelles
+    const pas = Number(A.pas) || 15, marge = Number(A.marge) || 0;
+    const maintenant = iso === enIso(aujourdhui()) ? Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / pas) * pas : -1;
     const fixes = [];
     for (const d of donnees.dossiers) {
       if (d.rdv !== iso || d.archives) continue;
       const m = enMinutes(d.rdv_heure);
-      if (m !== null) fixes.push([m, m + (Number(d.rdv_duree) || DUREE_RDV)]);
+      if (m !== null) fixes.push([m, m + (Number(d.rdv_duree) || dureeRdvDefaut()) + marge]);
     }
-    for (const r of rdvsClientsDuJour(iso)) { const m = enMinutes(r.heure); if (m !== null) fixes.push([m, m + (Number(r.duree) || DUREE_RDV)]); }
+    for (const r of rdvsClientsDuJour(iso)) { const m = enMinutes(r.heure); if (m !== null) fixes.push([m, m + (Number(r.duree) || dureeRdvDefaut()) + marge]); }
     const mobiles = [];
     for (const t of tachesDuJour(iso)) {
       const m = enMinutes(t.heure);
       if (m === null) { if (aCaser.includes(t.id)) mobiles.push([Infinity, t]); continue; }
-      if (t.fixe || t.id === ancre || m < maintenant) fixes.push([m, m + dureeTache(t)]);
+      // gestion coupée : les tâches déjà placées ne bougent plus (seules les nouvelles cherchent une place)
+      if (t.fixe || t.id === ancre || m < maintenant || (!A.actif && !aCaser.includes(t.id))) fixes.push([m, m + dureeTache(t) + marge]);
       else mobiles.push([m, t]);
     }
     fixes.sort((a, b) => a[0] - b[0]);
@@ -6777,18 +6832,19 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     // on garde l'ordre actuel des tâches, mais une plus courte peut passer devant pour boucher un trou
     const file = mobiles.sort((a, b) => a[0] - b[0] || String(a[1].cree || "").localeCompare(String(b[1].cree || ""))).map(([, t]) => t);
     for (const [a, b] of libres) {
-      let c = a;
+      let c = Math.ceil(a / pas) * pas;
       for (;;) {
-        const k = file.findIndex((t) => dureeTache(t) <= b - c);
+        // sans « combler », on respecte l'ordre : seule la première de la file peut prendre la place
+        const k = A.combler ? file.findIndex((t) => dureeTache(t) <= b - c) : (file.length && dureeTache(file[0]) <= b - c ? 0 : -1);
         if (k < 0) break;
         const t = file.splice(k, 1)[0];
         const h = enHeure(c);
         if (t.heure !== h) { t.heure = h; bilan.deplacees++; }
-        c += dureeTache(t);
+        c = Math.ceil((c + dureeTache(t) + marge) / pas) * pas;
       }
     }
-    // ce qui ne tient pas : jour ouvré suivant
-    if (file.length && profondeur < 10) {
+    // ce qui ne tient pas : jour ouvré suivant (ou, si le report est coupé, la tâche garde son jour sans heure)
+    if (file.length && profondeur < 10 && A.reporter) {
       const suivant = jourOuvreSuivant(iso);
       for (const t of file) { t.pour = suivant; t.heure = ""; bilan.reportees.push({ t, vers: suivant }); }
       const suite = replanifier(suivant, null, file.map((t) => t.id), profondeur + 1);
@@ -6798,6 +6854,40 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     }
     return bilan;
   }
+  // Un dossier au statut « À faire » dont je suis collaborateur reçoit une tâche, posée à la suite dans l'agenda :
+  // sa tâche (« Envoyer le projet ») ou, à défaut, « Analyse à faire », « Acte à faire »… Durée réglable (2 h par défaut),
+  // non figée : elle se décale comme les autres. Rien n'est recréé tant qu'une tâche ouverte existe pour ce dossier.
+  let planifEnCours = false;
+  function planifierDossiersAFaire(silencieux) {
+    const A = auto();
+    if (planifEnCours || !donnees || !A.dossiers || !String(A.moi || "").trim()) return 0;
+    planifEnCours = true;
+    const moi = cleClient(A.moi);
+    let crees = 0;
+    const jours = [], ids = [];
+    try {
+      for (const d of donnees.dossiers) {
+        if (d.archives || etapeDe(d) !== "2" || !d.client || !d.id) continue;
+        if (!collabsDe(d).some((c) => cleClient(c) === moi)) continue;
+        if (tachesDe(d.client).some((t) => !t.fait && t.dossier === d.id)) continue;   // il a déjà sa tâche
+        const nature = sansNumero(d.type) === "Sans type" ? "Dossier" : sansNumero(d.type);
+        const texte = String(d.tache || "").trim() || `${nature} à faire`;
+        // analyse ou acte : la durée prévue pour un dossier (2 h par défaut) ; autre nature : celle d'une tâche
+        const duree = String(/^(analyse|acte)/i.test(sansAccents(nature)) ? (Number(A.dureeDossier) || 120) : (Number(A.dureeTache) || DUREE_TACHE));
+        const [jour, heure] = premierCreneau(duree);
+        const id = nouvelId();
+        majTaches(d.client, (l) => [...l, { id, texte, pour: jour, heure, duree, fait: null, cree: new Date().toISOString(),
+          dossier: d.id, dossier_libelle: [d.tache, nature].filter(Boolean).join(" – "), auto: true }]);
+        if (jour) jours.push(jour);
+        ids.push(id);
+        crees++;
+      }
+      if (crees) apresAgenda(jours, null, ids);
+    } finally { planifEnCours = false; }
+    if (crees && !silencieux) setTimeout(() => informer((crees > 1 ? `${crees} dossiers à faire ont reçu leur tâche dans l’agenda.` : "1 dossier à faire a reçu sa tâche dans l’agenda.")), 60);
+    return crees;
+  }
+
   // après toute modification de l'agenda : on replanifie les jours concernés, on enregistre, on résume
   function apresAgenda(jours, ancre, aCaser = []) {
     let deplacees = 0;
