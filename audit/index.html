@@ -288,6 +288,28 @@ nav#nav .ni { display: none; }
 .depot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; border: 2px dashed color-mix(in srgb, var(--brand) 40%, var(--line)); border-radius: 12px; padding: 22px 16px; margin: 10px 0 4px; cursor: pointer; color: var(--muted); background: color-mix(in srgb, var(--brand) 3%, var(--paper)); transition: background .15s, border-color .15s; }
 .depot strong { color: var(--brand-text); font-size: 15px; }
 .depot:hover, .depot.survol { background: color-mix(in srgb, var(--brand) 10%, var(--paper)); border-color: var(--brand); }
+.reglages { border: 1px solid var(--line); border-radius: 10px; margin: 10px 0; }
+.reglages summary { cursor: pointer; padding: 11px 14px; font-weight: 700; font-size: 14.5px; color: var(--brand-text); }
+.reglages .rg { padding: 0 14px 12px; }
+.apercus { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.ap { aspect-ratio: 16 / 9; border-radius: 8px; border: 1px solid var(--line); padding: 7% 8%; display: flex; flex-direction: column; overflow: hidden; position: relative; font-size: clamp(8px, 1.5vw, 13px); }
+.ap.couv { color: #FFFFFF; justify-content: center; gap: 6%; }
+.ap.couv b { font-size: 1.5em; letter-spacing: .01em; } .ap.couv i { width: 16%; height: 2px; display: block; } .ap.couv span { font-size: 1.15em; }
+.ap.page { background: #FFFFFF; color: #1F2A33; gap: 2%; padding-left: 9%; }
+.ap.page u { position: absolute; left: 5%; top: 9%; width: 3px; height: 15%; }
+.ap.page b { font-size: 1.35em; } .ap.page span { font-size: .95em; margin-bottom: 4%; }
+.ap.page table { border-collapse: collapse; width: 82%; font-size: .8em; } .ap.page th { color: #FFFFFF; text-align: left; padding: 2px 6px; font-weight: 700; } .ap.page td { padding: 2px 6px; border-bottom: 1px solid #D9D3C4; }
+.ap.page em { position: absolute; left: 9%; bottom: 5%; font-size: .6em; color: #6B7680; font-style: normal; white-space: nowrap; }
+.palettes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.pal { display: inline-flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 18px; padding: 4px 12px 4px 4px; background: var(--paper); cursor: pointer; font: 600 13px var(--sans); color: var(--ink); }
+.pal span { width: 18px; height: 18px; display: block; } .pal span:first-child { border-radius: 50% 0 0 50%; } .pal span:nth-child(2) { border-radius: 0 50% 50% 0; margin-right: 8px; }
+.pal em { font-style: normal; } .pal.on { border-color: var(--brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, transparent); }
+input[type=color] { width: 100%; height: 38px; border: 1px solid var(--line); border-radius: 6px; padding: 3px; background: var(--field); cursor: pointer; }
+.logo-ligne { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.logo-ligne img { height: 38px; max-width: 120px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 2px; }
+.chk.plat { padding-top: 0; display: inline-flex; align-items: center; gap: 6px; }
+.chk.plat input { margin: 0; }
+@media (max-width: 600px) { .apercus { grid-template-columns: 1fr; } .ap { font-size: 12px; } }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -2485,7 +2507,42 @@ var PPTX = (function () {
     return best;
   }
 
-  async function generer(buf, A) {
+  function hex2rgb(h) { h = String(h || '').replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+  function melange(h, vers, t) { var a = hex2rgb(h), b = hex2rgb(vers); return a.map(function (v, i) { return ('0' + Math.round(v + (b[i] - v) * t).toString(16)).slice(-2); }).join('').toUpperCase(); }
+  /* Personnalisation du modèle intégré : couleurs, mention de pied de page, logo.
+     opts = { principale, accent, mention, logo: {data (Uint8Array PNG), w, h} | null, afficherLogo } */
+  async function personnaliser(buf, opts) {
+    opts = opts || {};
+    var zip = await JSZip.loadAsync(buf);
+    var P1 = String(opts.principale || '143A46').replace('#', '').toUpperCase(), A1 = String(opts.accent || 'B08A3E').replace('#', '').toUpperCase();
+    var carte = { '143A46': P1, 'B08A3E': A1, 'D8C49A': melange(A1, 'FFFFFF', 0.5), '2F6474': melange(P1, 'FFFFFF', 0.22), '8FB3BD': melange(P1, 'FFFFFF', 0.55), 'C9D6DA': melange(P1, 'FFFFFF', 0.8) };
+    var noms = Object.keys(zip.files).filter(function (n) { return /^ppt\/(theme|slideMasters|slideLayouts|slides)\/[^\/]+\.xml$/.test(n); });
+    for (var i = 0; i < noms.length; i++) {
+      var x = await zip.file(noms[i]).async('string'), y = x;
+      y = y.replace(/(srgbClr val=")([0-9A-Fa-f]{6})(")/g, function (m, a, c, z) { var k = c.toUpperCase(); return a + (carte[k] || k) + z; });
+      if (opts.mention !== undefined && opts.mention !== null && /slideMasters/.test(noms[i])) y = y.replace(/(<a:t>)Audit civil et fiscal[^<]*(<\/a:t>)/, function (m, a, z) { return a + esc(opts.mention) + z; });
+      if (opts.afficherLogo === false) y = y.replace(/<p:pic>[\s\S]*?<\/p:pic>/g, '');
+      else if (opts.logo && opts.logo.w && opts.logo.h) {
+        // logo personnel : conserve ses proportions dans le carré d'origine, aligné en haut à droite
+        y = y.replace(/<p:pic>[\s\S]*?<\/p:pic>/g, function (pic) {
+          return pic.replace(/<a:off x="(\d+)" y="(\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/, function (m, ox, oy, cx, cy) {
+            var s = Math.max(+cx, +cy), r = opts.logo.w / opts.logo.h, nw = r >= 1 ? s * Math.min(r, 2.6) : s * r, nh = r >= 1 ? nw / r : s;
+            return '<a:off x="' + Math.round(+ox + (+cx - nw)) + '" y="' + oy + '"/><a:ext cx="' + Math.round(nw) + '" cy="' + Math.round(nh) + '"/>';
+          });
+        });
+      }
+      if (y !== x) zip.file(noms[i], y);
+    }
+    if (opts.logo && opts.logo.data && opts.afficherLogo !== false) {
+      Object.keys(zip.files).filter(function (n) { return /^ppt\/media\/[^\/]+\.png$/i.test(n); }).forEach(function (n) { zip.file(n, opts.logo.data); });
+    }
+    Object.keys(zip.files).forEach(function (n) { if (zip.files[n].dir) delete zip.files[n]; });
+    return zip.generateAsync({ type: typeof window !== 'undefined' ? 'arraybuffer' : 'nodebuffer', compression: 'DEFLATE' });
+  }
+
+  async function generer(buf, A, opts) {
+    POLICE = String((opts && opts.police) || 'Garamond').replace(/[<>&"]/g, '');
+    FONT = '<a:latin typeface="' + POLICE + '"/><a:cs typeface="' + POLICE + '"/>';
     var M = await lireModele(buf);
     var ctx = A.ctx, d = ctx.d, zip = M.zip;
     window_CALC();
@@ -2671,7 +2728,7 @@ var PPTX = (function () {
     var keys = ['abattements et baremes', 'qu\'est ce que le demembrement', 'interet du demembrement', 'alimenter vos contrats d\'assurance-vie', 'modifier les clauses beneficiaires', 'pourquoi transmettre les parts de sci'];
     return { slides: M.slides.length, theme: M.theme, reconnues: keys.filter(function (k) { return !!trouver(M, [k]); }).length, total: keys.length, format: (M.cx / M.cy > 1.5 ? '16:9' : '4:3') };
   }
-  return { generer: generer, infosModele: infosModele, lireModele: lireModele, eur: eur };
+  return { generer: generer, personnaliser: personnaliser, melange: melange, infosModele: infosModele, lireModele: lireModele, eur: eur };
 })();
 if (typeof module !== 'undefined') module.exports = PPTX;
 
@@ -2696,11 +2753,13 @@ var XLSXOUT = (function () {
     return 'IF(' + c + '>1805677,' + c + '*0.45-237606,IF(' + c + '>902838,' + c + '*0.4-147322,IF(' + c + '>552324,' + c + '*0.3-57038,IF(' + c + '>15932,' + c + '*0.2-1806,IF(' + c + '>12109,' + c + '*0.15-1009,IF(' + c + '>8072,' + c + '*0.1-404,' + c + '*0.05))))))';
   }
 
-  async function generer(A, theme) {
+  async function generer(A, theme, opts) {
     var ctx = A.ctx, d = ctx.d, P = ctx.P;
+    if (opts && opts.personnalise) { NAVY = 'FF' + String(opts.principale).replace('#', '').toUpperCase(); GOLD = 'FF' + String(opts.accent).replace('#', '').toUpperCase(); }
+    else { NAVY = 'FF0C2D39'; GOLD = 'FFA87D2F'; }
     var wb = new ExcelJS.Workbook();
     wb.creator = 'Audit civil et fiscal'; wb.created = new Date();
-    var F = 'Garamond', SZ = 10;
+    var F = (opts && opts.police) || 'Garamond', SZ = 10;
     function font(o) { return Object.assign({ name: F, size: SZ, color: { argb: 'FF000000' } }, o || {}); }
     function put(ws, ref, v, o) {
       o = o || {};
@@ -3819,6 +3878,39 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     html += '<p class="note">Gains estimés à partir du taux marginal de succession des héritiers (' + Math.round((analyse.tauxMarginal || 0) * 100) + ' %) et de la tranche marginale d’impôt sur le revenu (' + Math.round(P().tmi * 100) + ' %) ; ils ne s’additionnent pas tous entre eux.</p>';
     return html;
   }
+  /* ---- apparence des exports (réglages conservés dans ce navigateur) ---- */
+  var APP_KEY = 'audit-apparence-v1';
+  var APP_DEFAUT = { principale: '#143A46', accent: '#B08A3E', police: 'Garamond', mention: 'Audit civil et fiscal  ·  Document non contractuel, établi selon les dispositions en vigueur à sa date', afficherLogo: true, logo: null };
+  var PALETTES = [['Bleu nuit et or', '#143A46', '#B08A3E'], ['Marine et cuivre', '#12284B', '#B4683A'], ['Bordeaux et or', '#5A1A28', '#B08A3E'], ['Sapin et laiton', '#1F4A3A', '#A8873D'], ['Anthracite et bleu', '#2B3138', '#3F7CAC'], ['Prune et rose poudré', '#3D2645', '#C08A8A']];
+  var POLICES = ['Garamond', 'Georgia', 'Cambria', 'Times New Roman', 'Calibri', 'Aptos', 'Arial', 'Century Gothic', 'Verdana'];
+  var apparence = (function () { try { return Object.assign({}, APP_DEFAUT, JSON.parse(localStorage.getItem(APP_KEY) || '{}')); } catch (e) { return Object.assign({}, APP_DEFAUT); } })();
+  function sauverApparence() { try { localStorage.setItem(APP_KEY, JSON.stringify(apparence)); } catch (e) { } }
+  function apparencePersonnalisee() { return apparence.principale.toUpperCase() !== APP_DEFAUT.principale || apparence.accent.toUpperCase() !== APP_DEFAUT.accent || apparence.police !== APP_DEFAUT.police; }
+  function optionsApparence() {
+    var o = { principale: apparence.principale, accent: apparence.accent, police: apparence.police, mention: apparence.mention, afficherLogo: apparence.afficherLogo !== false, personnalise: apparencePersonnalisee() };
+    if (apparence.logo && apparence.logo.url) {
+      var bin = atob(apparence.logo.url.split(',')[1]), a = new Uint8Array(bin.length); for (var k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k);
+      o.logo = { data: a, w: apparence.logo.w, h: apparence.logo.h };
+    }
+    return o;
+  }
+  function apercuModele() {
+    var c1 = apparence.principale, c2 = apparence.accent, f = '"' + apparence.police + '", Georgia, serif';
+    var clair = '#' + PPTX.melange(c1, 'FFFFFF', 0.82);
+    return '<div class="apercus" aria-hidden="true"><div class="ap couv" style="background:' + c1 + ';font-family:' + f + '"><b>AUDIT CIVIL ET FISCAL</b><i style="background:' + c2 + '"></i><span style="color:#' + PPTX.melange(c2, 'FFFFFF', 0.5) + '">M. et Mme CLIENT</span></div>' +
+      '<div class="ap page" style="font-family:' + f + '"><u style="background:' + c2 + '"></u><b style="color:' + c1 + '">Situation actuelle</b><span style="color:' + c2 + '">Aucune opération n’est réalisée</span><table><tr><th style="background:' + c1 + '">1er décès</th><th style="background:' + c1 + '">Droits</th></tr><tr><td>Actif taxable</td><td>838 000 €</td></tr><tr style="background:' + clair + '"><td><strong>Total</strong></td><td><strong>90 469 €</strong></td></tr></table><em>' + h((apparence.mention || '').slice(0, 46)) + '</em></div></div>';
+  }
+  function reglagesApparence() {
+    var html = '<details class="reglages"' + (reglagesApparence.ouvert ? ' open' : '') + '><summary>Personnaliser les couleurs, la police et le logo</summary><div class="rg">' + apercuModele();
+    html += '<div class="palettes">' + PALETTES.map(function (p, i) { var on = apparence.principale.toUpperCase() === p[1] && apparence.accent.toUpperCase() === p[2]; return '<button type="button" class="pal' + (on ? ' on' : '') + '" data-act="palette" data-i="' + i + '" title="' + h(p[0]) + '"><span style="background:' + p[1] + '"></span><span style="background:' + p[2] + '"></span><em>' + h(p[0]) + '</em></button>'; }).join('') + '</div>';
+    html += '<div class="grid g3"><label class="fld"><span>Couleur principale</span><input type="color" data-app="principale" value="' + h(apparence.principale) + '"></label><label class="fld"><span>Couleur d’accent</span><input type="color" data-app="accent" value="' + h(apparence.accent) + '"></label>' +
+      '<label class="fld"><span>Police</span><select data-app="police">' + POLICES.map(function (p) { return '<option' + (p === apparence.police ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></label></div>';
+    html += '<div class="grid g1"><label class="fld"><span>Mention de pied de page (modèle intégré)</span><input type="text" data-app="mention" value="' + h(apparence.mention) + '"></label></div>';
+    html += '<div class="logo-ligne">' + (apparence.logo ? '<img src="' + apparence.logo.url + '" alt="Logo choisi">' : '<span class="muted">Logo intégré</span>') + '<label class="btn ghost petit">Choisir un logo<input type="file" accept="image/*" data-act="logo" hidden></label>' + (apparence.logo ? '<button type="button" class="btn ghost petit" data-act="logo-defaut">Logo d’origine</button>' : '') +
+      '<label class="chk plat"><input type="checkbox" data-app="afficherLogo"' + (apparence.afficherLogo !== false ? ' checked' : '') + '><span>Afficher le logo</span></label><button type="button" class="btn ghost petit" data-act="apparence-defaut">Réglages par défaut</button></div>';
+    html += '<p class="note">' + (modele ? 'Avec votre modèle déposé, seules la police et les couleurs de l’Excel sont appliquées : le PowerPoint garde les couleurs et le logo du modèle.' : 'S’applique au PowerPoint du modèle intégré ; la police et les couleurs choisies sont aussi reprises dans l’Excel. La police doit être installée sur le poste qui ouvre les fichiers.') + '</p></div></details>';
+    return html;
+  }
   function modeleIntegre() {
     var bin = atob(MODELE_INTEGRE), n = bin.length, a = new Uint8Array(n);
     for (var k = 0; k < n; k++) a[k] = bin.charCodeAt(k);
@@ -3830,8 +3922,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       html += '<div class="card modele"><div><strong>' + h(modeleInfo.nom) + '</strong><p>Votre modèle : ' + modeleInfo.slides + ' diapositives, format ' + modeleInfo.format + '. ' + modeleInfo.reconnues + ' diapositives pédagogiques sur ' + modeleInfo.total + ' reconnues et réutilisées ; masque, logos et couleurs repris, police Garamond.</p><div class="swatches">' +
         ['dk2', 'accent1', 'accent2', 'accent3', 'accent4', 'lt2'].map(function (k) { var c = modeleInfo.theme.colors[k]; return c ? '<span title="' + k + '" style="background:#' + c + '"></span>' : ''; }).join('') + '</div></div><button class="btn ghost" data-act="oublier-modele">Revenir au modèle intégré</button></div>';
     } else {
-      html += '<div class="card modele"><div><strong>Modèle intégré</strong><p>Prêt à l’emploi : couverture, masque bleu nuit et or, police Garamond, diapositives pédagogiques (démembrement, assurance-vie, clauses bénéficiaires). Aucun fichier à charger.</p><div class="swatches"><span style="background:#143A46"></span><span style="background:#B08A3E"></span><span style="background:#2F6474"></span><span style="background:#D8C49A"></span><span style="background:#F3EFE6"></span></div></div><button class="btn ghost" data-act="telecharger-modele">Télécharger ce modèle</button></div>';
+      html += '<div class="card modele"><div><strong>Modèle intégré</strong><p>Prêt à l’emploi : couverture, masque à vos couleurs, police ' + h(apparence.police) + ', diapositives pédagogiques (démembrement, assurance-vie, clauses bénéficiaires). Aucun fichier à charger.</p><div class="swatches"><span style="background:' + h(apparence.principale) + '"></span><span style="background:' + h(apparence.accent) + '"></span><span style="background:#' + PPTX.melange(apparence.principale, 'FFFFFF', 0.22) + '"></span><span style="background:#' + PPTX.melange(apparence.accent, 'FFFFFF', 0.5) + '"></span><span style="background:#F3EFE6"></span></div></div><button class="btn ghost" data-act="telecharger-modele">Télécharger ce modèle</button></div>';
     }
+    html += reglagesApparence();
     html += '<label class="depot" id="depot"><strong>' + (modeleInfo ? 'Glissez un autre modèle .pptx ici' : 'Glissez votre propre modèle .pptx ici') + '</strong><span>ou touchez pour choisir un fichier. Il est mémorisé dans ce navigateur.</span><input type="file" accept=".pptx" data-act="modele" hidden></label>';
     html += '<h3>Livrables</h3><div class="exports"><button class="btn big" data-act="pptx"' + (analyse ? '' : ' disabled') + '>Générer le PowerPoint</button><button class="btn big" data-act="xlsx"' + (analyse ? '' : ' disabled') + '>Générer l’Excel</button></div>';
     html += '<p class="note">Le PowerPoint utilise ' + (modele ? 'votre modèle « ' + h(modele.nom) + ' »' : 'le modèle intégré') + '.</p>';
@@ -3908,8 +4001,33 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   }
 
   /* ---------- Événements ---------- */
+  document.addEventListener('input', function (ev) {
+    var el = ev.target; if (!el.dataset || !el.dataset.app || el.type !== 'color') return;
+    apparence[el.dataset.app] = el.value.toUpperCase(); sauverApparence();
+    var ap = $('.apercus'); if (ap) { var t = document.createElement('div'); t.innerHTML = apercuModele(); ap.innerHTML = t.firstChild.innerHTML; }
+  });
   document.addEventListener('change', function (ev) {
     var el = ev.target;
+    if (el.dataset && el.dataset.app) {
+      apparence[el.dataset.app] = el.type === 'checkbox' ? el.checked : el.type === 'color' ? el.value.toUpperCase() : el.value;
+      sauverApparence(); reglagesApparence.ouvert = true; rendre(); return;
+    }
+    if (el.dataset && el.dataset.act === 'logo' && el.files[0]) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var k = Math.min(1, 480 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(img.width * k)); cv.height = Math.max(1, Math.round(img.height * k));
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          apparence.logo = { url: cv.toDataURL('image/png'), w: cv.width, h: cv.height }; apparence.afficherLogo = true;
+          sauverApparence(); reglagesApparence.ouvert = true; rendre(); toast('Logo enregistré.');
+        };
+        img.onerror = function () { toast('Cette image n’a pas pu être lue.'); };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(el.files[0]); return;
+    }
     if (el.dataset && el.dataset.nus) {
       var arr = (get(el.dataset.nus) || []).slice(), idx = arr.indexOf(el.dataset.np);
       if (el.checked && idx < 0) arr.push(el.dataset.np); if (!el.checked && idx >= 0) arr.splice(idx, 1);
@@ -4030,7 +4148,10 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       toast('Tout a été réinitialisé.');
       return;
     }
-    if (a === 'telecharger-modele') return enregistrer('Modèle Audit civil et fiscal.pptx', new Blob([modeleIntegre()], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
+    if (a === 'palette') { var pal = PALETTES[+b.dataset.i]; apparence.principale = pal[1]; apparence.accent = pal[2]; sauverApparence(); reglagesApparence.ouvert = true; rendre(); return; }
+    if (a === 'apparence-defaut') { apparence = Object.assign({}, APP_DEFAUT); sauverApparence(); reglagesApparence.ouvert = true; rendre(); toast('Réglages par défaut rétablis.'); return; }
+    if (a === 'logo-defaut') { apparence.logo = null; sauverApparence(); reglagesApparence.ouvert = true; rendre(); return; }
+    if (a === 'telecharger-modele') return enregistrer('Modèle Audit civil et fiscal.pptx', new Blob([await PPTX.personnaliser(modeleIntegre(), optionsApparence())], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
     if (a === 'oublier-modele') { modele = null; modeleInfo = null; await idbDel('modele'); appliquerTheme(null); toast('Retour au modèle intégré.'); }
     planifier(true);
   });
@@ -4069,7 +4190,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (!analyse) return;
     var lbl = b.textContent; b.disabled = true; b.textContent = 'Génération…';
     try {
-      var blob = await PPTX.generer(modele ? modele.buf.slice(0) : modeleIntegre(), CALC.analyseComplete(clone(state)));
+      var oa = optionsApparence();
+      var base = modele ? modele.buf.slice(0) : await PPTX.personnaliser(modeleIntegre(), oa);
+      var blob = await PPTX.generer(base, CALC.analyseComplete(clone(state)), oa);
       await enregistrer(((couple() ? 'M. et Mme ' : '') + (state.c1.nom || 'CLIENT').toUpperCase() + ' - AUDIT CIVIL ET FISCAL.pptx'), blob);
     } catch (e) { console.error(e); toast('Le PowerPoint n’a pas pu être généré : ' + (e.message || 'modèle illisible') + '.'); }
     b.disabled = false; b.textContent = lbl;
@@ -4077,7 +4200,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   async function genererXLSX(b) {
     var lbl = b.textContent; b.disabled = true; b.textContent = 'Génération…';
     try {
-      var buf = await XLSXOUT.generer(CALC.analyseComplete(clone(state)), modeleInfo ? modeleInfo.theme : null);
+      var buf = await XLSXOUT.generer(CALC.analyseComplete(clone(state)), modeleInfo ? modeleInfo.theme : null, optionsApparence());
       await enregistrer(nomFichier('Audit civil et fiscal') + '.xlsx', new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     } catch (e) { console.error(e); toast('L’Excel n’a pas pu être généré.'); }
     b.disabled = false; b.textContent = lbl;
@@ -4229,6 +4352,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     window.addEventListener('resize', function () { if (st) placer(); });
   })();
 
+  document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('reglages')) reglagesApparence.ouvert = e.target.open; }, true);
   /* ---------- Glisser-déposer d'un modèle .pptx ou d'un dossier .json ---------- */
   (function () {
     function fichiers(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0; }
