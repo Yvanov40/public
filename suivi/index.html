@@ -1916,7 +1916,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   <div class="feuille-boite">
     <div class="feuille-entete">
       <button data-fermer>Fermer</button>
-      <h3 id="titrePersoEmol">Actes des émoluments</h3>
+      <h3 id="titrePersoEmol">Prestations et tarifs</h3>
       <button class="valider" id="enregistrerPersoEmol" hidden>Enregistrer</button>
     </div>
     <div class="feuille-corps" id="corpsPersoEmol"></div>
@@ -1976,7 +1976,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   <div class="feuille-boite">
     <div class="feuille-entete">
       <button data-fermer>Fermer</button>
-      <h3 id="titreEmoluments">Émoluments du notaire</h3>
+      <h3 id="titreEmoluments">Tarifs</h3>
       <span></span>
     </div>
     <div class="feuille-corps" id="corpsEmoluments"></div>
@@ -2050,8 +2050,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     <div class="menu-tete"><h3>Menu</h3><button class="menu-fermer" id="btnFermerMenu" aria-label="Fermer">✕</button></div>
     <h4>Outils</h4>
     <div class="menu-grille">
-      <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Émoluments</button>
-      <button class="menu-tuile" id="btnPersoEmol"><span>✎</span>Personnaliser les actes</button>
+      <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Tarifs</button>
+      <button class="menu-tuile" id="btnPersoEmol"><span>✎</span>Personnaliser les prestations</button>
     </div>
     <h4>Réglages</h4>
     <div class="menu-grille">
@@ -3311,7 +3311,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     $("indicateurs").replaceChildren(
       indic("Dossiers affichés", `${liste.length} / ${donnees.dossiers.length}`, "var(--discret)"),
       indic("Prévisionnel réglementés", eurosCts(regl), "var(--bleu)", "var(--bleu)"),
-      indic("Prévisionnel article IV", eurosCts(art4), "var(--bleu)", "var(--bleu)"),
+      indic("Prévisionnel libres", eurosCts(art4), "var(--bleu)", "var(--bleu)"),
       indic("CA encaissé", eurosCts(ca), "var(--or)", "var(--or)"),
       indic("Reste à encaisser", eurosCts(regl + art4 - ca), "var(--bleu)", "var(--bleu)"));
   }
@@ -3437,7 +3437,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const filtre = texteRecherche() || Object.values(selections).some((x) => x.size) || $("masquerArchives").checked;
     $("mReleve").replaceChildren(
       el("div", { class: "m-releve-ligne" }, el("span", null, "Prévisionnel réglementés"), el("b", null, euros(regl))),
-      el("div", { class: "m-releve-ligne" }, el("span", null, "Prévisionnel article IV"), el("b", null, euros(art4))),
+      el("div", { class: "m-releve-ligne" }, el("span", null, "Prévisionnel libres"), el("b", null, euros(art4))),
       el("div", { class: "m-releve-ligne or" }, el("span", null, "Encaissé"), el("b", null, euros(ca))),
       el("div", { class: "m-jauge", role: "img", "aria-label": `${part} % du prévisionnel encaissé` }, el("i", { style: `width:${part}%` })),
       el("div", { class: "m-releve-ligne reste" }, el("span", null, "Reste à encaisser"), el("b", null, euros(total - ca))),
@@ -5445,7 +5445,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
   const SUIVIS = { precision: "Précision", client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Demandeur", collaborateur: "Collaborateur", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
-    honos_art4: "Prévu article IV", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
+    honos_art4: "Prévu libres", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
   const appareil = () => (estTel() ? "téléphone" : "appli");
   function noterHistorique(d, avant) {
     const changements = [];
@@ -5530,8 +5530,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       desc: "Audit de transmission : successions, démembrement, assurance-vie, levier société." },
     { id: "revision", ic: "📚", nom: "Révision de la base", adresse: "../revision/",
       desc: "Réviser les fiches de la base en QCM, vrai ou faux et restitution, avec répétition espacée." },
-    { id: "emoluments", ic: "🧮", nom: "Émoluments du notaire", interne: () => ouvrirEmoluments(),
-      desc: "Calcul rapide des émoluments réglementés : vente, donation, apport en société." }
+    { id: "emoluments", ic: "🧮", nom: "Tarifs", interne: () => ouvrirEmoluments(),
+      desc: "Calcul rapide d’un tarif : barème par tranches ou forfait, selon la prestation." }
   ];
   let outilOuvert = null;
   function afficherOutils() {
@@ -5657,8 +5657,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const fermer = () => voile.remove();
       voile.addEventListener("click", (e) => { if (e.target === voile) fermer(); });
       const groupes = [...new Set(Object.values(BAREMES_EMOL).map((b) => b.groupe))];
-      voile.append(el("div", { class: "actes-boite", role: "dialog", "aria-label": "Choisir l’acte" },
-        el("div", { class: "actes-tete" }, el("b", null, "Quel acte ?"), el("button", { type: "button", "aria-label": "Fermer", onclick: fermer }, "✕")),
+      voile.append(el("div", { class: "actes-boite", role: "dialog", "aria-label": "Choisir la prestation" },
+        el("div", { class: "actes-tete" }, el("b", null, "Quelle prestation ?"), el("button", { type: "button", "aria-label": "Fermer", onclick: fermer }, "✕")),
         ...groupes.map((g) => el("div", { class: "actes-groupe" }, el("h5", null, g),
           el("div", { class: "actes-grille" }, Object.entries(BAREMES_EMOL).filter(([, b]) => b.groupe === g).map(([k, b]) =>
             el("button", { type: "button", class: "acte" + (k === valeur ? " choisi" : ""), onclick: () => {
@@ -5692,7 +5692,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // les champs de montant : un seul, ou un par donateur ; rien pour un forfait
   function champsMontants(onChange) {
     const nb = el("select", { "aria-label": "Nombre de donateurs" }, el("option", { value: "1" }, "1 donateur"), el("option", { value: "2" }, "2 donateurs"));
-    const m1 = el("input", { type: "text", inputmode: "decimal", placeholder: "Montant de l’acte", "aria-label": "Montant", autocomplete: "off" });
+    const m1 = el("input", { type: "text", inputmode: "decimal", placeholder: "Montant", "aria-label": "Montant", autocomplete: "off" });
     const m2 = el("input", { type: "text", inputmode: "decimal", placeholder: "Donateur 2", "aria-label": "Montant du donateur 2", autocomplete: "off" });
     const majPour = (b) => {
       const forfaitSeul = b.fixe !== undefined && !b.taux;
@@ -5700,7 +5700,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       if (!b.donateurs) nb.value = "1";
       m1.hidden = forfaitSeul;
       m2.hidden = nb.value !== "2" || !b.donateurs;
-      m1.placeholder = b.donateurs && nb.value === "2" ? "Donateur 1" : b.seuil ? "Valeur des biens déclarés" : "Montant de l’acte";
+      m1.placeholder = b.donateurs && nb.value === "2" ? "Donateur 1" : b.seuil ? "Valeur des biens déclarés" : "Montant";
     };
     for (const c of [nb, m1, m2]) c.addEventListener("input", onChange);
     m1.addEventListener("blur", () => { const n = lireMontant(m1.value); if (n) m1.value = n.toLocaleString("fr-FR"); });
@@ -5897,7 +5897,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       saisie.majPour(b);
       remise.hidden = !!(b.fixe !== undefined && !b.taux);
       const montants = saisie.montants();
-      if (b.taux && !montants.some((m) => m > 0) && !b.seuil) { sortie.replaceChildren(el("span", { class: "aide" }, "Tapez le montant de l’acte : le calcul se fait tout seul.")); return; }
+      if (b.taux && !montants.some((m) => m > 0) && !b.seuil) { sortie.replaceChildren(el("span", { class: "aide" }, "Tapez le montant : le calcul se fait tout seul.")); return; }
       const r = calculerEmoluments(choix.value, montants, remise.value);
       sortie.replaceChildren(
         el("div", { class: "calc-fiche-chiffres" }, el("b", null, fmtEuros(r.ht) + " HT"),
@@ -5911,7 +5911,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     for (const c of [choix, remise]) c.addEventListener("input", calculer);
     calculer();
     return el("details", { class: "calc-fiche" },
-      el("summary", null, "🧮 Calculer les émoluments réglementés"),
+      el("summary", null, "🧮 Calculer le tarif"),
       el("div", { class: "calc-fiche-saisie" }, choix, saisie.nb, saisie.m1, saisie.m2, remise),
       sortie);
   }
@@ -5926,7 +5926,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   function ouvrirPersoEmol(cle) {
     acteEdite = cle === undefined ? null : cle;
     $("enregistrerPersoEmol").hidden = acteEdite === null;
-    $("titrePersoEmol").textContent = acteEdite === null ? "Actes des émoluments" : acteEdite ? "Modifier l’acte" : "Nouvel acte";
+    $("titrePersoEmol").textContent = acteEdite === null ? "Prestations et tarifs" : acteEdite ? "Modifier la prestation" : "Nouvelle prestation";
     if (acteEdite === null) {
       // la liste : tous les actes (y compris ceux masqués), par groupe
       const tous = { ...BAREMES_BASE };
@@ -5934,8 +5934,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const groupes = [...new Set(Object.values(tous).map((b) => b.groupe || "Autres"))];
       const resume = (b) => b.fixe !== undefined && !b.taux ? `forfait ${fmtEuros(Number(b.fixe))} HT` : `${b.seuil ? "forfait puis " : ""}barème ${b.taux.map((t) => String(t).replace(".", ",")).join(" / ")} %${b.donateurs ? " · par donateur" : ""}${Number(b.coef) > 0 && Number(b.coef) !== 100 ? ` · assiette ${b.coef} %` : ""}`;
       $("corpsPersoEmol").replaceChildren(
-        el("p", { class: "aide" }, "Touchez un acte pour changer son nom, son icône, son calcul ou sa règle d’assiette. L’œil le retire de la liste sans le supprimer. Ces réglages sont partagés entre vos appareils."),
-        el("button", { type: "button", class: "bouton", style: "margin-bottom:10px", onclick: () => ouvrirPersoEmol("") }, "＋ Nouvel acte"),
+        el("p", { class: "aide" }, "Touchez une prestation pour changer son nom, son icône, son tarif ou sa règle d’assiette. L’œil la retire de la liste sans la supprimer. Ces réglages sont partagés entre vos appareils."),
+        el("button", { type: "button", class: "bouton", style: "margin-bottom:10px", onclick: () => ouvrirPersoEmol("") }, "＋ Nouvelle prestation"),
         ...groupes.map((g) => el("div", null, el("h4", { class: "rubrique" }, g),
           el("div", { class: "perso-actes" }, Object.entries(tous).filter(([, b]) => (b.groupe || "Autres") === g).map(([k, b]) => {
             const masque = emolPerso[k] === null, modifie = !!emolPerso[k] && !!BAREMES_BASE[k], ajoute = !!emolPerso[k] && !BAREMES_BASE[k];
@@ -5946,7 +5946,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
                 onclick: () => {
                   if (masque) delete emolPerso[k];
                   else if (BAREMES_BASE[k] && !emolPerso[k]) emolPerso[k] = null;
-                  else if (ajoute) { if (!confirm(`Supprimer l’acte « ${b.court || b.nom} » ?`)) return; delete emolPerso[k]; }
+                  else if (ajoute) { if (!confirm(`Supprimer la prestation « ${b.court || b.nom} » ?`)) return; delete emolPerso[k]; }
                   else { if (!confirm(`Revenir au réglage d’origine pour « ${b.court || b.nom} » ?`)) return; delete emolPerso[k]; }
                   garderEmolPerso(); ouvrirPersoEmol();
                 } }, masque ? "＋" : ajoute ? "🗑" : modifie ? "↺" : "👁"));
@@ -5979,7 +5979,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     };
     const icone = el("input", { name: "ic", type: "text", value: b.ic || "", maxlength: "4", style: "width:64px;text-align:center;font-size:20px" });
     $("corpsPersoEmol").replaceChildren(
-      el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirPersoEmol() }, "‹ Tous les actes"),
+      el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirPersoEmol() }, "‹ Toutes les prestations"),
       el("div", { class: "champ" }, el("label", null, "Icône"),
         el("div", { class: "perso-icones" }, icone, ...["🏠", "🏢", "🎁", "🧩", "💶", "💍", "💒", "🤝", "🛡", "📜", "🧾", "🏛", "📋", "⚖", "🔑", "🌳", "🚜", "🏦", "✍", "📄"].map((x) =>
           el("button", { type: "button", onclick: () => { icone.value = x; } }, x)))),
@@ -5998,7 +5998,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     $("enregistrerPersoEmol").onclick = () => {
       const v = lireFormulaire($("corpsPersoEmol"));
       const court = (v.court || v.nom || "").trim();
-      if (!court) { informer("Donnez un nom à l’acte."); return; }
+      if (!court) { informer("Donnez un nom à la prestation."); return; }
       const def = { ic: (v.ic || "📄").trim(), court, nom: (v.nom || court).trim(), groupe: (v.groupe || "Autres").trim(), ref: (v.ref || "").trim(), aide: (v.aide || "").trim(),
         coef: Number(String(v.coef).replace(",", ".")) || 100, donateurs: !!v.donateurs };
       const nb = (x) => Number(String(x).replace(",", ".")) || 0;
@@ -6015,7 +6015,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const cle = acteEdite || ("perso_" + nouvelId());
       emolPerso[cle] = def;
       garderEmolPerso();
-      informer(`Acte « ${court} » enregistré.`);
+      informer(`Prestation « ${court} » enregistrée.`);
       ouvrirPersoEmol();
     };
     if (!$("feuillePersoEmol").classList.contains("ouverte")) ouvrirFeuille("feuillePersoEmol", () => ouvrirPersoEmol(acteEdite));
@@ -6033,14 +6033,14 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       blocRemise.hidden = !!(b.fixe !== undefined && !b.taux);
       const montants = saisie.montants();
       if (b.taux && !montants.some((m) => m > 0) && !b.seuil) {
-        resultat.replaceChildren(el("p", { class: "aide" }, b.aide || "Indiquez le montant de l’acte."), el("p", { class: "aide" }, `Barème : ${b.ref}.`));
+        resultat.replaceChildren(el("p", { class: "aide" }, b.aide || "Indiquez le montant."), el("p", { class: "aide" }, `Barème : ${b.ref}.`));
         return;
       }
       const r = calculerEmoluments(choixActe.value, montants, champRemise.value);
       const lignesTable = [];
       r.parts.forEach((p, k) => {
         if (r.parts.length > 1) lignesTable.push(el("tr", { class: "sous-titre" }, el("td", { colspan: "3" }, `Donateur ${k + 1} · ${p.assiette.toLocaleString("fr-FR")} €`)));
-        if (r.forfait) lignesTable.push(el("tr", null, el("td", { colspan: "2" }, "Émolument fixe (forfait)"), el("td", null, fmtEuros(p.total))));
+        if (r.forfait) lignesTable.push(el("tr", null, el("td", { colspan: "2" }, "Tarif fixe (forfait)"), el("td", null, fmtEuros(p.total))));
         for (const l of p.lignes) lignesTable.push(el("tr", null,
           el("td", null, l.a === Infinity ? `au-delà de ${l.de.toLocaleString("fr-FR")} €` : `${l.de.toLocaleString("fr-FR")} à ${l.a.toLocaleString("fr-FR")} €`,
             el("small", null, ` · sur ${l.base.toLocaleString("fr-FR")} €`)),
@@ -6048,15 +6048,15 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         if (p.remise) lignesTable.push(el("tr", { class: "remise" }, el("td", { colspan: "2" }, `Remise de ${champRemise.value} % sur la part au-delà de 100 000 €`), el("td", null, "− " + fmtEuros(p.remise))));
       });
       resultat.replaceChildren(
-        el("div", { class: "emol-total" }, el("span", null, "Émoluments TTC"), el("b", null, fmtEuros(r.ttc)),
+        el("div", { class: "emol-total" }, el("span", null, "Tarif TTC"), el("b", null, fmtEuros(r.ttc)),
           el("small", null, `${fmtEuros(r.ht)} HT · TVA 20 % ${fmtEuros(r.tva)}` + (r.assiette && !r.forfait ? ` · soit ${(r.ttc / r.assiette * 100).toLocaleString("fr-FR", { maximumFractionDigits: 3 })} % du montant` : ""))),
         el("table", { class: "emol-table" },
-          el("thead", null, el("tr", null, el("th", null, "Tranche"), el("th", null, "Taux HT"), el("th", null, "Émolument HT"))),
+          el("thead", null, el("tr", null, el("th", null, "Tranche"), el("th", null, "Taux HT"), el("th", null, "Tarif HT"))),
           el("tbody", null, lignesTable),
           el("tfoot", null, el("tr", null, el("td", { colspan: "2" }, "Total HT"), el("td", null, fmtEuros(r.ht))))),
         Number(b.coef) > 0 && Number(b.coef) !== 100 ? el("p", { class: "aide" }, `Assiette retenue : ${b.coef} % du montant saisi, soit ${r.assiette.toLocaleString("fr-FR")} €.`) : null,
         el("p", { class: "aide" }, `${b.ref ? "Barème : " + b.ref + (BAREMES_BASE[choixActe.value] && !emolPerso[choixActe.value] ? " (tarif en vigueur jusqu’au 29 février 2028). " : ". ") : ""}${b.aide || ""}`),
-        el("p", { class: "aide" }, "Émoluments de l’acte seulement : hors émoluments de formalités, débours, droits d’enregistrement, taxe de publicité foncière et contribution de sécurité immobilière. Estimation indicative."));
+        el("p", { class: "aide" }, "Tarif de la prestation seulement : hors formalités, débours, droits et taxes. Estimation indicative."));
     };
     const saisie = champsMontants(calculer);
     if (Array.isArray(montantsDepart)) {
@@ -6065,8 +6065,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     }
     for (const c of [choixActe, champRemise]) c.addEventListener("input", calculer);
     $("corpsEmoluments").replaceChildren(
-      el("button", { type: "button", class: "lien-sous-champ emol-perso-lien", onclick: () => ouvrirPersoEmol() }, "✎ Personnaliser les actes"),
-      champ("Acte", choixActe),
+      el("button", { type: "button", class: "lien-sous-champ emol-perso-lien", onclick: () => ouvrirPersoEmol() }, "✎ Personnaliser les prestations"),
+      champ("Prestation", choixActe),
       el("div", { class: "emol-saisie" }, saisie.nb, saisie.m1, saisie.m2),
       blocRemise,
       resultat);
@@ -6191,7 +6191,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         // honoraires et exercice rejoignent les caractéristiques : 8 tuiles, 2 rangées de 4
         const honos = el("div", null, el("div", { class: "trois" },
           champ("Prévu réglementés (€)", saisie("honos_regl", d.honos_regl, "number", { inputmode: "decimal", step: "any" })),
-          champ("Prévu article IV (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
+          champ("Prévu libres (€)", saisie("honos_art4", d.honos_art4, "number", { inputmode: "decimal", step: "any" })),
           champ("Encaissé (€)", saisie("ca", d.ca, "number", { inputmode: "decimal", step: "any" }))),
           calculetteFiche(d));
         const val = (n) => Number(String(honos.querySelector(`[name=${n}]`).value || "").replace(",", ".")) || 0;
@@ -7749,7 +7749,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     ["＋", "Nouveau client", "créer ajouter prospect", () => nouveauClient()],
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
     ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", () => { const nom = (prompt("Pour quel client ?") || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
-    ["🧮", "Émoluments du notaire", "calculatrice frais notaire tarif vente donation apport", () => ouvrirEmoluments()],
+    ["🧮", "Tarifs", "calculatrice tarif prestation émoluments frais notaire vente donation apport", () => ouvrirEmoluments()],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
     ["☰", "Aller aux clients", "liste", () => { location.hash = "#clients"; }],
