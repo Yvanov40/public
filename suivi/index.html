@@ -1423,7 +1423,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de Â« tirer pour recharger Â
 :root[data-theme="dark"] .choix-ligne.choisi { color: #0f1b20; }
 
 .choix-contenu { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 9px 12px; margin-bottom: 6px; cursor: pointer; }
-.choix-contenu input { margin-top: 3px; accent-color: var(--bleu); }
+.choix-contenu input { margin-top: 3px; accent-color: var(--bleu); width: 18px !important; height: 18px; flex: none; padding: 0; }
+.choix-contenu span { flex: 1; text-align: left; }
 .choix-contenu b { display: block; font-weight: 600; color: var(--bleu); }
 .choix-contenu small { color: var(--discret); font-size: 12.5px; }
 </style>
