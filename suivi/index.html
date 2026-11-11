@@ -78,9 +78,72 @@
       else if (choix === "clair" || tel.matches) document.documentElement.setAttribute("data-theme", "light");
       else document.documentElement.removeAttribute("data-theme");
     };
-    window.appliquerTheme = appliquer;
+    window.appliquerTheme = () => { appliquer(); if (window.appliquerApparence) window.appliquerApparence(); };
     appliquer();
-    tel.addEventListener("change", appliquer);
+    tel.addEventListener("change", window.appliquerTheme);
+  })();
+  // Apparence : couleurs dominantes, fond et polices, choisis dans le menu ⋯ › Apparence (gardés sur cet appareil).
+  (function () {
+    const POLICES = {
+      plex: ['"IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif', ""],
+      inter: ['"Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif', "Inter:wght@400;500;600"],
+      nunito: ['"Nunito", "Segoe UI", Roboto, Helvetica, Arial, sans-serif', "Nunito:wght@400;600;700"],
+      systeme: ['system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', ""],
+      lora: ['"Lora", Georgia, "Times New Roman", serif', "Lora:wght@400;500;600"],
+      garamond: ['"EB Garamond", Garamond, Georgia, "Times New Roman", serif', ""],
+      playfair: ['"Playfair Display", Georgia, "Times New Roman", serif', "Playfair+Display:wght@500;600"],
+      georgia: ['Georgia, "Times New Roman", serif', ""]
+    };
+    const FONDS = {
+      creme: null,
+      blanc: { "--fond": "#f4f5f7", "--carte": "#ffffff", "--bordure": "#e1e4e8", "--section": "#e8ebef", "--colonne": "#eef0f3" },
+      gris: { "--fond": "#ecebe8", "--carte": "#f8f7f5", "--bordure": "#d6d3cc", "--section": "#dedbd4", "--colonne": "#e4e1db" }
+    };
+    const rvb = (h) => { const n = parseInt(String(h).replace("#", ""), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const melange = (a, b, part) => "#" + rvb(a).map((v, i) => Math.round(v * (1 - part) + rvb(b)[i] * part).toString(16).padStart(2, "0")).join("");
+    const DEFAUT = { principale: "#0c2d39", accent: "#a77d2f", fond: "creme", texte: "plex", titres: "garamond" };
+    window.APPARENCE_DEFAUT = DEFAUT;
+    window.POLICES_APPARENCE = POLICES;
+    window.lireApparence = () => { try { return { ...DEFAUT, ...(JSON.parse(localStorage.getItem("suivi-gp-apparence")) || {}) }; } catch (e) { return { ...DEFAUT }; } };
+    window.appliquerApparence = () => {
+      const a = window.lireApparence(), r = document.documentElement, st = r.style;
+      const theme = r.getAttribute("data-theme");
+      const sombre = theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      const perso = a.principale.toLowerCase() !== DEFAUT.principale || a.accent.toLowerCase() !== DEFAUT.accent;
+      const toutes = ["--bleu", "--barre", "--bleu-doux", "--or", "--or-doux", "--barre-discret", "--fond", "--carte", "--bordure", "--section", "--colonne"];
+      toutes.forEach((v) => st.removeProperty(v));
+      if (perso) {
+        if (sombre) {  // en sombre : versions éclaircies des deux couleurs, sur le fond sombre de l'appli
+          st.setProperty("--bleu", melange(a.principale, "#ffffff", 0.6));
+          st.setProperty("--barre", melange(a.principale, "#000000", 0.55));
+          st.setProperty("--bleu-doux", melange(a.principale, "#0f1b20", 0.7));
+          st.setProperty("--or", melange(a.accent, "#ffffff", 0.3));
+          st.setProperty("--or-doux", melange(a.accent, "#0f1b20", 0.8));
+          st.setProperty("--barre-discret", melange(a.accent, "#ffffff", 0.3));
+        } else {
+          st.setProperty("--bleu", a.principale);
+          st.setProperty("--barre", a.principale);
+          st.setProperty("--bleu-doux", melange(a.principale, "#ffffff", 0.88));
+          st.setProperty("--or", a.accent);
+          st.setProperty("--or-doux", melange(a.accent, "#ffffff", 0.84));
+          st.setProperty("--barre-discret", melange(a.accent, "#ffffff", 0.4));
+        }
+      }
+      if (!sombre && FONDS[a.fond]) for (const [k, v] of Object.entries(FONDS[a.fond])) st.setProperty(k, v);
+      // polices : chargées à la demande (celles d'origine le sont déjà)
+      for (const [cle, variable] of [[a.texte, "--ui"], [a.titres, "--titre"]]) {
+        const pol = POLICES[cle] || POLICES[variable === "--ui" ? "plex" : "garamond"];
+        if (pol[1] && !document.getElementById("police-" + cle)) {
+          const l = document.createElement("link"); l.id = "police-" + cle; l.rel = "stylesheet";
+          l.href = "https://fonts.googleapis.com/css2?family=" + pol[1] + "&display=swap"; document.head.appendChild(l);
+        }
+        if (cle === DEFAUT.texte && variable === "--ui" || cle === DEFAUT.titres && variable === "--titre") st.removeProperty(variable); else st.setProperty(variable, pol[0]);
+      }
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", perso ? (sombre ? melange(a.principale, "#000000", 0.55) : a.principale) : "#0c2d39");
+    };
+    window.appliquerApparence();
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", window.appliquerApparence);
   })();
 </script>
 <link rel="manifest" href="manifest.webmanifest">
@@ -1517,6 +1580,16 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 #clientsListe tr.a-faire td:first-child { box-shadow: inset 4px 0 0 var(--or); }
 :root[data-theme="dark"] .m-client.a-faire, :root[data-theme="dark"] #clientsListe tr.a-faire td { background: #2f2610 !important; border-color: #6a5522 !important; }
 :root[data-theme="dark"] .marque-a-faire { background: #6a5522; color: #f6e7bd; }
+
+/* ---------- Apparence ---------- */
+.app-palettes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.app-palette { display: flex; align-items: center; gap: 10px; text-align: left; border: 1px solid var(--bordure); background: var(--carte); border-radius: 12px; padding: 8px 10px; font-size: 13.5px; cursor: pointer; color: var(--texte); }
+.app-palette i { width: 34px; height: 34px; border-radius: 17px; flex: none; border: 2px solid var(--carte); box-shadow: 0 0 0 1px var(--bordure); }
+.app-palette.choisi { border-color: var(--bleu); box-shadow: 0 0 0 1px var(--bleu) inset; font-weight: 600; }
+.app-couleur { display: flex; align-items: center; gap: 10px; border: 1px solid var(--bordure); background: var(--carte); border-radius: 12px; padding: 8px 10px; cursor: pointer; }
+.app-couleur input[type=color] { width: 40px !important; height: 40px; padding: 0; border: 0; background: none; border-radius: 8px; flex: none; cursor: pointer; }
+.app-couleur span { font-size: 13.5px; }
+.app-couleur small { display: block; color: var(--discret); font-size: 11.5px; text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -1756,6 +1829,18 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   </div>
 </div>
 
+<!-- apparence -->
+<div class="feuille feuille-petite" id="feuilleApparence" role="dialog" aria-modal="true" aria-labelledby="titreApparence">
+  <div class="feuille-boite">
+    <div class="feuille-entete">
+      <button data-fermer>Fermer</button>
+      <h3 id="titreApparence">Apparence</h3>
+      <span></span>
+    </div>
+    <div class="feuille-corps" id="corpsApparence"></div>
+  </div>
+</div>
+
 <!-- créer un nouveau fichier -->
 <div class="feuille feuille-petite" id="feuilleNouveauFichier" role="dialog" aria-modal="true" aria-labelledby="titreNouveauFichier">
   <div class="feuille-boite">
@@ -1881,6 +1966,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       <button class="menu-tuile" id="btnDemandeurs"><span>🏛</span>Demandeurs et sociétés</button>
       <button class="menu-tuile" id="btnModeles"><span>☑</span>Modèles de tâches</button>
       <button class="menu-tuile" id="btnTheme"><span>🌓</span>Thème : automatique</button>
+      <button class="menu-tuile" id="btnApparence"><span>🎨</span>Apparence : couleurs, polices</button>
     </div>
     <h4>Votre fichier</h4>
     <p id="infoFichier"></p>
@@ -7122,6 +7208,51 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     window.appliquerTheme(); majBoutonTheme();
   });
   majBoutonTheme();
+
+  // ---- Apparence : palettes prêtes, couleurs au choix, fond, polices ; tout s'applique tout de suite ----
+  const PALETTES = [
+    ["Bleu nuit et or", "#0c2d39", "#a77d2f"], ["Sapin et cuivre", "#17392b", "#b0672c"], ["Bordeaux et or", "#4a1626", "#b08a3c"],
+    ["Ardoise et corail", "#27323d", "#d9634c"], ["Bleu roi et acier", "#1d3f8a", "#6f7b8c"], ["Prune et rose", "#3b2143", "#c2577d"],
+    ["Noir et orange", "#1b1b1f", "#e07b1a"], ["Canard et sable", "#0f4c5c", "#c49a52"]
+  ];
+  const NOMS_POLICES = { plex: "IBM Plex Sans", inter: "Inter", nunito: "Nunito", systeme: "Celle de l’appareil", lora: "Lora", garamond: "EB Garamond", playfair: "Playfair Display", georgia: "Georgia" };
+  function ouvrirApparence() {
+    fermerMenu();
+    const garder = (changes) => {
+      const a = { ...window.lireApparence(), ...changes };
+      try { localStorage.setItem("suivi-gp-apparence", JSON.stringify(a)); } catch (e) {}
+      window.appliquerApparence();
+      dessiner();
+    };
+    const dessiner = () => {
+      const a = window.lireApparence();
+      // précharger les polices proposées, pour l'aperçu dans les cases
+      for (const [cle, pol] of Object.entries(window.POLICES_APPARENCE)) if (pol[1] && !document.getElementById("police-" + cle)) {
+        const l = document.createElement("link"); l.id = "police-" + cle; l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + pol[1] + "&display=swap"; document.head.appendChild(l);
+      }
+      const couleur = (cle, lib) => { const c = el("input", { type: "color", value: a[cle], "aria-label": lib }); c.addEventListener("input", () => garder({ [cle]: c.value })); return el("label", { class: "app-couleur" }, c, el("span", null, lib, el("small", null, a[cle]))); };
+      const casesPolice = (cle, liste) => el("div", { class: "collabs" }, liste.map((k) => el("button", { type: "button", class: "collab" + (a[cle] === k ? " choisi" : ""),
+        style: `font-family:${window.POLICES_APPARENCE[k][0]}`, onclick: () => garder({ [cle]: k }) }, NOMS_POLICES[k])));
+      $("corpsApparence").replaceChildren(
+        el("h4", { class: "rubrique" }, "Palettes"),
+        el("div", { class: "app-palettes" }, PALETTES.map(([nom, p1, p2]) => el("button", { type: "button", class: "app-palette" + (a.principale.toLowerCase() === p1 && a.accent.toLowerCase() === p2 ? " choisi" : ""),
+          onclick: () => garder({ principale: p1, accent: p2 }) }, el("i", { style: `background:linear-gradient(135deg, ${p1} 0 62%, ${p2} 62%)` }), nom))),
+        el("h4", { class: "rubrique" }, "Vos couleurs"),
+        el("div", { class: "deux" }, couleur("principale", "Couleur principale"), couleur("accent", "Couleur d’accent")),
+        el("h4", { class: "rubrique" }, "Fond"),
+        el("div", { class: "collabs" }, [["creme", "Crème"], ["blanc", "Blanc"], ["gris", "Gris perle"]].map(([k, lib]) =>
+          el("button", { type: "button", class: "collab" + (a.fond === k ? " choisi" : ""), onclick: () => garder({ fond: k }) }, lib))),
+        el("h4", { class: "rubrique" }, "Police du texte"),
+        casesPolice("texte", ["plex", "inter", "nunito", "systeme", "lora"]),
+        el("h4", { class: "rubrique" }, "Police des titres"),
+        casesPolice("titres", ["garamond", "playfair", "lora", "georgia", "inter", "nunito"]),
+        el("p", { class: "aide" }, "Tout s’applique tout de suite, sur cet appareil seulement. Le fond choisi vaut pour le thème clair ; en thème sombre, les couleurs sont éclaircies pour rester lisibles. Les polices autres que celles d’origine demandent une connexion la première fois."),
+        el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => { try { localStorage.removeItem("suivi-gp-apparence"); } catch (e) {} window.appliquerApparence(); dessiner(); informer("Apparence d’origine rétablie."); } }, "↺ Rétablir l’apparence d’origine")));
+    };
+    dessiner();
+    ouvrirFeuille("feuilleApparence", ouvrirApparence);
+  }
+  $("btnApparence").addEventListener("click", ouvrirApparence);
   // Ctrl+Z (⌘Z) : annule la dernière modification, sauf pendant qu'on tape dans un champ
   document.addEventListener("keydown", (e) => {
     if (!(e.key === "z" || e.key === "Z") || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
