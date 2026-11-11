@@ -1397,6 +1397,30 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   input[type="date"], input[type="time"] { caret-color: transparent; }
   .choix-date-grille button { padding: 11px 0; font-size: 16px; }
 }
+
+/* ---------- menu ⋯ rangé par rubriques ---------- */
+.menu-panneau { max-height: calc(100vh - 32px); overflow-y: auto; width: min(430px, 100%); }
+.menu-tete { display: flex; justify-content: space-between; align-items: center; }
+.menu-fermer { border: 0; background: var(--section); color: var(--bleu); width: 34px; height: 34px; border-radius: 17px; font-size: 15px; cursor: pointer; }
+.menu-panneau h4 { margin: 6px 0 0; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--discret); font-weight: 600; }
+.menu-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.menu-tuile { display: flex; align-items: center; gap: 9px; text-align: left; border: 1px solid var(--bordure); background: var(--fond); color: var(--texte);
+  border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.25; cursor: pointer; min-height: 52px; }
+.menu-tuile span { font-size: 19px; flex: none; }
+.menu-tuile:hover { border-color: var(--or); }
+#infoFichier { margin: 0; font-size: 12.5px; color: var(--discret); }
+/* ---------- listes de choix (téléphone) ---------- */
+.choix-lignes { display: grid; gap: 6px; padding-bottom: 4px; }
+.choix-lignes.grille { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.choix-lignes h5 { margin: 10px 2px 2px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--discret); grid-column: 1 / -1; }
+.choix-ligne { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--bordure); background: var(--fond);
+  border-radius: 12px; padding: 12px 14px; font-size: 15px; color: var(--texte); cursor: pointer; }
+.choix-lignes.grille .choix-ligne { justify-content: center; text-align: center; padding: 12px 6px; }
+.choix-lignes.grille .choix-ligne i { display: none; }
+.choix-ligne.choisi { background: var(--bleu); color: var(--carte); border-color: var(--bleu); font-weight: 600; }
+.choix-ligne i { font-style: normal; }
+.choix-ligne:disabled { opacity: .45; }
+:root[data-theme="dark"] .choix-ligne.choisi { color: #0f1b20; }
 </style>
 </head>
 <body>
@@ -1414,7 +1438,6 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       <a href="#calendrier" data-vue="calendrier">📅 Calendrier</a>
       <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
       <a href="#activite" data-vue="activite">📊 Activité</a>
-      <a href="#outils" data-vue="outils">🧰 Outils</a>
     </nav>
     <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
     <button class="icone" id="btnMenu" aria-label="GitHub, import et export">⋯</button>
@@ -1737,20 +1760,29 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 <!-- menu -->
 <div class="menu" id="menu">
   <div class="menu-panneau">
-    <h3>Votre fichier</h3>
+    <div class="menu-tete"><h3>Menu</h3><button class="menu-fermer" id="btnFermerMenu" aria-label="Fermer">✕</button></div>
+    <h4>Outils</h4>
+    <div class="menu-grille">
+      <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Émoluments</button>
+      <button class="menu-tuile" id="btnOutilAudit"><span>⚖</span>Audit civil et fiscal</button>
+      <button class="menu-tuile" id="btnOutilRevision"><span>📚</span>Révision</button>
+    </div>
+    <h4>Réglages</h4>
+    <div class="menu-grille">
+      <button class="menu-tuile" id="btnHoraires"><span>🕘</span>Horaires et congés</button>
+      <button class="menu-tuile" id="btnDemandeurs"><span>🏛</span>Demandeurs et sociétés</button>
+      <button class="menu-tuile" id="btnModeles"><span>☑</span>Modèles de tâches</button>
+      <button class="menu-tuile" id="btnTheme"><span>🌓</span>Thème : automatique</button>
+    </div>
+    <h4>Votre fichier</h4>
     <p id="infoFichier"></p>
     <button class="bouton large" id="btnActualiser">Recharger depuis GitHub</button>
-    <button class="bouton leger large" id="btnGithub">Réglages GitHub</button>
-    <button class="bouton leger large" id="btnHoraires">Horaires et congés</button>
-    <button class="bouton leger large" id="btnDemandeurs">Demandeurs et sociétés</button>
-    <button class="bouton leger large" id="btnOutils">🧰 Outils : audit, révision</button>
-    <button class="bouton leger large" id="btnEmoluments">🧮 Émoluments du notaire</button>
-    <button class="bouton leger large" id="btnModeles">☑ Modèles de tâches</button>
-    <button class="bouton leger large" id="btnAnnulerTout">↶ Annuler la dernière modification</button>
-    <button class="bouton leger large" id="btnTheme">🌓 Thème : automatique</button>
-    <button class="bouton leger large" id="btnExporter">Exporter une copie</button>
-    <button class="bouton leger large" id="btnImporter">Ouvrir un autre fichier</button>
-    <button class="bouton leger large" id="btnFermerMenu">Fermer</button>
+    <div class="menu-grille">
+      <button class="menu-tuile" id="btnAnnulerTout"><span>↶</span>Annuler la dernière modification</button>
+      <button class="menu-tuile" id="btnGithub"><span>☁</span>Réglages GitHub</button>
+      <button class="menu-tuile" id="btnExporter"><span>⤓</span>Exporter une copie</button>
+      <button class="menu-tuile" id="btnImporter"><span>📂</span>Ouvrir un autre fichier</button>
+    </div>
   </div>
 </div>
 
@@ -4007,6 +4039,47 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     const champ = e.target.closest && e.target.closest('input[type="date"], input[type="time"]');
     if (champ && estTel()) { e.preventDefault(); champ.blur(); }
   }, true);
+  // une liste déroulante devient une feuille de grandes lignes à toucher
+  function ouvrirChoixListe(liste) {
+    liste.blur();
+    const voile = el("div", { class: "actes-voile" });
+    const fermer = () => voile.remove();
+    voile.addEventListener("click", (e) => { if (e.target === voile) fermer(); });
+    const etiquette = (liste.getAttribute("aria-label") || (liste.closest(".champ") && liste.closest(".champ").querySelector("label") ? liste.closest(".champ").querySelector("label").textContent : "") || "Choisir").replace(/\s*\(.*\)$/, "");
+    const ligne = (o) => el("button", { type: "button", class: "choix-ligne" + (o.value === liste.value ? " choisi" : ""), disabled: o.disabled || null, onclick: () => {
+      liste.value = o.value;
+      liste.dispatchEvent(new Event("input", { bubbles: true }));
+      liste.dispatchEvent(new Event("change", { bubbles: true }));
+      fermer();
+    } }, o.textContent, o.value === liste.value ? el("i", null, "✓") : null);
+    const contenu = [];
+    for (const n of liste.children) {
+      if (n.tagName === "OPTGROUP") contenu.push(el("h5", null, n.label), ...[...n.children].map(ligne));
+      else contenu.push(ligne(n));
+    }
+    voile.append(el("div", { class: "actes-boite", role: "dialog", "aria-label": etiquette },
+      el("div", { class: "actes-tete" }, el("b", null, etiquette), el("button", { type: "button", "aria-label": "Fermer", onclick: fermer }, "✕")),
+      el("div", { class: "choix-lignes" + (liste.options.length <= 9 && [...liste.options].every((o) => o.textContent.length <= 16) ? " grille" : "") }, contenu)));
+    document.body.append(voile);
+  }
+  let toucherListe = null;
+  document.addEventListener("touchstart", (e) => {
+    const l = e.target.closest && e.target.closest("select");
+    toucherListe = l && estTel() && !l.multiple ? { l, x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { capture: true, passive: true });
+  document.addEventListener("touchend", (e) => {
+    const t = toucherListe; toucherListe = null;
+    if (!t) return;
+    const p = e.changedTouches[0];
+    if (Math.hypot(p.clientX - t.x, p.clientY - t.y) > 10) return;
+    if (e.cancelable) e.preventDefault();
+    ouvrirChoixListe(t.l);
+  }, { capture: true, passive: false });
+  document.addEventListener("mousedown", (e) => {  // sécurité : pas de liste du système sur téléphone
+    const l = e.target.closest && e.target.closest("select");
+    if (l && estTel()) { e.preventDefault(); l.blur(); }
+  }, true);
+
   function ouvrirSelecteurPour(champ) {
     champ.blur();
     const poser = (v) => {
@@ -6824,7 +6897,10 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   $("enregistrerLot").addEventListener("click", enregistrerLot);
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
-  $("btnOutils").addEventListener("click", () => { fermerMenu(); outilOuvert = null; location.hash = "#outils"; });
+  // Audit et Révision : chacune dans sa propre fenêtre (ou son appli installée)
+  const ouvrirAppli = (dossier) => { fermerMenu(); window.open(`../${dossier}/`, "appli-" + dossier); };
+  $("btnOutilAudit").addEventListener("click", () => ouvrirAppli("audit"));
+  $("btnOutilRevision").addEventListener("click", () => ouvrirAppli("revision"));
   $("outilRetour").addEventListener("click", fermerOutil);
   $("btnEmoluments").addEventListener("click", () => { fermerMenu(); ouvrirEmoluments(); });
   $("btnModeles").addEventListener("click", () => ouvrirModeles());
@@ -6833,7 +6909,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   // thème : automatique → clair → sombre
   const NOMS_THEME = { auto: "automatique", clair: "clair", sombre: "sombre" };
   const themeChoisi = () => { try { return localStorage.getItem("suivi-gp-theme") || "auto"; } catch (e) { return "auto"; } };
-  const majBoutonTheme = () => { $("btnTheme").textContent = `🌓 Thème : ${NOMS_THEME[themeChoisi()]}`; };
+  const majBoutonTheme = () => { $("btnTheme").replaceChildren(el("span", null, "🌓"), `Thème : ${NOMS_THEME[themeChoisi()]}`); };
   $("btnTheme").addEventListener("click", () => {
     const suivant = { auto: "clair", clair: "sombre", sombre: "auto" }[themeChoisi()];
     try { localStorage.setItem("suivi-gp-theme", suivant); } catch (e) {}
@@ -6922,41 +6998,35 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
   $("btnEclair").addEventListener("click", () => ouvrirEclair());
   $("btnEclairPouce").addEventListener("click", () => ouvrirEclair());
 
-  // ---- tirer l'écran vers le bas, en haut de page : la recherche éclair (téléphone) ----
-  const indiceTirer = el("div", { class: "tirer-eclair", "aria-hidden": "true" }, el("span", null, "🔍"), el("b", null, "Recherche éclair"));
+  // ---- deux doigts glissés vers le bas : actualiser (recharge l'appli et relit les données sur GitHub) ----
+  const indiceTirer = el("div", { class: "tirer-eclair", "aria-hidden": "true" }, el("span", null, "↻"), el("b", null, "Actualiser"));
   document.body.append(indiceTirer);
   let tirer = null;
-  const enHautDePage = (cible) => {
-    if (window.scrollY > 2) return false;
-    for (let n = cible; n && n !== document.body; n = n.parentElement) if (n.scrollTop > 2) return false;  // une liste déjà défilée
-    return true;
-  };
+  const milieuY = (touches) => (touches[0].clientY + touches[1].clientY) / 2;
   document.addEventListener("touchstart", (e) => {
-    tirer = null;
-    if (!estTel() || e.touches.length !== 1) return;
-    const c = e.target instanceof Element ? e.target : null;
-    if (!c || c.closest("input, textarea, select, .feuille, .filtres, .fab, .fab-voile, .eclair, .choix-date, .horloge-voile, .roue-voile, .frise-bloc, .carte-dossier, .menu")) return;
-    if (document.querySelector(".feuille.ouverte, .eclair, .roue-voile") || document.body.classList.contains("filtres-ouverts")) return;
-    if (!enHautDePage(c)) return;
-    tirer = { x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0 };
+    tirer = e.touches.length === 2 ? { y: milieuY(e.touches), dy: 0 } : null;
   }, { passive: true });
   document.addEventListener("touchmove", (e) => {
     if (!tirer) return;
-    const t = e.touches[0];
-    const dx = t.clientX - tirer.x, dy = t.clientY - tirer.y;
-    if (dy < 0 || Math.abs(dx) > Math.max(30, dy * 0.6) || window.scrollY > 2) { tirer = null; indiceTirer.style.transform = ""; indiceTirer.classList.remove("pret"); return; }
-    tirer.dy = dy;
-    const avance = Math.min(1, dy / 90);
+    if (e.touches.length !== 2) { tirer = null; indiceTirer.style.transform = ""; indiceTirer.style.opacity = ""; indiceTirer.classList.remove("pret"); return; }
+    tirer.dy = milieuY(e.touches) - tirer.y;
+    const avance = Math.max(0, Math.min(1, tirer.dy / 110));
     indiceTirer.style.transform = `translate(-50%, ${-60 + avance * 80}px)`;
     indiceTirer.style.opacity = String(avance);
-    indiceTirer.classList.toggle("pret", dy >= 90);
+    indiceTirer.classList.toggle("pret", tirer.dy >= 110);
   }, { passive: true });
   document.addEventListener("touchend", () => {
     if (!tirer) return;
-    const assez = tirer.dy >= 90;
+    const assez = tirer.dy >= 110;
     tirer = null;
     indiceTirer.style.transform = ""; indiceTirer.style.opacity = ""; indiceTirer.classList.remove("pret");
-    if (assez) { avalerClic(); ouvrirEclair(); }
+    if (assez) {
+      avalerClic();
+      informer("Actualisation…");
+      // les modifications en attente partent d'abord ; puis la page se recharge (dernière version de l'appli et des données)
+      setTimeout(() => location.reload(), github && donnees && donnees.modifie ? 1800 : 250);
+      if (github && donnees && donnees.modifie) envoyerGithub();
+    }
   }, { passive: true });
 
   // ================================================================ recherche éclair
@@ -6972,6 +7042,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
     ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", () => { const nom = (prompt("Pour quel client ?") || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
     ["🧮", "Émoluments du notaire", "calculatrice frais notaire tarif vente donation apport", () => ouvrirEmoluments()],
+    ["⚖", "Audit civil et fiscal", "outil appli transmission succession", () => window.open("../audit/", "appli-audit")],
+    ["📚", "Révision de la base", "outil appli qcm fiches", () => window.open("../revision/", "appli-revision")],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
     ["☰", "Aller aux clients", "liste", () => { location.hash = "#clients"; }],
