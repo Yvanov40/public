@@ -1427,6 +1427,79 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .choix-contenu span { flex: 1; text-align: left; }
 .choix-contenu b { display: block; font-weight: 600; color: var(--bleu); }
 .choix-contenu small { color: var(--discret); font-size: 12.5px; }
+
+/* =====================================================================================================
+   Moins de défilement : sections encadrées, et tuiles côte à côte (3 par rangée sur téléphone)
+   ===================================================================================================== */
+/* ---- accueil : chaque section dans un cadre discret ---- */
+.acc-carte { background: var(--carte) !important; border: 1px solid var(--bordure) !important; border-radius: 14px !important; padding: 12px 14px 14px !important; }
+.acc-carte .m-h2 { margin: 0 0 8px !important; font-size: 18px; }
+@media (max-width: 900px) {
+  .acc-carte { margin-bottom: 12px; padding: 12px 12px 12px !important; }
+  .acc-carte .m-bloc { padding: 0 !important; }
+}
+/* ---- tuiles des tâches (accueil) ---- */
+#mTaches, #mDorment, #mDutreil, #mRdv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+#mTaches > p, #mDorment > p, #mDutreil > p, #mRdv > p, .tuile-suite { grid-column: 1 / -1; margin: 0; }
+.tuile-suite { margin-top: 2px !important; justify-self: start; }
+.t-tuile { position: relative; border: 1px solid var(--bordure); border-left: 3px solid #c9a45c; background: var(--fond); border-radius: 10px; min-width: 0; }
+.t-tuile.retard { border-left-color: var(--rouge); }
+.t-ouvrir { all: unset; box-sizing: border-box; display: grid; gap: 2px; width: 100%; padding: 8px 9px; cursor: pointer; min-height: 78px; align-content: start; }
+.t-ouvrir b { padding-right: 22px; }
+.t-ouvrir b { font-size: 13px; line-height: 1.25; font-weight: 600; color: var(--texte); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.t-ouvrir small { font-size: 11px; color: var(--discret); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-quand { font-size: 11px; color: #6e5220; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-tuile.retard .t-quand { color: var(--rouge); }
+.t-fait { position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 12px; border: 1px solid var(--bordure); background: var(--carte); color: var(--discret); font-size: 12px; cursor: pointer; padding: 0; }
+.t-fait:hover, .t-fait:active { background: var(--bleu); color: var(--carte); border-color: var(--bleu); }
+/* ---- tuiles « à relancer », « échéances Dutreil », « prochains rendez-vous » ---- */
+#mDorment .m-rdv, #mDutreil .m-rdv, #mRdv .m-rdv { display: grid !important; grid-template-columns: 1fr !important; gap: 4px; align-content: start; text-align: left; border: 1px solid var(--bordure) !important;
+  background: var(--fond) !important; border-radius: 10px !important; padding: 8px 9px !important; margin: 0 !important; min-width: 0; width: auto; }
+#mDorment .m-rdv-date, #mDutreil .m-rdv-date, #mRdv .m-rdv-date { min-width: 0 !important; width: fit-content; font-size: 11.5px !important; padding: 2px 7px !important; border-radius: 7px; }
+#mDorment .m-rdv b, #mDutreil .m-rdv b, #mRdv .m-rdv b { font-size: 13px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+#mDorment .m-rdv span, #mDutreil .m-rdv span, #mRdv .m-rdv span { font-size: 11px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* ---- étapes de l'accueil : 2 × 2 ---- */
+#mEtapes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+#mEtapes .m-etape { margin: 0 !important; border: 1px solid var(--bordure) !important; border-left: 4px solid var(--c) !important; border-radius: 10px !important; padding: 8px 10px !important; background: var(--fond) !important; }
+
+@media (max-width: 900px) {
+  /* ---- Kanban du téléphone : 3 cartes par rangée ---- */
+  .m-sections .cartes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .m-sections .carte-dossier { padding: 7px 8px; margin: 0; min-width: 0; min-height: 84px; display: grid; align-content: start; gap: 2px; border-left-width: 3px; }
+  .m-sections .carte-dossier .haut { display: grid; gap: 1px; }
+  .m-sections .carte-dossier .haut b { font-size: 12.5px; line-height: 1.2; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .m-sections .carte-dossier .prevu { font-size: 11px; justify-self: start; }
+  .m-sections .carte-dossier .ligne { font-size: 11px; line-height: 1.25; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .m-sections .carte-dossier .ligne.comm { display: none; }
+  .m-sections .carte-dossier .bas { font-size: 10px; gap: 4px; flex-wrap: wrap; }
+  .m-sections .carte-dossier .collab-carte { margin-left: 0; }
+  /* ---- clients du téléphone : 3 tuiles par rangée ---- */
+  #mClients { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  #mClients > .bouton-discret, #mClients > p { grid-column: 1 / -1; margin: 0 0 2px !important; justify-self: start; }
+  #mClients .m-client { display: grid; grid-template-columns: 1fr; gap: 1px; align-content: start; padding: 8px 9px; margin: 0; min-width: 0; min-height: 76px; }
+  #mClients .m-client b { font-size: 12.5px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  #mClients .m-client span { font-size: 10.5px; line-height: 1.25; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #mClients .m-client span.r { font-size: 11px; font-weight: 600; order: 3; }
+  #mClients .m-client span.r:empty { display: none; }
+  #mClients .m-client b > span, #mClients .m-client b > i { display: inline-block !important; width: auto !important; margin-left: 4px; font-size: 10px; vertical-align: 1px; }
+  /* ---- Dutreil du téléphone : chiffres clés sur une ligne, pactes sur 2 colonnes ---- */
+  #dIndicateurs { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; overflow: visible; }
+  #dIndicateurs .indic b { font-size: 15px !important; }
+  #dIndicateurs .indic { padding: 6px 8px !important; border: 1px solid var(--bordure) !important; border-radius: 10px; background: var(--carte) !important; min-width: 0; }
+  #dIndicateurs .indic span { font-size: 10px; white-space: normal; line-height: 1.15; display: block; }
+  #dIndicateurs .indic b { font-size: 17px; }
+  #dutreilContenu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  #dutreilContenu > .d-vide { grid-column: 1 / -1; }
+  #dutreilContenu .d-carte { margin: 0; padding: 8px 10px; min-width: 0; align-content: start; }
+  #dutreilContenu .d-carte .haut { display: grid; gap: 2px; }
+  #dutreilContenu .d-carte .haut b { font-size: 13px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  #dutreilContenu .d-carte .etat { font-size: 10.5px; justify-self: start; }
+  #dutreilContenu .d-carte .ech { font-size: 12px; display: grid; gap: 1px; }
+  #dutreilContenu .d-carte .ech span { font-size: 11px; color: var(--discret); }
+  #dutreilContenu .d-carte .ech small { font-size: 11px; color: var(--discret); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #dutreilContenu .d-carte .detail { font-size: 10px; }
+}
+:root[data-theme="dark"] .t-quand { color: #ecd9a4; }
 </style>
 </head>
 <body>
@@ -3623,8 +3696,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
         const e = prochaineEcheance(p);
         return el("button", { type: "button", class: "d-carte " + urgence(p), onclick: () => ouvrirPacte(i) },
           el("div", { class: "haut" }, el("b", null, p.societe), el("span", { class: "etat" }, p.etat || "—")),
-          e ? el("div", { class: "ech" }, el("strong", null, (echeanceSaisie(p) ? "" : "≈ ") + fmtDate(e[0])), ` · ${e[1]} · ${fmtDelai(e[2])}`) : el("div", { class: "ech" }, "Pas d’échéance à venir"),
-          el("div", { class: "detail" }, `Collectif : ${fmtDouT(p.debut_collectif) || "—"} → ${fmtDouT(dateEffective(p, "fin_collectif")[0]) || "—"} · Individuel jusqu’au ${fmtDouT(dateEffective(p, "courrier")[0]) || "—"}`));
+          e ? el("div", { class: "ech" }, el("strong", null, (echeanceSaisie(p) ? "" : "≈ ") + fmtDate(e[0])), el("span", null, ` ${fmtDelai(e[2])}`), el("small", null, e[1])) : el("div", { class: "ech" }, "Pas d’échéance à venir"),
+          el("div", { class: "detail" }, `Coll. → ${fmtDouT(dateEffective(p, "fin_collectif")[0]) || "—"} · Indiv. → ${fmtDouT(dateEffective(p, "courrier")[0]) || "—"}`));
       });
     } else {
       const cellule = (p, cle) => {
@@ -3647,7 +3720,7 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
     $("dutreilContenu").replaceChildren(...contenu);
     // téléphone : prochaines échéances sur l'accueil
     if ($("mDutreil")) {
-      const a = echeances.filter(([e]) => e[2] <= 365).sort((x, y) => x[0][0].localeCompare(y[0][0])).slice(0, 4);
+      const a = echeances.filter(([e]) => e[2] <= 365).sort((x, y) => x[0][0].localeCompare(y[0][0])).slice(0, 6);
       $("mDutreil").replaceChildren(...(a.length ? a.map(([e, p, i]) => el("button", { class: "m-rdv", type: "button", onclick: () => ouvrirPacte(i) },
         el("div", { class: "m-rdv-date" + (e[2] <= 90 ? " jour" : "") }, fmtDate(e[0]).slice(0, 5) + "/" + e[0].slice(2, 4)),
         el("div", null, el("b", null, p.societe), el("span", null, `${e[1]} · ${fmtDelai(e[2])}`)))) : [el("p", { class: "m-vide" }, "Aucune échéance Dutreil dans les 12 prochains mois.")]));
@@ -4798,22 +4871,28 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
       const taches = tachesAVenir(7);
       const toutes = Object.values(donnees.clients).reduce((n, f) => n + (f.taches || []).filter((t) => !t.fait).length, 0);
       afficherMaJournee();
-      $("mTaches").replaceChildren(...(taches.length ? taches.slice(0, 6).map(([t, nom, j]) => {
-        const c = el("input", { type: "checkbox", "aria-label": "Fait" });
-        c.addEventListener("change", () => { cocherTache(nom, t.id, true); informer(`« ${t.texte} » est fait.`); afficherTout(); });
-        const [quand, classe] = etatEcheance(t);
-        return el("div", { class: "tache" }, c,
-          el("button", { type: "button", class: "texte", style: "all:unset;cursor:pointer", onclick: () => ouvrirTache(nom, t.id) }, t.texte, el("small", null, nom)),
-          el("button", { type: "button", class: "echeance-tache modifiable " + classe, title: "Modifier la date et l’heure",
-            onclick: (ev) => editerEcheanceTache(ev.currentTarget, nom, t, afficherTout) }, quand), el("span"));
-      }) : [el("p", { class: "m-vide" }, toutes ? `Aucune tâche datée cette semaine (${toutes} tâche(s) sans date dans les fiches clients).` : "Aucune tâche. Ajoutez-en depuis la fiche d’un client.")]));
+      // tuiles : la tâche, le client, l'échéance ; un toucher ouvre la fiche, le ✓ la marque faite
+      $("mTaches").replaceChildren(...(taches.length ? [
+        ...taches.slice(0, 9).map(([t, nom]) => {
+          const [, classe] = etatEcheance(t);
+          // échéance en version courte, pour tenir dans la tuile : « auj. 15:00 », « demain 10:00 », « 14/11 9:30 »
+          const jj = Math.round((versDate(t.pour) - aujourdhui()) / 86400000);
+          const quand = (classe === "retard" ? "retard · " : "") + (jj === 0 ? "auj." : jj === 1 ? "demain" : fmtDate(t.pour).slice(0, 5)) + (t.heure ? " " + t.heure : "");
+          return el("div", { class: "t-tuile " + classe },
+            el("button", { type: "button", class: "t-ouvrir", onclick: () => ouvrirTache(nom, t.id) },
+              el("b", null, (t.repete ? "🔁 " : "") + t.texte), el("small", null, nom), el("span", { class: "t-quand" }, quand)),
+            el("button", { type: "button", class: "t-fait", "aria-label": "Fait", title: "Fait",
+              onclick: () => { cocherTache(nom, t.id, true); informer(`« ${t.texte} » est fait.`); afficherTout(); } }, "✓"));
+        }),
+        taches.length > 9 ? el("button", { type: "button", class: "bouton-discret tuile-suite", onclick: () => { location.hash = "#calendrier"; } }, `Voir les ${taches.length} tâches de la semaine dans l’agenda`) : null]
+        : [el("p", { class: "m-vide" }, toutes ? `Aucune tâche datée cette semaine (${toutes} tâche(s) sans date dans les fiches clients).` : "Aucune tâche. Ajoutez-en depuis la fiche d’un client.")]));
     }
     if ($("mDorment")) {
       const dort = dorment(liste);
       $("mDorment").replaceChildren(...(dort.length ? [
-        ...dort.slice(0, 3).map(([d, i, j]) => el("button", { class: "m-rdv", type: "button", onclick: () => ouvrirDossier(i) },
+        ...dort.slice(0, 6).map(([d, i, j]) => el("button", { class: "m-rdv", type: "button", onclick: () => ouvrirDossier(i) },
           el("div", { class: "m-rdv-date" }, `${j} j`), el("div", null, el("b", null, d.client), el("span", null, `${d.tache || ""} · ${sansNumero(d.type)}`)))),
-        el("button", { class: "bouton-discret", type: "button", style: "margin-top:8px", onclick: () => { location.hash = "#activite"; } }, `Voir les ${dort.length} dossiers qui dorment`)]
+        el("button", { class: "bouton-discret tuile-suite", type: "button", onclick: () => { location.hash = "#activite"; } }, `Voir les ${dort.length} dossiers qui dorment`)]
         : [el("p", { class: "m-vide" }, "Aucun dossier ne dort depuis plus de 90 jours.")]));
     }
     majComptesSegment();
