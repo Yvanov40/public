@@ -1535,7 +1535,12 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 #mDorment .m-rdv span, #mDutreil .m-rdv span, #mRdv .m-rdv span { font-size: 11px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* ---- étapes de l'accueil : 2 × 2 ---- */
 #mEtapes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-#mEtapes .m-etape { margin: 0 !important; border: 1px solid var(--bordure) !important; border-left: 4px solid var(--c) !important; border-radius: 10px !important; padding: 8px 10px !important; background: var(--fond) !important; }
+#mEtapes .m-etape { margin: 0 !important; border: 1px solid var(--bordure) !important; border-top: 4px solid var(--c) !important; border-radius: 10px !important;
+  padding: 8px 12px !important; background: var(--fond) !important; grid-template-columns: 1fr auto !important; gap: 8px !important; }
+#mEtapes .m-etape::before { display: none !important; content: none !important; }
+#mEtapes .m-etape b { font-size: 16px; }
+#mEtapes .m-etape span { font-size: 12px; line-height: 1.3; }
+#mEtapes .m-etape em { font-size: 22px; }
 
 @media (max-width: 900px) {
   /* ---- Kanban du téléphone : 3 cartes par rangée ---- */
@@ -1775,6 +1780,21 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 @media (max-width: 900px) { .tuile-page textarea { min-height: 170px; font-size: 16px; } }
 
 @media (max-width: 900px) { .encart-client { padding-left: 10px !important; padding-right: 10px !important; } .encart-client .tuile-panneau { padding: 10px; } }
+
+/* ---------- règles de mise à l'agenda ---------- */
+.regles { display: grid; gap: 8px; }
+.regle { border: 1px solid var(--bordure); border-left: 4px solid var(--or); background: var(--carte); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.regle-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.regle-mot { font-size: 13px; color: var(--discret); min-width: 118px; }
+.regle-ligne select, .regle-ligne input[type=text] { flex: 1 1 140px; min-width: 0; width: auto !important; border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 14px; }
+.regle-retirer { border: 0; background: none; color: var(--discret); font-size: 15px; cursor: pointer; padding: 4px 6px; }
+.regle-prio { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--bleu); font-weight: 600; }
+.regle-prio input { width: 17px !important; height: 17px; accent-color: var(--or); }
+.regle-note { color: var(--discret); font-size: 12px; }
+
+/* réglages de l'agenda : listes et champs à la même allure que le reste */
+.auto-choix select, .auto-choix input { border: 1px solid var(--bordure); background: var(--carte); border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 14px; color: var(--texte); }
+.auto-reglages > .bouton-discret { justify-self: start; }
 </style>
 </head>
 <body>
@@ -5125,11 +5145,36 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
               choix("pas", "Arrondi des heures", [5, 10, 15, 30], "min"),
               choix("dureeTache", "Durée d’une tâche", [15, 30, 45, 60, 90], "min"),
               choix("dureeRdv", "Durée d’un rendez-vous", [30, 45, 60, 90, 120], "min")),
-            interrupteur("dossiers", "Mettre dans l’agenda les dossiers « À faire » qui me sont attribués", "Une tâche est créée à la suite (la tâche du dossier, ou « Analyse à faire », « Acte à faire »…). Elle n’est pas figée : elle se décale comme les autres."),
-            el("div", { class: "auto-grille" },
-              el("label", { class: "auto-choix" }, el("span", null, "Mon nom dans les collaborateurs"),
-                el("input", { type: "text", value: A.moi, onchange: (e) => poser("moi", e.target.value.trim() || "Moi") })),
-              choix("dureeDossier", "Durée pour une analyse ou un acte", [30, 60, 90, 120, 180, 240], "min")));
+            interrupteur("dossiers", "Mettre dans l’agenda les dossiers « À faire » qui me sont attribués", "Selon les règles ci-dessous, nature par nature. Les rendez-vous et les tâches 📌 ne bougent jamais."),
+            el("label", { class: "auto-choix" }, el("span", null, "Mon nom dans les collaborateurs"),
+              el("input", { type: "text", value: A.moi, onchange: (e) => poser("moi", e.target.value.trim() || "Moi") })),
+            // les règles, une par nature
+            el("div", { class: "regles" }, ...(A.regles || []).map((r, k) => {
+              const majRegle = (champ, val) => { const l = (A.regles || []).map((x, j) => (j === k ? { ...x, [champ]: val } : x)); poser("regles", l); };
+              const naturesProposees = [...new Set([...naturesConnues(), r.nature].filter(Boolean))];
+              return el("div", { class: "regle" },
+                el("div", { class: "regle-ligne" }, el("span", { class: "regle-mot" }, "Si la nature est"),
+                  el("select", { onchange: (e) => majRegle("nature", e.target.value) }, naturesProposees.map((n) => el("option", { value: n, selected: n === r.nature }, n))),
+                  el("button", { type: "button", class: "regle-retirer", "aria-label": "Retirer la règle", onclick: () => poser("regles", (A.regles || []).filter((x, j) => j !== k)) }, "✕")),
+                el("div", { class: "regle-ligne" }, el("span", { class: "regle-mot" }, "mettre dans l’agenda"),
+                  el("select", { onchange: (e) => majRegle("texte", e.target.value) },
+                    el("option", { value: "tache", selected: r.texte !== "libelle" }, "la tâche du dossier"), el("option", { value: "libelle", selected: r.texte === "libelle" }, "ce libellé :")),
+                  r.texte === "libelle" ? el("input", { type: "text", value: r.libelle || "", placeholder: `ex. ${r.nature} à préparer`, onchange: (e) => majRegle("libelle", e.target.value) }) : null),
+                el("div", { class: "regle-ligne" }, el("span", { class: "regle-mot" }, "pour une durée de"),
+                  el("select", { onchange: (e) => majRegle("duree", Number(e.target.value)) }, [30, 45, 60, 90, 120, 150, 180, 240, 300, 360, 480].map((v) =>
+                    el("option", { value: v, selected: Number(r.duree) === v }, v < 60 ? `${v} min` : `${Math.floor(v / 60)} h${v % 60 ? " " + (v % 60) : ""}`))),
+                  el("label", { class: "regle-prio" }, el("input", { type: "checkbox", checked: !!r.prio, onchange: (e) => majRegle("prio", e.target.checked) }), "prioritaire")),
+                r.prio ? el("small", { class: "regle-note" }, "Prioritaire : placée dès le premier créneau libre, devant les autres tâches, qui se décalent. Jamais devant un rendez-vous ou une tâche 📌.") : null);
+            })),
+            el("button", { type: "button", class: "bouton-discret", onclick: () => {
+              const prises = new Set((A.regles || []).map((r) => r.nature));
+              const libre = naturesConnues().find((n) => !prises.has(n)) || "Analyse";
+              poser("regles", [...(A.regles || []), { nature: libre, texte: "tache", libelle: "", duree: 60, prio: false }]);
+            } }, "＋ Ajouter une règle"),
+            el("label", { class: "auto-choix" }, el("span", null, "Pour les autres natures"),
+              el("select", { onchange: (e) => poser("autres", e.target.value) },
+                el("option", { value: "tache", selected: A.autres !== "non" }, "la tâche du dossier, durée d’une tâche"),
+                el("option", { value: "non", selected: A.autres === "non" }, "ne pas mettre dans l’agenda"))));
         })(),
         el("h4", { class: "rubrique" }, "Congés et jours off"),
         el("div", { class: "agenda-conges" }, (b.conges || []).length ? b.conges.slice().sort((x, y) => x.du.localeCompare(y.du)).map((c) => el("div", { class: "agenda-conge" },
@@ -6724,9 +6769,22 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     dureeTache: 30, dureeRdv: 60,
     dossiers: true,       // un dossier « À faire » qui m'est attribué devient une tâche dans l'agenda
     moi: "Moi",           // mon nom dans les collaborateurs
-    dureeDossier: 120     // durée de la tâche d'un dossier (analyse, acte…)
+    dureeDossier: 120,    // (ancien réglage, repris dans les règles)
+    // règles par nature : quelle tâche, quelle durée, prioritaire ou non
+    //   texte : "tache" (la tâche du dossier, sinon « Nature à faire ») ou "libelle" (le libellé indiqué)
+    //   prio  : passe devant les autres tâches (jamais devant un rendez-vous ou une tâche 📌)
+    regles: [
+      { nature: "Analyse", texte: "tache", libelle: "", duree: 120, prio: false },
+      { nature: "Acte", texte: "tache", libelle: "", duree: 120, prio: false }
+    ],
+    autres: "tache"       // les autres natures : "tache" (tâche du dossier, durée d'une tâche) ou "non" (pas dans l'agenda)
   };
-  const auto = () => ({ ...AUTO_DEFAUT, ...((reglagesAgenda && reglagesAgenda.auto) || {}) });
+  const auto = () => {
+    const a = { ...AUTO_DEFAUT, ...((reglagesAgenda && reglagesAgenda.auto) || {}) };
+    if (!(reglagesAgenda && reglagesAgenda.auto && reglagesAgenda.auto.regles) && Number(a.dureeDossier) && Number(a.dureeDossier) !== 120)
+      a.regles = AUTO_DEFAUT.regles.map((r) => ({ ...r, duree: Number(a.dureeDossier) }));
+    return a;
+  };
   let reglagesAgenda = (() => { try { return { ...AGENDA_DEFAUT, ...JSON.parse(localStorage.getItem(CLE_AGENDA) || "{}") }; } catch (e) { return { ...AGENDA_DEFAUT }; } })();
   const congeDu = (iso) => (reglagesAgenda.conges || []).find((c) => c.du && c.du <= iso && iso <= (c.au || c.du));
   const jourTravaille = (iso) => (reglagesAgenda.jours || []).includes(versDate(iso).getDay()) && !congeDu(iso);
@@ -6843,7 +6901,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     // créneaux libres de la journée (plages de travail seulement)
     const libres = creneauxLibres(iso, fixes, maintenant);
     // on garde l'ordre actuel des tâches, mais une plus courte peut passer devant pour boucher un trou
-    const file = mobiles.sort((a, b) => a[0] - b[0] || String(a[1].cree || "").localeCompare(String(b[1].cree || ""))).map(([, t]) => t);
+    const file = mobiles.sort((a, b) => (b[1].prio ? 1 : 0) - (a[1].prio ? 1 : 0) || a[0] - b[0] || String(a[1].cree || "").localeCompare(String(b[1].cree || ""))).map(([, t]) => t);
     for (const [a, b] of libres) {
       let c = Math.ceil(a / pas) * pas;
       for (;;) {
@@ -6884,12 +6942,18 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         if (!collabsDe(d).some((c) => cleClient(c) === moi)) continue;
         if (tachesDe(d.client).some((t) => !t.fait && t.dossier === d.id)) continue;   // il a déjà sa tâche
         const nature = sansNumero(d.type) === "Sans type" ? "Dossier" : sansNumero(d.type);
-        const texte = String(d.tache || "").trim() || `${nature} à faire`;
-        // analyse ou acte : la durée prévue pour un dossier (2 h par défaut) ; autre nature : celle d'une tâche
-        const duree = String(/^(analyse|acte)/i.test(sansAccents(nature)) ? (Number(A.dureeDossier) || 120) : (Number(A.dureeTache) || DUREE_TACHE));
-        const [jour, heure] = premierCreneau(duree);
+        const regle = (A.regles || []).find((r) => r.nature && sansAccents(r.nature) === sansAccents(nature));
+        if (!regle && A.autres === "non") continue;            // nature sans règle : pas dans l'agenda
+        const texte = regle && regle.texte === "libelle" && String(regle.libelle || "").trim()
+          ? String(regle.libelle).trim() : (String(d.tache || "").trim() || `${nature} à faire`);
+        const duree = String(regle ? (Number(regle.duree) || 120) : (Number(A.dureeTache) || DUREE_TACHE));
+        const prio = !!(regle && regle.prio);
+        // prioritaire : au premier jour travaillé, devant les autres tâches (qui se décalent) ; sinon à la suite
+        let jour, heure;
+        if (prio) { jour = jourTravaille(enIso(aujourdhui())) ? enIso(aujourdhui()) : jourOuvreSuivant(enIso(aujourdhui())); heure = ""; }
+        else [jour, heure] = premierCreneau(duree);
         const id = nouvelId();
-        majTaches(d.client, (l) => [...l, { id, texte, pour: jour, heure, duree, fait: null, cree: new Date().toISOString(),
+        majTaches(d.client, (l) => [...l, { id, texte, pour: jour, heure, duree, fait: null, cree: new Date().toISOString(), ...(prio ? { prio: true } : {}),
           dossier: d.id, dossier_libelle: [d.tache, nature].filter(Boolean).join(" – "), auto: true }]);
         if (jour) jours.push(jour);
         ids.push(id);
