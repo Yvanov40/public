@@ -7113,6 +7113,61 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerFeuilles));
   // toucher le fond assombri referme la fenêtre : sur ordinateur, et sur téléphone pour les petites fenêtres (qui ne couvrent pas tout l'écran)
   document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && (window.innerWidth > 900 || f.classList.contains("feuille-petite"))) fermerFeuilles(); }));
+  // téléphone : toutes les feuilles qui montent du bas (menu d'une carte, choix d'un acte ou d'une liste, calendrier, horloge)
+  // redescendent quand on les tire vers le bas. Un seul guetteur pour toutes, où qu'elles soient créées.
+  (() => {
+    const FEUILLES = ".menu-contextuel, .actes-boite, .choix-date-boite, .horloge-boite";
+    let g = null;
+    document.addEventListener("touchstart", (e) => {
+      g = null;
+      if (!estTel() || e.touches.length !== 1 || !(e.target instanceof Element)) return;
+      const boite = e.target.closest(FEUILLES);
+      if (!boite || e.target.closest(".horloge-cadran, textarea")) return;
+      // si la feuille (ou une liste à l'intérieur) a défilé, le geste la fait d'abord remonter
+      for (let n = e.target; n && n !== boite.parentElement; n = n.parentElement) if (n.scrollTop > 0) return;
+      g = { boite, x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0, parti: false };
+    }, { passive: true });
+    document.addEventListener("touchmove", (e) => {
+      if (!g) return;
+      const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+      if (!g.parti) {
+        if (dy < 8 && Math.abs(dx) < 8) return;
+        if (dy <= 0 || Math.abs(dx) > dy) { g = null; return; }
+        g.parti = true;
+        g.boite.style.transition = "none";
+        g.boite.style.animation = "none";
+      }
+      g.dy = Math.max(0, dy);
+      g.boite.style.transform = `translateY(${g.dy}px)`;
+    }, { passive: true });
+    const lacher = () => {
+      if (!g) return;
+      const { boite, parti, dy } = g;
+      g = null;
+      if (!parti) return;
+      boite.style.transition = "transform .17s ease-out";
+      if (dy > 100) {
+        boite.style.transform = "translateY(105%)";
+        avalerClic();
+        setTimeout(() => {
+          if (boite.classList.contains("menu-contextuel")) { fermerMenuSelection(); return; }
+          // les autres : comme un toucher sur le fond assombri, qui les referme
+          const voile = boite.parentElement;
+          avaleJusqua = 0;
+          const annuler = [...boite.querySelectorAll("button")].find((x) => x.textContent.trim() === "Annuler");
+          if (annuler) annuler.click();   // (horloge) : son bouton Annuler
+          else if (voile && voile.isConnected) voile.dispatchEvent(new MouseEvent("click", { bubbles: false }));
+          if (boite.isConnected) { boite.style.transition = ""; boite.style.transform = ""; }
+        }, 160);
+      } else {
+        boite.style.transform = "";
+        setTimeout(() => { if (boite.isConnected) boite.style.transition = ""; }, 200);
+      }
+    };
+    document.addEventListener("touchend", lacher, { passive: true });
+    document.addEventListener("touchcancel", lacher, { passive: true });
+  })();
+
   // téléphone : une petite fenêtre (feuille du bas) redescend quand on la tire vers le bas
   document.querySelectorAll(".feuille-petite .feuille-boite").forEach((boite) => {
     let tire = null;
@@ -7468,7 +7523,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (!estTel() || e.touches.length !== 1) return;
     const c = e.target instanceof Element ? e.target : null;
     if (!c || c.closest("input, textarea, select, .feuille, .filtres, .fab, .fab-voile, .eclair, .choix-date, .horloge-voile, .roue-voile, .frise-bloc, .carte-dossier, .menu")) return;
-    if (document.querySelector(".feuille.ouverte, .eclair, .roue-voile") || document.body.classList.contains("filtres-ouverts")) return;
+    if (document.querySelector(".feuille.ouverte, .eclair, .roue-voile, .menu-contextuel, .actes-voile, .horloge-voile, .choix-date, .menu.ouvert") || document.body.classList.contains("filtres-ouverts")) return;  // rien d'ouvert par-dessus
     if (!enHautDePage(c)) return;
     tirerUn = { x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0 };
   }, { passive: true });
