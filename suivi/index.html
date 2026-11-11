@@ -1762,6 +1762,19 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .auto-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .auto-choix { display: grid; gap: 4px; font-size: 12.5px; color: var(--discret); }
 .auto-choix select, .auto-choix input { width: 100%; }
+
+/* ---------- zones de commentaire et de notes dans les tuiles : larges, confortables ---------- */
+.tuile-page textarea { display: block; width: 100%; box-sizing: border-box; min-height: 140px; resize: vertical; margin: 0;
+  border: 1px solid var(--bordure); border-radius: 12px; background: var(--carte); color: var(--texte);
+  padding: 12px 14px; font: inherit; font-size: 15px; line-height: 1.55; box-shadow: inset 0 1px 2px rgba(12, 45, 57, .05); transition: border-color .12s, box-shadow .12s; }
+.tuile-page textarea:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 3px var(--or-doux); }
+.tuile-page textarea::placeholder { color: var(--discret); font-style: italic; }
+.tuile-page > div:not(.tuile-panneau-titre) { width: 100%; }
+.tuile-page .liens { margin-top: 8px; }
+.tuile-panneau { padding: 12px 14px 14px; }
+@media (max-width: 900px) { .tuile-page textarea { min-height: 170px; font-size: 16px; } }
+
+@media (max-width: 900px) { .encart-client { padding-left: 10px !important; padding-right: 10px !important; } .encart-client .tuile-panneau { padding: 10px; } }
 </style>
 </head>
 <body>
@@ -6339,8 +6352,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const listePrecisions = el("datalist", { id: "liste-precisions" }, PRECISIONS.map((x) => el("option", { value: x })));
     const champPrecision = el("input", { name: "precision", type: "text", value: d.precision || "", list: "liste-precisions",
       placeholder: "facultatif : notaire, pièces, reporté…", autocomplete: "off" });
-    const zoneComm = el("textarea", { name: "commentaire_client" }, f.commentaire || "");
-    const zoneNotes = el("textarea", { name: "notes_client", style: "min-height:70px" }, f.notes || "");
+    const zoneComm = el("textarea", { name: "commentaire_client", placeholder: "Commentaire commun à tous les dossiers de ce client…" }, f.commentaire || "");
+    const zoneNotes = el("textarea", { name: "notes_client", placeholder: "Notes sur ce client : numéros, contacts, à savoir…" }, f.notes || "");
     const titreEncart = el("p", null, encartTitre(d.client, i));
     const entreeClient = saisie("client", d.client, "text", { autocomplete: "off", list: "liste-client" });
     const listeClients = el("datalist", { id: "liste-client" }, nomsClients().map((v) => el("option", { value: v })));
@@ -6406,7 +6419,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       el("h4", { class: "rubrique" }, "Client"),
       el("div", { class: "encart-client" }, titreEncart,
         (() => {
-          const zoneDossier = el("textarea", { name: "commentaire", style: "min-height:70px" }, d.commentaire || "");
+          const zoneDossier = el("textarea", { name: "commentaire", placeholder: "Ce qui concerne ce dossier : où on en est, ce qu’on attend, les décisions prises…" }, d.commentaire || "");
           // le rendez-vous du dossier : en bas, dans une tuile (les rendez-vous du client sont dans sa fiche)
           const rdv = el("div", null,
             el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)),
@@ -7411,8 +7424,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       (() => {
-        const zoneComm = el("textarea", { name: "commentaire", style: "min-height:170px" }, f.commentaire || "");
-        const zoneNotes = el("textarea", { name: "notes", style: "min-height:80px" }, f.notes || "");
+        const zoneComm = el("textarea", { name: "commentaire", placeholder: "Commentaire sur ce client : situation, famille, objectifs…" }, f.commentaire || "");
+        const zoneNotes = el("textarea", { name: "notes", placeholder: "Notes : numéros, contacts, à savoir…" }, f.notes || "");
         return tuiles([
           { libelle: "Tâches", contenu: blocTaches(nom), resume: () => resumeTaches(nom) },
           { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
