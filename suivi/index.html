@@ -5195,6 +5195,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
               choix("dureeTache", "Durée d’une tâche", [15, 30, 45, 60, 90], "min"),
               choix("dureeRdv", "Durée d’un rendez-vous", [30, 45, 60, 90, 120], "min")),
             interrupteur("dossiers", "Mettre dans l’agenda les dossiers « À faire » qui me sont attribués", "Selon les règles ci-dessous, nature par nature. Les rendez-vous et les tâches 📌 ne bougent jamais."),
+            interrupteur("effacerSortie", "Effacer la tâche quand le dossier quitte « À faire »", "Passé en attente, terminé, sans suite ou archivé : sa tâche automatique (si elle n’est pas faite) disparaît, et l’agenda se resserre. Les tâches créées à la main sont gardées."),
             el("label", { class: "auto-choix" }, el("span", null, "Mon nom dans les collaborateurs"),
               el("input", { type: "text", value: A.moi, onchange: (e) => poser("moi", e.target.value.trim() || "Moi") })),
             // les règles, une par nature
@@ -6826,7 +6827,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       { nature: "Analyse", texte: "tache", libelle: "", duree: 120, prio: false },
       { nature: "Acte", texte: "tache", libelle: "", duree: 120, prio: false }
     ],
-    autres: "tache"       // les autres natures : "tache" (tâche du dossier, durée d'une tâche) ou "non" (pas dans l'agenda)
+    autres: "tache",      // les autres natures : "tache" (tâche du dossier, durée d'une tâche) ou "non" (pas dans l'agenda)
+    effacerSortie: true   // un dossier qui quitte « À faire » : sa tâche automatique (non faite) est effacée de l'agenda
   };
   const auto = () => {
     const a = { ...AUTO_DEFAUT, ...((reglagesAgenda && reglagesAgenda.auto) || {}) };
@@ -6978,8 +6980,33 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // sa tâche (« Envoyer le projet ») ou, à défaut, « Analyse à faire », « Acte à faire »… Durée réglable (2 h par défaut),
   // non figée : elle se décale comme les autres. Rien n'est recréé tant qu'une tâche ouverte existe pour ce dossier.
   let planifEnCours = false;
+  // un dossier qui n'est plus « À faire » (autre statut, ou archivé) : on efface sa tâche automatique non faite
+  function effacerTachesSorties() {
+    const A = auto();
+    if (!A.effacerSortie || !donnees) return 0;
+    let n = 0;
+    const jours = [];
+    for (const d of donnees.dossiers) {
+      if (!d.id || !d.client || (!d.archives && etapeDe(d) === "2")) continue;
+      const aEffacer = tachesDe(d.client).filter((t) => t.auto && !t.fait && t.dossier === d.id);
+      if (!aEffacer.length) continue;
+      aEffacer.forEach((t) => { if (t.pour) jours.push(t.pour); });
+      majTaches(d.client, (l) => l.filter((t) => !aEffacer.includes(t)));
+      if (d.tache_agenda) delete d.tache_agenda;
+      n += aEffacer.length;
+    }
+    if (n) apresAgenda(jours);   // les tâches suivantes avancent dans les créneaux libérés
+    return n;
+  }
   function planifierDossiersAFaire(silencieux) {
     const A = auto();
+    if (!planifEnCours && donnees) {
+      planifEnCours = true;
+      let effaces = 0;
+      try { effaces = effacerTachesSorties(); } finally { planifEnCours = false; }
+      if (effaces && !silencieux) setTimeout(() => informer(effaces > 1 ? `${effaces} tâches de dossiers sortis de « À faire » effacées de l’agenda.` : "La tâche du dossier sorti de « À faire » est effacée de l’agenda."), 120);
+      if (effaces && !(A.dossiers && String(A.moi || "").trim())) return effaces;
+    }
     if (planifEnCours || !donnees || !A.dossiers || !String(A.moi || "").trim()) return 0;
     planifEnCours = true;
     const moi = cleClient(A.moi);
