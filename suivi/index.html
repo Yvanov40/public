@@ -7829,7 +7829,30 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   const rendus = {};               // nombre de fois où chaque fiche a été remplie
   let ficheCourante = null;        // { id, rouvrir }
   let restauration = false, retourFrais = false, ignorerRetour = 0;
+  // ---- enregistrement automatique à la fermeture : ce qui a été saisi dans une fiche n'est jamais perdu ----
+  // À l'ouverture, on photographie les champs ; à la fermeture (clic à côté, Fermer, Échap, glissement),
+  // s'ils ont changé, on enregistre comme avec le bouton « Enregistrer ».
+  const FICHES_AUTO = { feuilleDossier: "enregistrerDossier", feuilleClient: "enregistrerClient", feuillePacte: "enregistrerPacte",
+    feuilleTache: "enregistrerTache", feuilleRdv: "enregistrerRdv", feuilleModeles: "enregistrerModeles", feuillePersoEmol: "enregistrerPersoEmol", feuilleAgenda: "enregistrerAgenda" };
+  const photoChamps = (f) => JSON.stringify([...f.querySelectorAll(".feuille-corps [name]")].map((c) => [c.name, c.type === "checkbox" || c.type === "radio" ? c.checked : c.value]));
+  function photographierFeuille(id) { const f = $(id); if (f && FICHES_AUTO[id]) f.dataset.photo = photoChamps(f); }
+  let finFeuilleDemandee = false;
+  // renvoie vrai si la fiche s'est enregistrée et fermée d'elle-même ; faux s'il n'y avait rien à enregistrer ;
+  // null si l'enregistrement a échoué (champ manquant…) : la fiche reste ouverte
+  function enregistrerAvantFermeture() {
+    const f = document.querySelector(".feuille.ouverte");
+    if (!f || !FICHES_AUTO[f.id]) return false;
+    const bouton = $(FICHES_AUTO[f.id]);
+    if (!bouton || bouton.hidden || f.dataset.photo === undefined || f.dataset.photo === photoChamps(f)) return false;
+    finFeuilleDemandee = false;
+    bouton.click();
+    if (finFeuilleDemandee) return true;
+    // enregistré sans se fermer (ex. une prestation qui revient à la liste) : on prend la nouvelle photo
+    if (f.classList.contains("ouverte") && f.dataset.photo !== photoChamps(f)) return null;
+    return false;
+  }
   function ouvrirFeuille(id, rouvrir) {
+    setTimeout(() => photographierFeuille(id), 30);
     fermerSegment();
     rendus[id] = (rendus[id] || 0) + 1;
     const dejaOuverte = document.querySelector(".feuille.ouverte");
@@ -7881,10 +7904,14 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // Fermer, Échap, glissement : on passe par l'historique pour rester cohérent avec le geste « retour »
   function fermerFeuilles() {
     if (!document.querySelector(".feuille.ouverte")) return;
+    const r = enregistrerAvantFermeture();
+    if (r === true) return;      // enregistrée : elle s'est fermée toute seule
+    if (r === null) return;      // il manque quelque chose (le message le dit) : on reste dans la fiche
     if (history.state && history.state.fiche) history.back(); else retourFiche(false);
   }
   // après un enregistrement : retour à la fiche d'avant, remise à jour avec les nouvelles données
   function terminerFeuille() {
+    finFeuilleDemandee = true;
     retourFrais = true;
     if (history.state && history.state.fiche) history.back(); else { retourFrais = false; retourFiche(true); }
   }
