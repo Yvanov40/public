@@ -7965,7 +7965,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       el("div", { class: "actions-fiche" },
         el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
         el("button", { type: "button", title: "Ouvre l’Audit civil et fiscal ; le nom du client est copié pour le coller dans le dossier d’audit",
-          onclick: () => { try { navigator.clipboard.writeText(nom); } catch (e) {} fermerToutesFeuilles(); location.hash = "#audit"; informer(`« ${nom} » copié : collez-le dans le dossier d’audit.`); } }, "🧭 Audit"),
+          onclick: () => { try { navigator.clipboard.writeText(nom).catch(() => {}); } catch (e) {} fermerToutesFeuilles(); location.hash = "#audit"; informer(`« ${nom} » copié : collez-le dans le dossier d’audit.`); } }, "🧭 Audit"),
         el("button", { type: "button", onclick: () => renommerClient(clientEnCours) }, "✎ Renommer"),
         el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF"),
         !liste.length ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => supprimerClientSeul(nom) }, "Supprimer ce client") : null),
