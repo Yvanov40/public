@@ -2829,6 +2829,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       localStorage.setItem(CLE_STOCKAGE + "-sha", sha);
       if (nouveaux) { donnees.modifie = new Date().toISOString(); setTimeout(envoyerGithub, 500); }  // identifiants ajoutés : on les partage
       etatSync("", "À jour avec GitHub · " + heure());
+      githubJoint();
       if (silencieux === false) informer(`${dossiers.length} dossiers chargés depuis GitHub.`);
       const position = window.scrollY;
       afficherTout();
@@ -3139,6 +3140,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
       etatSync("", "Enregistré sur GitHub · " + heure());
       majAlerte();
+      githubJoint();
     } catch (e) {
       etatSync("erreur", "Pas envoyé : nouvel essai à la prochaine connexion");
       if (e && e.statut) informer(messageErreur(e.statut));
@@ -5510,6 +5512,11 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // relié à GitHub : les automatismes (tâches des dossiers, replacement) attendent d'avoir la version la plus récente,
   // pour ne jamais travailler sur la vieille copie de l'appareil
   var pretPourAuto = false;
+  function githubJoint() {
+    if (pretPourAuto) return;
+    pretPourAuto = true;
+    setTimeout(() => { if (donnees && typeof afficherTout === "function") afficherTout(); }, 0);
+  }
   // tâches à venir qui ont une date mais pas d'heure (elles attendaient une place) : on leur en trouve une
   function replacerSansHeure() {
     if (!donnees || !auto().reporter) return 0;
@@ -8322,7 +8329,12 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     etatSync("local", "Pas connecté à GitHub");
     fermerToutesFeuilles(); majAlerte();
   });
-  window.addEventListener("online", () => { if (github && donnees && donnees.modifie) envoyerGithub(); });
+  // le réseau revient : on envoie ce qui attend (avec fusion si besoin), sinon on relit GitHub ; les automatismes repartent ensuite
+  window.addEventListener("online", () => {
+    if (!github || !donnees) return;
+    if (donnees.modifie) envoyerGithub();
+    else if (!pretPourAuto) chargerDepuisGithub(true).catch(() => {});
+  });
 
   // ---- raccourci : Ctrl+K (⌘K sur Mac) ou « / » pour aller dans la recherche ; Entrée ouvre la fiche du client ----
   const surMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -8679,11 +8691,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   montrerVue();
   afficherTout();
   if (github) {
-    // (les automatismes démarrent une fois la version de GitHub reçue, ou au bout de 20 s sans réseau)
-    const pret = () => { if (!pretPourAuto) { pretPourAuto = true; if (donnees) afficherTout(); } };
-    setTimeout(pret, 20000);
-    if (donnees && donnees.modifie) Promise.resolve(envoyerGithub()).finally(pret);
-    else chargerDepuisGithub(true).catch(() => {}).finally(pret);
+    // (les automatismes ne démarrent qu'une fois GitHub joint : sans réseau, ils attendent son retour)
+    if (donnees && donnees.modifie) envoyerGithub();
+    else chargerDepuisGithub(true).catch(() => {});
     // (le Dutreil voyage maintenant avec le fichier principal)
     chargerReglagesAgenda();
     chargerSocietes();
