@@ -1953,6 +1953,8 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 .audit-ouvrir b { color: var(--bleu); font-weight: 600; }
 .audit-ouvrir small { color: var(--discret); font-size: 12px; }
 #auditLien .lien-sous-champ { padding: 0 4px; }
+
+.audit-actions { display: flex; gap: 10px; }
 </style>
 </head>
 <body>
@@ -2894,7 +2896,8 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   // modèles de tâches par nature de dossier : { "Donation": [{ texte, delai (jours après la création) }] }
   // actes des émoluments personnalisés : { cle: { …définition } } pour un acte modifié ou ajouté, { cle: null } pour un acte masqué
   // audits (appli Audit civil et fiscal) : { liste: { id: { nom, maj, data } }, liens: { id: client }, supprimes: { id: date } }
-  var auditsSuivi = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-audits")) || { liste: {}, liens: {}, supprimes: {} }; } catch (e) { return { liste: {}, liens: {}, supprimes: {} }; } })();
+  // (seul le Suivi efface un audit partout : « effaces ». Une suppression ou une remise à zéro faite dans l'Audit reste locale.)
+  var auditsSuivi = (() => { try { const a = JSON.parse(localStorage.getItem("suivi-gp-donnees-audits")) || {}; return { liste: a.liste || {}, liens: a.liens || {}, effaces: a.effaces || {} }; } catch (e) { return { liste: {}, liens: {}, effaces: {} }; } })();
   let emolPerso = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-emoluments")) || {}; } catch (e) { return {}; } })();
   let modelesTaches = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-modeles")) || {}; } catch (e) { return {}; } })();
   function sectionsAnnexes() {
@@ -2911,7 +2914,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     if (contenu.agenda) { reglagesAgenda = { ...AGENDA_DEFAUT, ...contenu.agenda }; localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda)); }
     if (contenu.societes) { societes = contenu.societes; INDEX_ETUDES = null; localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes)); }
     if (contenu.modeles) { modelesTaches = contenu.modeles; localStorage.setItem("suivi-gp-donnees-modeles", JSON.stringify(modelesTaches)); }
-    if (contenu.audits) { auditsSuivi = { liste: {}, liens: {}, supprimes: {}, ...contenu.audits }; localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); if (typeof versAudit === "function") versAudit(); }
+    if (contenu.audits) { auditsSuivi = { liste: contenu.audits.liste || {}, liens: contenu.audits.liens || {}, effaces: contenu.audits.effaces || {} }; localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); if (typeof versAudit === "function") versAudit(); }
     if (contenu.emoluments) { emolPerso = contenu.emoluments; localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso)); if (typeof reconstruireBaremes === "function") reconstruireBaremes(); }
   }
   // ancien format (dutreil.json, agenda.json, societes.json à part) : on les reprend une fois dans le fichier principal
@@ -3176,7 +3179,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   }
   function fusionnerAudits(b, l, r) {
     b = b || {}; l = l || {}; r = r || {};
-    const supprimes = { ...(r.supprimes || {}), ...(l.supprimes || {}) };
+    const supprimes = { ...(r.effaces || {}), ...(l.effaces || {}) };
     const liste = {};
     for (const id of new Set([...Object.keys(r.liste || {}), ...Object.keys(l.liste || {})])) {
       if (supprimes[id]) continue;
@@ -3190,7 +3193,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       const v = ll !== lb ? ll : lr;   // changé ici : on garde ; sinon la version de GitHub
       if (v) liens[id] = v;
     }
-    return { liste, liens, supprimes };
+    return { liste, liens, effaces: supprimes };
   }
   function fusionnerObjets(b, l, r) {
     // champ par champ : ce qui a changé ici l'emporte, sinon on prend la version de GitHub
@@ -6199,12 +6202,13 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   // GitHub → Audit
   function versAudit() {
     const a = lireAudit();
+    if (!a.liste) a.liste = {};
     let change = false;
     for (const [id, d] of Object.entries(auditsSuivi.liste || {})) {
       const ici = a.liste[id];
       if (!ici || String(d.maj || "") > String(ici.maj || "")) { a.liste[id] = d; change = true; }
     }
-    for (const id of Object.keys(auditsSuivi.supprimes || {})) if (a.liste[id]) { delete a.liste[id]; change = true; if (a.courant === id) a.courant = null; }
+    for (const id of Object.keys(auditsSuivi.effaces || {})) if (a.liste[id]) { delete a.liste[id]; change = true; if (a.courant === id) a.courant = null; }
     if (!change) return;
     try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
     auditVu = JSON.stringify(Object.keys(a.liste).sort());
@@ -6221,11 +6225,16 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       const d = a.liste[id], ici = (auditsSuivi.liste || {})[id];
       if (!ici || String(d.maj || "") > String(ici.maj || "")) { auditsSuivi.liste[id] = { nom: d.nom, maj: d.maj, data: d.data }; change = true; }
     }
-    // supprimé dans l'Audit (il y était au dernier passage, il n'y est plus)
-    for (const id of JSON.parse(auditVu)) if (!a.liste[id] && auditsSuivi.liste[id]) {
-      delete auditsSuivi.liste[id]; delete auditsSuivi.liens[id]; auditsSuivi.supprimes[id] = new Date().toISOString(); change = true;
-    }
+    // disparu de l'Audit (supprimé « de ce navigateur », ou remise à zéro) : on n'efface RIEN du fichier de suivi
+    const avant = JSON.parse(auditVu);
+    const partis = avant.filter((id) => !a.liste[id] && auditsSuivi.liste[id]);
     auditVu = JSON.stringify(ids.sort());
+    if (partis.length && partis.length === avant.length && avant.length > 1)
+      informer("L’Audit a été remis à zéro dans ce navigateur. Vos audits restent dans votre fichier de suivi : ils reviendront à la prochaine actualisation.");
+    else if (partis.length) {
+      const noms = partis.map((id) => auditsSuivi.liste[id].nom || "Audit sans nom").join(", ");
+      informer(`« ${noms} » retiré de ce navigateur seulement : il reste dans votre fichier.`, { texte: "Effacer partout", faire: () => effacerAudits(partis) });
+    }
     if (change) { garderAuditsSuivi(); annexeModifiee(); }
   }
   window.addEventListener("storage", (e) => { if (e.key === CLE_AUDIT) depuisAudit(); });   // l'Audit (dans son cadre ou sa fenêtre) a écrit
@@ -6269,6 +6278,16 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       } }, client ? "changer" : "rattacher à un client"));
   }
   setInterval(() => { if (vueCourante() === "audit") majBandeauAudit(); }, 2500);
+  // effacer un audit de partout (fichier, GitHub, tous les appareils)
+  function effacerAudits(ids) {
+    const a = lireAudit();
+    for (const id of ids) { delete auditsSuivi.liste[id]; delete auditsSuivi.liens[id]; auditsSuivi.effaces[id] = new Date().toISOString(); delete a.liste[id]; if (a.courant === id) a.courant = null; }
+    try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
+    auditVu = JSON.stringify(Object.keys(a.liste).sort());
+    garderAuditsSuivi(); annexeModifiee();
+    if ($("auditFrame").src) $("auditFrame").src = "../audit/";
+    informer(ids.length > 1 ? `${ids.length} audits effacés de partout.` : "Audit effacé de partout.");
+  }
   function lierAudit(id, nom) {
     if (nom) auditsSuivi.liens[id] = nom; else delete auditsSuivi.liens[id];
     garderAuditsSuivi(); annexeModifiee();
@@ -6283,7 +6302,10 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     const ligne = ([id, d], lie) => el("div", { class: "audit-ligne" },
       el("button", { type: "button", class: "audit-ouvrir", onclick: () => ouvrirAudit(id) }, el("b", null, "🧭 ", d.nom || "Audit sans nom"),
         el("small", null, d.maj ? "modifié le " + new Date(d.maj).toLocaleDateString("fr-FR") : "")),
-      lie ? el("button", { type: "button", class: "lien-sous-champ", title: "Ne plus rattacher cet audit à ce client", onclick: (e) => { lierAudit(id, ""); e.target.closest(".audit-ligne").remove(); } }, "détacher")
+      lie ? el("span", { class: "audit-actions" },
+          el("button", { type: "button", class: "lien-sous-champ", title: "Ne plus rattacher cet audit à ce client", onclick: (e) => { lierAudit(id, ""); e.target.closest(".audit-ligne").remove(); } }, "détacher"),
+          el("button", { type: "button", class: "lien-sous-champ", style: "color:var(--rouge)", title: "Effacer cet audit du fichier et de tous les appareils",
+            onclick: (e) => { if (!confirm(`Effacer l’audit « ${d.nom || "sans nom"} » de partout (fichier, GitHub, tous les appareils) ?`)) return; effacerAudits([id]); e.target.closest(".audit-ligne").remove(); } }, "effacer"))
         : el("button", { type: "button", class: "lien-sous-champ", onclick: () => { lierAudit(id, nom); informer("Audit rattaché à " + nom + "."); ouvrirClient(nom); } }, "rattacher"));
     return el("div", { class: "bloc-audits" },
       siens.length ? el("div", { class: "audit-liste" }, siens.map((x) => ligne(x, true))) : el("p", { class: "m-vide" }, "Aucun audit pour ce client."),
@@ -6876,6 +6898,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "audit"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
     if (v === "outils") afficherOutils();
     // l'Audit ne se charge qu'à la première visite de l'onglet, puis reste en mémoire (son travail en cours est gardé)
+    if (v === "audit") versAudit();
     if (v === "audit" && (!$("auditFrame").src || rechargerAuditEnAttente)) { rechargerAuditEnAttente = false; $("auditFrame").src = "../audit/"; }
     if (v !== "audit" && typeof depuisAudit === "function") depuisAudit();
     // la recherche dit ce qu'elle cherche selon l'onglet
