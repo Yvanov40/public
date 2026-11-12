@@ -1906,6 +1906,10 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     </section>
     <div class="voile-filtres" id="voileFiltres"></div>
     <div id="alerteCle" class="alerte-modif" hidden></div>
+    <div id="alerteLien" class="alerte-modif" hidden>
+      <span id="alerteLienTexte"></span>
+      <button id="btnReprendreLien">Reprendre</button>
+    </div>
     <div id="alerteModif" class="alerte-modif" hidden>
       <span>Des modifications ne sont pas encore dans votre fichier.</span>
       <button id="btnExporterAlerte">Exporter</button>
@@ -2231,6 +2235,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       <button class="menu-tuile" id="btnExporter"><span>⤓</span>Exporter une copie</button>
       <button class="menu-tuile" id="btnImporter"><span>📂</span>Ouvrir un autre fichier</button>
       <button class="menu-tuile" id="btnNouveauFichier"><span>＋</span>Créer un nouveau fichier</button>
+      <button class="menu-tuile" id="btnFichierLie" hidden><span>💾</span>Ouvrir et enregistrer dans un fichier</button>
     </div>
   </div>
 </div>
@@ -3327,6 +3332,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     } catch (e) {}
     try { localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees)); }
     catch (e) { informer("Le téléphone n’a pas pu garder les données."); }
+    if (marquer && typeof enregistrerDansFichier === "function" && fichierLie) enregistrerDansFichier();
     majAlerte();
     if (marquer) planifierEnvoi();
   }
@@ -3364,6 +3370,85 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     return clients;
   }
 
+  // ================================================================ fichier lié (Chrome et Edge sur ordinateur)
+  // On ouvre un fichier avec l'accord du navigateur ; chaque modification y est réécrite une seconde après, comme dans Word.
+  // Le lien est gardé (IndexedDB) : à la réouverture, un clic sur « Reprendre » suffit à redonner l'autorisation.
+  var lienPossible = typeof window.showOpenFilePicker === "function";  // (var : ces variables peuvent servir avant d'être atteintes)
+  var fichierLie = null, minuteurFichier = null, lienEnAttente = false;
+  const baseLien = () => new Promise((ok, ko) => {
+    const r = indexedDB.open("suivi-gp-fichier", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("liens");
+    r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
+  });
+  async function garderLien(handle) {
+    try { const db = await baseLien(); const tx = db.transaction("liens", "readwrite"); handle ? tx.objectStore("liens").put(handle, "fichier") : tx.objectStore("liens").delete("fichier"); } catch (e) {}
+  }
+  async function relireLien() {
+    try { const db = await baseLien(); return await new Promise((ok) => { const q = db.transaction("liens").objectStore("liens").get("fichier"); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); }); } catch (e) { return null; }
+  }
+  function majBandeauLien() {
+    $("alerteLien").hidden = !lienEnAttente;
+    if (lienEnAttente) $("alerteLienTexte").textContent = `Le suivi est lié au fichier « ${lienEnAttente.name} ». Cliquez pour reprendre l’enregistrement automatique.`;
+    $("btnFichierLie").hidden = !lienPossible;
+    $("btnFichierLie").replaceChildren(el("span", null, fichierLie ? "⛓" : "💾"), fichierLie ? `Ne plus enregistrer dans « ${fichierLie.name} »` : "Ouvrir et enregistrer dans un fichier");
+  }
+  async function ouvrirFichierLie() {
+    fermerMenu();
+    if (fichierLie) {  // déjà lié : on délie
+      if (!confirm(`Arrêter l’enregistrement automatique dans « ${fichierLie.name} » ?`)) return;
+      fichierLie = null; await garderLien(null); majBandeauLien(); majAlerte();
+      informer("Le suivi n’est plus lié au fichier. Vos données restent sur cet appareil.");
+      return;
+    }
+    let handle;
+    try { [handle] = await window.showOpenFilePicker({ types: [{ description: "Suivi (JSON)", accept: { "application/json": [".json"] } }], excludeAcceptAllOption: false }); }
+    catch (e) { return; }  // fenêtre fermée
+    try {
+      if ((await handle.requestPermission({ mode: "readwrite" })) !== "granted") { informer("Sans autorisation d’écriture, le fichier ne peut pas être mis à jour."); return; }
+      const texte = await (await handle.getFile()).text();
+      if (!importer(texte, handle.name, true)) return;   // GitHub relié : importer pose la question (et peut annuler)
+      fichierLie = handle; lienEnAttente = false;
+      await garderLien(handle);
+      majBandeauLien();
+      enregistrerDansFichier(true);
+      informer(`« ${handle.name} » ouvert : chaque modification y sera enregistrée automatiquement.`);
+    } catch (e) { informer("Ce fichier n’a pas pu être ouvert."); }
+  }
+  async function enregistrerDansFichier(maintenant) {
+    if (!fichierLie || !donnees) return;
+    clearTimeout(minuteurFichier);
+    minuteurFichier = setTimeout(async () => {
+      try {
+        const w = await fichierLie.createWritable();
+        await w.write(contenuComplet()); await w.close();
+        donnees.modifie = null;
+        try { localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees)); } catch (e) {}
+        etatSync("ok", `Enregistré dans ${fichierLie.name} · ${heure()}`);
+        majAlerte();
+      } catch (e) {
+        etatSync("erreur", "Fichier inaccessible : modifications gardées sur l’appareil");
+        lienEnAttente = fichierLie; fichierLie = null; majBandeauLien();
+      }
+    }, maintenant ? 0 : 1000);
+  }
+  async function reprendreLien() {
+    const h = lienEnAttente;
+    if (!h) return;
+    try {
+      if ((await h.requestPermission({ mode: "readwrite" })) !== "granted") return;
+      fichierLie = h; lienEnAttente = false; majBandeauLien();
+      if (donnees && donnees.modifie) enregistrerDansFichier(true);   // ce qui a été fait entre-temps part dans le fichier
+      else etatSync("ok", `Lié à ${h.name}`);
+      informer(`Enregistrement automatique dans « ${h.name} » repris.`);
+    } catch (e) { informer("Le fichier n’est plus accessible : ouvrez-le de nouveau."); lienEnAttente = false; await garderLien(null); majBandeauLien(); }
+  }
+  // au démarrage : un lien gardé ? (l'autorisation doit être redonnée d'un clic, le navigateur l'exige)
+  if (lienPossible) relireLien().then(async (h) => {
+    if (!h) { majBandeauLien(); return; }
+    try { if ((await h.queryPermission({ mode: "readwrite" })) === "granted") { fichierLie = h; etatSync("ok", `Lié à ${h.name}`); } else lienEnAttente = h; } catch (e) { lienEnAttente = h; }
+    majBandeauLien();
+  });
+
   function importer(texte, nomFichier) {
     let contenu;
     try { contenu = JSON.parse(texte); }
@@ -3379,7 +3464,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         etatSync("local", "Fichier seul · GitHub en pause");
       } else if (confirm(`Remplacer le suivi enregistré sur GitHub par ce fichier ?\n\nLe contenu actuel de GitHub reste dans les sauvegardes du jour.`)) {
         remplacerGithub = true;
-      } else { informer("Ouverture annulée : rien n’a changé."); return; }
+      } else { informer("Ouverture annulée : rien n’a changé."); return false; }
     }
     const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
     assurerIds(dossiers);
@@ -3391,6 +3476,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     informer(`${dossiers.length} dossiers chargés.` + (remplacerGithub ? " Ils remplacent le suivi GitHub." : github ? "" : githubEnPause() ? " GitHub est en pause." : ""));
     afficherTout();
     location.hash = "#accueil";
+    return true;
   }
 
   // Le service d'enregistrement de Claude est préparé dès l'ouverture : au moment du clic,
@@ -3472,7 +3558,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     informer.minuteur = setTimeout(() => m.classList.remove("visible"), action ? 7000 : 3200);
   }
   function majAlerte() {
-    $("alerteModif").hidden = !(donnees && donnees.modifie) || !!github;
+    $("alerteModif").hidden = !(donnees && donnees.modifie) || !!github || !!fichierLie;
     if (donnees) {
       const d = new Date(donnees.importe);
       $("infoFichier").textContent = `Version de l’appli : ${VERSION}. ${donnees.dossiers.length} dossiers, ${Object.keys(donnees.clients).length} clients. Chargé le ${d.toLocaleDateString("fr-FR")}.`
@@ -7886,6 +7972,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   };
   $("btnImporter").addEventListener("click", choisirFichier);
   $("btnNouveauFichier").addEventListener("click", ouvrirNouveauFichier);
+  $("btnFichierLie").addEventListener("click", ouvrirFichierLie);
+  $("btnReprendreLien").addEventListener("click", reprendreLien);
   $("creerNouveauFichier").addEventListener("click", creerNouveauFichier);
   $("btnImporterVide").addEventListener("click", choisirFichier);
   $("btnSuiviVide").addEventListener("click", () => {
@@ -7898,7 +7986,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const f = $("fichier").files[0];
     if (!f) return;
     const lecteur = new FileReader();
-    lecteur.onload = () => importer(lecteur.result, f.name);
+    lecteur.onload = () => { if (importer(lecteur.result, f.name) && fichierLie) { fichierLie = null; garderLien(null); majBandeauLien(); } };
     lecteur.onerror = () => informer("Le fichier n’a pas pu être lu.");
     lecteur.readAsText(f, "utf-8");
   });
