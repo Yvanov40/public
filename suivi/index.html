@@ -2697,8 +2697,13 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   let minuteurEnvoi = null;
   let envoiEnCours = false;
 
+  // « fichier seul » : on travaille sur un fichier ouvert à la main, la synchronisation GitHub est en pause
+  // (les réglages GitHub sont gardés ; « Recharger depuis GitHub » la reprend)
+  const CLE_PAUSE = "suivi-gp-github-pause";
+  const githubEnPause = () => { try { return localStorage.getItem(CLE_PAUSE) === "1"; } catch (e) { return false; } };
   function lireReglages() {
     try { github = JSON.parse(localStorage.getItem(CLE_GITHUB) || "null"); } catch (e) { github = null; }
+    if (githubEnPause()) github = null;
   }
   function etatSync(classe, texte) {
     $("etatSync").className = "etat-sync " + classe;
@@ -3217,6 +3222,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   }
 
   async function connecter() {
+    try { localStorage.removeItem(CLE_PAUSE); } catch (e) {}
     const g = {
       proprietaire: $("ghProprietaire").value.trim(), depot: $("ghDepot").value.trim(),
       chemin: $("ghChemin").value.trim() || "suivi_gp.json", branche: $("ghBranche").value.trim() || "main",
@@ -3364,13 +3370,25 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     catch (e) { informer("Ce fichier n’est pas un fichier JSON lisible."); return; }
     const dossiers = Array.isArray(contenu) ? contenu : contenu.dossiers;
     if (!Array.isArray(dossiers)) { informer("Ce fichier ne contient pas de dossiers : choisissez suivi_gp.json."); return; }
+    // relié à GitHub : sans précaution, la synchronisation mélangerait ce fichier et celui de GitHub
+    let remplacerGithub = false;
+    if (github) {
+      if (confirm(`Votre suivi est relié à GitHub.\n\nOK : ouvrir « ${nomFichier || "ce fichier"} » seul, sans toucher à GitHub (la synchronisation est mise en pause ; « Recharger depuis GitHub » la reprend).\n\nAnnuler : autres choix.`)) {
+        try { localStorage.setItem(CLE_PAUSE, "1"); } catch (e) {}
+        github = null;
+        etatSync("local", "Fichier seul · GitHub en pause");
+      } else if (confirm(`Remplacer le suivi enregistré sur GitHub par ce fichier ?\n\nLe contenu actuel de GitHub reste dans les sauvegardes du jour.`)) {
+        remplacerGithub = true;
+      } else { informer("Ouverture annulée : rien n’a changé."); return; }
+    }
     const clients = (!Array.isArray(contenu) && contenu.clients) ? contenu.clients : regrouper(dossiers);
     assurerIds(dossiers);
     migrerTypes(dossiers);
     appliquerAnnexes(contenu);
     donnees = { version: 2, dossiers, clients, importe: new Date().toISOString(), modifie: null, fichier: nomFichier || "suivi_gp.json" };
     sauver(false);
-    informer(`${dossiers.length} dossiers chargés.`);
+    if (remplacerGithub) { donnees.modifie = new Date().toISOString(); sauver(false); envoyerGithub(true); }
+    informer(`${dossiers.length} dossiers chargés.` + (remplacerGithub ? " Ils remplacent le suivi GitHub." : github ? "" : githubEnPause() ? " GitHub est en pause." : ""));
     afficherTout();
     location.hash = "#accueil";
   }
@@ -3458,7 +3476,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (donnees) {
       const d = new Date(donnees.importe);
       $("infoFichier").textContent = `Version de l’appli : ${VERSION}. ${donnees.dossiers.length} dossiers, ${Object.keys(donnees.clients).length} clients. Chargé le ${d.toLocaleDateString("fr-FR")}.`
-        + (github ? ` Relié à GitHub : ${github.proprietaire}/${github.depot}/${github.chemin}.`
+        + (github ? ` Relié à GitHub : ${github.proprietaire}/${github.depot}/${github.chemin}.` : githubEnPause() ? " Fichier seul : la synchronisation GitHub est en pause (« Recharger depuis GitHub » la reprend)."
           : (donnees.modifie ? " Des modifications n’ont pas encore été exportées." : ""));
     } else {
       $("infoFichier").textContent = github ? "Relié à GitHub, rien de chargé pour l’instant." : "Aucun fichier ouvert.";
@@ -7848,7 +7866,12 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   $("enregistrerDossier").addEventListener("click", enregistrerDossier);
   $("enregistrerClient").addEventListener("click", enregistrerClient);
 
-  function ouvrirMenu() { majAlerte(); $("btnActualiser").hidden = !github; $("menu").classList.add("ouvert"); }
+  function ouvrirMenu() {
+    majAlerte();
+    $("btnActualiser").hidden = !github && !githubEnPause();
+    $("btnActualiser").textContent = githubEnPause() ? "Reprendre la synchronisation GitHub" : "Recharger depuis GitHub";
+    $("menu").classList.add("ouvert");
+  }
   function fermerMenu() { $("menu").classList.remove("ouvert"); }
   $("btnMenu").addEventListener("click", ouvrirMenu);
   $("btnFermerMenu").addEventListener("click", fermerMenu);
@@ -8064,6 +8087,11 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   $("btnGithubVide").addEventListener("click", ouvrirReglages);
   $("connecterGithub").addEventListener("click", connecter);
   $("btnActualiser").addEventListener("click", () => {
+    if (!github && githubEnPause()) {
+      if (!confirm("Reprendre la synchronisation GitHub ? Le suivi de GitHub remplacera le fichier ouvert (exportez-le avant si vous voulez le garder).")) return;
+      try { localStorage.removeItem(CLE_PAUSE); } catch (e) {}
+      lireReglages();
+    }
     if (!github) { ouvrirReglages(); return; }
     if (donnees && donnees.modifie && !confirm("Une modification n’est pas encore enregistrée sur GitHub. Recharger quand même ?")) return;
     fermerMenu();
@@ -8439,7 +8467,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     chargerReglagesAgenda();
     chargerSocietes();
   } else if (donnees) {
-    etatSync("local", "Copie sur cet appareil, sans GitHub");
+    etatSync("local", githubEnPause() ? "Fichier seul · GitHub en pause" : "Copie sur cet appareil, sans GitHub");
   }
 })();
 </script>
