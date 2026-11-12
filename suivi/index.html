@@ -2953,6 +2953,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       localStorage.setItem(CLE_STOCKAGE + "-sha", sha);
       if (nouveaux) { donnees.modifie = new Date().toISOString(); setTimeout(envoyerGithub, 500); }  // identifiants ajoutés : on les partage
       etatSync("", "À jour avec GitHub · " + heure());
+      if (pretPourAuto) setTimeout(() => { if (reparerAgenda()) afficherTout(); }, 300);
       githubJoint();
       if (silencieux === false) informer(`${dossiers.length} dossiers chargés depuis GitHub.`);
       const position = window.scrollY;
@@ -3245,6 +3246,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     for (const k of ["dutreil", "agenda", "societes", "modeles", "emoluments"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
     pris.audits = fusionnerAudits(base.audits, ici.audits, contenu.audits);
     appliquerAnnexes(pris);
+    setTimeout(() => { if (reparerAgenda()) afficherTout(); }, 300);   // après une fusion : doublons et chevauchements
     shaDistant = sha;
     localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
     afficherTout();
@@ -5698,6 +5700,41 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     setTimeout(() => { if (donnees && typeof afficherTout === "function") afficherTout(); }, 0);
   }
   // tâches à venir qui ont une date mais pas d'heure (elles attendaient une place) : on leur en trouve une
+  // Remise en ordre de l'agenda, après chaque mise à jour venue de GitHub (deux appareils ont pu travailler chacun de leur côté) :
+  //  1. un dossier n'a qu'une tâche automatique ouverte : les doublons (créés en parallèle sur deux appareils) sont retirés ;
+  //  2. les tâches qui se chevauchent (deux appareils ont placé chacun la leur au même créneau) sont recalées.
+  function reparerAgenda() {
+    if (!donnees) return 0;
+    let retirees = 0;
+    const auj = enIso(aujourdhui());
+    for (const f of Object.values(donnees.clients)) {
+      const vues = new Map();
+      const garder = [];
+      const triees = (f.taches || []).slice().sort((a, b) => String(a.cree || "").localeCompare(String(b.cree || "")));
+      for (const t of triees) {
+        if (t.auto && t.dossier && !t.fait) {
+          if (vues.has(t.dossier)) { retirees++; continue; }   // doublon : on garde la plus ancienne
+          vues.set(t.dossier, t);
+        }
+        garder.push(t);
+      }
+      if (garder.length !== (f.taches || []).length) f.taches = (f.taches || []).filter((t) => garder.includes(t));
+    }
+    // les jours à venir où deux éléments se chevauchent
+    const parJour = new Map();
+    for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) {
+      const m = enMinutes(t.heure);
+      if (t.fait || !t.pour || t.pour < auj || m === null) continue;
+      (parJour.get(t.pour) || parJour.set(t.pour, []).get(t.pour)).push([m, m + dureeTache(t)]);
+    }
+    for (const d of donnees.dossiers) { const m = enMinutes(d.rdv_heure); if (d.rdv && d.rdv >= auj && m !== null && !d.archives && parJour.has(d.rdv)) parJour.get(d.rdv).push([m, m + (Number(d.rdv_duree) || dureeRdvDefaut())]); }
+    const jours = [...parJour.entries()].filter(([, l]) => { l.sort((a, b) => a[0] - b[0]); return l.some((x, k) => k && x[0] < l[k - 1][1]); }).map(([j]) => j).sort();
+    if (retirees || jours.length) {
+      if (jours.length && auto().actif) apresAgenda(jours);
+      else sauver();
+    }
+    return retirees + jours.length;
+  }
   function replacerSansHeure() {
     if (!donnees || !auto().reporter) return 0;
     const auj = enIso(aujourdhui()), jours = new Set(), ids = [];
@@ -5707,7 +5744,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     return ids.length;
   }
   function afficherTout() {
-    if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { depuisAudit(); const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b) afficherTout(); }, 400); }
+    if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { depuisAudit(); const r = reparerAgenda(); const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b || r) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     const vide = !donnees;
