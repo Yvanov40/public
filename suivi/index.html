@@ -1930,6 +1930,20 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   .cal-panneau { top: 12px; }
   #vue-dutreil > #dIndicateurs { top: 12px; }
 }
+
+/* ---------- Audit intégré ---------- */
+body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important; }
+#vue-audit:not([hidden]) { display: flex; flex-direction: column; gap: 8px; }
+.audit-barre { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.audit-barre b { font: 600 19px var(--titre); color: var(--bleu); }
+.audit-barre .aide { margin: 0; flex: 1; }
+.audit-barre a { text-decoration: none; }
+#auditFrame { width: 100%; height: calc(100vh - 92px); border: 1px solid var(--bordure); border-radius: 12px; background: #fff; display: block; }
+@media (max-width: 900px) {
+  .audit-barre .aide { display: none; }
+  #auditFrame { height: calc(100vh - 210px - env(safe-area-inset-bottom, 0px)); border-radius: 10px; }
+  body.vue-audit .fab { display: none; }
+}
 </style>
 </head>
 <body>
@@ -1947,6 +1961,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       <a href="#calendrier" data-vue="calendrier">📅 Calendrier</a>
       <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
       <a href="#activite" data-vue="activite">📊 Activité</a>
+      <a href="#audit" data-vue="audit">🧭 Audit</a>
     </nav>
     <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
     <button class="icone" id="btnActualiserTel" aria-label="Actualiser" title="Actualiser">↻</button>
@@ -2057,6 +2072,15 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         </div>
         <aside class="cal-panneau" id="calPanneau"></aside>
       </div>
+    </section>
+
+    <section class="vue" id="vue-audit" hidden>
+      <div class="audit-barre">
+        <b>Audit civil et fiscal</b>
+        <span class="aide">Ses dossiers d’audit sont gardés sur cet appareil.</span>
+        <a class="bouton-discret" href="../audit/" target="appli-audit" rel="opener">Ouvrir dans sa fenêtre ↗</a>
+      </div>
+      <iframe id="auditFrame" title="Audit civil et fiscal" allow="clipboard-write"></iframe>
     </section>
 
     <section class="vue" id="vue-outils" hidden>
@@ -2315,6 +2339,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     <div class="menu-grille">
       <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Tarifs</button>
       <button class="menu-tuile" id="btnPersoEmol"><span>✎</span>Personnaliser les prestations</button>
+      <button class="menu-tuile" id="btnAudit"><span>🧭</span>Audit civil et fiscal</button>
     </div>
     <h4>Réglages</h4>
     <div class="menu-grille">
@@ -6060,8 +6085,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // ---------------------------------------------------------------- navigation
   function vueCourante() {
     const v = location.hash.replace("#", "");
-    if (estTel()) return ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils"].includes(v) ? v : "accueil";
-    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite", "outils"].includes(v) ? v : "accueil";
+    if (estTel()) return ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "audit"].includes(v) ? v : "accueil";
+    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite", "outils", "audit"].includes(v) ? v : "accueil";
   }
   // ---- téléphone : glisser le doigt vers la gauche ou la droite pour changer de vue ----
   const ORDRE_VUES = ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"];
@@ -6094,7 +6119,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       if (doigtCible.closest("#calPanneau")) { changerJourCalendrier(dx < 0 ? 1 : -1); return; }
       if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
     }
-    if (vueCourante() === "outils") return;  // l'onglet Outils n'est pas dans l'ordre de balayage
+    if (vueCourante() === "outils" || vueCourante() === "audit") return;  // ces onglets ne sont pas dans l'ordre de balayage
     const i = ORDRE_VUES.indexOf(vueCourante()) + (dx < 0 ? 1 : -1);
     if (i < 0 || i >= ORDRE_VUES.length) return;
     sensVue = dx < 0 ? "depuis-droite" : "depuis-gauche";
@@ -6714,8 +6739,10 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     document.querySelectorAll(".vue").forEach((s) => { s.hidden = s.id !== "vue-" + v; });
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "audit"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
     if (v === "outils") afficherOutils();
+    // l'Audit ne se charge qu'à la première visite de l'onglet, puis reste en mémoire (son travail en cours est gardé)
+    if (v === "audit" && !$("auditFrame").src) $("auditFrame").src = "../audit/";
     // la recherche dit ce qu'elle cherche selon l'onglet
     $("recherche").placeholder = v === "dutreil" ? "Rechercher un pacte, une société, un client…" : v === "calendrier" ? "Rechercher un client, une tâche…" : "Filtrer les dossiers… (« / »)";
     if (donnees) majPortee();
@@ -7937,6 +7964,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         { libelle: "Millionnaire", choix: choixMillionnaire(f.millionnaire) }]),
       el("div", { class: "actions-fiche" },
         el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
+        el("button", { type: "button", title: "Ouvre l’Audit civil et fiscal ; le nom du client est copié pour le coller dans le dossier d’audit",
+          onclick: () => { try { navigator.clipboard.writeText(nom); } catch (e) {} fermerToutesFeuilles(); location.hash = "#audit"; informer(`« ${nom} » copié : collez-le dans le dossier d’audit.`); } }, "🧭 Audit"),
         el("button", { type: "button", onclick: () => renommerClient(clientEnCours) }, "✎ Renommer"),
         el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF"),
         !liste.length ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => supprimerClientSeul(nom) }, "Supprimer ce client") : null),
@@ -8345,6 +8374,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
   $("btnPersoEmol").addEventListener("click", () => { fermerMenu(); ouvrirPersoEmol(); });
+  $("btnAudit").addEventListener("click", () => { fermerMenu(); location.hash = "#audit"; });
   $("outilRetour").addEventListener("click", fermerOutil);
   $("btnEmoluments").addEventListener("click", () => { fermerMenu(); ouvrirEmoluments(); });
   $("btnModeles").addEventListener("click", () => ouvrirModeles());
@@ -8568,6 +8598,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     ["＋", "Nouveau client", "créer ajouter prospect", () => nouveauClient()],
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
     ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", () => { const nom = (prompt("Pour quel client ?") || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
+    ["🧭", "Audit civil et fiscal", "audit transmission succession démembrement assurance-vie", () => { location.hash = "#audit"; }],
     ["🧮", "Tarifs", "calculatrice tarif prestation émoluments frais notaire vente donation apport", () => ouvrirEmoluments()],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
