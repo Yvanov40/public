@@ -1944,6 +1944,15 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   #auditFrame { height: calc(100vh - 210px - env(safe-area-inset-bottom, 0px)); border-radius: 10px; }
   body.vue-audit .fab { display: none; }
 }
+
+/* ---------- audits dans la fiche client ---------- */
+.bloc-audits { display: grid; gap: 8px; }
+.audit-liste { display: grid; gap: 6px; }
+.audit-ligne { display: flex; align-items: center; gap: 10px; border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 4px 10px 4px 4px; }
+.audit-ouvrir { flex: 1; text-align: left; border: 0; background: none; padding: 6px; cursor: pointer; color: var(--texte); display: grid; }
+.audit-ouvrir b { color: var(--bleu); font-weight: 600; }
+.audit-ouvrir small { color: var(--discret); font-size: 12px; }
+#auditLien .lien-sous-champ { padding: 0 4px; }
 </style>
 </head>
 <body>
@@ -2077,7 +2086,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     <section class="vue" id="vue-audit" hidden>
       <div class="audit-barre">
         <b>Audit civil et fiscal</b>
-        <span class="aide">Ses dossiers d’audit sont gardés sur cet appareil.</span>
+        <span class="aide" id="auditLien">Enregistrés dans votre fichier de suivi, et synchronisés.</span>
         <a class="bouton-discret" href="../audit/" target="appli-audit" rel="opener">Ouvrir dans sa fenêtre ↗</a>
       </div>
       <iframe id="auditFrame" title="Audit civil et fiscal" allow="clipboard-write"></iframe>
@@ -2884,11 +2893,13 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   // ---- un seul fichier : dossiers, clients, pactes Dutreil, horaires de l'agenda et sociétés ----
   // modèles de tâches par nature de dossier : { "Donation": [{ texte, delai (jours après la création) }] }
   // actes des émoluments personnalisés : { cle: { …définition } } pour un acte modifié ou ajouté, { cle: null } pour un acte masqué
+  // audits (appli Audit civil et fiscal) : { liste: { id: { nom, maj, data } }, liens: { id: client }, supprimes: { id: date } }
+  var auditsSuivi = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-audits")) || { liste: {}, liens: {}, supprimes: {} }; } catch (e) { return { liste: {}, liens: {}, supprimes: {} }; } })();
   let emolPerso = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-emoluments")) || {}; } catch (e) { return {}; } })();
   let modelesTaches = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-modeles")) || {}; } catch (e) { return {}; } })();
   function sectionsAnnexes() {
     const { sha: _s, ...agenda } = reglagesAgenda || {};
-    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso };
+    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso, audits: auditsSuivi };
   }
   function contenuComplet() {
     return JSON.stringify({ version: 3, dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }, null, 1);
@@ -2900,6 +2911,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     if (contenu.agenda) { reglagesAgenda = { ...AGENDA_DEFAUT, ...contenu.agenda }; localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda)); }
     if (contenu.societes) { societes = contenu.societes; INDEX_ETUDES = null; localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes)); }
     if (contenu.modeles) { modelesTaches = contenu.modeles; localStorage.setItem("suivi-gp-donnees-modeles", JSON.stringify(modelesTaches)); }
+    if (contenu.audits) { auditsSuivi = { liste: {}, liens: {}, supprimes: {}, ...contenu.audits }; localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); if (typeof versAudit === "function") versAudit(); }
     if (contenu.emoluments) { emolPerso = contenu.emoluments; localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso)); if (typeof reconstruireBaremes === "function") reconstruireBaremes(); }
   }
   // ancien format (dutreil.json, agenda.json, societes.json à part) : on les reprend une fois dans le fichier principal
@@ -3162,6 +3174,24 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     for (const e of (Array.isArray(r) ? r : [])) if (!e || !e.id) res.push(e);
     return res;
   }
+  function fusionnerAudits(b, l, r) {
+    b = b || {}; l = l || {}; r = r || {};
+    const supprimes = { ...(r.supprimes || {}), ...(l.supprimes || {}) };
+    const liste = {};
+    for (const id of new Set([...Object.keys(r.liste || {}), ...Object.keys(l.liste || {})])) {
+      if (supprimes[id]) continue;
+      const a = (l.liste || {})[id], c = (r.liste || {})[id];
+      liste[id] = !a ? c : !c ? a : (String(a.maj || "") >= String(c.maj || "") ? a : c);   // le plus récent
+    }
+    const liens = {};
+    for (const id of new Set([...Object.keys(r.liens || {}), ...Object.keys(l.liens || {})])) {
+      if (supprimes[id]) continue;
+      const lb = (b.liens || {})[id], ll = (l.liens || {})[id], lr = (r.liens || {})[id];
+      const v = ll !== lb ? ll : lr;   // changé ici : on garde ; sinon la version de GitHub
+      if (v) liens[id] = v;
+    }
+    return { liste, liens, supprimes };
+  }
   function fusionnerObjets(b, l, r) {
     // champ par champ : ce qui a changé ici l'emporte, sinon on prend la version de GitHub
     const resultat = { ...r };
@@ -3210,6 +3240,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     const ici = sectionsAnnexes();
     const pris = {};
     for (const k of ["dutreil", "agenda", "societes", "modeles", "emoluments"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
+    pris.audits = fusionnerAudits(base.audits, ici.audits, contenu.audits);
     appliquerAnnexes(pris);
     shaDistant = sha;
     localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
@@ -5673,7 +5704,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     return ids.length;
   }
   function afficherTout() {
-    if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b) afficherTout(); }, 400); }
+    if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { depuisAudit(); const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     const vide = !donnees;
@@ -6157,6 +6188,109 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     if ($("outilFrame").dataset.id !== id) { $("outilFrame").src = o.adresse; $("outilFrame").dataset.id = id; }
     if (vueCourante() !== "outils") location.hash = "#outils"; else afficherOutils();
   }
+  // ================================================================ audits : pont entre l'Audit et le fichier de suivi
+  // L'Audit range ses dossiers dans la mémoire du navigateur (clé « audit-dossiers-v1 »). Le Suivi la lit et l'écrit :
+  // ce que l'Audit modifie part dans suivi_gp.json (et GitHub) ; ce qui arrive de GitHub est rendu à l'Audit.
+  var CLE_AUDIT = "audit-dossiers-v1";
+  var lireAudit = () => { try { return JSON.parse(localStorage.getItem(CLE_AUDIT)) || { courant: null, liste: {} }; } catch (e) { return { courant: null, liste: {} }; } };
+  var garderAuditsSuivi = () => { try { localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); } catch (e) {} };
+  var auditVu = JSON.stringify(Object.keys(lireAudit().liste || {}).sort());
+  var rechargerAuditEnAttente = false;
+  // GitHub → Audit
+  function versAudit() {
+    const a = lireAudit();
+    let change = false;
+    for (const [id, d] of Object.entries(auditsSuivi.liste || {})) {
+      const ici = a.liste[id];
+      if (!ici || String(d.maj || "") > String(ici.maj || "")) { a.liste[id] = d; change = true; }
+    }
+    for (const id of Object.keys(auditsSuivi.supprimes || {})) if (a.liste[id]) { delete a.liste[id]; change = true; if (a.courant === id) a.courant = null; }
+    if (!change) return;
+    try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
+    auditVu = JSON.stringify(Object.keys(a.liste).sort());
+    // l'Audit affiché se recharge pour montrer la nouvelle version (plus tard s'il est à l'écran)
+    if ($("auditFrame").src) { if (vueCourante() === "audit") rechargerAuditEnAttente = true; else $("auditFrame").src = "../audit/"; }
+  }
+  // Audit → fichier de suivi
+  function depuisAudit() {
+    if (!donnees) return;
+    const a = lireAudit();
+    const ids = Object.keys(a.liste || {});
+    let change = false;
+    for (const id of ids) {
+      const d = a.liste[id], ici = (auditsSuivi.liste || {})[id];
+      if (!ici || String(d.maj || "") > String(ici.maj || "")) { auditsSuivi.liste[id] = { nom: d.nom, maj: d.maj, data: d.data }; change = true; }
+    }
+    // supprimé dans l'Audit (il y était au dernier passage, il n'y est plus)
+    for (const id of JSON.parse(auditVu)) if (!a.liste[id] && auditsSuivi.liste[id]) {
+      delete auditsSuivi.liste[id]; delete auditsSuivi.liens[id]; auditsSuivi.supprimes[id] = new Date().toISOString(); change = true;
+    }
+    auditVu = JSON.stringify(ids.sort());
+    if (change) { garderAuditsSuivi(); annexeModifiee(); }
+  }
+  window.addEventListener("storage", (e) => { if (e.key === CLE_AUDIT) depuisAudit(); });   // l'Audit (dans son cadre ou sa fenêtre) a écrit
+  setInterval(() => { if (vueCourante() === "audit") depuisAudit(); }, 4000);              // (par sécurité)
+  // ouvrir un audit précis dans l'onglet Audit
+  function ouvrirAudit(id) {
+    const a = lireAudit();
+    if (id && !a.liste[id] && auditsSuivi.liste[id]) a.liste[id] = auditsSuivi.liste[id];
+    if (id) a.courant = id;
+    try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
+    $("auditFrame").src = "../audit/";   // l'Audit s'ouvre sur ce dossier
+    const ouvertes = !!document.querySelector(".feuille.ouverte");
+    fermerToutesFeuilles();
+    // (on laisse le retour en arrière des fiches se faire, puis on va sur l'onglet Audit)
+    setTimeout(() => { location.hash = "#audit"; }, ouvertes ? 150 : 0);
+  }
+  // nouvel audit pour un client : l'Audit le complète (situation, régime…) à l'ouverture
+  function nouvelAuditPour(nom) {
+    const id = "D" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const morceaux = String(nom).trim().split(/\s+/);
+    const d = { nom, maj: new Date().toISOString(), data: { dateEtude: enIso(aujourdhui()), c1: { nom: morceaux[0] || nom, prenom: morceaux.slice(1).join(" ") } } };
+    auditsSuivi.liste[id] = d; auditsSuivi.liens[id] = nom;
+    garderAuditsSuivi(); annexeModifiee();
+    const a = lireAudit(); a.liste[id] = d; try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
+    auditVu = JSON.stringify(Object.keys(a.liste).sort());
+    ouvrirAudit(id);
+    informer(`Nouvel audit pour ${nom}, rattaché à sa fiche.`);
+  }
+  function majBandeauAudit() {
+    const a = lireAudit(), id = a.courant;
+    const z = $("auditLien");
+    if (!z) return;
+    if (!id || !a.liste[id]) { z.replaceChildren("Enregistrés dans votre fichier de suivi, et synchronisés."); return; }
+    const client = auditsSuivi.liens[id];
+    z.replaceChildren(client ? el("span", null, "Rattaché à ", el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirClient(client) }, "👤 " + client)) : "Pas rattaché à un client · ",
+      el("button", { type: "button", class: "lien-sous-champ", onclick: () => {
+        const nom = (prompt("Rattacher cet audit à quel client ?", client || (a.liste[id].nom || "")) || "").trim();
+        if (!nom) return;
+        const existant = nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom;
+        depuisAudit(); lierAudit(id, existant); majBandeauAudit(); informer("Audit rattaché à " + existant + ".");
+      } }, client ? "changer" : "rattacher à un client"));
+  }
+  setInterval(() => { if (vueCourante() === "audit") majBandeauAudit(); }, 2500);
+  function lierAudit(id, nom) {
+    if (nom) auditsSuivi.liens[id] = nom; else delete auditsSuivi.liens[id];
+    garderAuditsSuivi(); annexeModifiee();
+  }
+  const auditsDuClient = (nom) => Object.entries(auditsSuivi.liste || {}).filter(([id]) => cleClient(auditsSuivi.liens[id] || "") === cleClient(nom))
+    .sort((x, y) => String(y[1].maj || "").localeCompare(String(x[1].maj || "")));
+  // bloc « Audits » de la fiche client : ses audits, et ceux qui portent son nom sans être encore rattachés
+  function blocAuditsClient(nom) {
+    const siens = auditsDuClient(nom);
+    const n = sansAccents(nom).split(/[\s/,-]+/).filter((x) => x.length > 2);
+    const proches = Object.entries(auditsSuivi.liste || {}).filter(([id, d]) => !auditsSuivi.liens[id] && n.length && n.every((m) => sansAccents(d.nom || "").includes(m)));
+    const ligne = ([id, d], lie) => el("div", { class: "audit-ligne" },
+      el("button", { type: "button", class: "audit-ouvrir", onclick: () => ouvrirAudit(id) }, el("b", null, "🧭 ", d.nom || "Audit sans nom"),
+        el("small", null, d.maj ? "modifié le " + new Date(d.maj).toLocaleDateString("fr-FR") : "")),
+      lie ? el("button", { type: "button", class: "lien-sous-champ", title: "Ne plus rattacher cet audit à ce client", onclick: (e) => { lierAudit(id, ""); e.target.closest(".audit-ligne").remove(); } }, "détacher")
+        : el("button", { type: "button", class: "lien-sous-champ", onclick: () => { lierAudit(id, nom); informer("Audit rattaché à " + nom + "."); ouvrirClient(nom); } }, "rattacher"));
+    return el("div", { class: "bloc-audits" },
+      siens.length ? el("div", { class: "audit-liste" }, siens.map((x) => ligne(x, true))) : el("p", { class: "m-vide" }, "Aucun audit pour ce client."),
+      proches.length ? el("div", null, el("p", { class: "aide" }, "Audits qui portent son nom, pas encore rattachés :"), el("div", { class: "audit-liste" }, proches.map((x) => ligne(x, false)))) : null,
+      el("button", { type: "button", class: "bouton-discret", onclick: () => nouvelAuditPour(nom) }, "＋ Nouvel audit pour ce client"));
+  }
+
   // ================================================================ émoluments du notaire (tarif réglementé)
   // Barèmes du Code de commerce (partie Arrêtés, art. A444-59 et suivants), en vigueur du 1er mars 2026 au 29 février 2028
   // (tarif de 2021 reconduit). Montants HT. Seuls les émoluments de l'acte : sans émoluments de formalités, débours,
@@ -6742,7 +6876,8 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "audit"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
     if (v === "outils") afficherOutils();
     // l'Audit ne se charge qu'à la première visite de l'onglet, puis reste en mémoire (son travail en cours est gardé)
-    if (v === "audit" && !$("auditFrame").src) $("auditFrame").src = "../audit/";
+    if (v === "audit" && (!$("auditFrame").src || rechargerAuditEnAttente)) { rechargerAuditEnAttente = false; $("auditFrame").src = "../audit/"; }
+    if (v !== "audit" && typeof depuisAudit === "function") depuisAudit();
     // la recherche dit ce qu'elle cherche selon l'onglet
     $("recherche").placeholder = v === "dutreil" ? "Rechercher un pacte, une société, un client…" : v === "calendrier" ? "Rechercher un client, une tâche…" : "Filtrer les dossiers… (« / »)";
     if (donnees) majPortee();
@@ -7954,6 +8089,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
         return tuiles([
           { libelle: "Tâches", contenu: blocTaches(nom), resume: () => resumeTaches(nom) },
           { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
+          { libelle: "Audits", contenu: blocAuditsClient(nom), resume: () => { const l = auditsDuClient(nom); return l.length ? `${l.length} audit${l.length > 1 ? "s" : ""} · ${new Date(l[0][1].maj).toLocaleDateString("fr-FR")}` : ""; } },
           { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
           { libelle: "Notes", contenu: el("div", null, ...avecLiens(zoneNotes)), resume: () => premiereLigne(zoneNotes.value) }]);
       })(),
@@ -7964,8 +8100,8 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
         { libelle: "Millionnaire", choix: choixMillionnaire(f.millionnaire) }]),
       el("div", { class: "actions-fiche" },
         el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
-        el("button", { type: "button", title: "Ouvre l’Audit civil et fiscal ; le nom du client est copié pour le coller dans le dossier d’audit",
-          onclick: () => { try { navigator.clipboard.writeText(nom).catch(() => {}); } catch (e) {} fermerToutesFeuilles(); location.hash = "#audit"; informer(`« ${nom} » copié : collez-le dans le dossier d’audit.`); } }, "🧭 Audit"),
+        el("button", { type: "button", title: "Ouvre le dernier audit de ce client, ou en crée un",
+          onclick: () => { const l = auditsDuClient(nom); if (l.length) ouvrirAudit(l[0][0]); else nouvelAuditPour(nom); } }, "🧭 Audit"),
         el("button", { type: "button", onclick: () => renommerClient(clientEnCours) }, "✎ Renommer"),
         el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF"),
         !liste.length ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => supprimerClientSeul(nom) }, "Supprimer ce client") : null),
