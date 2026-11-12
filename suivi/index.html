@@ -1845,6 +1845,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .comps-ajout { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
 
 .emol-table tr.sous-titre td { text-align: left !important; }
+
+.rdv-dossier textarea { min-height: 80px !important; }
 </style>
 </head>
 <body>
@@ -4569,7 +4571,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
         if (retenus && !correspondRecherche(d)) return;
-        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
+        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.rdv_objet, d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
@@ -5868,7 +5870,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 
   // ---- historique : chaque modification importante est notée dans le dossier ----
   const SUIVIS = { precision: "Précision", client: "Client", rdv_heure: "Heure RDV", type: "Type", tache: "Tâche", notaire: "Demandeur", collaborateur: "Collaborateur", partenaire: "Partenaire", honos_regl: "Prévu réglementés",
-    honos_art4: "Prévu libres", ca: "Encaissé", rdv: "RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
+    honos_art4: "Prévu libres", ca: "Encaissé", rdv: "RDV", rdv_objet: "Objet du RDV", rdv_note: "Note du RDV", debut: "Début", fin: "Fin", archives: "Archivé", exercice: "Exercice", commentaire: "Commentaire" };
   const appareil = () => (estTel() ? "téléphone" : "appli");
   function noterHistorique(d, avant) {
     const changements = [];
@@ -6689,10 +6691,17 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         (() => {
           const zoneDossier = el("textarea", { name: "commentaire", placeholder: "Ce qui concerne ce dossier : où on en est, ce qu’on attend, les décisions prises…" }, d.commentaire || "");
           // le rendez-vous du dossier : en bas, dans une tuile (les rendez-vous du client sont dans sa fiche)
-          const rdv = el("div", null,
-            el("div", { class: "rdv-champs" }, saisie("rdv", d.rdv, "date"), saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }), choixDuree("rdv_duree", d.rdv_duree)),
+          const rdv = el("div", { class: "rdv-dossier" },
+            el("div", { class: "deux" }, champ("Le", saisie("rdv", d.rdv, "date")), champ("À", saisie("rdv_heure", d.rdv_heure, "time", { "aria-label": "Heure du rendez-vous" }))),
+            el("div", { class: "deux" }, champ("Durée", choixDuree("rdv_duree", d.rdv_duree)), el("span")),
+            champ("Objet", saisie("rdv_objet", d.rdv_objet, "text", { placeholder: "Signature, point d’étape, remise du projet…", autocomplete: "off" })),
+            champ("Note", avecLiens(el("textarea", { name: "rdv_note", placeholder: "Lieu, documents à apporter…" }, d.rdv_note || ""))),
             el("div", { class: "actions-fiche", style: "margin-top:8px" },
-              d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}`, d.rdv, [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure, d.rdv_duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
+              d.rdv ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${d.client}${d.rdv_objet ? " · " + d.rdv_objet : ""}`, d.rdv, d.rdv_note || [d.tache, sansNumero(d.type), d.notaire].filter(Boolean).join(" · "), d.rdv_heure, d.rdv_duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
+              d.rdv ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
+                for (const n of ["rdv", "rdv_heure", "rdv_objet", "rdv_note"]) { const c = rdv.querySelector(`[name=${n}]`); if (c) { c.value = ""; c.dispatchEvent(new Event("input", { bubbles: true })); } }
+                informer("Rendez-vous retiré : enregistrez (ou fermez) la fiche pour valider.");
+              } }, "Supprimer le rendez-vous") : null,
               d.client ? el("button", { type: "button", onclick: () => ouvrirClient(d.client) }, "Tous les rendez-vous du client ›") : null));
           const lireRdv = (n) => rdv.querySelector(`[name=${n}]`).value;
           const lot = [];
@@ -6706,7 +6715,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
           lot.push({ libelle: "◆ Commentaire client", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
             { libelle: "◆ Notes client", contenu: el("div", null, ...avecLiens(zoneNotes)), resume: () => premiereLigne(zoneNotes.value) },
             { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) },
-            { libelle: "Rendez-vous", contenu: rdv, resume: () => lireRdv("rdv") ? versDate(lireRdv("rdv")).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (lireRdv("rdv_heure") ? " " + lireRdv("rdv_heure") : "") : "" });
+            { libelle: "Rendez-vous", contenu: rdv, resume: () => lireRdv("rdv") ? versDate(lireRdv("rdv")).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (lireRdv("rdv_heure") ? " " + lireRdv("rdv_heure") : "") + (lireRdv("rdv_objet") ? " · " + lireRdv("rdv_objet") : "") : "" });
           return tuiles(lot);
         })()),
       el("label", { class: "case" }, el("input", { type: "checkbox", name: "archives", checked: !!d.archives }), "Dossier archivé"),
@@ -6851,7 +6860,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   function rendezVousDuClient(nom) {
     const l = rdvsDe(nom).map((r) => ({ ...r, source: "client" }));
     donnees.dossiers.forEach((d, i) => {
-      if (cleClient(d.client) === cleClient(nom) && estIso(d.rdv || "")) l.push({ date: d.rdv, heure: d.rdv_heure || "", duree: d.rdv_duree, objet: d.tache || sansNumero(d.type), source: "dossier", i });
+      if (cleClient(d.client) === cleClient(nom) && estIso(d.rdv || "")) l.push({ date: d.rdv, heure: d.rdv_heure || "", duree: d.rdv_duree, objet: d.rdv_objet || d.tache || sansNumero(d.type), note: d.rdv_note || "", source: "dossier", i });
     });
     return l.filter((r) => estIso(r.date || "")).sort((a, b) => (a.date + (a.heure || "99")).localeCompare(b.date + (b.heure || "99")));
   }
@@ -7702,7 +7711,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     Object.assign(d, {
       client: v.client, tache: v.tache, collaborateur: (v.collaborateur || "").trim(), type: `${v.statut || "2"}. ${natureNormale(v.nature)}`, precision: v.precision || "", notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
-      exercice: exerciceNormal(v.exercice || (v.debut ? v.debut.slice(0, 4) : "")), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", rdv_duree: v.rdv ? (v.rdv_duree || "") : "", fin: v.fin,
+      exercice: exerciceNormal(v.exercice || (v.debut ? v.debut.slice(0, 4) : "")), debut: v.debut, rdv: v.rdv, rdv_heure: v.rdv ? (v.rdv_heure || "") : "", rdv_duree: v.rdv ? (v.rdv_duree || "") : "",
+      rdv_objet: v.rdv ? (v.rdv_objet || "").trim() : "", rdv_note: v.rdv ? (v.rdv_note || "") : "", fin: v.fin,
       // A-vie et Millionnaire ne sont plus dans la fiche dossier : on garde la valeur du dossier, sinon celle du client
       a_vie: "a_vie" in v ? v.a_vie : (d.a_vie ?? fiche(v.client).a_vie ?? ""), millionnaire: "millionnaire" in v ? v.millionnaire : (d.millionnaire ?? fiche(v.client).millionnaire ?? ""),
       archives: v.archives, commentaire: v.commentaire
