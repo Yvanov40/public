@@ -3035,10 +3035,31 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     return n;
   }
   const pareil = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  // listes d'éléments avec identifiant (tâches, rendez-vous) : fusionnées élément par élément,
+  // pour que deux appareils qui touchent à des tâches différentes du même client gardent tous les deux leur travail
+  function fusionnerListes(b, l, r) {
+    const carte = (x) => new Map((Array.isArray(x) ? x : []).filter((e) => e && e.id).map((e) => [e.id, e]));
+    const B = carte(b), L = carte(l), R = carte(r);
+    const res = [];
+    for (const id of new Set([...R.keys(), ...L.keys()])) {
+      const eb = B.get(id), el_ = L.get(id), er = R.get(id);
+      if (!eb) { res.push(el_ && er ? fusionnerObjets({}, el_, er) : (el_ || er)); continue; }   // ajouté d'un côté
+      if (!el_) { if (er && !pareil(er, eb)) res.push(er); continue; }   // supprimé ici, sauf s'il a changé ailleurs
+      if (!er) { if (!pareil(el_, eb)) res.push(el_); continue; }        // supprimé ailleurs, sauf s'il a changé ici
+      res.push(fusionnerObjets(eb, el_, er));
+    }
+    // éléments sans identifiant (très anciens) : on garde la version de GitHub
+    for (const e of (Array.isArray(r) ? r : [])) if (!e || !e.id) res.push(e);
+    return res;
+  }
   function fusionnerObjets(b, l, r) {
     // champ par champ : ce qui a changé ici l'emporte, sinon on prend la version de GitHub
     const resultat = { ...r };
     for (const cle of new Set([...Object.keys(l || {}), ...Object.keys(r || {}), ...Object.keys(b || {})])) {
+      if ((cle === "taches" || cle === "rdvs") && (Array.isArray((l || {})[cle]) || Array.isArray((r || {})[cle]))) {
+        resultat[cle] = fusionnerListes((b || {})[cle], (l || {})[cle], (r || {})[cle]);
+        continue;
+      }
       resultat[cle] = pareil((l || {})[cle], (b || {})[cle]) ? (r || {})[cle] : (l || {})[cle];
       if (resultat[cle] === undefined) delete resultat[cle];
     }
@@ -3336,7 +3357,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   }
   function sauver(marquer = true) {
     if (marquer) donnees.modifie = new Date().toISOString();
-    if (marquer && !planifEnCours && typeof planifierDossiersAFaire === "function") setTimeout(() => { if (planifierDossiersAFaire() && typeof afficherTout === "function") afficherTout(); }, 0);
+    if (marquer && !planifEnCours && (pretPourAuto || !github) && typeof planifierDossiersAFaire === "function") setTimeout(() => { if (planifierDossiersAFaire() && typeof afficherTout === "function") afficherTout(); }, 0);
     try {
       const photo = photographier();
       // plusieurs enregistrements coup sur coup (une action qui en déclenche d'autres) ne font qu'une seule étape à annuler
@@ -5486,6 +5507,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche()));
 
   let premierePlanif = false;
+  // relié à GitHub : les automatismes (tâches des dossiers, replacement) attendent d'avoir la version la plus récente,
+  // pour ne jamais travailler sur la vieille copie de l'appareil
+  var pretPourAuto = false;
   // tâches à venir qui ont une date mais pas d'heure (elles attendaient une place) : on leur en trouve une
   function replacerSansHeure() {
     if (!donnees || !auto().reporter) return 0;
@@ -5496,7 +5520,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     return ids.length;
   }
   function afficherTout() {
-    if (!premierePlanif && donnees) { premierePlanif = true; setTimeout(() => { const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b) afficherTout(); }, 400); }
+    if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     const vide = !donnees;
@@ -8655,8 +8679,11 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   montrerVue();
   afficherTout();
   if (github) {
-    if (donnees && donnees.modifie) envoyerGithub();
-    else chargerDepuisGithub(true).catch(() => {});
+    // (les automatismes démarrent une fois la version de GitHub reçue, ou au bout de 20 s sans réseau)
+    const pret = () => { if (!pretPourAuto) { pretPourAuto = true; if (donnees) afficherTout(); } };
+    setTimeout(pret, 20000);
+    if (donnees && donnees.modifie) Promise.resolve(envoyerGithub()).finally(pret);
+    else chargerDepuisGithub(true).catch(() => {}).finally(pret);
     // (le Dutreil voyage maintenant avec le fichier principal)
     chargerReglagesAgenda();
     chargerSocietes();
