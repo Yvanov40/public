@@ -1922,6 +1922,14 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   .entete-int > #btnMenu { grid-area: menu; align-self: end; }
   .entete-recherche { display: none !important; }
 }
+
+/* ---------- ordinateur, barre à gauche : plus rien ne reste collé par-dessus le contenu au défilement ---------- */
+@media (min-width: 901px) {
+  .filtres { position: static !important; top: auto !important; box-shadow: none !important; }
+  .k-statuts { position: static !important; }
+  .cal-panneau { top: 12px; }
+  #vue-dutreil > #dIndicateurs { top: 12px; }
+}
 </style>
 </head>
 <body>
