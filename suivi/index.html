@@ -1884,6 +1884,44 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   .dt-bas .or { color: var(--or); font-weight: 600; }
   :root[data-theme="dark"] .d-tuile.urgent { background: #3a1d1d; } :root[data-theme="dark"] .d-tuile.bientot { background: #33290f; }
 }
+
+/* ---------- téléphone : bouton Actualiser ---------- */
+#btnActualiserTel { display: none; }
+@media (max-width: 900px) {
+  #btnActualiserTel { display: inline-flex; align-items: center; justify-content: center; font-size: 19px; margin-left: auto; }
+  #btnActualiserTel + #btnMenu { margin-left: 4px; }
+  #btnActualiserTel.tourne { animation: tourner .8s linear infinite; }
+}
+@keyframes tourner { to { transform: rotate(360deg); } }
+
+/* ---------- Dutreil (ordinateur) : chiffres clés cliquables, à la place des listes de filtres ---------- */
+@media (min-width: 901px) {
+  body.vue-dutreil .filtres .dutreil-seul { display: none !important; }
+  #dIndicateurs .indic.cliquable { cursor: pointer; transition: box-shadow .12s, transform .12s; }
+  #dIndicateurs .indic.cliquable:hover { box-shadow: 0 4px 12px rgba(12,45,57,.1); }
+  #dIndicateurs .indic.actif { background: var(--bleu) !important; border-color: var(--bleu) !important; }
+  #dIndicateurs .indic.actif span, #dIndicateurs .indic.actif b { color: var(--carte) !important; }
+  :root[data-theme="dark"] #dIndicateurs .indic.actif span, :root[data-theme="dark"] #dIndicateurs .indic.actif b { color: #0f1b20 !important; }
+}
+
+/* ---------- ordinateur : la barre bleue devient une colonne à gauche ---------- */
+@media (min-width: 901px) {
+  :root { --largeur-barre: 200px; }
+  body { padding-left: var(--largeur-barre); }
+  .entete { position: fixed; top: 0; left: 0; bottom: 0; width: var(--largeur-barre); height: 100vh; z-index: 30; overflow-y: auto; }
+  .entete-int { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto 1fr; grid-template-areas: "titre titre" "nav nav" "eclair menu";
+    align-items: start; height: 100%; min-height: 0; padding: 16px 12px 18px; gap: 18px 8px; max-width: none; box-sizing: border-box; }
+  .entete-int > div:first-child { grid-area: titre; padding: 0 4px; }
+  .entete h1 { font-size: 21px; line-height: 1.15; }
+  .etat-sync { display: flex; margin-top: 6px; font-size: 11.5px; line-height: 1.35; white-space: normal; }
+  .onglets-haut { grid-area: nav; flex-direction: column; margin-left: 0; gap: 2px; align-self: start; }
+  .onglets-haut a { padding: 10px 12px; border-bottom: 0; border-left: 3px solid transparent; border-radius: 8px; font-size: 14.5px; }
+  .onglets-haut a[aria-current="page"] { border-left-color: var(--barre-discret); background: rgba(255,255,255,.09); }
+  .onglets-haut .nb-clients { margin-left: auto; padding-left: 8px; }
+  .entete-int > #btnEclair { grid-area: eclair; align-self: end; justify-self: start; }
+  .entete-int > #btnMenu { grid-area: menu; align-self: end; }
+  .entete-recherche { display: none !important; }
+}
 </style>
 </head>
 <body>
@@ -1903,6 +1941,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       <a href="#activite" data-vue="activite">📊 Activité</a>
     </nav>
     <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
+    <button class="icone" id="btnActualiserTel" aria-label="Actualiser" title="Actualiser">↻</button>
     <button class="icone" id="btnMenu" aria-label="GitHub, import et export">⋯</button>
     <div class="entete-recherche">
       <input id="rechercheTel" type="search" placeholder="Rechercher un client, une tâche, une société…" autocomplete="off" enterkeyhint="search" aria-label="Rechercher">
@@ -4334,6 +4373,22 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
         return el("button", { class: "pastille-rdv" + classe, type: "button", onclick: () => ouvrirPacte(i) },
           el("b", null, quand), `${p.societe} · ${e[1]}`);
       }) : [el("em", null, "Aucune échéance dans les 12 prochains mois.")]));
+    // ordinateur : un clic sur un chiffre clé filtre les pactes (un second clic retire le filtre)
+    if (!estTel()) {
+      const [iPactes, iEnCours, i3m, i12m] = $("dIndicateurs").querySelectorAll(".indic");
+      const etat = $("fEtatDutreil").value, ech = $("fEcheanceDutreil").value;
+      const poser = (champ, v) => { $(champ).value = v; $(champ).dispatchEvent(new Event("change")); };
+      const rendre = (x, actif, faire, aide) => {
+        if (!x) return;
+        x.classList.add("cliquable"); x.classList.toggle("actif", actif);
+        x.setAttribute("role", "button"); x.tabIndex = 0; x.title = aide;
+        x.onclick = faire; x.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); faire(); } };
+      };
+      rendre(iPactes, !etat && !ech, () => { $("fEtatDutreil").value = ""; poser("fEcheanceDutreil", ""); }, "Tous les pactes");
+      rendre(iEnCours, etat === "en cours", () => poser("fEtatDutreil", etat === "en cours" ? "" : "en cours"), "Seulement les pactes en cours");
+      rendre(i3m, ech === "3m", () => poser("fEcheanceDutreil", ech === "3m" ? "" : "3m"), "Échéances dans les 3 mois");
+      rendre(i12m, ech === "12m", () => poser("fEcheanceDutreil", ech === "12m" ? "" : "12m"), "Échéances dans les 12 mois");
+    }
     const liste = pactesVisibles();
     let contenu;
     if (!pactes.length) {
@@ -8482,36 +8537,16 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     if (assez) { avalerClic(); ouvrirEclair(); }
   }, { passive: true });
 
-  // ---- deux doigts glissés vers le bas : actualiser (recharge l'appli et relit les données sur GitHub) ----
-  const indiceTirer = el("div", { class: "tirer-eclair", "aria-hidden": "true" }, el("span", null, "↻"), el("b", null, "Actualiser"));
-  document.body.append(indiceTirer);
-  let tirer = null;
-  const milieuY = (touches) => (touches[0].clientY + touches[1].clientY) / 2;
-  document.addEventListener("touchstart", (e) => {
-    tirer = e.touches.length === 2 ? { y: milieuY(e.touches), dy: 0 } : null;
-  }, { passive: true });
-  document.addEventListener("touchmove", (e) => {
-    if (!tirer) return;
-    if (e.touches.length !== 2) { tirer = null; indiceTirer.style.transform = ""; indiceTirer.style.opacity = ""; indiceTirer.classList.remove("pret"); return; }
-    tirer.dy = milieuY(e.touches) - tirer.y;
-    const avance = Math.max(0, Math.min(1, tirer.dy / 110));
-    indiceTirer.style.transform = `translate(-50%, ${-60 + avance * 80}px)`;
-    indiceTirer.style.opacity = String(avance);
-    indiceTirer.classList.toggle("pret", tirer.dy >= 110);
-  }, { passive: true });
-  document.addEventListener("touchend", () => {
-    if (!tirer) return;
-    const assez = tirer.dy >= 110;
-    tirer = null;
-    indiceTirer.style.transform = ""; indiceTirer.style.opacity = ""; indiceTirer.classList.remove("pret");
-    if (assez) {
-      avalerClic();
-      informer("Actualisation…");
-      // les modifications en attente partent d'abord ; puis la page se recharge (dernière version de l'appli et des données)
-      setTimeout(() => location.reload(), github && donnees && donnees.modifie ? 1800 : 250);
-      if (github && donnees && donnees.modifie) envoyerGithub();
-    }
-  }, { passive: true });
+  // ---- téléphone : le bouton ↻ de la barre du haut actualise (recharge l'appli et relit GitHub) ----
+  function actualiserAppli() {
+    informer("Actualisation…");
+    $("btnActualiserTel").classList.add("tourne");
+    // ce qui attend part d'abord sur GitHub, puis la page se recharge (dernière version de l'appli et des données)
+    const enAttente = github && donnees && donnees.modifie;
+    if (enAttente) envoyerGithub();
+    setTimeout(() => location.reload(), enAttente ? 1800 : 250);
+  }
+  $("btnActualiserTel").addEventListener("click", actualiserAppli);
 
   // ================================================================ recherche éclair
   // Une seule case : clients, dossiers, pactes Dutreil, tâches et actions. ↑ ↓ pour choisir, Entrée pour ouvrir.
