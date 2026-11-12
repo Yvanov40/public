@@ -1833,6 +1833,18 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   #clientsListe tr.groupe-demandeur td { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; border-radius: 10px; margin-top: 8px; }
   :root[data-theme="dark"] #clientsListe tr.ligne.a-faire { background: #2f2610; border-color: #6a5522; }
 }
+
+/* ---------- composantes d'une prestation ---------- */
+.comps { display: grid; gap: 8px; margin-bottom: 6px; }
+.comp { border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 8px 10px; border-left: 4px solid var(--or); display: grid; gap: 6px; }
+.comp.bareme { border-left-color: var(--bleu); }
+.comp-tete { display: flex; align-items: center; gap: 8px; }
+.comp-tete b { font-size: 13px; color: var(--bleu); white-space: nowrap; }
+.comp-libelle { flex: 1; min-width: 0; border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; padding: 5px 8px; font: inherit; font-size: 13.5px; }
+.comp .champ { margin: 0; }
+.comps-ajout { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+
+.emol-table tr.sous-titre td { text-align: left !important; }
 </style>
 </head>
 <body>
@@ -6027,6 +6039,30 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     });
     return { lignes, total: Math.round(total * 100) / 100 };
   }
+  // Une prestation = une liste de composantes qui s'additionnent :
+  //   { type: "forfait", libelle, montant, jusqua? }  (jusqua : seulement si l'assiette ne dépasse pas ce montant)
+  //   { type: "bareme",  libelle, taux: [4], tranches?, apartir? }  (apartir : seulement si l'assiette dépasse ce montant)
+  // Les anciennes définitions (fixe / taux / seuil) sont converties à la volée.
+  function composantesDe(b) {
+    if (!b) return [];
+    if (Array.isArray(b.composantes)) return b.composantes;
+    const l = [];
+    if (b.fixe !== undefined) l.push({ type: "forfait", libelle: "", montant: Number(b.fixe) || 0, ...(b.taux && b.seuil ? { jusqua: Number(b.seuil) } : {}) });
+    if (b.taux) l.push({ type: "bareme", libelle: "", taux: b.taux, ...(b.tranches ? { tranches: b.tranches } : {}), ...(b.fixe !== undefined && b.seuil ? { apartir: Number(b.seuil) } : {}) });
+    return l;
+  }
+  const aBareme = (b) => composantesDe(b).some((c) => c.type === "bareme");
+  const sansMontant = (b) => composantesDe(b).every((c) => c.type === "forfait" && !Number(c.jusqua));   // forfaits seuls : pas de montant à saisir
+  const totalForfaits = (b) => composantesDe(b).filter((c) => c.type === "forfait").reduce((t, c) => t + (Number(c.montant) || 0), 0);
+  // résumé court (sous le nom, dans le choix de la prestation)
+  function resumeCalcul(b) {
+    const c = composantesDe(b);
+    if (sansMontant(b)) return `${fmtEuros(totalForfaits(b))} HT`;
+    const nbF = c.filter((x) => x.type === "forfait").length, nbB = c.filter((x) => x.type === "bareme").length;
+    const conditions = c.some((x) => Number(x.jusqua) || Number(x.apartir));
+    return (conditions ? "forfait ou barème" : nbF && nbB ? "forfait + barème" : nbB > 1 ? `${nbB} barèmes` : "barème") + (b.donateurs ? " · par donateur" : "");
+  }
+
   // calcul complet pour un acte : montants = [un montant] ou [donateur 1, donateur 2]
   // renvoie { forfait, parts: [{ lignes, total, remise }], total, remise, ht, tva, ttc }
   function calculerEmoluments(acte, montants, remisePct = 0) {
@@ -6034,17 +6070,35 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const pct = Math.min(20, Math.max(0, Number(remisePct) || 0));
     const coef = Number(b.coef) > 0 ? Number(b.coef) / 100 : 1;  // règle d'assiette : part du montant retenue (100 % par défaut)
     const liste = (Array.isArray(montants) ? montants : [montants]).map((m) => Math.round((Number(m) || 0) * coef));
-    let parts, forfait = false;
-    if (b.fixe !== undefined && (!b.taux || (liste[0] || 0) <= (b.seuil || 0))) {
-      forfait = true;
-      parts = [{ lignes: [], total: b.fixe, remise: 0 }];
-    } else {
-      parts = liste.filter((m) => m > 0).map((m) => {
-        const { lignes, total } = emolumentBareme(m, b.taux, b.tranches);
-        const auDela = m > SEUIL_REMISE ? total - emolumentBareme(SEUIL_REMISE, b.taux, b.tranches).total : 0;
-        return { assiette: m, lignes, total, remise: Math.round(auDela * pct) / 100 };
-      });
-    }
+    const comps = composantesDe(b);
+    const nbBaremes = comps.filter((c) => c.type === "bareme").length;
+    // chaque montant (un par donateur) passe par toutes les composantes ; les forfaits ne comptent qu'une fois
+    const montantsCalcul = sansMontant(b) ? [0] : (liste.filter((m) => m > 0).length ? liste.filter((m) => m > 0) : [0]);
+    let unBaremeApplique = false;
+    const parts = montantsCalcul.map((m, k) => {
+      const lignes = [];
+      let total = 0, remise = 0;
+      for (const c of comps) {
+        if (Number(c.jusqua) && m > Number(c.jusqua)) continue;
+        if (Number(c.apartir) && m <= Number(c.apartir)) continue;
+        if (c.type === "forfait") {
+          if (k > 0) continue;
+          const v = Number(c.montant) || 0;
+          lignes.push({ forfait: true, libelle: c.libelle || "Forfait", montant: v });
+          total += v;
+        } else if (m > 0) {
+          const r = emolumentBareme(m, c.taux || [0, 0, 0, 0], c.tranches);
+          if (nbBaremes > 1 || comps.length > 1) lignes.push({ titre: c.libelle || "Barème" });
+          lignes.push(...r.lignes);
+          total += r.total;
+          unBaremeApplique = true;
+          const auDela = m > SEUIL_REMISE ? r.total - emolumentBareme(SEUIL_REMISE, c.taux || [0, 0, 0, 0], c.tranches).total : 0;
+          remise += Math.round(auDela * pct) / 100;
+        }
+      }
+      return { assiette: m, lignes, total: Math.round(total * 100) / 100, remise };
+    });
+    const forfait = !unBaremeApplique;
     const total = Math.round(parts.reduce((s, p) => s + p.total, 0) * 100) / 100;
     const remise = Math.round(parts.reduce((s, p) => s + p.remise, 0) * 100) / 100;
     const ht = Math.round((total - remise) * 100) / 100, tva = Math.round(ht * 20) / 100;
@@ -6075,7 +6129,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
             el("button", { type: "button", class: "acte" + (k === valeur ? " choisi" : ""), onclick: () => {
               valeur = k; dessiner(); fermer(); bouton.dispatchEvent(new Event("input", { bubbles: true }));
             } }, el("span", { class: "ic" }, b.ic), el("span", null, b.court,
-              el("small", null, b.fixe !== undefined && !b.taux ? `${b.fixe.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} € HT` : b.seuil ? "forfait ou barème" : b.donateurs ? "barème · par donateur" : "barème")))))))));
+              el("small", null, resumeCalcul(b))))))))));
       document.body.append(voile);
     });
     dessiner();
@@ -6106,12 +6160,12 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const m1 = el("input", { type: "text", inputmode: "decimal", placeholder: "Montant", "aria-label": "Montant", autocomplete: "off" });
     const m2 = el("input", { type: "text", inputmode: "decimal", placeholder: "Donateur 2", "aria-label": "Montant du donateur 2", autocomplete: "off" });
     const majPour = (b) => {
-      const forfaitSeul = b.fixe !== undefined && !b.taux;
+      const forfaitSeul = sansMontant(b);
       nb.hidden = !b.donateurs;
       if (!b.donateurs) nb.value = "1";
       m1.hidden = forfaitSeul;
       m2.hidden = nb.value !== "2" || !b.donateurs;
-      m1.placeholder = b.donateurs && nb.value === "2" ? "Donateur 1" : b.seuil ? "Valeur des biens déclarés" : "Montant";
+      m1.placeholder = b.donateurs && nb.value === "2" ? "Donateur 1" : "Montant";
     };
     for (const c of [nb, m1, m2]) c.addEventListener("input", onChange);
     m1.addEventListener("blur", () => { const n = lireMontant(m1.value); if (n) m1.value = n.toLocaleString("fr-FR"); });
@@ -6306,9 +6360,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const calculer = () => {
       const b = BAREMES_EMOL[choix.value];
       saisie.majPour(b);
-      remise.hidden = !!(b.fixe !== undefined && !b.taux);
+      remise.hidden = !aBareme(b);
       const montants = saisie.montants();
-      if (b.taux && !montants.some((m) => m > 0) && !b.seuil) { sortie.replaceChildren(el("span", { class: "aide" }, "Tapez le montant : le calcul se fait tout seul.")); return; }
+      if (!sansMontant(b) && !montants.some((m) => m > 0)) { sortie.replaceChildren(el("span", { class: "aide" }, "Tapez le montant : le calcul se fait tout seul.")); return; }
       const r = calculerEmoluments(choix.value, montants, remise.value);
       sortie.replaceChildren(
         el("div", { class: "calc-fiche-chiffres" }, el("b", null, fmtEuros(r.ht) + " HT"),
@@ -6343,7 +6397,10 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const tous = { ...BAREMES_BASE };
       for (const [k, b] of Object.entries(emolPerso)) if (b) tous[k] = b;
       const groupes = [...new Set(Object.values(tous).map((b) => b.groupe || "Autres"))];
-      const resume = (b) => b.fixe !== undefined && !b.taux ? `forfait ${fmtEuros(Number(b.fixe))} HT` : `${b.seuil ? "forfait puis " : ""}barème ${b.taux.map((t) => String(t).replace(".", ",")).join(" / ")} %${b.donateurs ? " · par donateur" : ""}${Number(b.coef) > 0 && Number(b.coef) !== 100 ? ` · assiette ${b.coef} %` : ""}`;
+      const resume = (b) => composantesDe(b).map((c) => c.type === "forfait"
+          ? `${c.libelle ? c.libelle + " : " : ""}forfait ${fmtEuros(Number(c.montant) || 0)}${Number(c.jusqua) ? ` jusqu’à ${Number(c.jusqua).toLocaleString("fr-FR")} €` : ""}`
+          : `${c.libelle ? c.libelle + " : " : ""}barème ${(c.taux || []).map((t) => String(t).replace(".", ",")).join(" / ")} %${Number(c.apartir) ? ` au-delà de ${Number(c.apartir).toLocaleString("fr-FR")} €` : ""}`).join(" + ")
+        + `${b.donateurs ? " · par donateur" : ""}${Number(b.coef) > 0 && Number(b.coef) !== 100 ? ` · assiette ${b.coef} %` : ""}`;
       $("corpsPersoEmol").replaceChildren(
         el("p", { class: "aide" }, "Touchez une prestation pour changer son nom, son icône, son tarif ou sa règle d’assiette. L’œil la retire de la liste sans la supprimer. Ces réglages sont partagés entre vos appareils."),
         el("button", { type: "button", class: "bouton", style: "margin-bottom:10px", onclick: () => ouvrirPersoEmol("") }, "＋ Nouvelle prestation"),
@@ -6367,27 +6424,39 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     }
     // la fiche d'un acte
     const tousActes = { ...BAREMES_BASE, ...Object.fromEntries(Object.entries(emolPerso).filter(([, b]) => b)) };
-    const b = acteEdite ? tousActes[acteEdite] : { ic: "📄", court: "", nom: "", groupe: "Ventes et sociétés", taux: [3.870, 1.596, 1.064, 0.799], coef: 100 };
-    const mode0 = b.fixe !== undefined && !b.taux ? "forfait" : b.seuil ? "mixte" : "bareme";
-    const taux0 = b.taux || [0, 0, 0, 0];
+    const b = acteEdite ? tousActes[acteEdite] : { ic: "📄", court: "", nom: "", groupe: "Ventes et sociétés", composantes: [], coef: 100 };
     const groupesConnus = [...new Set(Object.values(tousActes).map((x) => x.groupe || "Autres"))];
-    const casesMode = el("div", { class: "collabs" });
-    let mode = mode0;
-    const blocBareme = el("div", null,
-      el("div", { class: "champ" }, el("label", null, "Taux HT par tranche (%)"),
-        el("div", { class: "perso-taux" }, taux0.map((t, k) => el("label", null, el("small", null, ["jusqu’à 6 500 €", "6 500 à 17 000 €", "17 000 à T3", "au-delà"][k]),
-          el("input", { type: "number", step: "0.001", min: "0", name: "taux" + k, value: t }))))),
-      champ("3ᵉ tranche jusqu’à", el("select", { name: "t3" }, el("option", { value: "60000", selected: !(b.tranches && b.tranches[2] === 30000) }, "60 000 € (ventes, donations)"), el("option", { value: "30000", selected: !!(b.tranches && b.tranches[2] === 30000) }, "30 000 € (successions)"))));
-    const blocForfait = el("div", { class: "deux" },
-      champ("Forfait HT (€)", el("input", { type: "number", step: "0.01", min: "0", name: "fixe", value: b.fixe !== undefined ? b.fixe : "" })),
-      champ("Forfait jusqu’à (€ d’assiette)", el("input", { type: "number", step: "1", min: "0", name: "seuil", value: b.seuil || "" })));
-    const majMode = () => {
-      casesMode.replaceChildren(...[["bareme", "Barème par tranches"], ["forfait", "Forfait"], ["mixte", "Forfait, puis barème"]].map(([v, lib]) =>
-        el("button", { type: "button", class: "collab" + (mode === v ? " choisi" : ""), onclick: () => { mode = v; majMode(); } }, lib)));
-      blocBareme.hidden = mode === "forfait";
-      blocForfait.hidden = mode === "bareme";
-      blocForfait.querySelector("[name=seuil]").closest(".champ").hidden = mode !== "mixte";
+    // les composantes, modifiables : chaque carte écrit directement dans son objet
+    const comps = composantesDe(b).map((c) => ({ ...c, taux: c.taux ? [...c.taux] : undefined }));
+    const zoneComps = el("div", { class: "comps" });
+    const nb = (x) => Number(String(x).replace(",", ".")) || 0;
+    const dessinerComps = () => {
+      zoneComps.replaceChildren(...comps.map((c, k) => {
+        const champNum = (lib, val, ecrire, attrs = {}) => champ(lib, el("input", { type: "number", min: "0", step: "any", value: val ?? "", ...attrs, oninput: (e) => ecrire(e.target.value) }));
+        const tete = el("div", { class: "comp-tete" },
+          el("b", null, c.type === "forfait" ? "Forfait" : "Barème par tranches"),
+          el("input", { type: "text", class: "comp-libelle", value: c.libelle || "", placeholder: c.type === "forfait" ? "Libellé (ex. Rédaction)" : "Libellé (ex. Sur le prix)", oninput: (e) => { c.libelle = e.target.value; } }),
+          el("button", { type: "button", class: "regle-retirer", "aria-label": "Retirer", onclick: () => { comps.splice(k, 1); dessinerComps(); } }, "✕"));
+        if (c.type === "forfait") return el("div", { class: "comp forfait" }, tete,
+          el("div", { class: "deux" },
+            champNum("Montant HT (€)", c.montant, (v) => { c.montant = nb(v); }, { step: "0.01" }),
+            champNum("Seulement si le montant ne dépasse pas (€)", Number(c.jusqua) || "", (v) => { c.jusqua = nb(v) || undefined; }, { placeholder: "toujours" })));
+        c.taux = c.taux || [0, 0, 0, 0];
+        return el("div", { class: "comp bareme" }, tete,
+          el("div", { class: "perso-taux" }, c.taux.map((t, n) => el("label", null, el("small", null, ["jusqu’à 6 500 €", "6 500 à 17 000 €", "17 000 à T3", "au-delà"][n]),
+            el("input", { type: "number", step: "0.001", min: "0", value: t, oninput: (e) => { c.taux[n] = nb(e.target.value); } })))),
+          el("div", { class: "deux" },
+            champ("3ᵉ tranche jusqu’à", el("select", { onchange: (e) => { c.tranches = e.target.value === "30000" ? [6500, 17000, 30000] : undefined; } },
+              el("option", { value: "60000", selected: !(c.tranches && c.tranches[2] === 30000) }, "60 000 €"), el("option", { value: "30000", selected: !!(c.tranches && c.tranches[2] === 30000) }, "30 000 €"))),
+            champNum("Seulement au-delà de (€)", Number(c.apartir) || "", (v) => { c.apartir = nb(v) || undefined; }, { placeholder: "toujours" })));
+      }), comps.length ? null : el("p", { class: "m-vide" }, "Ajoutez au moins un forfait ou un barème."));
     };
+    dessinerComps();
+    const casesMode = el("div", { class: "comps-ajout" },
+      el("button", { type: "button", class: "bouton-discret", onclick: () => { comps.push({ type: "forfait", libelle: "", montant: 0 }); dessinerComps(); } }, "＋ Ajouter un forfait"),
+      el("button", { type: "button", class: "bouton-discret", onclick: () => { comps.push({ type: "bareme", libelle: "", taux: [0, 0, 0, 0] }); dessinerComps(); } }, "＋ Ajouter un barème"));
+    const blocBareme = zoneComps, blocForfait = el("p", { class: "aide" }, "Les forfaits et barèmes s’additionnent. Un forfait « seulement si le montant ne dépasse pas » et un barème « seulement au-delà » font un calcul « forfait, puis barème ».");
+    const majMode = () => {};
     const icone = el("input", { name: "ic", type: "text", value: b.ic || "", maxlength: "4", style: "width:64px;text-align:center;font-size:20px" });
     $("corpsPersoEmol").replaceChildren(
       el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirPersoEmol() }, "‹ Toutes les prestations"),
@@ -6397,8 +6466,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       el("div", { class: "deux" }, champ("Nom court (sur les cases)", el("input", { name: "court", type: "text", value: b.court || "", placeholder: "ex. Bail commercial" })),
         champ("Nom complet", el("input", { name: "nom", type: "text", value: b.nom || "", placeholder: "ex. Bail commercial de 9 ans" }))),
       champ("Groupe", [el("input", { name: "groupe", type: "text", value: b.groupe || "", list: "liste-groupes-emol" }), el("datalist", { id: "liste-groupes-emol" }, groupesConnus.map((g) => el("option", { value: g })))]),
-      el("div", { class: "champ" }, el("label", null, "Calcul"), casesMode),
-      blocBareme, blocForfait,
+      el("div", { class: "champ" }, el("label", null, "Calcul"), blocBareme, casesMode, blocForfait),
       el("h4", { class: "rubrique" }, "Règle d’assiette"),
       el("div", { class: "deux" },
         champ("Part du montant retenue (%)", el("input", { name: "coef", type: "number", min: "1", max: "1000", step: "0.01", value: b.coef || 100 })),
@@ -6412,17 +6480,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       if (!court) { informer("Donnez un nom à la prestation."); return; }
       const def = { ic: (v.ic || "📄").trim(), court, nom: (v.nom || court).trim(), groupe: (v.groupe || "Autres").trim(), ref: (v.ref || "").trim(), aide: (v.aide || "").trim(),
         coef: Number(String(v.coef).replace(",", ".")) || 100, donateurs: !!v.donateurs };
-      const nb = (x) => Number(String(x).replace(",", ".")) || 0;
-      if (mode !== "forfait") {
-        def.taux = [nb(v.taux0), nb(v.taux1), nb(v.taux2), nb(v.taux3)];
-        if (!def.taux.some((t) => t > 0)) { informer("Indiquez au moins un taux."); return; }
-        if (v.t3 === "30000") def.tranches = [6500, 17000, 30000];
-      }
-      if (mode !== "bareme") {
-        if (v.fixe === "" || v.fixe === undefined) { informer("Indiquez le montant du forfait."); return; }
-        def.fixe = nb(v.fixe);
-        if (mode === "mixte") def.seuil = nb(v.seuil);
-      }
+      if (!comps.length) { informer("Ajoutez au moins un forfait ou un barème."); return; }
+      if (comps.some((c) => c.type === "bareme" && !(c.taux || []).some((t) => t > 0))) { informer("Un barème n’a aucun taux."); return; }
+      def.composantes = comps.map((c) => Object.fromEntries(Object.entries(c).filter(([, x]) => x !== undefined && x !== "")));
       const cle = acteEdite || ("perso_" + nouvelId());
       emolPerso[cle] = def;
       garderEmolPerso();
@@ -6441,9 +6501,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     const calculer = () => {
       const b = BAREMES_EMOL[choixActe.value];
       saisie.majPour(b);
-      blocRemise.hidden = !!(b.fixe !== undefined && !b.taux);
+      blocRemise.hidden = !aBareme(b);
       const montants = saisie.montants();
-      if (b.taux && !montants.some((m) => m > 0) && !b.seuil) {
+      if (!sansMontant(b) && !montants.some((m) => m > 0)) {
         resultat.replaceChildren(el("p", { class: "aide" }, b.aide || "Indiquez le montant."), el("p", { class: "aide" }, `Barème : ${b.ref}.`));
         return;
       }
@@ -6451,8 +6511,8 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       const lignesTable = [];
       r.parts.forEach((p, k) => {
         if (r.parts.length > 1) lignesTable.push(el("tr", { class: "sous-titre" }, el("td", { colspan: "3" }, `Donateur ${k + 1} · ${p.assiette.toLocaleString("fr-FR")} €`)));
-        if (r.forfait) lignesTable.push(el("tr", null, el("td", { colspan: "2" }, "Tarif fixe (forfait)"), el("td", null, fmtEuros(p.total))));
-        for (const l of p.lignes) lignesTable.push(el("tr", null,
+        for (const l of p.lignes) lignesTable.push(l.forfait ? el("tr", null, el("td", { colspan: "2" }, l.libelle), el("td", null, fmtEuros(l.montant)))
+          : l.titre ? el("tr", { class: "sous-titre" }, el("td", { colspan: "3" }, l.titre)) : el("tr", null,
           el("td", null, l.a === Infinity ? `au-delà de ${l.de.toLocaleString("fr-FR")} €` : `${l.de.toLocaleString("fr-FR")} à ${l.a.toLocaleString("fr-FR")} €`,
             el("small", null, ` · sur ${l.base.toLocaleString("fr-FR")} €`)),
           el("td", null, l.taux.toLocaleString("fr-FR", { minimumFractionDigits: 3 }) + " %"), el("td", null, fmtEuros(l.montant))));
