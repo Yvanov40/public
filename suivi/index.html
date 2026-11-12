@@ -5472,8 +5472,17 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
     || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche()));
 
   let premierePlanif = false;
+  // tâches à venir qui ont une date mais pas d'heure (elles attendaient une place) : on leur en trouve une
+  function replacerSansHeure() {
+    if (!donnees || !auto().reporter) return 0;
+    const auj = enIso(aujourdhui()), jours = new Set(), ids = [];
+    for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (!t.fait && t.pour && t.pour >= auj && !t.heure && !t.fixe) { jours.add(t.pour); ids.push(t.id); }
+    if (!ids.length) return 0;
+    apresAgenda([...jours].sort(), null, ids);
+    return ids.length;
+  }
   function afficherTout() {
-    if (!premierePlanif && donnees) { premierePlanif = true; setTimeout(() => { if (planifierDossiersAFaire()) afficherTout(); }, 400); }
+    if (!premierePlanif && donnees) { premierePlanif = true; setTimeout(() => { const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     const vide = !donnees;
@@ -6977,7 +6986,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   // le premier créneau libre à partir de maintenant, sur les jours travaillés : [jour, heure] (ou ["", ""] si rien sous 60 jours)
   function premierCreneau(duree) {
     let iso = enIso(aujourdhui());
-    for (let k = 0; k < 60; k++) {
+    for (let k = 0; k < 250; k++) {
       if (jourTravaille(iso)) { const h = prochainCreneau(iso, duree); if (h) return [iso, h]; }
       iso = jourOuvreSuivant(iso);
     }
@@ -7070,7 +7079,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       }
     }
     // ce qui ne tient pas : jour ouvré suivant (ou, si le report est coupé, la tâche garde son jour sans heure)
-    if (file.length && profondeur < 10 && A.reporter) {
+    if (file.length && profondeur < 180 && A.reporter) {   // (jusqu'à environ 6 mois de report en cascade)
       const suivant = jourOuvreSuivant(iso);
       for (const t of file) { t.pour = suivant; t.heure = ""; bilan.reportees.push({ t, vers: suivant }); }
       const suite = replanifier(suivant, null, file.map((t) => t.id), profondeur + 1);
