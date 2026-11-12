@@ -1847,6 +1847,43 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .emol-table tr.sous-titre td { text-align: left !important; }
 
 .rdv-dossier textarea { min-height: 80px !important; }
+
+/* ---------- onglet Dutreil sur ordinateur : chiffres clés à gauche, pactes en tuiles ---------- */
+@media (min-width: 901px) {
+  #vue-dutreil:not([hidden]) { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 18px; align-items: start; }
+  #vue-dutreil > * { grid-column: 2; }
+  #vue-dutreil > #dIndicateurs { grid-column: 1; grid-row: 1 / span 6; display: grid !important; grid-template-columns: 1fr; gap: 8px; position: sticky; top: 10px; margin: 0; }
+  #dIndicateurs .indic { padding: 10px 14px; background: var(--carte) !important; border: 1px solid var(--bordure) !important; border-left: 4px solid var(--c) !important; border-radius: 10px !important; }
+  #dIndicateurs .indic b { font-size: 22px; font-family: var(--titre); }
+  .d-mode { display: flex; gap: 4px; margin-top: 6px; background: var(--section); border-radius: 10px; padding: 3px; }
+  .d-mode button { flex: 1; border: 0; background: none; border-radius: 8px; padding: 6px 4px; font-size: 13px; color: var(--discret); cursor: pointer; }
+  .d-mode button[aria-pressed="true"] { background: var(--carte); color: var(--bleu); font-weight: 600; box-shadow: 0 1px 3px rgba(12,45,57,.1); }
+  .d-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .d-tuile { display: grid; gap: 8px; align-content: start; text-align: left; border: 1px solid var(--bordure); border-top: 4px solid var(--bordure); background: var(--carte);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer; color: var(--texte); transition: border-color .12s, box-shadow .12s; }
+  .d-tuile:hover { box-shadow: 0 4px 14px rgba(12,45,57,.08); }
+  .d-tuile.urgent { border-top-color: var(--rouge); background: #fcf0f0; }
+  .d-tuile.bientot { border-top-color: var(--or); background: #fdf7e9; }
+  .d-tuile.inactive { opacity: .6; }
+  .dt-tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .dt-tete b { font-size: 15px; color: var(--bleu); line-height: 1.25; }
+  .dt-tete .etat { font-size: 11.5px; border-radius: 10px; padding: 2px 8px; background: var(--section); color: var(--bleu); white-space: nowrap; }
+  .dt-ech { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; align-items: baseline; }
+  .dt-ech strong { font: 600 18px var(--titre); color: var(--bleu); }
+  .dt-ech span { color: var(--discret); font-size: 13px; text-align: right; }
+  .dt-ech small { grid-column: 1 / -1; color: var(--discret); font-size: 12.5px; }
+  .dt-ech.vide { display: block; color: var(--discret); font-size: 13px; font-style: italic; }
+  .d-tuile.urgent .dt-ech strong, .d-tuile.urgent .dt-ech span { color: var(--rouge); }
+  .dt-periodes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid var(--bordure); padding-top: 8px; }
+  .dt-periodes i { display: block; font-style: normal; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--discret); margin-bottom: 2px; }
+  .dt-ligne { display: flex; justify-content: space-between; gap: 6px; font-size: 12.5px; }
+  .dt-ligne span { color: var(--discret); }
+  .dt-ligne b { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .dt-bas { display: grid; gap: 2px; font-size: 12px; color: var(--discret); border-top: 1px solid var(--bordure); padding-top: 6px; }
+  .dt-bas span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dt-bas .or { color: var(--or); font-weight: 600; }
+  :root[data-theme="dark"] .d-tuile.urgent { background: #3a1d1d; } :root[data-theme="dark"] .d-tuile.bientot { background: #33290f; }
+}
 </style>
 </head>
 <body>
@@ -4273,6 +4310,7 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
   }
   const urgence = (p) => { const e = prochaineEcheance(p); return e && e[2] <= 90 ? "urgent" : e && e[2] <= 365 ? "bientot" : (p.etat || "") !== "en cours" ? "inactif" : ""; };
 
+  const modeDutreil = () => { try { return localStorage.getItem("suivi-gp-dutreil-mode") || "tuiles"; } catch (e) { return "tuiles"; } };
   function afficherDutreil() {
     memoriserFiltres();
     if (vueCourante() === "dutreil") { const n = pactesVisibles().length; $("fermerFiltres").textContent = `Voir ${n === dutreil.pactes.length ? "les" : "ces"} ${n} pacte${n > 1 ? "s" : ""}`; }
@@ -4284,7 +4322,9 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
       indic("En cours", pactes.filter((p) => (p.etat || "") === "en cours").length, "var(--bleu)"),
       indic("Échéances < 3 mois", echeances.filter(([e]) => e[2] <= 90).length, "var(--rouge)", "var(--rouge)"),
       indic("Échéances < 12 mois", echeances.filter(([e]) => e[2] <= 365).length, "var(--or)", "var(--or)"),
-      indic("Honoraires", euros(pactes.reduce((s, p) => s + (Number(p.honoraires) || 0), 0)), "var(--discret)"));
+      indic("Honoraires", euros(pactes.reduce((s, p) => s + (Number(p.honoraires) || 0), 0)), "var(--discret)"),
+      estTel() ? null : el("div", { class: "d-mode" }, [["tuiles", "▦ Tuiles"], ["tableau", "☰ Tableau"]].map(([v, lib]) =>
+        el("button", { type: "button", "aria-pressed": String(modeDutreil() === v), onclick: () => { try { localStorage.setItem("suivi-gp-dutreil-mode", v); } catch (e) {} afficherDutreil(); } }, lib))));
     // bandeau bleu des prochaines échéances (même présentation que les rendez-vous)
     const proches = echeances.filter(([e]) => e[2] <= 365).sort((a, b) => a[0][0].localeCompare(b[0][0]));
     $("dAlerte").replaceChildren(el("strong", null, "Prochaines échéances"),
@@ -4310,6 +4350,24 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
           e ? el("div", { class: "ech" }, el("strong", null, (echeanceSaisie(p) ? "" : "≈ ") + fmtDate(e[0])), el("span", null, ` ${fmtDelai(e[2])}`), el("small", null, e[1])) : el("div", { class: "ech" }, "Pas d’échéance à venir"),
           el("div", { class: "detail" }, `Coll. → ${fmtDouT(dateEffective(p, "fin_collectif")[0]) || "—"} · Indiv. → ${fmtDouT(dateEffective(p, "courrier")[0]) || "—"}`));
       });
+    } else if (modeDutreil() === "tuiles") {
+      // tuiles de l'ordinateur : l'essentiel en haut, puis les périodes du pacte
+      const date = (p, cle) => { const [v, calc] = dateEffective(p, cle); return v ? (calc ? "≈ " : "") + fmtDouT(v) : "—"; };
+      const ligne = (lib, val) => el("div", { class: "dt-ligne" }, el("span", null, lib), el("b", null, val || "—"));
+      contenu = [el("div", { class: "d-tuiles" }, liste.map(([p, i]) => {
+        const e = prochaineEcheance(p);
+        return el("button", { type: "button", class: "d-tuile " + urgence(p) + ((p.etat || "") !== "en cours" ? " inactive" : ""), onclick: () => ouvrirPacte(i) },
+          el("div", { class: "dt-tete" }, el("b", null, p.societe), el("span", { class: "etat" }, p.etat || "—")),
+          e ? el("div", { class: "dt-ech" }, el("strong", null, (echeanceSaisie(p) ? "" : "≈ ") + fmtDate(e[0])), el("span", null, fmtDelai(e[2])), el("small", null, e[1]))
+            : el("div", { class: "dt-ech vide" }, "Pas d’échéance à venir"),
+          el("div", { class: "dt-periodes" },
+            el("div", null, el("i", null, "Engagement collectif"), ligne("début", date(p, "debut_collectif")), ligne("fin", date(p, "fin_collectif"))),
+            el("div", null, el("i", null, "Engagement individuel"), ligne("début", date(p, "debut_individuel")), ligne("courrier", date(p, "courrier")))),
+          (p.donation || p.denonciation || p.honoraires) ? el("div", { class: "dt-bas" },
+            p.donation ? el("span", null, "Donation : ", p.donation) : null,
+            p.denonciation ? el("span", { title: p.denonciation }, "Dénonciation : ", p.denonciation) : null,
+            p.honoraires ? el("span", { class: "or" }, euros(p.honoraires)) : null) : null);
+      }))];
     } else {
       const cellule = (p, cle) => {
         const [v, calc] = dateEffective(p, cle);
