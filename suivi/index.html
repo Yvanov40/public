@@ -1964,6 +1964,19 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 .jr-fleche:hover { border-color: var(--or); }
 .jr-auj { border: 1px solid var(--or); background: var(--or-doux); color: var(--bleu); border-radius: 14px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; }
 @media (max-width: 900px) { .jr-fleche { display: none; } }   /* téléphone : on glisse le doigt sur la carte */
+
+/* ---------- Audit dans le Suivi : sur téléphone, une seule barre en haut et une seule en bas (celle de l'Audit) ---------- */
+.audit-retour { display: none; }
+@media (max-width: 900px) {
+  body.vue-audit .entete, body.vue-audit nav.bas, body.vue-audit .fab, body.vue-audit .tirer-eclair { display: none !important; }
+  body.vue-audit main, body.vue-audit .contenu { padding: 0 !important; margin: 0 !important; }
+  #vue-audit:not([hidden]) { position: fixed; inset: 0; z-index: 25; gap: 0; background: var(--fond); padding-top: env(safe-area-inset-top, 0px); }
+  #vue-audit .audit-barre { flex-wrap: nowrap; gap: 8px; padding: 8px 10px; background: var(--barre); color: #fff; }
+  #vue-audit .audit-barre b { color: #fff; font-size: 16px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #vue-audit .audit-barre .aide, #vue-audit .audit-barre a { display: none; }
+  .audit-retour { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff; border-radius: 16px; padding: 5px 12px; font-size: 14px; cursor: pointer; white-space: nowrap; }
+  #auditFrame { flex: 1; height: auto !important; min-height: 0; border: 0 !important; border-radius: 0 !important; }
+}
 </style>
 </head>
 <body>
@@ -2096,11 +2109,12 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 
     <section class="vue" id="vue-audit" hidden>
       <div class="audit-barre">
+        <button type="button" class="audit-retour" id="auditRetour" aria-label="Revenir au suivi">‹ Suivi</button>
         <b>Audit civil et fiscal</b>
         <span class="aide" id="auditLien">Enregistrés dans votre fichier de suivi, et synchronisés.</span>
         <a class="bouton-discret" href="../audit/" target="appli-audit" rel="opener">Ouvrir dans sa fenêtre ↗</a>
       </div>
-      <iframe id="auditFrame" title="Audit civil et fiscal" allow="clipboard-write"></iframe>
+      <iframe id="auditFrame" title="Audit civil et fiscal" allow="clipboard-write" onload="window.habillerAudit && window.habillerAudit()"></iframe>
     </section>
 
     <section class="vue" id="vue-outils" hidden>
@@ -6310,12 +6324,30 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     ouvrirAudit(id);
     informer(`Nouvel audit pour ${nom}, rattaché à sa fiche.`);
   }
+  // dans le Suivi, l'Audit n'a pas besoin de son grand titre (le bandeau du Suivi le porte déjà) : on l'allège
+  window.habillerAudit = () => {
+    try {
+      const doc = $("auditFrame").contentDocument;
+      if (!doc || doc.getElementById("dans-suivi")) return;
+      const st = doc.createElement("style"); st.id = "dans-suivi";
+      st.textContent = `.brand { display: none !important; }
+        header.top .top-in { min-height: 0 !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+        #installer { display: none !important; }`;
+      doc.head.appendChild(st);
+    } catch (e) {}
+  };
+  // téléphone : « ‹ Suivi » revient à l'onglet d'avant
+  let vueAvantAudit = "accueil";
+  window.addEventListener("hashchange", (e) => { try { const avant = new URL(e.oldURL).hash.slice(1); if (avant && avant !== "audit") vueAvantAudit = avant; } catch (er) {} });
+  $("auditRetour").addEventListener("click", () => { depuisAudit(); location.hash = "#" + (vueAvantAudit || "accueil"); });
   function majBandeauAudit() {
     const a = lireAudit(), id = a.courant;
     const z = $("auditLien");
     if (!z) return;
     if (!id || !a.liste[id]) { z.replaceChildren("Enregistrés dans votre fichier de suivi, et synchronisés."); return; }
     const client = auditsSuivi.liens[id];
+    const titre = document.querySelector("#vue-audit .audit-barre b");
+    if (titre) titre.textContent = client ? `Audit · ${client}` : "Audit civil et fiscal";
     z.replaceChildren(client ? el("span", null, "Rattaché à ", el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirClient(client) }, "👤 " + client)) : "Pas rattaché à un client · ",
       el("button", { type: "button", class: "lien-sous-champ", onclick: () => {
         const nom = (prompt("Rattacher cet audit à quel client ?", client || (a.liste[id].nom || "")) || "").trim();
