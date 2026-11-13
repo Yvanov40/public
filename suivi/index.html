@@ -3768,7 +3768,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     const auj = aujourdhui();
     const rdv = visibles().filter(([d]) => !d.archives && d.rdv)
       .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i])
-      .filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99"));
+      .filter(([e, d]) => e >= 0 && e <= 30 && !rdvPasse({ date: d.rdv, heure: d.rdv_heure, duree: d.rdv_duree })).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99"));
     const taches = tachesAVenir(7);
     const pastillesTaches = taches.slice(0, 8).map(([t, nom, j]) => el("button", {
       class: "pastille-rdv tache-p" + (tacheEnRetard(t) ? " retard" : j === 0 ? " jour" : j === 1 ? " demain" : ""), type: "button", onclick: () => ouvrirTache(nom, t.id) },
@@ -3898,7 +3898,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       if (!estIso(r.date || "")) continue;
       rdv.push([Math.round((versDate(r.date) - auj) / 86400000), { client: f.nom, rdv: r.date, rdv_heure: r.heure, tache: r.objet || "Rendez-vous", type: "", _rdvClient: r.id }, -1]);
     }
-    rdv.splice(0, rdv.length, ...rdv.filter(([e]) => e >= 0 && e <= 30).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99")));
+    rdv.splice(0, rdv.length, ...rdv.filter(([e, d]) => e >= 0 && e <= 30 && !rdvPasse({ date: d.rdv, heure: d.rdv_heure, duree: d.rdv_duree })).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99")));
     $("mRdv").replaceChildren(...(rdv.length ? rdv.slice(0, 8).map(([e, d, i]) => {
       const jour = versDate(d.rdv);
       const quand = [e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`,
@@ -6701,7 +6701,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   }
   function resumeRdv(nom) {
     const auj = enIso(aujourdhui());
-    const tous = rendezVousDuClient(nom), r = tous.find((x) => x.date >= auj), passes = tous.filter((x) => x.date < auj).length;
+    const tous = rendezVousDuClient(nom), r = tous.find((x) => !rdvPasse(x)), passes = tous.filter(rdvPasse).length;
     if (r) return "Prochain : " + versDate(r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (r.heure ? " " + r.heure : "");
     return passes ? `aucun à venir · ${passes} passé${passes > 1 ? "s" : ""}` : "";
   }
@@ -7230,6 +7230,16 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     donnees.clients[cle] = f;
     sauver();
   }
+  // un rendez-vous est « passé » une fois son heure de fin dépassée (sans heure : à la fin de la journée)
+  function rdvPasse(r) {
+    const auj = enIso(aujourdhui());
+    if (!r || !r.date || r.date < auj) return true;
+    if (r.date > auj) return false;
+    const m = enMinutes(r.heure);
+    if (m === null) return false;
+    const n = new Date();
+    return m + (Number(r.duree) || DUREE_RDV) <= n.getHours() * 60 + n.getMinutes();
+  }
   // tous les rendez-vous d'un client : les siens et ceux de ses dossiers, du plus ancien au plus récent
   function rendezVousDuClient(nom) {
     const l = rdvsDe(nom).map((r) => ({ ...r, source: "client" }));
@@ -7287,7 +7297,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   function blocRdvClient(nom) {
     const auj = enIso(aujourdhui());
     const tous = rendezVousDuClient(nom);
-    const avenir = tous.filter((r) => r.date >= auj), passes = tous.filter((r) => r.date < auj).reverse();
+    const avenir = tous.filter((r) => !rdvPasse(r)), passes = tous.filter(rdvPasse).reverse();
     const ouvrir = (r) => (r.source === "client" ? ouvrirRdv(nom, r.id) : ouvrirDossier(r.i));
     const ligne = (r, classe = "") => el("button", { type: "button", class: "rdv-ligne " + classe, onclick: () => ouvrir(r) },
       el("span", { class: "quand" }, versDate(r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: r.date.slice(0, 4) !== auj.slice(0, 4) ? "numeric" : undefined }),
@@ -8051,7 +8061,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
         const tous = rendezVousDuClient(nom);
         if (!tous.length) return "";
         const auj = enIso(aujourdhui());
-        const avenir = tous.filter((r) => r.date >= auj), passes = tous.filter((r) => r.date < auj).reverse();
+        const avenir = tous.filter((r) => !rdvPasse(r)), passes = tous.filter(rdvPasse).reverse();
         const ligne = (r) => el("tr", null, el("td", null, versDate(r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" })),
           el("td", null, r.heure ? plage(r.heure, r.duree || DUREE_RDV) : "—"), el("td", null, r.objet || "Rendez-vous", r.note ? el("div", { class: "petit" }, r.note) : null),
           el("td", null, r.source === "dossier" ? "dossier" : (r.dossier_libelle || "client")));
