@@ -1985,6 +1985,26 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   .tuile-page textarea, .feuille textarea { font-size: 14px !important; line-height: 1.4 !important; }   /* (14 px au moins sur téléphone : en dessous, le navigateur zoome en écrivant) */
   .tuile-page textarea { min-height: 240px !important; }
 }
+
+/* ---------- journal de notes ---------- */
+.journal { display: grid; gap: 10px; }
+.journal-ajout { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.journal-saisie { width: 100%; min-height: 64px !important; resize: vertical; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); padding: 8px 10px !important; font: inherit; font-size: 13.5px !important; line-height: 1.45; box-sizing: border-box; }
+.journal-saisie:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 3px var(--or-doux); }
+.journal-liste { display: grid; gap: 6px; }
+.journal-note { border: 1px solid var(--bordure); border-left: 3px solid var(--or); background: var(--carte); border-radius: 10px; padding: 7px 10px 8px; }
+.journal-tete { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.journal-tete span { flex: 1; font-size: 11.5px; color: var(--discret); font-weight: 600; font-variant-numeric: tabular-nums; }
+.journal-tete button { border: 0; background: none; color: var(--discret); cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 6px; }
+.journal-tete button:hover { background: var(--section); color: var(--bleu); }
+.journal-texte { font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.journal-actions { display: flex; gap: 8px; margin-top: 6px; }
+.tuile-page textarea.zone-coordonnees { min-height: 110px !important; }
+#impression .note-impr { margin-bottom: 6px; } #impression .note-impr b { font-size: 10px; color: #666; } #impression .note-impr pre { margin: 2px 0 0; }
+@media (max-width: 900px) { .journal-saisie, .journal-texte { font-size: 14px !important; } }
+
+.tuile-page textarea.journal-saisie, .feuille textarea.journal-saisie { min-height: 58px !important; height: 58px; }
+.tuile-page textarea.journal-saisie:focus { height: 96px; }
 </style>
 </head>
 <body>
@@ -2556,7 +2576,8 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     const t = texteRecherche();
     if (!t) return true;
     const f = fiche(d.client);
-    const meule = [d.client, d.tache, d.commentaire, d.notes, d.notaire, d.partenaire, f.commentaire, f.notes].join(" ").toLocaleLowerCase("fr");
+    const meule = [d.client, d.tache, d.commentaire, d.notes, d.notaire, d.partenaire, d.coordonnees, f.commentaire, f.notes, f.coordonnees,
+      ...(f.journal || []).map((x) => x.texte), ...(d.journal || []).map((x) => x.texte)].join(" ").toLocaleLowerCase("fr");
     return t.split(/\s+/).every((m) => meule.includes(m));
   }
   // clients qui ont une tâche ouverte (calculé une fois par affichage)
@@ -7047,7 +7068,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     const champPrecision = el("input", { name: "precision", type: "text", value: d.precision || "", list: "liste-precisions",
       placeholder: "facultatif : notaire, pièces, reporté…", autocomplete: "off" });
     const zoneComm = el("textarea", { name: "commentaire_client", placeholder: "Commentaire commun à tous les dossiers de ce client…" }, f.commentaire || "");
-    const zoneNotes = el("textarea", { name: "notes_client", placeholder: "Notes sur ce client : numéros, contacts, à savoir…" }, f.notes || "");
+    const zoneNotes = el("textarea");   // (plus dans la fiche : les notes du client sont un journal)
     const titreEncart = el("p", null, encartTitre(d.client, i));
     const entreeClient = saisie("client", d.client, "text", { autocomplete: "off", list: "liste-client" });
     const listeClients = el("datalist", { id: "liste-client" }, nomsClients().map((v) => el("option", { value: v })));
@@ -7137,8 +7158,13 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
             } }, (modelesTaches[sansNumero(d.type)] || []).length ? `☑ Ajouter les tâches du modèle « ${sansNumero(d.type)} »` : `☑ Créer un modèle de tâches pour « ${sansNumero(d.type)} »`)),
             resume: () => resumeTaches(d.client) });
           lot.push({ libelle: "◆ Commentaire client", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
-            { libelle: "◆ Notes client", contenu: el("div", null, ...avecLiens(zoneNotes)), resume: () => premiereLigne(zoneNotes.value) },
+            ...(d.client && i >= 0 ? [{ libelle: "◆ Notes client", contenu: blocJournal({ lire: () => journalClient(d.client), ecrire: (l) => ecrireJournalClient(d.client, l) }), resume: () => resumeJournal(journalClient(d.client)) }] : []),
+            { libelle: "◆ Coordonnées client", contenu: el("div", null, ...avecLiens(el("textarea", { name: "coordonnees_client", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || ""))),
+              resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees_client]") || {}).value) },
             { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) },
+            ...(i >= 0 ? [{ libelle: "Notes du dossier", contenu: blocJournal({ lire: () => journalDossier(i), ecrire: (l) => ecrireJournalDossier(i, l), aide: "Nouvelle note sur ce dossier… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalDossier(i)) }] : []),
+            { libelle: "Coordonnées du dossier", contenu: el("div", null, ...avecLiens(el("textarea", { name: "coordonnees", class: "zone-coordonnees", placeholder: "Interlocuteurs du dossier : notaire, banque, expert-comptable…" }, d.coordonnees || ""))),
+              resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees]") || {}).value) },
             { libelle: "Rendez-vous", contenu: rdv, resume: () => lireRdv("rdv") ? versDate(lireRdv("rdv")).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (lireRdv("rdv_heure") ? " " + lireRdv("rdv_heure") : "") + (lireRdv("rdv_objet") ? " · " + lireRdv("rdv_objet") : "") : "" });
           return tuiles(lot);
         })()),
@@ -7204,6 +7230,72 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     return [zone, puces];
   }
   // texte simple dont les liens sont cliquables (tâches…)
+  // ---- journal de notes : chaque note a sa date et son heure ; on en ajoute, on en corrige, on en efface ----
+  //   lire()  : la liste des notes [{ id, le, texte }]     ecrire(liste) : l'enregistre
+  // Une note tapée mais pas encore ajoutée l'est d'elle-même quand on quitte la case ou qu'on ferme la fiche.
+  const brouillonsJournal = new Set();
+  function validerBrouillonsJournal() { for (const f of [...brouillonsJournal]) f(); }
+  const dateNote = (le) => le ? new Date(le).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }) + " · " + new Date(le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "notes d’avant le journal";
+  function resumeJournal(liste) {
+    if (!liste.length) return "";
+    const d = liste.map((n) => n.le).filter(Boolean).sort().pop();
+    return `${liste.length} note${liste.length > 1 ? "s" : ""}${d ? " · " + dateNote(d).replace(" · ", " ") : ""}`;
+  }
+  function blocJournal({ lire, ecrire, aide }) {
+    const zone = el("div", { class: "journal" });
+    const saisieNote = el("textarea", { class: "journal-saisie", placeholder: aide || "Nouvelle note… (Ctrl + Entrée pour l’ajouter)" });
+    const ajouter = () => {
+      const t = saisieNote.value.trim();
+      if (!t) return;
+      saisieNote.value = "";
+      ecrire([{ id: nouvelId(), le: new Date().toISOString(), texte: t }, ...lire()]);
+      dessiner();
+      zone.dispatchEvent(new Event("input", { bubbles: true }));   // (le résumé de la tuile suit)
+    };
+    const brouillon = () => { if (!saisieNote.isConnected) { brouillonsJournal.delete(brouillon); return; } ajouter(); };
+    brouillonsJournal.add(brouillon);
+    saisieNote.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ajouter(); } });
+    saisieNote.addEventListener("blur", () => setTimeout(() => { if (saisieNote.value.trim()) ajouter(); }, 150));
+    const liste = el("div", { class: "journal-liste" });
+    function dessiner() {
+      const notes = lire().slice().sort((a, b) => String(b.le || "").localeCompare(String(a.le || "")));
+      liste.replaceChildren(...(notes.length ? notes.map((n) => {
+        const corps = el("div", { class: "journal-texte" }, ...texteAvecLiens(n.texte));
+        const carte = el("div", { class: "journal-note" },
+          el("div", { class: "journal-tete" }, el("span", null, dateNote(n.le)),
+            el("button", { type: "button", title: "Corriger", "aria-label": "Corriger la note", onclick: () => {
+              const edit = el("textarea", { class: "journal-saisie" }, n.texte);
+              const garder = () => { const t = edit.value.trim(); ecrire(lire().map((x) => (x.id === n.id ? { ...x, texte: t } : x)).filter((x) => x.texte)); dessiner(); zone.dispatchEvent(new Event("input", { bubbles: true })); };
+              corps.replaceChildren(edit, el("div", { class: "journal-actions" },
+                el("button", { type: "button", class: "bouton", onclick: garder }, "Enregistrer"), el("button", { type: "button", class: "bouton-discret", onclick: dessiner }, "Annuler")));
+              edit.focus();
+            } }, "✎"),
+            el("button", { type: "button", title: "Effacer", "aria-label": "Effacer la note", onclick: () => {
+              if (!confirm("Effacer cette note ?")) return;
+              ecrire(lire().filter((x) => x.id !== n.id)); dessiner(); zone.dispatchEvent(new Event("input", { bubbles: true }));
+            } }, "✕")),
+          corps);
+        return carte;
+      }) : [el("p", { class: "m-vide" }, "Aucune note pour l’instant.")]));
+    }
+    dessiner();
+    zone.append(el("div", { class: "journal-ajout" }, saisieNote, el("button", { type: "button", class: "bouton", onclick: ajouter }, "＋ Ajouter")), liste);
+    return zone;
+  }
+  // le journal d'un client (les anciennes « notes » deviennent sa première note, sans date)
+  function journalClient(nom) {
+    const f = fiche(nom);
+    if (Array.isArray(f.journal)) return f.journal;
+    return f.notes && String(f.notes).trim() ? [{ id: "notes-anciennes", le: null, texte: String(f.notes).trim() }] : [];
+  }
+  function ecrireJournalClient(nom, liste) {
+    const cle = cleClient(nom);
+    donnees.clients[cle] = { ...fiche(nom), nom: fiche(nom).nom || nom, journal: liste, notes: "" };
+    sauver();
+  }
+  const journalDossier = (i) => (donnees.dossiers[i] && Array.isArray(donnees.dossiers[i].journal) ? donnees.dossiers[i].journal : []);
+  function ecrireJournalDossier(i, liste) { if (!donnees.dossiers[i]) return; donnees.dossiers[i].journal = liste; sauver(); }
+
   function texteAvecLiens(texte) {
     const morceaux = [];
     let pos = 0;
@@ -7733,7 +7825,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       (() => {
         const f = fiche(nom), d = iDossier >= 0 ? donnees.dossiers[iDossier] : null;
         const vus = new Set();
-        const contacts = liensDans([f.commentaire, f.notes, d && d.commentaire].filter(Boolean).join("\n"))
+        const contacts = liensDans([f.coordonnees, d && d.coordonnees, f.commentaire, f.notes, ...(f.journal || []).map((x) => x.texte), d && d.commentaire].filter(Boolean).join("\n"))
           .filter((x) => (x.type === "tel" || x.type === "mail") && !vus.has(x.valeur.replace(/\s|\./g, "")) && vus.add(x.valeur.replace(/\s|\./g, "")));
         return contacts.length ? el("div", { class: "liens tache-contacts" }, contacts.slice(0, 6).map(puceLien)) : "";  // (replaceChildren écrirait « null »)
       })(),
@@ -7856,7 +7948,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   // ============================================================== « Ma journée » : aujourd'hui, heure par heure
   function telephoneDe(nom) {
     const f = fiche(nom);
-    const t = liensDans([f.commentaire, f.notes].filter(Boolean).join("\n")).find((x) => x.type === "tel");
+    const t = liensDans([f.coordonnees, f.commentaire, f.notes, ...(f.journal || []).map((x) => x.texte)].filter(Boolean).join("\n")).find((x) => x.type === "tel");
     return t ? lienPour(t) : null;
   }
   // le jour affiché dans « Ma journée » (aujourd'hui par défaut ; flèches sur ordinateur, glissement sur téléphone)
@@ -8136,7 +8228,12 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
             passes.length ? el("tr", null, el("td", { colspan: "4", class: "inter" }, "Passés")) : null, ...passes.map(ligne)));
       })(),
       f.commentaire ? el("div", null, el("h2", null, "Commentaire"), el("pre", null, f.commentaire)) : "",
-      f.notes ? el("div", null, el("h2", null, "Notes"), el("pre", null, f.notes)) : "");
+      f.coordonnees ? el("div", null, el("h2", null, "Coordonnées"), el("pre", null, f.coordonnees)) : "",
+      (() => {
+        const notes = journalClient(nom).slice().sort((a, b) => String(b.le || "").localeCompare(String(a.le || "")));
+        return notes.length ? el("div", null, el("h2", null, `Notes (${notes.length})`),
+          ...notes.map((n) => el("div", { class: "note-impr" }, el("b", null, dateNote(n.le)), el("pre", null, n.texte)))) : "";
+      })());
     window.print();
   }
 
@@ -8157,6 +8254,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     if (!String(v.nature || "").trim()) { informer("Indiquez la nature du dossier (Analyse, Acte… ou une nouvelle)."); return; }
     const avant = enCours >= 0 ? { ...donnees.dossiers[enCours] } : null;
     const d = avant ? { ...avant } : { coche: false, repere: "", heures: 0, reglementaire: "", societe: "", suivi_j: "", notes: "" };
+    if ("coordonnees" in v) d.coordonnees = v.coordonnees;
     Object.assign(d, {
       client: v.client, tache: v.tache, collaborateur: (v.collaborateur || "").trim(), type: `${v.statut || "2"}. ${natureNormale(v.nature)}`, precision: v.precision || "", notaire: v.notaire, partenaire: v.partenaire,
       honos_regl: montant(v.honos_regl), honos_art4: montant(v.honos_art4), ca: montant(v.ca),
@@ -8178,7 +8276,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       f[c] = d[c] || f[c] || "";
     }
     f.commentaire = v.commentaire_client;
-    f.notes = v.notes_client;
+    if ("coordonnees_client" in v) f.coordonnees = v.coordonnees_client;
     donnees.clients[cle] = f;
     sauver();
     const resumeAgenda = rdvChange && d.rdv_heure ? apresAgenda([avant && avant.rdv, d.rdv]) : "";
@@ -8220,13 +8318,14 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       (() => {
         const zoneComm = el("textarea", { name: "commentaire", placeholder: "Commentaire sur ce client : situation, famille, objectifs…" }, f.commentaire || "");
-        const zoneNotes = el("textarea", { name: "notes", placeholder: "Notes : numéros, contacts, à savoir…" }, f.notes || "");
+        const zoneCoord = el("textarea", { name: "coordonnees", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "");
         return tuiles([
           { libelle: "Tâches", contenu: blocTaches(nom), resume: () => resumeTaches(nom) },
           { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
           { libelle: "Audits", contenu: blocAuditsClient(nom), resume: () => { const l = auditsDuClient(nom); return l.length ? `${l.length} audit${l.length > 1 ? "s" : ""} · ${new Date(l[0][1].maj).toLocaleDateString("fr-FR")}` : ""; } },
           { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
-          { libelle: "Notes", contenu: el("div", null, ...avecLiens(zoneNotes)), resume: () => premiereLigne(zoneNotes.value) }]);
+          { libelle: "Notes", contenu: blocJournal({ lire: () => journalClient(nom), ecrire: (l) => ecrireJournalClient(nom, l), aide: "Nouvelle note sur ce client… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalClient(nom)) },
+          { libelle: "Coordonnées", contenu: el("div", null, ...avecLiens(zoneCoord)), resume: () => premiereLigne(zoneCoord.value) }]);
       })(),
       tuiles([
         { libelle: "Demandeur", choix: choixDemandeur(f.notaire) },
@@ -8278,7 +8377,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       if ((v[c] || "") !== vieux) for (const d of dossiersDe(clientEnCours)) if (!d[c] || d[c] === vieux) d[c] = v[c];
       f[c] = v[c];
     }
-    f.commentaire = v.commentaire; f.notes = v.notes; f.nom = f.nom || clientEnCours;
+    f.commentaire = v.commentaire; if ("coordonnees" in v) f.coordonnees = v.coordonnees; f.nom = f.nom || clientEnCours;
     donnees.clients[cle] = f;
     sauver(); terminerFeuille(); afficherTout(); informer("Fiche client enregistrée.");
   }
@@ -8302,6 +8401,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   // renvoie vrai si la fiche s'est enregistrée et fermée d'elle-même ; faux s'il n'y avait rien à enregistrer ;
   // null si l'enregistrement a échoué (champ manquant…) : la fiche reste ouverte
   function enregistrerAvantFermeture() {
+    validerBrouillonsJournal();
     const f = document.querySelector(".feuille.ouverte");
     if (!f || !FICHES_AUTO[f.id]) return false;
     const bouton = $(FICHES_AUTO[f.id]);
