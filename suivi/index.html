@@ -1955,6 +1955,15 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 #auditLien .lien-sous-champ { padding: 0 4px; }
 
 .audit-actions { display: flex; gap: 10px; }
+
+/* ---------- « Ma journée » : changer de jour ---------- */
+.jr-tete { display: flex !important; align-items: center !important; gap: 6px; flex-wrap: wrap; }
+.jr-tete > span { order: 0; }
+.jr-tete > small { margin-left: auto; }
+.jr-fleche { border: 1px solid var(--bordure); background: var(--carte); color: var(--bleu); width: 28px; height: 28px; border-radius: 14px; cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+.jr-fleche:hover { border-color: var(--or); }
+.jr-auj { border: 1px solid var(--or); background: var(--or-doux); color: var(--bleu); border-radius: 14px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; }
+@media (max-width: 900px) { .jr-fleche { display: none; } }   /* téléphone : on glisse le doigt sur la carte */
 </style>
 </head>
 <body>
@@ -6167,7 +6176,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     doigt = null;
     if (!estTel() || e.touches.length !== 1) return;
     // zones qui défilent déjà horizontalement : on les laisse tranquilles
-    if (e.target.closest(".m-onglets, .rdv, .indicateurs, .d-indic, .d-etats, input, textarea, select, .fen-segment, .filtres, " +
+    if (!e.target.closest(".acc-journee") && e.target.closest(".m-onglets, .rdv, .indicateurs, .d-indic, .d-etats, input, textarea, select, .fen-segment, .filtres, " +
       ".entete, nav.bas, .fab, .fab-voile, .feuille, .menu, .eclair, .choix-date, .horloge-voile, .voile-filtres, .menu-contextuel")) return;
     if (document.querySelector(".eclair, .choix-date, .horloge-voile") || fabOuvert) return;
     // et, de façon générale, tout bandeau qui défile de côté (indicateurs, pastilles…)
@@ -6186,6 +6195,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     doigt = null;
     if (Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy) || duree > 700) return;
     if (glisse || document.querySelector(".feuille.ouverte") || document.body.classList.contains("filtres-ouverts")) return;
+    if (vueCourante() === "accueil" && doigtCible && doigtCible.closest(".acc-journee")) { changerJourJournee(dx < 0 ? 1 : -1); return; }
     if (vueCourante() === "calendrier" && doigtCible) {
       if (doigtCible.closest("#calPanneau")) { changerJourCalendrier(dx < 0 ? 1 : -1); return; }
       if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
@@ -7809,11 +7819,20 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     const t = liensDans([f.commentaire, f.notes].filter(Boolean).join("\n")).find((x) => x.type === "tel");
     return t ? lienPour(t) : null;
   }
+  // le jour affiché dans « Ma journée » (aujourd'hui par défaut ; flèches sur ordinateur, glissement sur téléphone)
+  let jourJournee = null;
+  function changerJourJournee(sens) {
+    const base = jourJournee || enIso(aujourdhui());
+    if (sens === 0) jourJournee = null;
+    else { const d = versDate(base); d.setDate(d.getDate() + sens); jourJournee = enIso(d) === enIso(aujourdhui()) ? null : enIso(d); }
+    afficherMaJournee();
+  }
   function afficherMaJournee() {
     const zone = $("mJournee");
     if (!zone || !donnees) return;
     const auj = enIso(aujourdhui());
-    const elements = (evenementsCalendrier(true)[auj] || []).filter((e) => e.type !== "dutreil");
+    const jour = jourJournee || auj, estAujourdhui = jour === auj;
+    const elements = (evenementsCalendrier(true)[jour] || []).filter((e) => e.type !== "dutreil");
     // tâches en retard (date passée, non faites)
     const retard = [];
     for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (!t.fait && t.pour && t.pour < auj) retard.push([t, f.nom]);
@@ -7827,18 +7846,24 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
           el("small", null, estTache ? e.client : e.sous)),
         el("span", { class: "jr-actions" },
           tel ? el("a", { class: "jr-bouton", href: tel, title: "Appeler", "aria-label": "Appeler " + client }, "📞") : null,
-          estTache ? el("button", { type: "button", class: "jr-bouton", title: "Reporter à demain", onclick: () => deplacerEvenement(e, jourOuvreSuivant(auj)) }, "→") : null,
+          estTache ? el("button", { type: "button", class: "jr-bouton", title: "Reporter à demain", onclick: () => deplacerEvenement(e, jourOuvreSuivant(jour)) }, "→") : null,
           estTache ? el("button", { type: "button", class: "jr-bouton fait", title: "Fait", onclick: () => {
             const t = trouverTache(e.ref.tache); cocherTache(e.ref.client, e.ref.tache, true); afficherTout(); informer(`« ${t ? t.texte : "Tâche"} » est faite.`);
           } }, "✓") : null));
     };
-    const date = aujourdhui().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    const date = versDate(jour).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    const ecart = Math.round((versDate(jour) - versDate(auj)) / 86400000);
+    const nomJour = estAujourdhui ? "" : ecart === 1 ? "Demain · " : ecart === -1 ? "Hier · " : "";
     zone.replaceChildren(
-      el("div", { class: "jr-tete" }, el("span", null, date.charAt(0).toUpperCase() + date.slice(1)),
+      el("div", { class: "jr-tete" },
+        el("button", { type: "button", class: "jr-fleche", "aria-label": "Jour précédent", title: "Jour précédent", onclick: () => changerJourJournee(-1) }, "‹"),
+        el("span", null, nomJour + date.charAt(0).toUpperCase() + date.slice(1)),
+        el("button", { type: "button", class: "jr-fleche", "aria-label": "Jour suivant", title: "Jour suivant", onclick: () => changerJourJournee(1) }, "›"),
+        !estAujourdhui ? el("button", { type: "button", class: "jr-auj", onclick: () => changerJourJournee(0) }, "Aujourd’hui") : null,
         el("small", null, elements.length ? `${elements.filter((e) => e.type === "tache").length} tâche(s) · ${elements.filter((e) => e.type === "rdv").length} rendez-vous` : "")),
-      retard.length ? el("div", { class: "jr-retard" }, el("span", null, `${retard.length} tâche${retard.length > 1 ? "s" : ""} des jours passés ${retard.length > 1 ? "ne sont pas faites" : "n’est pas faite"}.`),
+      estAujourdhui && retard.length ? el("div", { class: "jr-retard" }, el("span", null, `${retard.length} tâche${retard.length > 1 ? "s" : ""} des jours passés ${retard.length > 1 ? "ne sont pas faites" : "n’est pas faite"}.`),
         el("button", { type: "button", onclick: () => replacerRetards(retard) }, "Replacer aujourd’hui")) : null,
-      ...(elements.length ? elements.map(ligne) : [el("p", { class: "m-vide" }, retard.length ? "Rien d’autre de prévu aujourd’hui." : "Rien de prévu aujourd’hui.")]));
+      ...(elements.length ? elements.map(ligne) : [el("p", { class: "m-vide" }, !estAujourdhui ? (jourTravaille(jour) ? "Rien de prévu ce jour-là." : "Jour non travaillé : rien de prévu.") : retard.length ? "Rien d’autre de prévu aujourd’hui." : "Rien de prévu aujourd’hui.")]));
   }
   // les tâches en retard reviennent aujourd'hui ; l'agenda leur trouve une place (les 📌 gardent leur heure)
   function replacerRetards(retard) {
