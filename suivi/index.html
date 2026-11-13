@@ -1977,6 +1977,14 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   .audit-retour { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff; border-radius: 16px; padding: 5px 12px; font-size: 14px; cursor: pointer; white-space: nowrap; }
   #auditFrame { flex: 1; height: auto !important; min-height: 0; border: 0 !important; border-radius: 0 !important; }
 }
+
+/* ---------- commentaires et notes : police plus petite et zone plus haute, pour tout lire d'un coup d'œil ---------- */
+.tuile-page textarea, .feuille textarea { font-size: 13.5px !important; line-height: 1.45 !important; padding: 10px 12px !important; }
+.tuile-page textarea { min-height: 200px !important; }
+@media (max-width: 900px) {
+  .tuile-page textarea, .feuille textarea { font-size: 14px !important; line-height: 1.4 !important; }   /* (14 px au moins sur téléphone : en dessous, le navigateur zoome en écrivant) */
+  .tuile-page textarea { min-height: 240px !important; }
+}
 </style>
 </head>
 <body>
