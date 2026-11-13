@@ -2005,6 +2005,16 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 
 .tuile-page textarea.journal-saisie, .feuille textarea.journal-saisie { min-height: 58px !important; height: 58px; }
 .tuile-page textarea.journal-saisie:focus { height: 96px; }
+
+/* ---------- coordonnées : une fiche contact, liens cliquables ---------- */
+.coordonnees { display: grid; gap: 6px; }
+.coord-vue { border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 9px 12px; font-size: 14px; line-height: 1.6; }
+.coord-ligne { overflow-wrap: anywhere; }
+.coord-vue a.lien { color: var(--bleu); font-weight: 600; text-decoration: underline; text-decoration-color: var(--or); text-underline-offset: 3px; }
+.coord-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.coordonnees [hidden] { display: none !important; }
+
+.coord-plan { text-decoration: none; margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -7159,11 +7169,11 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
             resume: () => resumeTaches(d.client) });
           lot.push({ libelle: "◆ Commentaire client", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
             ...(d.client && i >= 0 ? [{ libelle: "◆ Notes client", contenu: blocJournal({ lire: () => journalClient(d.client), ecrire: (l) => ecrireJournalClient(d.client, l) }), resume: () => resumeJournal(journalClient(d.client)) }] : []),
-            { libelle: "◆ Coordonnées client", contenu: el("div", null, ...avecLiens(el("textarea", { name: "coordonnees_client", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || ""))),
+            { libelle: "◆ Coordonnées client", contenu: vueCoordonnees(el("textarea", { name: "coordonnees_client", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "")),
               resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees_client]") || {}).value) },
             { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) },
             ...(i >= 0 ? [{ libelle: "Notes du dossier", contenu: blocJournal({ lire: () => journalDossier(i), ecrire: (l) => ecrireJournalDossier(i, l), aide: "Nouvelle note sur ce dossier… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalDossier(i)) }] : []),
-            { libelle: "Coordonnées du dossier", contenu: el("div", null, ...avecLiens(el("textarea", { name: "coordonnees", class: "zone-coordonnees", placeholder: "Interlocuteurs du dossier : notaire, banque, expert-comptable…" }, d.coordonnees || ""))),
+            { libelle: "Coordonnées du dossier", contenu: vueCoordonnees(el("textarea", { name: "coordonnees", class: "zone-coordonnees", placeholder: "Interlocuteurs du dossier : notaire, banque, expert-comptable…" }, d.coordonnees || "")),
               resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees]") || {}).value) },
             { libelle: "Rendez-vous", contenu: rdv, resume: () => lireRdv("rdv") ? versDate(lireRdv("rdv")).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (lireRdv("rdv_heure") ? " " + lireRdv("rdv_heure") : "") + (lireRdv("rdv_objet") ? " · " + lireRdv("rdv_objet") : "") : "" });
           return tuiles(lot);
@@ -7180,9 +7190,14 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 
   // ---- liens, téléphones, e-mails et chemins dans les textes : ils deviennent cliquables ----
   const MOTIFS = [
-    ["url", /\b(?:https?:\/\/|www\.)[^\s<>"']*[^\s<>"'.,;:!?)\]]/gi],
     ["mail", /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g],
-    ["tel", /(?:(?:\+|00)33[\s.-]?|\b0)[1-9](?:[\s.-]?\d{2}){4}\b/g],
+    ["url", /\b(?:https?:\/\/|www\.)[^\s<>"']*[^\s<>"'.,;:!?)\]]/gi],
+    // site écrit sans « www » ni « https » : notaires.fr, cabinet-martin.com/contact…
+    ["url", /(?<![@\w.-])(?:[a-z0-9][a-z0-9-]*\.)+(?:fr|com|net|org|eu|io|be|ch|lu|info|biz|immo|notaires\.fr|gouv\.fr)(?:\/[^\s<>"']*[^\s<>"'.,;:!?)\]])?(?![\w@-])/gi],
+    // téléphone français (0X…, +33 6…, +33 (0)6…, 0033…), groupé ou non
+    ["tel", /(?:(?:\+|00)33\s?(?:\(0\)\s?)?|\b0)[1-9](?:[\s.-]?\d){8}\b/g],
+    // téléphone étranger : +41 79…, +32 4…
+    ["tel", /(?:\+|\b00)(?!33)[1-9]\d{0,2}(?:[\s.-]?\d{1,4}){2,5}\b/g],
     ["chemin", /(?:\b[A-Za-z]:\\|\\\\)[^\n"<>|?*]*[^\s"<>|?*.,;:)]/g],
     ["chemin", /(?:^|\s)(\/(?:Users|Volumes|home)\/[^\n"<>|?*]*[^\s"<>|?*.,;:)])/gm]
   ];
@@ -7204,7 +7219,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   function lienPour(t) {
     if (t.type === "url") return /^https?:/i.test(t.valeur) ? t.valeur : "https://" + t.valeur;
     if (t.type === "mail") return "mailto:" + t.valeur;
-    if (t.type === "tel") { const n = t.valeur.replace(/[^\d+]/g, "").replace(/^00/, "+"); return "tel:" + (n.startsWith("0") ? "+33" + n.slice(1) : n); }
+    if (t.type === "tel") { const n = t.valeur.replace(/\(0\)/g, "").replace(/[^\d+]/g, "").replace(/^00/, "+"); return "tel:" + (n.startsWith("0") ? "+33" + n.slice(1) : n); }
     return null;
   }
   function puceLien(t) {
@@ -7221,6 +7236,27 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       title: t.type === "tel" ? "Appeler" : t.type === "mail" ? "Écrire un e-mail" : "Ouvrir le lien" }, icone, el("span", null, affiche));
   }
   // une zone de texte suivie des liens qu'elle contient (mis à jour pendant la saisie)
+  function vueCoordonnees(zone) {
+    const vue = el("div", { class: "coord-vue" });
+    const boutonModif = el("button", { type: "button", class: "lien-sous-champ", onclick: () => basculer(true) }, "✎ Modifier");
+    const boutonOk = el("button", { type: "button", class: "lien-sous-champ", onclick: () => basculer(false) }, "✓ Terminé");
+    function dessiner() {
+      const lignes = zone.value.split("\n");
+      // une ligne d'adresse (avec un code postal) : un 📍 ouvre le plan
+      vue.replaceChildren(...lignes.map((l) => el("div", { class: "coord-ligne" }, ...(l.trim() ? texteAvecLiens(l) : ["\u00a0"]),
+        /\b\d{5}\b/.test(l) && !liensDans(l).some((x) => x.type === "tel") ? el("a", { class: "coord-plan", href: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(l.trim()),
+          target: "_blank", rel: "noopener", title: "Voir sur le plan" }, " 📍") : null)));
+    }
+    function basculer(ecrire) {
+      zone.hidden = !ecrire; vue.hidden = ecrire; boutonModif.hidden = ecrire; boutonOk.hidden = !ecrire;
+      if (ecrire) zone.focus(); else dessiner();
+    }
+    zone.addEventListener("input", dessiner);
+    dessiner();
+    const cadre = el("div", { class: "coordonnees" }, vue, zone, el("div", { class: "coord-actions" }, boutonModif, boutonOk));
+    setTimeout(() => basculer(!zone.value.trim()), 0);   // vide : on commence par écrire
+    return cadre;
+  }
   function avecLiens(zone) {
     const puces = el("div", { class: "liens" });
     const maj = () => puces.replaceChildren(...liensDans(zone.value).map(puceLien));
@@ -8325,7 +8361,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
           { libelle: "Audits", contenu: blocAuditsClient(nom), resume: () => { const l = auditsDuClient(nom); return l.length ? `${l.length} audit${l.length > 1 ? "s" : ""} · ${new Date(l[0][1].maj).toLocaleDateString("fr-FR")}` : ""; } },
           { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
           { libelle: "Notes", contenu: blocJournal({ lire: () => journalClient(nom), ecrire: (l) => ecrireJournalClient(nom, l), aide: "Nouvelle note sur ce client… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalClient(nom)) },
-          { libelle: "Coordonnées", contenu: el("div", null, ...avecLiens(zoneCoord)), resume: () => premiereLigne(zoneCoord.value) }]);
+          { libelle: "Coordonnées", contenu: vueCoordonnees(zoneCoord), resume: () => premiereLigne(zoneCoord.value) }]);
       })(),
       tuiles([
         { libelle: "Demandeur", choix: choixDemandeur(f.notaire) },
