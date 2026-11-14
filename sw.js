@@ -15,9 +15,9 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     // On jette les anciennes copies de l'ancien service, en épargnant celles des nouveaux
-    // services (leurs noms commencent par suivi- ou audit-). /^(suivi|audit)-/ est un « motif » :
-    // il reconnaît les noms qui COMMENCENT par « suivi- » ou « audit- ».
-    for (const k of await caches.keys()) if (!/^(suivi|audit)-/.test(k)) await caches.delete(k);
+    // services (leurs noms commencent par suivi-, audit-, revision- ou pvi-). /^(suivi|audit|revision|pvi)-/ est
+    // un « motif » : il reconnaît les noms qui COMMENCENT par l'un de ces préfixes.
+    for (const k of await caches.keys()) if (!/^(suivi|audit|revision|pvi)-/.test(k)) await caches.delete(k);
     await self.registration.unregister();      // on se désinscrit : le navigateur oublie ce service
     // Chaque fenêtre ouverte du site est rechargée, pour repartir proprement sans l'ancien service.
     for (const c of await self.clients.matchAll({ type: "window" })) c.navigate(c.url);

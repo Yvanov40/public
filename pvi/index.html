@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<!-- ==================================================================================
+     pvi/index.html — Simulateur de plus-value immobilière des particuliers
+     Adresse : https://yvanov40.github.io/public/pvi/
+     Tout tient dans ce fichier : la mise en page (HTML), l'apparence (CSS, dans <style>)
+     et le comportement (JavaScript, dans <script>). Le moteur de calcul est la fonction
+     calculer() ; il suit les fiches PVI de la base documentaire (mises à jour oct. 2026).
+     ================================================================================== -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plus-value immobilière – simulateur</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0c2d39">
+<link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Plus-value">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+<style>
+/* ---------- Couleurs : --bleu et --or sont modifiables dans Réglages ---------- */
+:root{
+  color-scheme:light;
+  --bleu:#0c2d39; --or:#a57d2f;
+  --fond:#f4f1ea; --carte:#fffdf9; --champ:#ffffff; --encre:#17222b; --discret:#6b6f73; --ligne:#e4ded2;
+  --bleu-txt:var(--bleu); --sur-bleu:#fff;
+  --doux:color-mix(in srgb,var(--bleu) 7%,var(--carte));
+  --or-doux:color-mix(in srgb,var(--or) 14%,var(--carte));
+  --ok:#2c7a4b; --ok-doux:color-mix(in srgb,#2c7a4b 11%,var(--carte));
+  --att:#9a5516; --att-doux:color-mix(in srgb,#c47a1c 13%,var(--carte));
+  --err:#a33a2f; --err-doux:color-mix(in srgb,#a33a2f 11%,var(--carte));
+  --sans:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --ombre:0 10px 30px rgba(12,30,40,.10);
+}
+:root[data-theme="sombre"]{
+  color-scheme:dark;
+  --fond:#0d1316; --carte:#151d21; --champ:#10171a; --encre:#e4e8ea; --discret:#9aa5ac; --ligne:#2a353b;
+  --bleu-txt:color-mix(in srgb,var(--bleu) 45%,#fff);
+  --doux:color-mix(in srgb,var(--bleu) 25%,var(--carte));
+  --or-doux:color-mix(in srgb,var(--or) 22%,var(--carte));
+  --ok:#6cc08f; --att:#e0a26a; --err:#ef8a80;
+  --ombre:0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:150px}
+body{margin:0;background:var(--fond);color:var(--encre);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+
+/* ---------- En-tête ---------- */
+header.haut{position:sticky;top:0;z-index:20;background:var(--bleu);color:#fff;padding-top:env(safe-area-inset-top,0px);box-shadow:0 2px 14px rgba(0,0,0,.15)}
+.haut-in{max-width:1440px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.marque{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.marque img{width:38px;height:38px;border-radius:10px}
+.marque b{display:block;font:600 19px var(--serif);letter-spacing:-.01em}
+.marque small{display:block;font-size:12px;color:color-mix(in srgb,#fff 70%,var(--bleu))}
+.kpis{display:flex;margin-left:auto;flex-wrap:wrap}
+.kpi{padding:0 18px;border-left:1px solid color-mix(in srgb,#fff 18%,var(--bleu))}
+.kpi .k{display:block;font-size:11.5px;color:color-mix(in srgb,#fff 68%,var(--bleu));white-space:nowrap}
+.kpi .v{font:600 21px var(--serif);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpi.net .v{color:color-mix(in srgb,var(--or) 70%,#fff)}
+.actions{display:flex;gap:8px}
+.bt-h{background:transparent;border:1px solid color-mix(in srgb,#fff 25%,var(--bleu));color:#fff;border-radius:8px;padding:7px 12px;display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.bt-h:hover{border-color:var(--or);background:color-mix(in srgb,#fff 6%,var(--bleu))}
+.bt-h svg{width:17px;height:17px}
+@media(max-width:900px){.kpis{display:none}.haut-in{padding:10px 14px;flex-wrap:nowrap;gap:10px}.actions{margin-left:auto}.bt-h{padding:7px 9px}.bt-h span{display:none}.marque{min-width:0}.marque b{font-size:17px;white-space:nowrap}.marque small{display:none}}
+
+/* ---------- Navigation des sections ---------- */
+nav.etapes{position:sticky;top:var(--hh,62px);z-index:15;background:color-mix(in srgb,var(--fond) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--ligne)}
+.etapes-in{max-width:1440px;margin:0 auto;padding:8px 24px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.etapes a{flex:none;display:flex;align-items:center;gap:7px;padding:5px 12px 5px 6px;border-radius:20px;text-decoration:none;color:var(--encre);font-size:13.5px;font-weight:500;border:1px solid transparent}
+.etapes a:hover{border-color:var(--ligne);background:var(--carte)}
+.etapes a.on{background:var(--carte);border-color:var(--or)}
+.etapes a i{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--doux);color:var(--bleu-txt)}
+.etapes a.fait i{background:var(--or);color:#fff}
+@media(max-width:900px){.etapes-in{padding:8px 12px}}
+
+/* ---------- Mise en page ---------- */
+.page{max-width:1440px;margin:0 auto;padding:22px 24px 40px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.92fr);gap:24px}
+.col-res{position:sticky;top:calc(var(--hh,62px) + 60px);align-self:start;max-height:calc(100vh - var(--hh,62px) - 74px);overflow:auto;padding-right:2px;scrollbar-width:thin}
+@media(max-width:1100px){.page{grid-template-columns:1fr;padding:14px 12px 90px}.col-res{position:static;max-height:none;overflow:visible}}
+
+/* ---------- Cartes de saisie ---------- */
+.carte{background:var(--carte);border:1px solid var(--ligne);border-radius:14px;margin-bottom:16px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.carte>header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--ligne)}
+.carte>header .n{width:28px;height:28px;border-radius:50%;background:var(--bleu);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.carte>header h2{margin:0;font:600 17px var(--serif);letter-spacing:-.01em}
+.carte>header .ref{margin-left:auto;font-size:12px;color:var(--discret);text-align:right}
+.corps{padding:16px 18px}
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px 16px}
+.ch{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ch.plein{grid-column:1/-1}
+.ch>label,.lbl{font-size:12.5px;font-weight:600;color:var(--discret);display:flex;align-items:center;gap:5px}
+.ch .aide{font-size:12px;color:var(--discret);line-height:1.35}
+.saisie{position:relative;display:flex;align-items:center}
+.saisie input,.ch select{width:100%;min-height:40px;padding:8px 11px;border:1px solid var(--ligne);border-radius:9px;background:var(--champ);font-variant-numeric:tabular-nums;transition:border-color .12s,box-shadow .12s}
+.saisie input:focus,.ch select:focus{outline:none;border-color:var(--or);box-shadow:0 0 0 3px var(--or-doux)}
+.saisie .u{position:absolute;right:11px;color:var(--discret);font-size:13.5px;pointer-events:none}
+.saisie.avec-u input{padding-right:34px}
+.saisie input.faux{border-color:var(--err);box-shadow:0 0 0 3px var(--err-doux)}
+.ch select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23888' stroke-width='1.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.case{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--ligne);border-radius:10px;background:var(--champ);cursor:pointer;font-size:14px;line-height:1.4;transition:border-color .12s,background .12s}
+.case:hover{border-color:color-mix(in srgb,var(--or) 60%,var(--ligne))}
+.case input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--bleu);flex:none}
+.case:has(input:checked){border-color:var(--or);background:var(--or-doux)}
+.ss{grid-column:1/-1;margin:6px 0 -4px;font:600 13px var(--sans);color:var(--bleu-txt);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.ss::after{content:"";flex:1;height:1px;background:var(--ligne)}
+.cache{display:none!important}
+.info{width:17px;height:17px;border-radius:50%;border:1px solid currentColor;background:none;color:var(--discret);font:700 10.5px/1 var(--serif);display:inline-grid;place-items:center;padding:0;opacity:.75}
+.info:hover{opacity:1;color:var(--or)}
+
+/* segments (choix courts) */
+.seg{display:flex;background:var(--doux);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:7px 10px;font-size:13.5px;font-weight:600;color:var(--discret);white-space:nowrap}
+.seg button.on{background:var(--carte);color:var(--bleu-txt);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* cédants */
+.ced{border:1px solid var(--ligne);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.ced-t{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--doux)}
+.ced-t input{border:0;background:transparent;font:600 16px var(--serif);min-width:0;flex:1;padding:4px 2px}
+.ced-t input:focus{outline:none;border-bottom:1px solid var(--or)}
+.ced-c{padding:12px}
+.pastille{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--or-doux);color:color-mix(in srgb,var(--or) 75%,var(--encre))}
+.bt{border:1px solid var(--ligne);background:var(--carte);border-radius:9px;padding:8px 14px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px}
+.bt:hover{border-color:var(--or)}
+.bt.prim{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+.bt.prim:hover{background:color-mix(in srgb,var(--bleu) 85%,#fff)}
+.bt.or{background:var(--or);color:#fff;border-color:var(--or)}
+.bt.mini{padding:4px 10px;font-size:12.5px}
+.bt.danger{color:var(--err)}
+
+/* ---------- Résultats ---------- */
+.res-k{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.rk{background:var(--carte);border:1px solid var(--ligne);border-radius:14px;padding:12px 14px}
+.rk .k{font-size:12px;color:var(--discret);font-weight:600}
+.rk .v{font:600 22px var(--serif);font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+.rk .s{font-size:12px;color:var(--discret)}
+.rk.fort{background:var(--bleu);border-color:var(--bleu);color:#fff}
+.rk.fort .k,.rk.fort .s{color:color-mix(in srgb,#fff 70%,var(--bleu))}
+.rk.fort .v{color:color-mix(in srgb,var(--or) 60%,#fff)}
+@media(max-width:520px){.res-k{grid-template-columns:1fr 1fr}.rk.fort{grid-column:1/-1}}
+.cascade{display:flex;height:16px;border-radius:8px;overflow:hidden;margin:6px 0 10px;background:var(--doux)}
+.cascade span{display:block;height:100%}
+.leg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:5px 18px;font-size:13px}
+.leg div{display:flex;align-items:center;gap:7px}
+.leg i{width:10px;height:10px;border-radius:3px;flex:none}
+.leg b{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.onglets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.onglets button{border:1px solid var(--ligne);background:var(--carte);border-radius:20px;padding:5px 13px;font-size:13px;font-weight:600}
+.onglets button.on{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--ligne);text-align:right;font-size:13.5px;vertical-align:top}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:12px;color:var(--discret);font-weight:600}
+tr.gras td{font-weight:700}
+tr.tot td{font-weight:700;border-top:2px solid var(--bleu);background:var(--doux)}
+tr.inter td{font-weight:600;background:var(--or-doux)}
+td.disc{color:var(--discret);font-size:12.5px}
+.alertes{display:flex;flex-direction:column;gap:7px}
+.al{padding:9px 12px;border-radius:9px;font-size:13.5px;border-left:3px solid;line-height:1.4}
+.al-ok{background:var(--ok-doux);border-color:var(--ok)}
+.al-att{background:var(--att-doux);border-color:var(--att)}
+.al-err{background:var(--err-doux);border-color:var(--err)}
+.al-info{background:var(--doux);border-color:var(--bleu-txt)}
+.exo{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border-radius:8px;background:var(--ok-doux);font-size:13px;margin:4px 0}
+.exo::before{content:"✓";color:var(--ok);font-weight:700}
+svg.graph{width:100%;height:auto;display:block}
+svg.graph text{font:500 11px var(--sans);fill:var(--discret)}
+svg.graph .barre:hover{opacity:.8}
+details.recap summary{cursor:pointer;font-weight:600;color:var(--bleu-txt);padding:2px 0}
+details.recap table td{font-size:12.8px}
+
+/* barre du bas sur téléphone */
+.bas{display:none}
+@media(max-width:1100px){.bas{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--bleu);color:#fff;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));align-items:center;gap:14px;box-shadow:0 -4px 18px rgba(0,0,0,.18)}
+  .bas div{display:flex;flex-direction:column;line-height:1.2}.bas small{font-size:11px;opacity:.75}.bas b{font:600 17px var(--serif)}
+  .bas button{margin-left:auto;background:var(--or);border:0;color:#fff;border-radius:9px;padding:9px 14px;font-weight:600}}
+
+/* ---------- Fenêtres, menus, bulles ---------- */
+.voile{position:fixed;inset:0;background:rgba(10,20,26,.45);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+.voile.on{display:flex}
+.fen{background:var(--carte);border-radius:16px;box-shadow:var(--ombre);width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto}
+.fen>header{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--ligne);position:sticky;top:0;background:var(--carte);z-index:1}
+.fen>header h3{margin:0;font:600 18px var(--serif)}
+.fen>header button{margin-left:auto;border:0;background:none;font-size:24px;color:var(--discret);line-height:1}
+.fen .corps{display:flex;flex-direction:column;gap:14px}
+.menu{position:fixed;z-index:45;background:var(--carte);border:1px solid var(--ligne);border-radius:12px;box-shadow:var(--ombre);padding:6px;display:none;min-width:230px}
+.menu.on{display:block}
+.menu button{display:flex;width:100%;text-align:left;border:0;background:none;padding:9px 12px;border-radius:8px;gap:10px;font-size:14px;align-items:center}
+.menu button:hover{background:var(--doux)}
+.menu small{display:block;color:var(--discret);font-size:12px}
+#bulle{position:fixed;z-index:60;max-width:320px;background:var(--encre);color:var(--carte);padding:10px 12px;border-radius:9px;font-size:12.8px;line-height:1.45;box-shadow:var(--ombre);display:none}
+#bulle.on{display:block}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:var(--encre);color:var(--carte);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:70}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.coul{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.coul label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
+.coul input[type=color]{width:46px;height:36px;border:1px solid var(--ligne);border-radius:8px;padding:2px;background:var(--champ)}
+.coul input[type=text]{width:150px;min-height:36px;padding:6px 9px;border:1px solid var(--ligne);border-radius:8px;background:var(--champ);font-variant-numeric:tabular-nums}
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.presets button{border:1px solid var(--ligne);background:var(--champ);border-radius:10px;padding:6px 10px 6px 6px;display:flex;align-items:center;gap:8px;font-size:13px}
+.presets button:hover{border-color:var(--or)}
+.presets i{display:flex;width:34px;height:22px;border-radius:6px;overflow:hidden}
+.presets i b{flex:1}
+.scen{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--ligne)}
+.scen div{flex:1;min-width:0}
+.scen small{display:block;color:var(--discret);font-size:12px}
+
+/* sélecteur de date */
+.dp-bt{position:absolute;right:4px;width:32px;height:32px;border:0;border-radius:7px;background:none;color:var(--bleu-txt);display:grid;place-items:center}
+.dp-bt:hover{background:var(--doux)}
+.saisie.date input{padding-right:40px}
+#cal{position:fixed;z-index:55;width:300px;background:var(--carte);border:1px solid var(--ligne);border-radius:14px;box-shadow:var(--ombre);padding:12px;display:none}
+#cal.on{display:block}
+@media(max-width:600px){#cal.on{left:0!important;right:0;bottom:0;top:auto!important;width:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px))}}
+.cal-h{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.cal-h .fil{display:flex;gap:4px}
+.cal-h .fil button{border:0;background:var(--doux);color:var(--bleu-txt);border-radius:7px;padding:5px 9px;font-weight:700;font-size:14px}
+.cal-h .nav{margin-left:auto;display:flex;gap:2px}
+.cal-h .nav button{border:0;background:none;width:30px;height:30px;border-radius:7px;font-size:18px;color:var(--discret)}
+.cal-h .nav button:hover{background:var(--doux)}
+.cal-g{display:grid;gap:5px}
+.cal-g.j{grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-g.m,.cal-g.a{grid-template-columns:repeat(4,1fr)}
+.cal-g button{border:1px solid transparent;background:none;border-radius:8px;padding:8px 0;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.cal-g.m button,.cal-g.a button{border-color:var(--ligne);padding:11px 0}
+.cal-g button:hover{border-color:var(--or)}
+.cal-g button.hors{color:var(--discret);opacity:.5}
+.cal-g button.auj{box-shadow:inset 0 0 0 1px var(--or)}
+.cal-g button.sel{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+.cal-g .js{text-align:center;font-size:11.5px;font-weight:700;color:var(--discret);padding:3px 0}
+.cal-b{display:flex;justify-content:space-between;margin-top:10px}
+.cal-b button{border:0;background:none;color:var(--bleu-txt);font-weight:600;padding:6px 4px}
+
+footer.pied{max-width:1440px;margin:0 auto;padding:0 24px 30px;color:var(--discret);font-size:12.5px}
+
+/* ---------- Impression : seulement les résultats et les hypothèses ---------- */
+@media print{
+  header.haut,nav.etapes,.col-saisie,.bas,.onglets,.no-print,footer.pied{display:none!important}
+  body{background:#fff;font-size:11px}
+  .page{display:block;padding:0}
+  .col-res{position:static;max-height:none;overflow:visible}
+  .carte{break-inside:avoid;box-shadow:none}
+  details.recap{display:block}details.recap>*{display:block}
+  .print-titre{display:block!important}
+}
+.print-titre{display:none;font:600 20px var(--serif);margin:0 0 10px}
+</style>
+</head>
+<body>
+
+<header class="haut">
+  <div class="haut-in">
+    <a class="marque" href="../" title="Retour à Mes applis"><img src="icone-192.png" alt=""><div><b>Plus-value immobilière</b><small>Particuliers · cessions 2026</small></div></a>
+    <div class="kpis">
+      <div class="kpi"><span class="k">Plus-value brute</span><span class="v" id="hPVB">–</span></div>
+      <div class="kpi"><span class="k">Impôt total</span><span class="v" id="hTot">–</span></div>
+      <div class="kpi net"><span class="k">Net vendeur</span><span class="v" id="hNet">–</span></div>
+    </div>
+    <div class="actions">
+      <button class="bt-h" id="bScen" title="Scénarios enregistrés"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span>Scénarios</span></button>
+      <button class="bt-h" id="bExport" title="Exporter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg><span>Exporter</span></button>
+      <button class="bt-h" id="bRegl" title="Réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span>Réglages</span></button>
+    </div>
+  </div>
+</header>
+<nav class="etapes"><div class="etapes-in" id="etapes"></div></nav>
+
+<div class="page">
+  <div class="col-saisie" id="saisie"></div>
+
+  <div class="col-res" id="res">
+    <h1 class="print-titre">Simulation de plus-value immobilière</h1>
+    <div class="res-k">
+      <div class="rk"><div class="k">Plus-value brute</div><div class="v" id="rPVB">–</div><div class="s" id="rDet">–</div></div>
+      <div class="rk"><div class="k">Impôt total</div><div class="v" id="rTot">–</div><div class="s" id="rTaux">–</div></div>
+      <div class="rk fort"><div class="k">Net vendeur après impôt</div><div class="v" id="rNet">–</div><div class="s">après frais de cession</div></div>
+    </div>
+    <section class="carte"><header><h2>Répartition du prix de vente</h2></header><div class="corps"><div class="cascade" id="cascade"></div><div class="leg" id="legende"></div></div></section>
+    <section class="carte"><header><h2>Calcul détaillé</h2></header><div class="corps"><div class="onglets" id="onglets"></div><div id="detail"></div></div></section>
+    <section class="carte"><header><h2>Points de vigilance</h2></header><div class="corps"><div class="alertes" id="alertes"></div></div></section>
+    <section class="carte"><header><h2>Et si je vendais plus tard ?</h2><span class="ref">même prix, mêmes hypothèses</span></header><div class="corps" id="proj"></div></section>
+    <section class="carte"><div class="corps"><details class="recap" id="recap"><summary>Hypothèses retenues</summary><div id="recapT"></div></details></div></section>
+  </div>
+</div>
+<footer class="pied">Outil d'aide au calcul, à visée indicative, construit sur les fiches « Plus-value immobilière : principes généraux » et « Exonérations » (mises à jour oct. 2026). Les conditions d'exonération relèvent de l'appréciation des faits ; il ne remplace pas la déclaration 2048-IMM établie par le notaire.</footer>
+
+<div class="bas"><div><small>Impôt total</small><b id="bTot">–</b></div><div><small>Net vendeur</small><b id="bNet">–</b></div><button id="bVoir">Voir le détail</button></div>
+
+<!-- Menus, fenêtres, bulles -->
+<div class="menu" id="mExport">
+  <button data-x="xlsx"><span>📊</span><div>Excel<small>Hypothèses, calcul et projection</small></div></button>
+  <button data-x="print"><span>🖨️</span><div>Imprimer / PDF<small>Résultats et hypothèses</small></div></button>
+  <button data-x="copy"><span>📋</span><div>Copier la synthèse<small>Texte à coller dans un mail</small></div></button>
+  <button data-x="json"><span>💾</span><div>Enregistrer le fichier (.json)<small>Pour le rouvrir plus tard</small></div></button>
+  <button data-x="import"><span>📂</span><div>Ouvrir un fichier (.json)</div></button>
+</div>
+<input type="file" id="fImport" accept=".json,application/json" class="cache">
+
+<div class="voile" id="vRegl"><div class="fen"><header><h3>Réglages</h3><button data-ferme>×</button></header><div class="corps">
+  <div><div class="lbl" style="margin-bottom:8px">Couleurs de l'appli</div>
+    <div class="coul">
+      <label><input type="color" id="cBleu"> Couleur principale</label><input type="text" id="cBleuT" placeholder="12 45 57">
+    </div>
+    <div class="coul" style="margin-top:10px">
+      <label><input type="color" id="cOr"> Couleur d'accent</label><input type="text" id="cOrT" placeholder="165 125 47">
+    </div>
+    <div class="aide" style="font-size:12px;color:var(--discret);margin-top:6px">Saisie possible en RVB (« 165 125 47 ») ou en hexadécimal (« #a57d2f »).</div>
+  </div>
+  <div><div class="lbl" style="margin-bottom:8px">Palettes</div><div class="presets" id="presets"></div></div>
+  <div><div class="lbl" style="margin-bottom:8px">Thème</div><div class="seg" id="segTheme"><button data-v="clair">Clair</button><button data-v="sombre">Sombre</button><button data-v="auto">Automatique</button></div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="bt" id="bCoulDef">Couleurs par défaut (or et bleu)</button><button class="bt danger" id="bRAZ">Effacer la simulation</button></div>
+</div></div></div>
+
+<div class="voile" id="vScen"><div class="fen"><header><h3>Scénarios</h3><button data-ferme>×</button></header><div class="corps">
+  <div style="display:flex;gap:8px"><div class="saisie" style="flex:1"><input type="text" id="scNom" placeholder="Nom du scénario (ex. Vente 2027 – forfait 15 %)" style="width:100%;min-height:40px;padding:8px 11px;border:1px solid var(--ligne);border-radius:9px;background:var(--champ)"></div><button class="bt prim" id="scAjout">Enregistrer</button></div>
+  <div id="scListe"></div>
+  <div id="scComp"></div>
+</div></div></div>
+
+<div id="cal"></div>
+<div id="bulle"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================================
+   1. OUTILS
+   ===================================================================================== */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// num() lit un nombre saisi « à la française » : espaces de milliers et virgule décimale acceptés
+const num = (v) => { const x = parseFloat(String(v ?? "").replace(/[\s  €%]/g, "").replace(",", ".")); return isFinite(x) ? x : 0; };
+const eur = (n, d = 0) => isFinite(n) ? n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }) + " €" : "–";
+const pc = (n, d = 2) => isFinite(n) ? (n * 100).toLocaleString("fr-FR", { maximumFractionDigits: d }) + " %" : "–";
+const D = (s) => { if (!s) return null; const d = new Date(s + "T00:00:00"); return isNaN(d) ? null : d; };
+const iso = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
+const dfr = (s) => { const d = D(s); return d ? d.toLocaleDateString("fr-FR") : ""; };
+const stock = { lire(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }, ecrire(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2000); }
+
+/* =====================================================================================
+   2. BARÈMES (fiche PVI « principes généraux », § 8, 11, 12 ; fiche « exonérations », § 5, 6)
+   ===================================================================================== */
+function anneesDetention(a, c) { if (!a || !c || c < a) return 0; let y = c.getFullYear() - a.getFullYear(); const t = new Date(a); t.setFullYear(a.getFullYear() + y); if (t > c) y--; return Math.max(0, y); }
+function abatIR(y) { if (y < 6) return 0; if (y >= 22) return 1; return 0.06 * (y - 5); }
+function abatPS(y) { if (y < 6) return 0; if (y >= 30) return 1; if (y < 22) return 0.0165 * (y - 5); return 0.28 + 0.09 * (y - 22); }
+function usufruit669(age) { for (const [a, v] of [[21, .9], [31, .8], [41, .7], [51, .6], [61, .5], [71, .4], [81, .3], [91, .2]]) if (age < a) return v; return .1; }
+const SURTAXE = [[60000, .02, 1 / 20], [100000, .02, 0], [110000, .03, 1 / 10], [150000, .03, 0], [160000, .04, .15], [200000, .04, 0], [210000, .05, .2], [250000, .05, 0], [260000, .06, .25]];
+function surtaxe(pv, mult) { if (pv <= 50000) return 0; for (const [hi, r, l] of SURTAXE) if (pv <= hi) return Math.max(0, r * mult * pv - (hi - pv) * l); return .06 * mult * pv; }
+function seuilRFR(zone, parts, type) {
+  const dp = Math.max(0, Math.round((parts - 1) * 2));
+  if (type === "ehpad") return 30083 + (dp > 0 ? 7029 : 0) + Math.max(0, dp - 1) * 5533;
+  const z = { metro: [12793, 3428, 3428], guy: [15827, 4356, 3428], dom: [15139, 3615, 3428] }[zone] || [12793, 3428, 3428];
+  return z[0] + (dp > 0 ? z[1] : 0) + Math.max(0, dp - 1) * z[2];
+}
+
+/* =====================================================================================
+   3. LE FORMULAIRE, DÉCRIT SOUS FORME DE LISTE
+   Chaque champ : id, type (montant, nombre, pourcent, date, choix, case, segment), libellé,
+   aide (texte sous le champ), info (bulle « i »), quand (condition d'affichage).
+   ===================================================================================== */
+const OUI = (f) => true;
+const SECTIONS = [
+ { id: "bien", t: "Bien et cession", ref: "CGI art. 150 U, 150 VA", champs: [
+   { id: "typeBien", type: "choix", l: "Nature du bien cédé", def: "bati", plein: true, opts: [["bati", "Immeuble bâti (logement, local, dépendance…)"], ["tab", "Terrain à bâtir"], ["terrain", "Terrain non bâti (hors terrain à bâtir)"], ["foret", "Bois et forêts / peuplement forestier"], ["parts", "Parts de société à prépondérance immobilière (SCI, SCPI…)"], ["surelev", "Droit de surélévation"]] },
+   { id: "detention", type: "segment", l: "Le bien est cédé", def: "direct", plein: true, opts: [["direct", "En direct (seul, indivision, communauté)"], ["sci", "Par une société à l'IR (SCI…)"]], info: "Société de personnes relevant des articles 8 à 8 ter du CGI qui vend elle-même l'immeuble. Le seuil de la surtaxe s'apprécie alors au niveau de la société, sur la quote-part des associés imposables." },
+   { id: "dateCession", type: "date", l: "Date de cession (acte)", def: () => iso(new Date()), info: "Date de l'acte authentique. Promesse synallagmatique avec transfert rétroactif : date de la promesse." },
+   { id: "prixCession", type: "montant", l: "Prix de cession stipulé", info: "Viager : valeur en capital de la rente + bouquet. Prix à terme : total des échéances, hors intérêts. Échange : valeur du bien reçu ± soulte." },
+   { id: "fraisCession", type: "montant", l: "Frais de cession supportés", aide: "Agence (mandat vendeur), diagnostics, mainlevée, indemnité d'éviction…" },
+   { id: "charges", type: "montant", l: "Charges et indemnités au profit du cédant", aide: "Majorent le prix (ex. remboursements mis à la charge de l'acquéreur)" },
+   { id: "mobilier", type: "montant", l: "Valeur des meubles vendus (justifiée)" },
+   { id: "tvaCession", type: "montant", l: "TVA acquittée par le vendeur" },
+ ]},
+ { id: "acq", t: "Acquisition et prix de revient", ref: "CGI art. 150 VB", champs: [
+   { id: "modeAcq", type: "segment", l: "Mode d'acquisition", def: "onereux", plein: true, opts: [["onereux", "Achat"], ["gratuit", "Donation / succession"], ["construction", "Construction par le cédant"]] },
+   { id: "dateAcq", type: "date", l: (f) => f.modeAcq === "construction" ? "Date d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Date de la donation ou du décès" : "Date d'acquisition", info: "Achat : date de l'acte (ou de levée des conditions suspensives). Succession : date du décès. Donation et donation-partage : date de l'acte. VEFA : date du contrat." },
+   { id: "prixAcq", type: "montant", l: (f) => f.modeAcq === "construction" ? "Prix d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Valeur retenue dans l'acte ou la déclaration" : "Prix d'acquisition stipulé" },
+   { id: "ss1", type: "titre", l: "Frais d'acquisition", quand: (f) => f.modeAcq !== "gratuit" },
+   { id: "fraisMode", type: "segment", l: "Option", def: "auto", quand: (f) => f.modeAcq !== "gratuit", opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 7,5 %"], ["reel", "Réels"]], info: "Le forfait de 7,5 % du prix d'achat est ouvert aux acquisitions à titre onéreux (pas aux titres de sociétés). En cas de construction, il ne porte que sur le terrain." },
+   { id: "fraisReel", type: "montant", l: "Frais réels justifiés", aide: "Notaire, droits d'enregistrement, commission à la charge de l'acquéreur", quand: (f) => f.modeAcq !== "gratuit" && f.fraisMode !== "forfait" },
+   { id: "fraisGratuit", type: "montant", l: "Frais d'acte et droits de mutation payés", aide: "Forfait de 7,5 % exclu. Droits de succession sur l'actif brut.", quand: (f) => f.modeAcq === "gratuit" },
+   { id: "ss2", type: "titre", l: "Construction", quand: (f) => f.modeAcq === "construction" },
+   { id: "coutConstr", type: "montant", l: "Coût de la construction (factures)", quand: (f) => f.modeAcq === "construction" },
+   { id: "dateDebutTrav", type: "date", l: "Début des travaux", aide: "Départ de la détention de la fraction « construction »", quand: (f) => f.modeAcq === "construction" },
+   { id: "dateAchev", type: "date", l: "Achèvement", aide: "Départ du délai de 5 ans du forfait de 15 %", quand: (f) => f.modeAcq === "construction" },
+   { id: "assiette15", type: "choix", l: "Assiette du forfait de 15 %", def: "terrain", quand: (f) => f.modeAcq === "construction", opts: [["terrain", "Prix du terrain seul (prudent)"], ["total", "Terrain + construction"]], info: "Les textes ne tranchent pas nettement ce point ; l'option prudente est retenue par défaut." },
+ ]},
+ { id: "trav", t: "Travaux et amortissements", ref: "CGI art. 150 VB II 4° et III", champs: [
+   { id: "travMode", type: "segment", l: "Travaux", def: "auto", plein: true, opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 15 %"], ["reel", "Réels"], ["aucun", "Aucun"]], info: "Forfait de 15 % du prix d'achat pour un immeuble bâti cédé plus de 5 ans après son acquisition, sans justificatif. Travaux réels : construction, reconstruction, agrandissement ou amélioration, réalisés par une entreprise et non déduits des revenus." },
+   { id: "travReel", type: "montant", l: "Travaux réels justifiés", quand: (f) => f.travMode === "reel" || f.travMode === "auto" },
+   { id: "deficit", type: "montant", l: "Déficit foncier « travaux » non imputé", info: "Les déficits fonciers correspondant à des travaux et non encore imputés majorent le prix d'acquisition (BOI-RFPI-PVI-20-10-20-20 § 270)." },
+   { id: "ss3", type: "titre", l: "Réintégration des amortissements" },
+   { id: "amortLMNP", type: "montant", l: "Amortissements LMNP déduits", info: "Cessions depuis le 15/02/2025 : les amortissements déduits en location meublée (régime réel) minorent le prix d'acquisition, même si le bien n'est plus loué meublé." },
+   { id: "amortJB", type: "montant", l: "Amortissements « Jeanbrun » déduits" },
+   { id: "lmnpExcept", type: "case", l: "Résidence étudiante ou seniors, EHPAD, établissement pour personnes handicapées : pas de réintégration", quand: (f) => num(f.amortLMNP) > 0, plein: true },
+ ]},
+ { id: "dem", t: "Démembrement", ref: "CGI art. 669", champs: [
+   { id: "demembre", type: "case", l: "Bien démembré, cédé en pleine propriété par l'usufruitier et le nu-propriétaire", plein: true },
+   { id: "demMethode", type: "segment", l: "Ventilation du prix", def: "669", quand: (f) => f.demembre, opts: [["669", "Barème fiscal (art. 669)"], ["eco", "Valeur économique"]], info: "L'administration admet le barème de l'article 669 selon l'âge de l'usufruitier au jour de la vente ; une valorisation économique est à privilégier." },
+   { id: "ageUsu", type: "nombre", l: "Âge de l'usufruitier à la cession", u: "ans", quand: (f) => f.demembre && f.demMethode === "669" },
+   { id: "pctUsu", type: "pourcent", l: "Valeur de l'usufruit", quand: (f) => f.demembre && f.demMethode === "eco" },
+ ]},
+ { id: "ced", t: "Cédants et exonérations personnelles", ref: "CGI art. 150 U II, 244 bis A", special: "cedants" },
+ { id: "ops", t: "Opérations et régimes particuliers", ref: "CGI art. 150 U II, 150 VE, 150 VF", champs: [
+   { id: "operation", type: "choix", l: "Nature de l'opération", def: "normale", plein: true, opts: [["normale", "Cession ordinaire"], ["expro", "Expropriation pour utilité publique (avec remploi)"], ["delaiss", "Droit de délaissement (avec remploi)"], ["logsoc", "Cession pour le logement social"], ["partage", "Partage ou licitation familiale (hors champ)"], ["remembr", "Remembrement / échange intercalaire"]] },
+   { id: "pctRemploiExpro", type: "pourcent", l: "Indemnité remployée sous 12 mois", def: "100", aide: "Remploi intégral réputé satisfait à 90 %", quand: (f) => f.operation === "expro" || f.operation === "delaiss" },
+   { id: "pctLogSoc", type: "pourcent", l: "Surface de logements sociaux ou intermédiaires", aide: "Rapportée à la surface totale du permis de construire", quand: (f) => f.operation === "logsoc" },
+   { id: "orgSocial", type: "case", l: "Cession directe à un organisme de logement social (exonération totale au-delà de 80 %)", plein: true, quand: (f) => f.operation === "logsoc" },
+   { id: "abat150VE", type: "choix", l: "Abattement exceptionnel démolition-reconstruction (art. 150 VE)", def: "0", plein: true, opts: [["0", "Non applicable"], ["0.70", "70 % – GOU / ORT, promesse 2021-2023"], ["0.60", "60 % – zone A, A bis ou B1, promesse 2024-2025"], ["0.75", "75 % – GOU / ORT / OIN, promesse 2024-2025"], ["0.85", "85 % – logements sociaux ou intermédiaires ≥ 50 % (25 % en commune carencée)"]], info: "Cession au plus tard le 31/12/2027, acquéreur sans lien de dépendance, engagement de démolir puis construire (ou réhabiliter) des logements collectifs sous 4 ans. S'applique après l'abattement pour durée, à l'IR, aux PS et à la surtaxe." },
+   { id: "hectares", type: "nombre", l: "Surface boisée cédée", u: "ha", quand: (f) => f.typeBien === "foret", info: "Réduction de l'impôt sur le revenu (pas des PS) de 10 € par hectare et par année de détention." },
+   { id: "ss4", type: "titre", l: "Terrains devenus constructibles", quand: (f) => f.typeBien === "tab" },
+   { id: "coefErosion", type: "nombre", l: "Coefficient d'érosion monétaire", def: "1", quand: (f) => f.typeBien === "tab", info: "BOI-ANNX-000097, version de l'année de la cession. Le prix d'acquisition actualisé n'est ni majoré des frais ni des travaux." },
+   { id: "anneeConstr", type: "nombre", l: "Année de classement constructible", quand: (f) => f.typeBien === "tab" },
+   { id: "taxeCommunale", type: "case", l: "Taxe communale (art. 1529) instituée – classé constructible depuis moins de 18 ans", plein: true, quand: (f) => f.typeBien === "tab" },
+   { id: "taxe2tiers", type: "case", l: "Pas d'élément de référence : assiette = 2/3 du prix de cession", plein: true, quand: (f) => f.typeBien === "tab" && f.taxeCommunale },
+   { id: "taxeNationale", type: "case", l: "Taxe nationale (art. 1605 nonies) – première cession depuis le classement", plein: true, quand: (f) => f.typeBien === "tab" },
+   { id: "ss5", type: "titre", l: "Localisation et taux" },
+   { id: "corse", type: "case", l: "Corse, zone de surtaxe renforcée (taux × 5 si détention ≤ 22 ans)", plein: true },
+   { id: "tIR", type: "pourcent", l: "Impôt sur le revenu", def: "19" },
+   { id: "tPS", type: "pourcent", l: "Prélèvements sociaux", def: "17.2" },
+   { id: "tSol", type: "pourcent", l: "Prélèvement de solidarité", def: "7.5", info: "Non-résidents affiliés à un régime de sécurité sociale d'un État de l'EEE, de la Suisse ou du Royaume-Uni." },
+ ]},
+];
+const CHAMPS = SECTIONS.flatMap((s) => s.champs || []).filter((c) => c.type !== "titre");
+const CEDANT = { nom: "Cédant 1", droit: "PP", quote: "100", resid: "FR", is: false, rp: false, rpPct: "100", rp244: false, bis: false, bisPct: "100", retraite: false, ifi: false, rfr: "", parts: "1", zone: "metro", ehpad: false, ehpadDelai: true, nr150: false, solid: false };
+let etat = {};          // valeurs du formulaire
+let cedants = [];       // liste des cédants
+let ongletActif = 0;
+
+function valDef(c) { return typeof c.def === "function" ? c.def() : (c.def ?? (c.type === "case" ? false : "")); }
+function defauts() { const o = {}; for (const c of CHAMPS) o[c.id] = valDef(c); return o; }
+function lireTout() { return { ...etat, cedants: JSON.parse(JSON.stringify(cedants)) }; }
+
+/* =====================================================================================
+   4. MOTEUR DE CALCUL (vérifié sur les exemples chiffrés des fiches PVI)
+   ===================================================================================== */
+function calculer(f) {
+  const W = []; const note = (t, m) => W.push([t, m]);
+  const dc = D(f.dateCession), da = D(f.dateAcq);
+  const type = f.typeBien, parts = type === "parts", sci = f.detention === "sci";
+  const tIR = num(f.tIR) / 100, tPS = num(f.tPS) / 100, tSol = num(f.tSol) / 100;
+  const prix = num(f.prixCession);
+  const P = prix + num(f.charges) - num(f.fraisCession) - num(f.mobilier) - num(f.tvaCession);
+  const L = [];
+  L.push(["Prix de cession stipulé", prix]);
+  if (num(f.charges)) L.push(["+ Charges et indemnités au profit du cédant", num(f.charges)]);
+  if (num(f.fraisCession)) L.push(["− Frais de cession", -num(f.fraisCession)]);
+  if (num(f.mobilier)) L.push(["− Mobilier", -num(f.mobilier)]);
+  if (num(f.tvaCession)) L.push(["− TVA acquittée", -num(f.tvaCession)]);
+  L.push(["Prix de cession corrigé", P, "inter"]);
+  const constr = f.modeAcq === "construction", grat = f.modeAcq === "gratuit";
+  const A = num(f.prixAcq), C = constr ? num(f.coutConstr) : 0;
+  L.push([grat ? "Valeur retenue (donation / succession)" : constr ? "Prix d'acquisition du terrain" : "Prix d'acquisition stipulé", A]);
+  if (constr) L.push(["+ Coût de la construction", C]);
+  let frais = 0, fraisLib = "";
+  if (grat) { frais = num(f.fraisGratuit); fraisLib = "frais et droits réels"; }
+  else {
+    const forfOK = !parts, forf = forfOK ? .075 * A : 0, reel = num(f.fraisReel);
+    if (f.fraisMode === "forfait" && forfOK) { frais = forf; fraisLib = "forfait 7,5 %" + (constr ? " du terrain" : ""); }
+    else if (f.fraisMode === "reel" || !forfOK) { frais = reel; fraisLib = "frais réels"; }
+    else if (forf >= reel) { frais = forf; fraisLib = "forfait 7,5 %, plus favorable"; } else { frais = reel; fraisLib = "frais réels, plus favorables"; }
+    if (parts && f.fraisMode === "forfait") note("att", "Forfait de 7,5 % non applicable aux cessions de titres de sociétés : frais réels retenus.");
+  }
+  if (frais) L.push(["+ Frais d'acquisition (" + fraisLib + ")", frais]);
+  const ref15 = constr ? D(f.dateAchev) : da;
+  const forf15OK = (type === "bati" || constr) && !parts && ref15 && dc && (() => { const t = new Date(ref15); t.setFullYear(t.getFullYear() + 5); return dc > t; })();
+  const base15 = constr && f.assiette15 === "total" ? A + C : A;
+  const forf15 = forf15OK ? .15 * base15 : 0, trR = num(f.travReel);
+  let trav = 0, travLib = "";
+  if (f.travMode === "forfait") { if (forf15OK) { trav = forf15; travLib = "forfait 15 %"; } else note("att", "Forfait travaux de 15 % non applicable : immeuble bâti détenu depuis plus de 5 ans requis (hors parts de sociétés)."); }
+  else if (f.travMode === "reel") { trav = trR; travLib = "montant réel"; }
+  else if (f.travMode === "auto") { if (forf15 >= trR && forf15 > 0) { trav = forf15; travLib = "forfait 15 %, plus favorable"; } else if (trR > 0) { trav = trR; travLib = "réels, plus favorables"; } }
+  if (trav) L.push(["+ Travaux (" + travLib + ")", trav]);
+  const def = num(f.deficit); if (def) L.push(["+ Déficit foncier « travaux » non imputé", def]);
+  let amort = 0; const lm = num(f.amortLMNP);
+  if (lm) { if (dc && dc >= new Date("2025-02-15") && !f.lmnpExcept) { amort += lm; L.push(["− Amortissements LMNP réintégrés", -lm]); } else note("info", "Amortissements LMNP non réintégrés (" + (f.lmnpExcept ? "résidence de services exclue" : "cession antérieure au 15/02/2025") + ")."); }
+  const jb = num(f.amortJB); if (jb) { amort += jb; L.push(["− Amortissements Jeanbrun réintégrés", -jb]); }
+  const PR = A + C + frais + trav + def - amort;
+  L.push(["Prix de revient", PR, "inter"]);
+  const PVB = P - PR;
+  L.push(["Plus-value brute (bien entier)", PVB, "tot"]);
+
+  const yT = anneesDetention(da, dc), yC = constr ? anneesDetention(D(f.dateDebutTrav), dc) : yT;
+  const rT = constr && A + C > 0 ? A / (A + C) : 1;
+  const aIR = rT * abatIR(yT) + (1 - rT) * abatIR(yC), aPS = rT * abatPS(yT) + (1 - rT) * abatPS(yC);
+  const yMax = Math.max(yT, yC), yMin = constr ? Math.min(yT, yC) : yT;
+  let fu = 0; if (f.demembre) fu = f.demMethode === "669" ? usufruit669(num(f.ageUsu)) : num(f.pctUsu) / 100;
+  const fracDroit = (d) => !f.demembre || d === "PP" ? 1 : d === "US" ? fu : 1 - fu;
+
+  let gExo = null;
+  if (type === "surelev") { if (dc && dc <= new Date("2026-12-31")) gExo = "Cession d'un droit de surélévation (CGI art. 150 U II 9°) — engagement de l'acquéreur de construire des locaux d'habitation sous 4 ans"; else note("att", "Droit de surélévation : exonération limitée aux cessions jusqu'au 31/12/2026, sauf nouvelle prorogation."); }
+  if (f.operation === "partage") gExo = "Partage ou licitation familiale hors champ (CGI art. 150 U IV)";
+  if (f.operation === "remembr") gExo = "Remembrement intercalaire (CGI art. 150 U II 5°) — imposition reportée à la revente";
+  if (f.operation === "expro" || f.operation === "delaiss") {
+    if (num(f.pctRemploiExpro) >= 90) gExo = (f.operation === "expro" ? "Expropriation" : "Droit de délaissement") + " avec remploi d'au moins 90 % sous 12 mois (CGI art. 150 U II 4°)";
+    else note("err", "Remploi inférieur à 90 % : pas d'exonération pour expropriation ou délaissement (aucune exonération partielle).");
+  }
+  if (!gExo && yMin >= 30 && da) gExo = "Détention de plus de 30 ans : exonération totale d'IR et de prélèvements sociaux";
+  let fLS = 0;
+  if (f.operation === "logsoc") { if (dc && dc > new Date("2027-12-31")) note("att", "Exonération « logement social » limitée aux cessions jusqu'au 31/12/2027."); else { fLS = Math.min(1, num(f.pctLogSoc) / 100); if (f.orgSocial && fLS > .8) fLS = 1; } }
+  const ve = num(f.abat150VE);
+  if (ve && dc && dc > new Date("2027-12-31")) note("att", "Abattement de l'art. 150 VE : cession au plus tard le 31/12/2027.");
+  if (ve && parts) note("att", "L'abattement de l'art. 150 VE vise les immeubles bâtis et terrains à bâtir, pas les parts de sociétés.");
+
+  const sQ = { PP: 0, US: 0, NP: 0 }; for (const c of f.cedants) sQ[f.demembre ? c.droit : "PP"] += num(c.quote);
+  if (!f.demembre && Math.abs(sQ.PP - 100) > .01) note("att", "Somme des quotes-parts : " + sQ.PP.toLocaleString("fr-FR") + " % (100 % attendu si tous les cédants sont saisis).");
+  if (f.demembre) { for (const d of ["US", "NP"]) if (sQ[d] && Math.abs(sQ[d] - 100) > .01) note("att", "Quotes-parts en " + (d === "US" ? "usufruit" : "nue-propriété") + " : " + sQ[d] + " % (100 % attendu)."); if (!sQ.US || !sQ.NP) note("info", "Bien démembré : indiquez au moins un usufruitier et un nu-propriétaire parmi les cédants."); }
+
+  const mult = f.corse && yMax <= 22 ? 5 : 1;
+  const res = [];
+  for (const c of f.cedants) {
+    const s = num(c.quote) / 100 * fracDroit(f.demembre ? c.droit : "PP");
+    const r = { nom: c.nom || "Cédant", part: s, lignes: [], exos: [], nr: c.resid !== "FR" };
+    const pvb = PVB * s; r.pvb = pvb; let e = 0;
+    if (sci && c.is) { Object.assign(r, { is: true, e: 1, pvIR: 0, pvPS: 0, IR: 0, PS: 0, tauxPS: tPS }); r.exos.push("Associé soumis à l'impôt sur les sociétés : sa quote-part relève de son résultat imposable, hors régime des plus-values des particuliers"); res.push(r); continue; }
+    if (gExo) { e = 1; r.exos.push(gExo); }
+    if (!e && !parts && type !== "surelev") {
+      const b = f.demembre || sci ? prix : prix * num(c.quote) / 100;
+      if (b > 0 && b <= 15000) { e = 1; r.exos.push("Prix de cession ≤ 15 000 € (CGI art. 150 U II 6°), apprécié " + (f.demembre ? "sur la pleine propriété" : sci ? "au niveau de la société" : "par quote-part")); }
+    }
+    if (!e && (c.rp || c.rp244)) {
+      if (c.resid !== "FR" && !c.rp244) note("att", r.nom + " : non-résident — l'exonération RP suppose une ancienne RP cédée après le départ (art. 244 bis A).");
+      else { const p = Math.min(1, num(c.rpPct) / 100); e = Math.max(e, p); r.exos.push((c.rp244 ? "Ancienne résidence principale d'un contribuable parti à l'étranger (CGI art. 244 bis A)" : "Résidence principale (CGI art. 150 U II 1°)") + (p < 1 ? " — " + pc(p, 1) + " de la surface" : ""));
+        if (sci) r.exos.push("RP détenue par une société à l'IR et mise gratuitement à disposition : exonération limitée à la quote-part de l'associé occupant");
+        if (f.demembre && c.droit === "NP") note("info", r.nom + " : en démembrement, l'exonération RP ne joue que pour le titulaire qui occupe effectivement le logement."); }
+    }
+    if (e < 1 && c.bis && !c.rp) {
+      if (c.resid !== "FR") note("att", r.nom + " : exonération du 1° bis réservée aux résidents de France (sous réserve des conventions, ex. Suisse).");
+      if (type !== "bati") note("att", r.nom + " : le 1° bis vise un logement ; terrains et locaux non affectés à l'habitation exclus.");
+      if (parts) note("att", r.nom + " : le 1° bis ne s'applique pas aux cessions de parts sociales.");
+      const p = Math.min(1, num(c.bisPct) / 100);
+      if (c.resid === "FR" && !parts && type === "bati") { e = Math.max(e, p); r.exos.push("Première cession d'un logement, remploi de " + pc(p, 1) + " du prix dans la RP sous 24 mois (CGI art. 150 U II 1° bis)"); }
+    }
+    if (e < 1 && c.ehpad) {
+      const seuil = seuilRFR(c.zone, num(c.parts) || 1, "ehpad");
+      if (!c.ifi && num(c.rfr) <= seuil && c.ehpadDelai && !parts && c.resid === "FR") { e = 1; r.exos.push("Ancienne RP d'un résident d'un établissement pour personnes âgées ou handicapées (CGI art. 150 U II 1° ter)"); }
+      else note("att", r.nom + " : conditions du 1° ter non remplies (résident de France, pas d'IFI en N-2, RFR N-2 ≤ " + eur(seuil) + ", vente dans les 2 ans de l'entrée, logement inoccupé).");
+    }
+    if (e < 1 && c.retraite) {
+      const seuil = seuilRFR(c.zone, num(c.parts) || 1, "retraite");
+      if (parts || sci) note("att", r.nom + " : exonération retraité / invalide inapplicable aux parts de sociétés et aux plus-values réalisées par une société.");
+      else if (c.ifi) note("att", r.nom + " : passible de l'IFI en N-2 — exonération retraité / invalide exclue.");
+      else if (num(c.rfr) > seuil) note("att", r.nom + " : RFR N-2 de " + eur(num(c.rfr)) + " supérieur au seuil de " + eur(seuil) + " — exonération retraité / invalide exclue.");
+      else { e = 1; r.exos.push("Pension de vieillesse ou carte d'invalidité, pas d'IFI et RFR N-2 ≤ " + eur(seuil) + " (CGI art. 150 U III)"); if (c.resid === "HUE") note("att", r.nom + " : pour un non-résident, exonération réservée aux ressortissants UE / EEE (ou clause de non-discrimination)."); }
+    }
+    r.e = e;
+    if (pvb <= 0) { r.pvIR = 0; r.pvPS = 0; }
+    else {
+      const base = pvb * (1 - e);
+      r.lignes.push(["Quote-part de plus-value brute", pvb, pvb]);
+      if (e > 0) r.lignes.push(["− Fraction exonérée (" + pc(e, 1) + ")", -pvb * e, -pvb * e]);
+      const abI = base * aIR, abP = base * aPS;
+      r.lignes.push(["− Abattement pour durée (" + pc(aIR) + " / " + pc(aPS) + ")", -abI, -abP]);
+      let ir = base - abI, ps = base - abP;
+      if (fLS > 0) { r.lignes.push(["− Exonération logement social (" + pc(fLS, 1) + ")", -ir * fLS, -ps * fLS]); ir *= 1 - fLS; ps *= 1 - fLS; }
+      if (ve > 0) { r.lignes.push(["− Abattement exceptionnel art. 150 VE (" + pc(ve, 0) + ")", -ir * ve, -ps * ve]); ir *= 1 - ve; ps *= 1 - ve; }
+      if (c.resid !== "FR" && c.nr150 && !(c.rp244 && e > 0)) {
+        if (sci || parts || type !== "bati") note("att", r.nom + " : exonération non-résident de 150 000 € réservée aux logements détenus en direct.");
+        else { const xi = Math.min(150000, ir), xp = Math.min(150000, ps); r.lignes.push(["− Exonération non-résident (plafond 150 000 €)", -xi, -xp]); ir -= xi; ps -= xp; r.exos.push("Exonération non-résident dans la limite de 150 000 € (CGI art. 150 U II 2°)"); }
+      }
+      r.pvIR = Math.max(0, ir); r.pvPS = Math.max(0, ps);
+    }
+    r.IR = r.pvIR * tIR;
+    if (type === "foret" && r.IR > 0) { const red = Math.min(r.IR, 10 * yMax * num(f.hectares) * s); if (red) { r.redForet = red; r.IR -= red; } }
+    r.tauxPS = c.resid !== "FR" && c.solid ? tSol : tPS;
+    r.PS = r.pvPS * r.tauxPS;
+    res.push(r);
+  }
+  if (type !== "tab") {
+    if (sci) { const base = res.reduce((a, r) => a + r.pvIR, 0), t = surtaxe(base, mult); for (const r of res) r.sur = base ? t * r.pvIR / base : 0; if (t) note("info", "Société : seuil de 50 000 € apprécié sur la plus-value des seuls associés imposables (" + eur(base) + ")."); }
+    else for (const r of res) r.sur = surtaxe(r.pvIR, mult);
+  } else for (const r of res) r.sur = 0;
+  if (mult === 5 && res.some((r) => r.sur > 0)) note("att", "Surtaxe Corse (taux × 5) : sous réserve de la délimitation des zones concernées.");
+  let tCom = 0, tNat = 0; const tInfo = [];
+  if (type === "tab") {
+    const acqAct = A * Math.max(1, num(f.coefErosion) || 1);
+    if (f.taxeCommunale) { const ass = f.taxe2tiers ? P * 2 / 3 : Math.max(0, P - acqAct); tCom = .1 * ass; tInfo.push(["Taxe communale (art. 1529) : 10 % × " + eur(ass), tCom]); }
+    if (f.taxeNationale) {
+      const ratio = acqAct > 0 ? P / acqAct : Infinity;
+      if (ratio > 10) {
+        const pv = Math.max(0, P - acqAct), an = dc ? dc.getFullYear() : 0, ac = num(f.anneeConstr);
+        const abt = ac ? Math.min(1, Math.max(0, (an - ac - 8) * .1)) : 0;
+        const p1 = Math.min(pv, 30 * acqAct), p2 = Math.max(0, pv - p1);
+        tNat = (p1 * .05 + p2 * .1) * (1 - abt);
+        tInfo.push(["Taxe nationale (art. 1605 nonies) : prix / prix actualisé = " + ratio.toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + ", abattement " + pc(abt, 0), tNat]);
+      } else tInfo.push(["Taxe nationale non due (prix / prix actualisé ≤ 10)", 0]);
+    }
+  }
+  for (const r of res) { r.tCom = tCom * r.part; r.tNat = tNat * r.part; r.total = r.IR + r.PS + r.sur + r.tCom + r.tNat; }
+  const T = { IR: 0, PS: 0, sur: 0, tCom: 0, tNat: 0, total: 0, pvIR: 0, pvPS: 0 };
+  for (const r of res) for (const k in T) T[k] += r[k] || 0;
+
+  if (!dc || !da) note("err", "Renseignez la date d'acquisition et la date de cession.");
+  else if (da > dc) note("err", "La date d'acquisition est postérieure à la date de cession.");
+  if (PVB < 0) note("info", "Moins-value brute : non imputable sur d'autres plus-values ni sur le revenu global (sauf vente en bloc d'un bien acquis par fractions).");
+  if (da && dc && yMin >= 22 && yMin < 30 && !gExo) note("ok", "Détention d'au moins 22 ans : exonération d'impôt sur le revenu ; seuls les prélèvements sociaux restent dus.");
+  if (da && dc && yMin < 22 && !gExo && PVB > 0) { const n = 22 - yMin; note("info", "Exonération d'IR dans " + n + " an" + (n > 1 ? "s" : "") + ", de prélèvements sociaux dans " + (30 - yMin) + " ans."); }
+  if (type === "tab") note("info", "Terrain à bâtir : pas de surtaxe sur les plus-values élevées ; vérifiez les taxes sur les terrains devenus constructibles.");
+  if (f.demembre && f.demMethode === "669") note("info", "Ventilation selon l'art. 669 : usufruit " + pc(fu, 0) + ", nue-propriété " + pc(1 - fu, 0) + ".");
+  if (T.sur > 0) note("info", "Surtaxe sur les plus-values de plus de 50 000 € (CGI art. 1609 nonies G) : " + eur(T.sur) + ".");
+  if (gExo) note("ok", gExo + ".");
+  return { L, P, PR, PVB, yT, yC, constr, aIR, aPS, res, T, tInfo, W, prix, frais: num(f.fraisCession), net: prix - num(f.fraisCession) - T.total, fu };
+}
+
+/* =====================================================================================
+   5. CONSTRUCTION DU FORMULAIRE
+   ===================================================================================== */
+const ICAL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+function htmlChamp(c) {
+  const lab = typeof c.l === "function" ? c.l(etat) : c.l;
+  const info = c.info ? `<button class="info" data-tip="${esc(c.info)}" type="button">i</button>` : "";
+  const aide = c.aide ? `<span class="aide">${esc(c.aide)}</span>` : "";
+  const w = `class="ch${c.plein ? " plein" : ""}" id="w_${c.id}"`;
+  switch (c.type) {
+    case "titre": return `<div class="ss" id="w_${c.id}">${esc(lab)}</div>`;
+    case "case": return `<div ${w}><label class="case"><input type="checkbox" id="${c.id}"><span>${esc(lab)} ${info}</span></label></div>`;
+    case "choix": return `<div ${w}><label for="${c.id}"><span id="l_${c.id}">${esc(lab)}</span>${info}</label><select id="${c.id}">${c.opts.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join("")}</select>${aide}</div>`;
+    case "segment": return `<div ${w}><span class="lbl">${esc(lab)}${info}</span><div class="seg" id="${c.id}">${c.opts.map(([v, t]) => `<button type="button" data-v="${v}">${esc(t)}</button>`).join("")}</div>${aide}</div>`;
+    case "date": return `<div ${w}><label for="${c.id}"><span id="l_${c.id}">${esc(lab)}</span>${info}</label><div class="saisie date"><input id="${c.id}" inputmode="numeric" placeholder="jj/mm/aaaa" autocomplete="off"><button class="dp-bt" type="button" data-cal="${c.id}" aria-label="Calendrier">${ICAL}</button></div>${aide}</div>`;
+    default: {
+      const u = c.type === "montant" ? "€" : c.type === "pourcent" ? "%" : (c.u || "");
+      return `<div ${w}><label for="${c.id}"><span id="l_${c.id}">${esc(lab)}</span>${info}</label><div class="saisie${u ? " avec-u" : ""}"><input id="${c.id}" inputmode="decimal" autocomplete="off" data-t="${c.type}">${u ? `<span class="u">${u}</span>` : ""}</div>${aide}</div>`;
+    }
+  }
+}
+function construireFormulaire() {
+  $("saisie").innerHTML = SECTIONS.map((s, i) => `
+    <section class="carte" id="s_${s.id}"><header><span class="n">${i + 1}</span><h2>${esc(s.t)}</h2><span class="ref">${esc(s.ref)}</span></header>
+    <div class="corps">${s.special === "cedants" ? '<div id="cedants"></div><button class="bt" id="bAjCed" type="button">+ Ajouter un cédant</button><p class="aide" style="font-size:12.5px;color:var(--discret);margin:10px 0 0">Bien commun d\'époux : deux cédants à 50 % (seuil de la surtaxe apprécié par quote-part). En société : quote-part de chaque associé.</p>' : `<div class="grille">${s.champs.map(htmlChamp).join("")}</div>`}</div></section>`).join("");
+  $("etapes").innerHTML = SECTIONS.map((s, i) => `<a href="#s_${s.id}" data-s="${s.id}"><i>${i + 1}</i>${esc(s.t.split(" et ")[0])}</a>`).join("") + `<a href="#res" class="voir-res"><i>✓</i>Résultat</a>`;
+  // Écouteurs
+  for (const c of CHAMPS) {
+    const e = $(c.id); if (!e) continue;
+    const redessine = () => { if (c.id === "detention" || c.id === "demembre") dessinerCedants(); };
+    if (c.type === "case") e.addEventListener("change", () => { etat[c.id] = e.checked; redessine(); maj(); });
+    else if (c.type === "choix") e.addEventListener("change", () => { etat[c.id] = e.value; maj(); });
+    else if (c.type === "segment") e.querySelectorAll("button").forEach((b) => b.onclick = () => { etat[c.id] = b.dataset.v; redessine(); maj(); });
+    else if (c.type === "date") brancherDate(e, (v) => { etat[c.id] = v; maj(); });
+    else brancherNombre(e, c.type, (v) => { etat[c.id] = v; maj(true); });
+  }
+  $("bAjCed").onclick = () => { cedants.push({ ...CEDANT, nom: "Cédant " + (cedants.length + 1), quote: "0" }); dessinerCedants(); maj(); };
+}
+// Champs numériques : séparateur de milliers à la sortie du champ
+function fmtSaisie(v, t) { if (v === "" || v == null) return ""; const n = num(v); if (!isFinite(n)) return v; return t === "montant" ? n.toLocaleString("fr-FR", { maximumFractionDigits: 2 }) : String(v).replace(".", ","); }
+function brancherNombre(e, t, cb) {
+  e.addEventListener("input", () => { e.value = e.value.replace(/[^\d\s,.\-  ]/g, ""); cb(e.value.trim() === "" ? "" : String(num(e.value))); });
+  e.addEventListener("blur", () => { e.value = fmtSaisie(e.value, t); });
+}
+// Champs date : saisie libre jj/mm/aaaa (les barres s'ajoutent toutes seules) + calendrier
+function lireDateFr(s) {
+  const m = String(s).trim().match(/^(\d{1,2})[\/.\-\s]?(\d{1,2})[\/.\-\s]?(\d{4})$/); if (!m) return null;
+  const d = new Date(+m[3], +m[2] - 1, +m[1]); return d.getDate() === +m[1] && d.getMonth() === +m[2] - 1 ? d : null;
+}
+function brancherDate(e, cb) {
+  e.addEventListener("input", (ev) => {
+    if (ev.inputType && ev.inputType.startsWith("delete")) { if (!e.value) cb(""); return; }
+    let v = e.value.replace(/[^\d]/g, "").slice(0, 8);
+    if (v.length > 4) v = v.slice(0, 2) + "/" + v.slice(2, 4) + "/" + v.slice(4); else if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
+    e.value = v; const d = lireDateFr(v);
+    e.classList.toggle("faux", v.length === 10 && !d);
+    if (d) cb(iso(d)); else if (!v) cb("");
+  });
+  e.addEventListener("blur", () => { const d = lireDateFr(e.value); e.classList.toggle("faux", !!e.value && !d); });
+}
+
+/* Cédants : une carte par personne */
+function dessinerCedants() {
+  const multi = cedants.length > 1;
+  $("cedants").innerHTML = cedants.map((c, i) => {
+    const nr = c.resid !== "FR";
+    const cs = (k, t, extra = "") => `<label class="case"${extra}><input type="checkbox" data-k="${k}"${c[k] ? " checked" : ""}><span>${t}</span></label>`;
+    const nb = (k, t, u, v) => `<div class="ch"><label>${t}</label><div class="saisie${u ? " avec-u" : ""}"><input data-k="${k}" inputmode="decimal" value="${esc(fmtSaisie(v, u === "€" ? "montant" : ""))}" data-t="${u === "€" ? "montant" : "pourcent"}">${u ? `<span class="u">${u}</span>` : ""}</div></div>`;
+    return `<div class="ced" data-i="${i}">
+      <div class="ced-t"><input data-k="nom" value="${esc(c.nom)}" aria-label="Nom du cédant"><span class="pastille" data-part>${esc(c.quote)} %</span>${multi ? `<button class="bt mini danger" data-sup="${i}" type="button">Retirer</button>` : ""}</div>
+      <div class="ced-c"><div class="grille">
+        ${nb("quote", "Quote-part dans le droit cédé", "%", c.quote)}
+        <div class="ch${etat.demembre ? "" : " cache"}"><label>Droit détenu</label><select data-k="droit">${[["PP", "Pleine propriété"], ["US", "Usufruit"], ["NP", "Nue-propriété"]].map(([v, t]) => `<option value="${v}"${c.droit === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+        <div class="ch"><label>Résidence fiscale</label><select data-k="resid">${[["FR", "France"], ["UE", "Non-résident – UE / EEE"], ["HUE", "Non-résident – hors UE / EEE"]].map(([v, t]) => `<option value="${v}"${c.resid === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+        ${etat.detention === "sci" ? `<div class="ch plein">${cs("is", "Associé <b>soumis à l'impôt sur les sociétés</b> (sa quote-part sort du régime des particuliers)")}</div>` : ""}
+        <div class="ss">Exonérations liées au cédant</div>
+        <div class="ch plein">${cs("rp", "Le bien est sa <b>résidence principale</b> au jour de la cession (ou jusqu'à la mise en vente, vente dans un délai normal)")}</div>
+        ${c.rp ? nb("rpPct", "Surface occupée à titre privatif", "%", c.rpPct) : ""}
+        ${nr ? `<div class="ch plein">${cs("rp244", "<b>Ancienne RP</b> cédée après le départ de France, au plus tard le 31/12 de l'année suivante, ni louée ni prêtée (art. 244 bis A)")}</div>` : ""}
+        <div class="ch plein">${cs("bis", "<b>Première cession d'un logement</b> autre que la RP, sans avoir été propriétaire de sa RP depuis 4 ans, avec remploi dans une RP sous 24 mois (1° bis)")}</div>
+        ${c.bis ? nb("bisPct", "Part du prix destinée au remploi", "%", c.bisPct) : ""}
+        <div class="ch plein">${cs("retraite", "Titulaire d'une <b>pension de vieillesse</b> ou d'une <b>carte d'invalidité</b> (lui ou son conjoint soumis à imposition commune)")}</div>
+        <div class="ch plein">${cs("ehpad", "Ancienne RP inoccupée d'un résident en <b>EHPAD</b> ou établissement pour personnes handicapées (1° ter)")}</div>
+        ${c.ehpad ? `<div class="ch plein">${cs("ehpadDelai", "Vente dans les 2 ans de l'entrée dans l'établissement, logement non occupé depuis")}</div>` : ""}
+        ${(c.retraite || c.ehpad) ? `${nb("rfr", "Revenu fiscal de référence N-2", "€", c.rfr)}${nb("parts", "Nombre de parts", "", c.parts)}
+          <div class="ch"><label>Zone</label><select data-k="zone">${[["metro", "Métropole"], ["dom", "Martinique, Guadeloupe, Réunion"], ["guy", "Guyane, Mayotte"]].map(([v, t]) => `<option value="${v}"${c.zone === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+          <div class="ch plein">${cs("ifi", "Passible de l'IFI au titre de N-2")}</div>
+          <div class="ch plein aide" data-seuil></div>` : ""}
+        ${nr ? `<div class="ss">Non-résident</div>
+          <div class="ch plein">${cs("nr150", "<b>Exonération de 150 000 €</b> : ressortissant UE / EEE, domicilié en France au moins 2 ans, logement détenu en direct, libre disposition depuis le 1/1 N-1 ou vente dans les 10 ans du départ (une seule fois)")}</div>
+          <div class="ch plein">${cs("solid", "Affilié à la sécurité sociale d'un État de l'EEE, de la Suisse ou du Royaume-Uni (prélèvement de solidarité)")}</div>` : ""}
+      </div></div></div>`;
+  }).join("");
+  $("cedants").querySelectorAll(".ced").forEach((el) => {
+    const c = cedants[+el.dataset.i];
+    el.querySelectorAll("[data-k]").forEach((inp) => {
+      const k = inp.dataset.k;
+      if (inp.type === "checkbox") inp.onchange = () => { c[k] = inp.checked; dessinerCedants(); maj(); };
+      else if (inp.tagName === "SELECT") inp.onchange = () => { c[k] = inp.value; dessinerCedants(); maj(); };
+      else if (k === "nom") inp.oninput = () => { c.nom = inp.value; maj(true); };
+      else brancherNombre(inp, inp.dataset.t, (v) => { c[k] = v; if (k === "quote") el.querySelector("[data-part]").textContent = (v || 0).toString().replace(".", ",") + " %"; majSeuils(); maj(true); });
+    });
+    el.querySelector("[data-sup]")?.addEventListener("click", () => { cedants.splice(+el.dataset.i, 1); dessinerCedants(); maj(); });
+  });
+  majSeuils();
+}
+function majSeuils() {
+  $("cedants").querySelectorAll(".ced").forEach((el) => {
+    const c = cedants[+el.dataset.i], z = el.querySelector("[data-seuil]"); if (!z) return;
+    const p = num(c.parts) || 1, t = [];
+    if (c.retraite) t.push("seuil retraité / invalide : " + eur(seuilRFR(c.zone, p, "retraite")));
+    if (c.ehpad) t.push("seuil 1° ter : " + eur(seuilRFR(c.zone, p, "ehpad")) + " (barème métropole)");
+    z.textContent = "Seuils de RFR pour les cessions 2026 — " + t.join(" · ");
+  });
+}
+
+/* Remplit les champs à partir de l'état (au démarrage, après import ou chargement d'un scénario) */
+function remplir() {
+  for (const c of CHAMPS) {
+    const e = $(c.id), v = etat[c.id]; if (!e) continue;
+    if (c.type === "case") e.checked = !!v;
+    else if (c.type === "choix") e.value = v;
+    else if (c.type === "date") { e.value = dfr(v); e.classList.remove("faux"); }
+    else if (c.type !== "segment") e.value = fmtSaisie(v, c.type);
+  }
+  dessinerCedants();
+}
+
+/* =====================================================================================
+   6. MISE À JOUR DE L'ÉCRAN
+   ===================================================================================== */
+let dernier = null;
+function maj(saisieEnCours) {
+  // visibilité, libellés et segments
+  for (const c of SECTIONS.flatMap((s) => s.champs || [])) {
+    const w = $("w_" + c.id); if (!w) continue;
+    w.classList.toggle("cache", !!(c.quand && !c.quand(etat)));
+    if (typeof c.l === "function" && $("l_" + c.id)) $("l_" + c.id).textContent = c.l(etat);
+    if (c.type === "segment") $(c.id).querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === etat[c.id]));
+  }
+  if (!saisieEnCours) $("cedants").querySelectorAll('select[data-k="droit"]').forEach((s) => s.closest(".ch").classList.toggle("cache", !etat.demembre));
+  // état des étapes
+  const fait = { bien: num(etat.prixCession) > 0 && !!etat.dateCession, acq: !!etat.dateAcq && (num(etat.prixAcq) > 0 || etat.modeAcq === "gratuit") };
+  document.querySelectorAll("#etapes a[data-s]").forEach((a) => a.classList.toggle("fait", !!fait[a.dataset.s]));
+
+  const f = lireTout(), R = calculer(f); dernier = R;
+  const tauxPVB = R.PVB > 0 ? R.T.total / R.PVB : 0;
+  $("hPVB").textContent = $("rPVB").textContent = eur(R.PVB);
+  $("hTot").textContent = $("rTot").textContent = $("bTot").textContent = eur(R.T.total);
+  $("hNet").textContent = $("rNet").textContent = $("bNet").textContent = eur(R.net);
+  $("rDet").textContent = R.constr ? `terrain ${R.yT} ans · construction ${R.yC} ans` : `${R.yT} an${R.yT > 1 ? "s" : ""} de détention`;
+  $("rTaux").textContent = R.PVB > 0 ? `${pc(tauxPVB, 1)} de la plus-value` : "aucune plus-value";
+  dessinerCascade(R);
+  dessinerDetail(R);
+  $("alertes").innerHTML = R.W.length ? R.W.map(([t, m]) => `<div class="al al-${t}">${esc(m)}</div>`).join("") : '<div class="al al-ok">Aucune remarque particulière.</div>';
+  dessinerProjection(f, R);
+  dessinerRecap(f);
+  stock.ecrire("pvi-etat", f);
+}
+const COUL = () => { const cs = getComputedStyle(document.documentElement); return { bleu: cs.getPropertyValue("--bleu").trim(), or: cs.getPropertyValue("--or").trim() }; };
+function dessinerCascade(R) {
+  const { bleu, or } = COUL();
+  const parts = [["Net vendeur", Math.max(0, R.net), or], ["Impôt sur le revenu", R.T.IR, bleu], ["Prélèvements sociaux", R.T.PS, `color-mix(in srgb, ${bleu} 60%, #fff)`], ["Surtaxe et taxes terrain", R.T.sur + R.T.tCom + R.T.tNat, `color-mix(in srgb, ${bleu} 30%, #fff)`], ["Frais de cession", R.frais, "#b9b2a5"]];
+  const tot = parts.reduce((a, p) => a + p[1], 0) || 1;
+  $("cascade").innerHTML = parts.filter((p) => p[1] > 0).map(([l, v, c]) => `<span style="width:${v / tot * 100}%;background:${c}" title="${esc(l)} : ${eur(v)}"></span>`).join("");
+  $("legende").innerHTML = parts.map(([l, v, c]) => `<div><i style="background:${c}"></i>${esc(l)}<b>${eur(v)}</b></div>`).join("");
+}
+function dessinerDetail(R) {
+  const noms = ["Synthèse", ...R.res.map((r) => r.nom)];
+  if (ongletActif >= noms.length) ongletActif = 0;
+  const multi = R.res.length > 1;
+  $("onglets").innerHTML = multi ? noms.map((n, i) => `<button class="${i === ongletActif ? "on" : ""}" data-o="${i}">${esc(n)}</button>`).join("") : "";
+  $("onglets").querySelectorAll("button").forEach((b) => b.onclick = () => { ongletActif = +b.dataset.o; dessinerDetail(dernier); });
+  let h = "";
+  if (ongletActif === 0 || !multi) {
+    h += "<table><tbody>" + R.L.map(([l, v, c]) => `<tr class="${c || ""}"><td>${esc(l)}</td><td>${eur(v)}</td></tr>`).join("");
+    h += `<tr><td class="disc">Abattements pour durée de détention (IR / PS)</td><td class="disc">${pc(R.aIR)} / ${pc(R.aPS)}</td></tr></tbody></table>`;
+    if (!multi && R.res[0]) h += tableCedant(R.res[0]);
+    else {
+      h += `<table style="margin-top:14px"><thead><tr><th>Cédant</th><th>Base IR</th><th>IR</th><th>PS</th><th>Surtaxe / taxes</th><th>Total</th></tr></thead><tbody>`;
+      for (const r of R.res) h += `<tr><td>${esc(r.nom)} <span class="pastille">${pc(r.part, 1)}</span></td><td>${eur(r.pvIR)}</td><td>${eur(r.IR)}</td><td>${eur(r.PS)}</td><td>${eur(r.sur + r.tCom + r.tNat)}</td><td><b>${eur(r.total)}</b></td></tr>`;
+      h += `<tr class="tot"><td>Total</td><td>${eur(R.T.pvIR)}</td><td>${eur(R.T.IR)}</td><td>${eur(R.T.PS)}</td><td>${eur(R.T.sur + R.T.tCom + R.T.tNat)}</td><td>${eur(R.T.total)}</td></tr></tbody></table>`;
+    }
+    if (R.tInfo.length) h += `<table style="margin-top:14px"><tbody><tr class="inter"><td colspan="2">Terrains devenus constructibles (bien entier)</td></tr>${R.tInfo.map(([l, v]) => `<tr><td>${esc(l)}</td><td>${eur(v)}</td></tr>`).join("")}</tbody></table>`;
+  } else h += tableCedant(R.res[ongletActif - 1]);
+  $("detail").innerHTML = h;
+}
+function tableCedant(r) {
+  let h = `<table style="margin-top:14px"><thead><tr><th>${esc(r.nom)} · quote-part ${pc(r.part, 2)}</th><th>Impôt sur le revenu</th><th>Prélèv. sociaux</th></tr></thead><tbody>`;
+  if (r.exos.length) h += `<tr><td colspan="3" style="text-align:left">${r.exos.map((x) => `<div class="exo">${esc(x)}</div>`).join("")}</td></tr>`;
+  if (r.pvb <= 0) h += `<tr><td>Moins-value (non imputable)</td><td>${eur(r.pvb)}</td><td>${eur(r.pvb)}</td></tr>`;
+  for (const [l, a, b] of r.lignes) h += `<tr><td>${esc(l)}</td><td>${eur(a)}</td><td>${eur(b)}</td></tr>`;
+  h += `<tr class="inter"><td>Plus-value nette imposable</td><td>${eur(r.pvIR)}</td><td>${eur(r.pvPS)}</td></tr>`;
+  h += `<tr><td class="disc">Taux</td><td class="disc">${pc(num(etat.tIR) / 100, 1)}</td><td class="disc">${pc(r.tauxPS, 1)}</td></tr>`;
+  if (r.redForet) h += `<tr><td>− Réduction peuplement forestier</td><td>${eur(-r.redForet)}</td><td>–</td></tr>`;
+  h += `<tr class="gras"><td>Impôt</td><td>${eur(r.IR)}</td><td>${eur(r.PS)}</td></tr>`;
+  h += `<tr><td>Surtaxe sur les plus-values élevées</td><td colspan="2">${eur(r.sur)}</td></tr>`;
+  if (r.tCom || r.tNat) h += `<tr><td>Taxes terrains devenus constructibles</td><td colspan="2">${eur(r.tCom + r.tNat)}</td></tr>`;
+  return h + `<tr class="tot"><td>Total dû</td><td colspan="2">${eur(r.total)}</td></tr></tbody></table>`;
+}
+function projection(f) {
+  const dc = D(f.dateCession); if (!dc || !D(f.dateAcq)) return [];
+  const base = calculer(f), y0 = base.yT, pts = [];
+  for (let k = 0; k <= Math.max(0, 31 - y0); k++) {
+    const g = JSON.parse(JSON.stringify(f)), d = new Date(dc); d.setFullYear(d.getFullYear() + k); g.dateCession = iso(d);
+    const r = calculer(g); pts.push({ k, an: d.getFullYear(), y: r.yT, IR: r.T.IR, PS: r.T.PS, sur: r.T.sur + r.T.tCom + r.T.tNat, tot: r.T.total });
+    if (k > 0 && r.T.total === 0) break;
+  }
+  return pts;
+}
+function dessinerProjection(f, R) {
+  if (R.PVB <= 0) { $("proj").innerHTML = '<p class="aide" style="margin:0;color:var(--discret)">La projection s\'affiche dès qu\'une plus-value est constatée.</p>'; return; }
+  const pts = projection(f); if (!pts.length) { $("proj").innerHTML = ""; return; }
+  const { bleu, or } = COUL();
+  const W = 640, H = 220, g = 34, b = 26, n = pts.length, bw = (W - g - 6) / n, mx = Math.max(...pts.map((p) => p.tot), 1);
+  const yy = (v) => H - b - v / mx * (H - b - 12);
+  let s = `<svg class="graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="Impôt selon l'année de vente">`;
+  for (let i = 0; i <= 3; i++) { const v = mx * i / 3, y = yy(v); s += `<line x1="${g}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--ligne)"/><text x="${g - 4}" y="${y + 4}" text-anchor="end">${v >= 1000 ? Math.round(v / 1000) + " k" : Math.round(v)}</text>`; }
+  pts.forEach((p, i) => {
+    const x = g + i * bw + bw * .15, w = bw * .7; let y = H - b;
+    for (const [v, c] of [[p.IR, bleu], [p.PS, `color-mix(in srgb, ${bleu} 55%, #fff)`], [p.sur, or]]) { if (v <= 0) continue; const h = v / mx * (H - b - 12); y -= h; s += `<rect class="barre" x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" rx="1.5"><title>Vente en ${p.an} (${p.y} ans) : ${eur(p.tot)}</title></rect>`; }
+    if (i === 0) s += `<rect x="${x - 2}" y="${yy(p.tot) - 3}" width="${w + 4}" height="${H - b - yy(p.tot) + 3}" fill="none" stroke="${or}" stroke-width="1.5" rx="3"/>`;
+    if (i === 0 || p.y === 22 || p.y === 30 || p.y % 5 === 0) s += `<text x="${x + w / 2}" y="${H - 8}" text-anchor="middle"${p.y === 22 || p.y === 30 ? ` style="fill:${or};font-weight:700"` : ""}>${i === 0 ? "auj." : p.y + " a"}</text>`;
+  });
+  s += "</svg>";
+  const lignes = pts.filter((p, i) => i <= 8 || [22, 30].includes(p.y) || p.y % 5 === 0);
+  s += `<div class="leg" style="margin:6px 0 10px"><div><i style="background:${bleu}"></i>IR</div><div><i style="background:color-mix(in srgb, ${bleu} 55%, #fff)"></i>Prélèvements sociaux</div><div><i style="background:${or}"></i>Surtaxe et taxes</div></div>`;
+  s += `<details><summary style="cursor:pointer;font-weight:600;color:var(--bleu-txt)">Tableau par année</summary><table><thead><tr><th>Vente en</th><th>Détention</th><th>IR</th><th>PS</th><th>Surtaxe</th><th>Total</th><th>Économie</th></tr></thead><tbody>${lignes.map((p) => `<tr${p.k === 0 ? ' class="inter"' : ""}><td>${p.k === 0 ? "Date saisie" : p.an}</td><td>${p.y} ans</td><td>${eur(p.IR)}</td><td>${eur(p.PS)}</td><td>${eur(p.sur)}</td><td><b>${eur(p.tot)}</b></td><td>${p.k ? eur(pts[0].tot - p.tot) : "–"}</td></tr>`).join("")}</tbody></table></details>`;
+  $("proj").innerHTML = s;
+}
+function lignesRecap(f) {
+  const t = [];
+  for (const s of SECTIONS) for (const c of s.champs || []) {
+    if (c.type === "titre" || (c.quand && !c.quand(f))) continue;
+    const v = f[c.id]; if (v === "" || v === false || v == null) continue;
+    const lab = typeof c.l === "function" ? c.l(f) : c.l;
+    let x = v;
+    if (c.type === "case") x = "oui"; else if (c.type === "montant") x = eur(num(v)); else if (c.type === "pourcent") x = String(v).replace(".", ",") + " %"; else if (c.type === "date") x = dfr(v);
+    else if (c.opts) x = (c.opts.find((o) => o[0] === v) || [, v])[1];
+    t.push([lab, x]);
+  }
+  f.cedants.forEach((c) => {
+    const ex = [c.rp && "RP", c.rp244 && "RP 244 bis A", c.bis && "1° bis (" + c.bisPct + " %)", c.retraite && "retraité/invalide", c.ehpad && "EHPAD", c.nr150 && "150 000 € non-résident", c.solid && "prélèvement de solidarité"].filter(Boolean);
+    t.push([c.nom, `${c.quote} %${f.demembre ? " en " + { PP: "pleine propriété", US: "usufruit", NP: "nue-propriété" }[c.droit] : ""} · ${{ FR: "résident", UE: "non-résident UE", HUE: "non-résident hors UE" }[c.resid]}${ex.length ? " · " + ex.join(", ") : ""}`]);
+  });
+  return t;
+}
+function dessinerRecap(f) { $("recapT").innerHTML = "<table><tbody>" + lignesRecap(f).map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join("") + "</tbody></table>"; }
+
+/* =====================================================================================
+   7. CALENDRIER (années → mois → jours)
+   ===================================================================================== */
+const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const MOISL = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const cal = { champ: null, vue: "j", an: 2026, mois: 0, debut: 2016 };
+function ouvrirCal(id, ancre) {
+  const d = D(etat[id]) || new Date();
+  Object.assign(cal, { champ: id, vue: "j", an: d.getFullYear(), mois: d.getMonth(), debut: d.getFullYear() - 7 });
+  dessinerCal(); const el = $("cal"); el.classList.add("on");
+  const r = ancre.getBoundingClientRect(); let top = r.bottom + 6; if (top + 360 > innerHeight) top = Math.max(8, r.top - 366);
+  el.style.top = top + "px"; el.style.left = Math.min(innerWidth - 310, Math.max(8, r.right - 300)) + "px";
+}
+function dessinerCal() {
+  const sel = D(etat[cal.champ]), auj = new Date(); let h = "", g = "";
+  const fil = `<div class="fil"><button data-v="m">${MOISL[cal.mois]}</button><button data-v="a">${cal.an}</button></div>`;
+  if (cal.vue === "a") {
+    h = `<div class="cal-h"><b style="padding:5px 4px">${cal.debut} – ${cal.debut + 15}</b><div class="nav"><button data-n="-16">‹</button><button data-n="16">›</button></div></div>`;
+    g = `<div class="cal-g a">${Array.from({ length: 16 }, (_, i) => cal.debut + i).map((a) => `<button data-a="${a}" class="${sel && sel.getFullYear() === a ? "sel" : a === auj.getFullYear() ? "auj" : ""}">${a}</button>`).join("")}</div>`;
+  } else if (cal.vue === "m") {
+    h = `<div class="cal-h"><div class="fil"><button data-v="a">${cal.an}</button></div><div class="nav"><button data-n="-1">‹</button><button data-n="1">›</button></div></div>`;
+    g = `<div class="cal-g m">${MOIS.map((m, i) => `<button data-m="${i}" class="${sel && sel.getFullYear() === cal.an && sel.getMonth() === i ? "sel" : ""}">${m}</button>`).join("")}</div>`;
+  } else {
+    h = `<div class="cal-h">${fil}<div class="nav"><button data-n="-1">‹</button><button data-n="1">›</button></div></div>`;
+    const p = new Date(cal.an, cal.mois, 1), dec = (p.getDay() + 6) % 7, start = new Date(cal.an, cal.mois, 1 - dec);
+    g = `<div class="cal-g j">${["L", "M", "M", "J", "V", "S", "D"].map((j) => `<div class="js">${j}</div>`).join("")}`;
+    for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); const cl = [d.getMonth() !== cal.mois && "hors", sel && iso(d) === iso(sel) && "sel", iso(d) === iso(auj) && "auj"].filter(Boolean).join(" "); g += `<button data-d="${iso(d)}" class="${cl}">${d.getDate()}</button>`; }
+    g += "</div>";
+  }
+  $("cal").innerHTML = h + g + `<div class="cal-b"><button data-x="eff">Effacer</button><button data-x="auj">Aujourd'hui</button></div>`;
+}
+function choisirDate(v) { etat[cal.champ] = v; $(cal.champ).value = dfr(v); $(cal.champ).classList.remove("faux"); $("cal").classList.remove("on"); maj(); }
+$("cal").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
+  if (b.dataset.v) cal.vue = b.dataset.v;
+  else if (b.dataset.n) { const n = +b.dataset.n; if (cal.vue === "a") cal.debut += n; else if (cal.vue === "m") cal.an += n; else { cal.mois += n; if (cal.mois < 0) { cal.mois = 11; cal.an--; } if (cal.mois > 11) { cal.mois = 0; cal.an++; } } }
+  else if (b.dataset.a) { cal.an = +b.dataset.a; cal.vue = "m"; }
+  else if (b.dataset.m) { cal.mois = +b.dataset.m; cal.vue = "j"; }
+  else if (b.dataset.d) return choisirDate(b.dataset.d);
+  else if (b.dataset.x === "auj") return choisirDate(iso(new Date()));
+  else if (b.dataset.x === "eff") return choisirDate("");
+  dessinerCal();
+});
+
+/* =====================================================================================
+   8. COULEURS ET THÈME
+   ===================================================================================== */
+const PALETTES = [["Or et bleu", "#a57d2f", "#0c2d39"], ["Bleu pétrole", "#b08a3e", "#234e5c"], ["Bordeaux", "#b38b4d", "#5a1f2b"], ["Vert anglais", "#b8955a", "#1f3d2f"], ["Ardoise", "#c06a3a", "#2f3a48"], ["Marine", "#3f8fc4", "#132a4a"]];
+const hex2rgb = (h) => { const m = h.replace("#", "").match(/^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i); return m ? [1, 2, 3].map((i) => parseInt(m[i], 16)) : null; };
+const rgb2hex = (r) => "#" + r.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0")).join("");
+function lireCouleur(s) { s = String(s).trim(); if (/^#?[\da-f]{6}$/i.test(s)) return "#" + s.replace("#", "").toLowerCase(); const n = s.match(/\d+(\.\d+)?/g); return n && n.length === 3 ? rgb2hex(n.map(Number)) : null; }
+let regl = stock.lire("pvi-reglages", { or: "#a57d2f", bleu: "#0c2d39", theme: "clair" });
+function appliquerReglages() {
+  const r = document.documentElement;
+  r.style.setProperty("--or", regl.or); r.style.setProperty("--bleu", regl.bleu);
+  const sombre = regl.theme === "sombre" || (regl.theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  r.dataset.theme = sombre ? "sombre" : "clair";
+  document.querySelector('meta[name="theme-color"]').content = regl.bleu;
+  $("cOr").value = regl.or; $("cBleu").value = regl.bleu;
+  $("cOrT").value = hex2rgb(regl.or).join(" "); $("cBleuT").value = hex2rgb(regl.bleu).join(" ");
+  $("segTheme").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === regl.theme));
+  stock.ecrire("pvi-reglages", regl);
+  if (dernier) maj();
+}
+$("presets").innerHTML = PALETTES.map(([n, o, b], i) => `<button data-p="${i}"><i><b style="background:${b}"></b><b style="background:${o}"></b></i>${n}</button>`).join("");
+$("presets").onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; const p = PALETTES[+b.dataset.p]; regl.or = p[1]; regl.bleu = p[2]; appliquerReglages(); };
+$("cOr").oninput = () => { regl.or = $("cOr").value; appliquerReglages(); };
+$("cBleu").oninput = () => { regl.bleu = $("cBleu").value; appliquerReglages(); };
+$("cOrT").onchange = () => { const c = lireCouleur($("cOrT").value); if (c) { regl.or = c; appliquerReglages(); } else toast("Couleur non reconnue"); };
+$("cBleuT").onchange = () => { const c = lireCouleur($("cBleuT").value); if (c) { regl.bleu = c; appliquerReglages(); } else toast("Couleur non reconnue"); };
+$("segTheme").onclick = (e) => { const b = e.target.closest("button"); if (b) { regl.theme = b.dataset.v; appliquerReglages(); } };
+$("bCoulDef").onclick = () => { regl.or = "#a57d2f"; regl.bleu = "#0c2d39"; appliquerReglages(); toast("Or (165 125 47) et bleu (12 45 57) rétablis"); };
+$("bRAZ").onclick = () => { etat = defauts(); cedants = [{ ...CEDANT }]; remplir(); maj(); fermer(); toast("Simulation effacée"); };
+
+/* =====================================================================================
+   9. SCÉNARIOS ENREGISTRÉS
+   ===================================================================================== */
+let scenarios = stock.lire("pvi-scenarios", []);
+function dessinerScenarios() {
+  $("scListe").innerHTML = scenarios.length ? scenarios.map((s, i) => { const R = calculer(s.f); return `<div class="scen"><div><b>${esc(s.nom)}</b><small>Prix ${eur(num(s.f.prixCession))} · impôt ${eur(R.T.total)} · net ${eur(R.net)} · ${new Date(s.le).toLocaleDateString("fr-FR")}</small></div><button class="bt mini" data-ch="${i}">Ouvrir</button><button class="bt mini danger" data-su="${i}">×</button></div>`; }).join("") : '<p style="color:var(--discret);margin:0">Aucun scénario enregistré. Enregistrez la simulation en cours pour la comparer à d\'autres hypothèses.</p>';
+  if (scenarios.length > 1) {
+    const rs = scenarios.map((s) => calculer(s.f));
+    const lig = [["Prix de cession", (r) => eur(r.prix)], ["Plus-value brute", (r) => eur(r.PVB)], ["Détention", (r) => r.yT + " ans"], ["Impôt sur le revenu", (r) => eur(r.T.IR)], ["Prélèvements sociaux", (r) => eur(r.T.PS)], ["Surtaxe et taxes", (r) => eur(r.T.sur + r.T.tCom + r.T.tNat)], ["Impôt total", (r) => "<b>" + eur(r.T.total) + "</b>"], ["Net vendeur", (r) => "<b>" + eur(r.net) + "</b>"]];
+    $("scComp").innerHTML = `<div class="lbl" style="margin-bottom:6px">Comparaison</div><div style="overflow-x:auto"><table><thead><tr><th></th>${scenarios.map((s) => `<th>${esc(s.nom)}</th>`).join("")}</tr></thead><tbody>${lig.map(([l, fn]) => `<tr><td>${l}</td>${rs.map((r) => `<td>${fn(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  } else $("scComp").innerHTML = "";
+}
+$("scAjout").onclick = () => { const nom = $("scNom").value.trim() || "Scénario " + (scenarios.length + 1); scenarios.push({ nom, le: Date.now(), f: lireTout() }); stock.ecrire("pvi-scenarios", scenarios); $("scNom").value = ""; dessinerScenarios(); toast("Scénario enregistré"); };
+$("scListe").onclick = (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.ch) { const s = scenarios[+b.dataset.ch]; charger(s.f); fermer(); toast("« " + s.nom + " » ouvert"); }
+  if (b.dataset.su) { scenarios.splice(+b.dataset.su, 1); stock.ecrire("pvi-scenarios", scenarios); dessinerScenarios(); }
+};
+function charger(f) { etat = { ...defauts(), ...f }; delete etat.cedants; cedants = (f.cedants && f.cedants.length ? f.cedants : [CEDANT]).map((c) => ({ ...CEDANT, ...c })); remplir(); maj(); }
+
+/* =====================================================================================
+   10. EXPORTS
+   ===================================================================================== */
+function texteSynthese() {
+  const f = lireTout(), R = calculer(f);
+  let t = `SIMULATION DE PLUS-VALUE IMMOBILIÈRE\nCession du ${dfr(f.dateCession)} — prix ${eur(R.prix)}\n\n`;
+  for (const [l, v] of R.L) t += `${l} : ${eur(v)}\n`;
+  t += `Détention : ${R.yT} ans — abattements IR ${pc(R.aIR)} / PS ${pc(R.aPS)}\n\n`;
+  for (const r of R.res) { t += `${r.nom} (${pc(r.part, 1)}) : base IR ${eur(r.pvIR)}, base PS ${eur(r.pvPS)} → IR ${eur(r.IR)}, PS ${eur(r.PS)}, surtaxe ${eur(r.sur)}${r.tCom + r.tNat ? ", taxes terrain " + eur(r.tCom + r.tNat) : ""} — total ${eur(r.total)}\n`; for (const x of r.exos) t += `  • ${x}\n`; }
+  return t + `\nIMPÔT TOTAL : ${eur(R.T.total)}\nNET VENDEUR : ${eur(R.net)}\n`;
+}
+function telecharger(nom, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+function chargerScript(src) { return new Promise((ok, ko) => { if (window.ExcelJS) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = ko; document.head.appendChild(s); }); }
+async function exportExcel() {
+  try { await chargerScript("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"); } catch (e) { return toast("Excel indisponible hors connexion"); }
+  const f = lireTout(), R = calculer(f), { bleu, or } = COUL();
+  const argb = (h) => "FF" + h.replace("#", "").toUpperCase();
+  const wb = new ExcelJS.Workbook(); wb.creator = "Simulateur PVI";
+  const ws = wb.addWorksheet("Simulation", { views: [{ showGridLines: false }], pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+  ws.columns = [{ width: 52 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
+  const EUR = '#,##0 "€";-#,##0 "€"';
+  const titre = (t) => { const r = ws.addRow([t]); r.getCell(1).font = { name: "Grandview", size: 11, bold: true, color: { argb: argb(bleu) } }; r.height = 18; };
+  const entete = (cells) => { const r = ws.addRow(cells); r.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(bleu) } }; c.font = { name: "Grandview", size: 8, bold: true, color: { argb: "FFFFFFFF" } }; c.alignment = { horizontal: c.col === 1 ? "left" : "right" }; }); };
+  const ligne = (cells, style) => { const r = ws.addRow(cells); r.eachCell((c) => { if (typeof c.value === "number") c.numFmt = EUR; c.border = { bottom: { style: "hair", color: { argb: "FFD9D4C8" } } }; }); if (style === "tot") r.eachCell((c) => { c.font = { name: "Grandview", size: 8, bold: true }; c.border = { top: { style: "medium", color: { argb: argb(or) } } }; }); if (style === "inter") r.eachCell((c) => { c.font = { name: "Grandview", size: 8, bold: true }; }); return r; };
+  titre("Simulation de plus-value immobilière"); ws.addRow([`Cession du ${dfr(f.dateCession)} — édition du ${new Date().toLocaleDateString("fr-FR")}`]); ws.addRow([]);
+  titre("Hypothèses"); entete(["Paramètre", "Valeur"]); for (const [a, b] of lignesRecap(f)) ligne([a, b]); ws.addRow([]);
+  titre("Détermination de la plus-value"); entete(["", "Montant"]); for (const [l, v, c] of R.L) ligne([l, v], c === "tot" ? "tot" : c ? "inter" : ""); ligne(["Abattements pour durée (IR / PS)", `${pc(R.aIR)} / ${pc(R.aPS)}`]); ws.addRow([]);
+  for (const r of R.res) {
+    titre(`${r.nom} — quote-part ${pc(r.part, 2)}`); entete(["", "Impôt sur le revenu", "Prélèvements sociaux"]);
+    for (const x of r.exos) ligne(["Exonération : " + x]);
+    for (const [l, a, b] of r.lignes) ligne([l, a, b]);
+    ligne(["Plus-value nette imposable", r.pvIR, r.pvPS], "inter"); ligne(["Impôt", r.IR, r.PS]); ligne(["Surtaxe sur les plus-values élevées", r.sur]);
+    if (r.tCom || r.tNat) ligne(["Taxes terrains devenus constructibles", r.tCom + r.tNat]);
+    ligne(["Total dû", r.total], "tot"); ws.addRow([]);
+  }
+  titre("Synthèse"); entete(["", "Montant"]); ligne(["Impôt sur le revenu", R.T.IR]); ligne(["Prélèvements sociaux", R.T.PS]); ligne(["Surtaxe et taxes", R.T.sur + R.T.tCom + R.T.tNat]); ligne(["Impôt total", R.T.total], "tot"); ligne(["Net vendeur (prix − frais de cession − impôts)", R.net], "tot"); ws.addRow([]);
+  const pts = projection(f);
+  if (pts.length && R.PVB > 0) { titre("Projection : même prix, vente plus tardive"); entete(["Année de vente", "Détention (ans)", "IR", "PS", "Surtaxe", "Total"]); for (const p of pts) ligne([p.k ? String(p.an) : "Date saisie (" + p.an + ")", p.y, p.IR, p.PS, p.sur, p.tot]).getCell(2).numFmt = "0"; }
+  ws.eachRow((row) => row.eachCell({ includeEmpty: true }, (c) => { c.font = { name: "Grandview", size: 8, ...(c.font || {}), name: "Grandview", size: c.font && c.font.size === 11 ? 11 : 8 }; }));
+  const buf = await wb.xlsx.writeBuffer();
+  telecharger(`plus-value-${f.dateCession || "simulation"}.xlsx`, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  toast("Fichier Excel créé");
+}
+$("mExport").onclick = async (e) => {
+  const b = e.target.closest("button"); if (!b) return; fermer();
+  const x = b.dataset.x;
+  if (x === "xlsx") exportExcel();
+  if (x === "print") { $("recap").open = true; setTimeout(() => window.print(), 50); }
+  if (x === "copy") { try { await navigator.clipboard.writeText(texteSynthese()); toast("Synthèse copiée"); } catch (er) { toast("Copie refusée par le navigateur"); } }
+  if (x === "json") telecharger(`plus-value-${etat.dateCession || "simulation"}.json`, new Blob([JSON.stringify({ app: "pvi", version: 1, f: lireTout() }, null, 2)], { type: "application/json" }));
+  if (x === "import") $("fImport").click();
+};
+$("fImport").onchange = async () => { const fi = $("fImport").files[0]; if (!fi) return; try { const o = JSON.parse(await fi.text()); charger(o.f || o); toast("Simulation ouverte"); } catch (e) { toast("Fichier illisible"); } $("fImport").value = ""; };
+
+/* =====================================================================================
+   11. FENÊTRES, MENUS, BULLES D'AIDE
+   ===================================================================================== */
+function fermer() { document.querySelectorAll(".voile.on,.menu.on,#cal.on,#bulle.on").forEach((x) => x.classList.remove("on")); }
+$("bRegl").onclick = () => { fermer(); $("vRegl").classList.add("on"); };
+$("bScen").onclick = () => { fermer(); dessinerScenarios(); $("vScen").classList.add("on"); setTimeout(() => $("scNom").focus(), 50); };
+$("bExport").onclick = (e) => { e.stopPropagation(); const m = $("mExport"), on = m.classList.contains("on"); fermer(); if (on) return; const r = e.currentTarget.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 250, r.right - 240)) + "px"; m.classList.add("on"); };
+document.querySelectorAll(".voile").forEach((v) => v.addEventListener("click", (e) => { if (e.target === v || e.target.closest("[data-ferme]")) fermer(); }));
+$("bVoir").onclick = () => $("res").scrollIntoView({ behavior: "smooth" });
+document.addEventListener("click", (e) => {
+  const tip = e.target.closest(".info");
+  const calBt = e.target.closest("[data-cal]");
+  if (calBt) { e.preventDefault(); e.stopPropagation(); const on = $("cal").classList.contains("on") && cal.champ === calBt.dataset.cal; fermer(); if (!on) ouvrirCal(calBt.dataset.cal, calBt.parentElement); return; }
+  if (tip) { e.preventDefault(); e.stopPropagation(); const bu = $("bulle"), on = bu.classList.contains("on") && bu.dataset.de === tip.dataset.tip; fermer(); if (on) return; bu.textContent = tip.dataset.tip; bu.dataset.de = tip.dataset.tip; bu.classList.add("on"); const r = tip.getBoundingClientRect(); bu.style.left = Math.max(8, Math.min(innerWidth - 330, r.left - 10)) + "px"; bu.style.top = (r.bottom + 8 + bu.offsetHeight > innerHeight ? r.top - bu.offsetHeight - 8 : r.bottom + 8) + "px"; return; }
+  if (!e.target.closest("#cal,.menu,.fen,#bulle")) document.querySelectorAll(".menu.on,#cal.on,#bulle.on").forEach((x) => x.classList.remove("on"));
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") fermer(); });
+addEventListener("scroll", () => document.querySelectorAll("#cal.on,#bulle.on,.menu.on").forEach((x) => x.classList.remove("on")), { passive: true });
+// Étape active dans la barre de navigation, selon la section visible
+const obs = new IntersectionObserver((ents) => { for (const en of ents) if (en.isIntersecting) document.querySelectorAll("#etapes a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id)); }, { rootMargin: "-140px 0px -60% 0px" });
+
+/* =====================================================================================
+   12. DÉMARRAGE
+   ===================================================================================== */
+const hauteur = () => document.documentElement.style.setProperty("--hh", document.querySelector("header.haut").offsetHeight + "px");
+hauteur(); addEventListener("resize", hauteur);
+construireFormulaire();
+SECTIONS.forEach((s) => obs.observe($("s_" + s.id)));
+const sauve = stock.lire("pvi-etat", null);
+if (sauve) charger(sauve); else { etat = defauts(); cedants = [{ ...CEDANT }]; remplir(); }
+appliquerReglages();
+maj();
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => regl.theme === "auto" && appliquerReglages());
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
