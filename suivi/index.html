@@ -5670,6 +5670,16 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     }
     return enIso(d);
   }
+  // toucher l'onglet Agenda quand on y est déjà : retour à aujourd'hui (comme les applis d'agenda)
+  document.addEventListener("click", (e) => {
+    const lien = e.target.closest('a[data-vue="calendrier"]');
+    if (!lien || vueCourante() !== "calendrier") return;
+    e.preventDefault();
+    const auj = enIso(aujourdhui()), d = aujourdhui(); d.setDate(1);
+    moisCalendrier = d; jourCalendrier = auj;
+    afficherCalendrier();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
   // téléphone : un seul bouton pour l'affichage de l'agenda
   function menuAgendaTel(x, y) {
     fermerMenuSelection();
