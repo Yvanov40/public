@@ -26,12 +26,15 @@ et sur vos autres appareils, et les montre dans la fiche du client et dans son o
 
 ## Identifiant et mot de passe
 
-Le Suivi et les simulateurs peuvent demander un identifiant et un mot de passe (menu ⋯ du Suivi). Le réglage se fait
-sur chaque appareil. Après un temps sans utilisation, les applis se verrouillent : les dossiers, les simulations et
-la clé GitHub gardés par le navigateur sont chiffrés (AES-GCM, clé tirée du mot de passe). Le fichier sur GitHub n'est
-pas concerné.
+Le site est public mais ne contient aucune donnée : le fichier de suivi est dans le dépôt privé `suivi`, lisible
+seulement avec une clé d'accès GitHub. Le compte permet de retrouver cette clé avec un identifiant et un mot de passe,
+depuis n'importe quel appareil :
 
-- `verrou.source.js` : le module commun, recopié au début de chaque appli protégée (repères `verrou : début` / `verrou : fin`).
+- `suivi/comptes/<empreinte>.json` : les réglages GitHub (dont la clé) chiffrés par le mot de passe
+  (AES-GCM 256 bits, PBKDF2-SHA-256 600 000 tours). Le nom du fichier est une empreinte de l'identifiant.
+- Le Suivi demande toujours la connexion ; les simulateurs, dès qu'un compte a servi sur l'appareil.
+- Après un temps sans utilisation, les données gardées par le navigateur sont chiffrées avec la même clé.
+- `verrou.source.js` : le module commun, recopié au début de chaque appli (repères `verrou : début` / `verrou : fin`).
 
 ## Fichiers à la racine
 
