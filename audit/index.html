@@ -330,6 +330,78 @@ h3.sub::before, main h3::before { content: ""; display: inline-block; width: 3px
 #etat-local[hidden] { display: none; }
 .alerte.local { border-color: color-mix(in srgb, var(--gain) 45%, transparent); background: color-mix(in srgb, var(--gain) 7%, var(--paper)); }
 @media (max-width: 980px) { #etat-local { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); } }
+/* ---- mise en page personnalisable ---- */
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.preset { font: 600 13.5px var(--sans); border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 18px; padding: 7px 14px; cursor: pointer; }
+.preset.on { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.mise-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px 22px; }
+.mise-opt { display: flex; flex-direction: column; gap: 5px; }
+.mise-lib { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.mise-opt small { color: var(--muted); font-size: 12px; }
+.mise-grille + .exports { margin-top: 16px; }
+.segment { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--field); }
+.segment button { flex: 1 1 auto; font: 600 13px var(--sans); color: var(--muted); background: transparent; border: 0; border-right: 1px solid var(--line); padding: 7px 10px; cursor: pointer; min-height: 34px; }
+.segment button:last-child { border-right: 0; }
+.segment button.on { background: var(--brand); color: var(--on-brand); }
+.segment button:hover:not(.on) { color: var(--ink); background: var(--soft); }
+/* menu */
+@media (min-width: 981px) {
+  [data-menu="haut"] .layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  [data-menu="haut"] nav#nav { position: sticky; top: 74px; z-index: 4; flex-direction: row; flex-wrap: wrap; gap: 4px; background: var(--canvas); padding: 4px 0; }
+  [data-menu="haut"][data-entete="defilant"] nav#nav { top: 0; }
+  [data-menu="haut"] nav#nav a { padding: 7px 14px; }
+  [data-menu="icones"] .layout { grid-template-columns: 58px minmax(0, 1fr); gap: 18px; }
+  [data-menu="icones"] nav#nav a { display: grid; place-items: center; padding: 10px 0; }
+  [data-menu="icones"] nav#nav .ni { display: grid; place-items: center; } [data-menu="icones"] nav#nav .ni svg { width: 22px; height: 22px; }
+  [data-menu="icones"] nav#nav .nl { display: none; }
+}
+/* densité */
+[data-densite="compacte"] .layout { gap: 16px; padding: 14px 16px; }
+[data-densite="compacte"] main#main { padding: 16px 20px 22px; }
+[data-densite="compacte"] main h2 { font-size: 23px; margin-bottom: 10px; }
+[data-densite="compacte"] main h3 { margin: 16px 0 6px; }
+[data-densite="compacte"] .grid { gap: 8px 12px; }
+[data-densite="compacte"] .chips { gap: 8px; }
+[data-densite="compacte"] .chip { padding: 8px 10px; }
+[data-densite="compacte"] table.t td, [data-densite="compacte"] table.t th { padding-top: 4px; padding-bottom: 4px; }
+[data-densite="compacte"] .top-in { padding-top: 8px; padding-bottom: 8px; }
+[data-densite="aeree"] .layout { gap: 36px; padding: 32px; }
+[data-densite="aeree"] main#main { padding: 36px 44px 46px; }
+[data-densite="aeree"] main h3 { margin: 34px 0 14px; }
+[data-densite="aeree"] .grid { gap: 18px 24px; }
+[data-densite="aeree"] .chips { gap: 16px; }
+[data-densite="aeree"] .chip { padding: 16px 18px; }
+[data-densite="aeree"] table.t td, [data-densite="aeree"] table.t th { padding-top: 11px; padding-bottom: 11px; }
+/* largeur */
+[data-largeur="etroite"] .layout, [data-largeur="etroite"] .top-in { max-width: 1060px; }
+[data-largeur="large"] .layout, [data-largeur="large"] .top-in { max-width: none; }
+/* taille du texte */
+[data-texte="petit"] body { zoom: .92; }
+[data-texte="grand"] body { zoom: 1.1; }
+[data-texte="tresgrand"] body { zoom: 1.22; }
+/* fond */
+[data-fond="blanc"] { --canvas: #FFFFFF; }
+[data-fond="blanc"] main#main { border-color: transparent; padding-left: 4px; padding-right: 4px; }
+[data-fond="creme"] { --canvas: #F3EEE4; --paper: #FFFDF8; --field: #FFFEFB; --line: #E2DACB; }
+/* coins */
+[data-angles="droits"] :is(main#main, .chip, .card, .btn, .bulle, .noeud, .levier, .dossier, .mini, .pill, .preset, .filtres button, .onglets button, input:not([type=checkbox]):not([type=radio]), select, textarea, .tablewrap, .reglages, .depot, nav#nav a, .tag, .ap, #datepick, .dp-grid button, .alerte, .calc-detail .cd, .ligne-clause, .dutreil, .segment, .arbre-wrap, .pal, #infobulle, #toast) { border-radius: 2px !important; }
+[data-angles="ronds"] :is(main#main, .card, .bulle, .levier, .dossier, .tablewrap, .reglages, .depot, .ap, #datepick, .alerte, .arbre-wrap, .chip, .ligne-clause, .dutreil) { border-radius: 18px !important; }
+[data-angles="ronds"] :is(.btn, .pill, nav#nav a, .tag, .mini, .segment, input:not([type=checkbox]):not([type=radio]), select) { border-radius: 999px !important; }
+[data-angles="ronds"] .segment button:first-child { padding-left: 14px; } [data-angles="ronds"] .segment button:last-child { padding-right: 14px; }
+/* police de l'écran */
+[data-police="serif"] { --sans: "Source Serif 4", Georgia, "Times New Roman", serif; }
+[data-police="systeme"] { --sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; --serif: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+/* pastilles en liste */
+[data-pastilles="liste"] .chips { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+[data-pastilles="liste"] .chip { grid-template-columns: 34px minmax(0, 1fr); padding: 8px 12px; align-items: center; }
+[data-pastilles="liste"] .chip .ico { width: 34px; height: 34px; }
+/* bandeau */
+[data-entete="defilant"] header.top { position: static; }
+[data-entete="defilant"] nav#nav { top: 16px; }
+/* animations */
+[data-animations="non"] *, [data-animations="non"] *::before, [data-animations="non"] *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+@media (max-width: 980px) { [data-texte="grand"] nav#nav { zoom: .91; } [data-texte="tresgrand"] nav#nav { zoom: .82; } }
+@media (max-width: 700px) { .mise-grille { grid-template-columns: minmax(0, 1fr); } }
 .btn.big { padding: 13px 22px; font-size: 15.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .exports { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -3670,9 +3742,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   function dessinerArbre() {
     var A = $('#arbre'); if (!A) return;
     var svg = A.querySelector('svg.liens'), pg = A.querySelector('.poignees');
-    var ar = A.getBoundingClientRect();
+    var ar0 = A.getBoundingClientRect(), Zr = zoomEcran(), ar = { left: ar0.left / Zr, top: ar0.top / Zr };
     svg.setAttribute('width', A.scrollWidth); svg.setAttribute('height', A.scrollHeight);
-    function bx(id) { var n = A.querySelector('[data-node="' + id + '"]'); if (!n) return null; var r = n.getBoundingClientRect(); return { l: r.left - ar.left, r: r.right - ar.left, t: r.top - ar.top, b: r.bottom - ar.top, cx: (r.left + r.right) / 2 - ar.left, cy: (r.top + r.bottom) / 2 - ar.top }; }
+    function bx(id) { var n = A.querySelector('[data-node="' + id + '"]'); if (!n) return null; var r0 = n.getBoundingClientRect(), Z = zoomEcran(), r = { left: r0.left / Z, right: r0.right / Z, top: r0.top / Z, bottom: r0.bottom / Z }; return { l: r.left - ar.left, r: r.right - ar.left, t: r.top - ar.top, b: r.bottom - ar.top, cx: (r.left + r.right) / 2 - ar.left, cy: (r.top + r.bottom) / 2 - ar.top }; }
     var paths = [], handles = [];
     function coude(x1, y1, x2, y2) { var my = (y1 + y2) / 2; paths.push('M' + x1 + ' ' + y1 + ' V' + my + ' H' + x2 + ' V' + y2); }
     function poignee(id, x, y, titre, sym) { handles.push('<button class="poignee" data-act="lien" data-id="' + h(id) + '" style="left:' + (x - 11) + 'px;top:' + (y - 11) + 'px" title="' + h(titre) + '" aria-label="' + h(titre) + '">' + sym + '</button>'); }
@@ -3965,6 +4037,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     html += '<div class="chips">' + state.av.map(pastilleAV).join('') + (state.av.length ? '' : '<p class="empty">Aucun contrat d’assurance-vie.</p>') + '</div>';
     return html + bulle();
   }
+  // facteur d'agrandissement du texte (zoom CSS) : les positions mesurées sont ramenées à l'échelle de la page
+  function echelle(r) { var z = zoomEcran(); return { left: r.left / z, right: r.right / z, top: r.top / z, bottom: r.bottom / z, width: r.width / z, height: r.height / z }; }
+  function zoomEcran() { var z = parseFloat(getComputedStyle(document.body).zoom); return z > 0 ? z : 1; }
   function placerBulle(apresRendu) {
     var mainEl = $('#main'); if (mainEl) mainEl.style.minHeight = '';
     var voile = $('#voile'); if (voile) voile.classList.remove('on');
@@ -3973,7 +4048,8 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (!chip) return;
     if (window.matchMedia('(max-width: 700px)').matches) { b.classList.add('sheet'); if (voile) voile.classList.add('on'); return; }
     b.classList.remove('sheet');
-    var mr = main.getBoundingClientRect(), cr = chip.getBoundingClientRect();
+    var Z = zoomEcran(), r0 = main.getBoundingClientRect(), r1 = chip.getBoundingClientRect();
+    var mr = { left: r0.left / Z, top: r0.top / Z, width: r0.width / Z }, cr = { left: r1.left / Z, right: r1.right / Z, bottom: r1.bottom / Z, width: r1.width / Z };
     var w = Math.min(460, mr.width - 32);
     var left = Math.min(Math.max(cr.left - mr.left, 16), mr.width - w - 16);
     b.style.width = w + 'px'; b.style.left = left + 'px'; b.style.top = (cr.bottom - mr.top + 12) + 'px';
@@ -4016,7 +4092,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     return html;
   }
   function rHypotheses() {
-    return '<p class="lead">Hypothèses de l’étude. Par défaut : premier décès après 81 ans, conjoint optant pour l’usufruit total valorisé à 20 %.</p><div class="grid g3">' + field('Date de l’étude', 'dateEtude', 'date') + '</div><div class="grid g3">' +
+    return reglagesMise() + '<p class="lead">Hypothèses de l’étude. Par défaut : premier décès après 81 ans, conjoint optant pour l’usufruit total valorisé à 20 %.</p><div class="grid g3">' + field('Date de l’étude', 'dateEtude', 'date') + '</div><div class="grid g3">' +
       field('Âge minimum au 1er décès', 'params.ageMinPremierDeces', 'num', { hint: 'Fixe aussi l’âge minimum de l’usufruitier (art. 669).' }) +
       field('Décote sur parts de SCI créée', 'params.decoteSociete', 'pct') + field('Décote sur parts de sociétés déjà détenues', 'params.decoteExistante', 'pct', { hint: '0 % dans le modèle Excel du cabinet.' }) +
       field('Frais fixes de création de SCI', 'params.fraisFixesSociete', 'money') +
@@ -4207,6 +4283,45 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   var APP_DEFAUT = { principale: '#143A46', accent: '#B08A3E', police: 'Garamond', mention: 'Audit civil et fiscal  ·  Document non contractuel, établi selon les dispositions en vigueur à sa date', afficherLogo: true, logo: null };
   var PALETTES = [['Bleu nuit et or', '#143A46', '#B08A3E'], ['Marine et cuivre', '#12284B', '#B4683A'], ['Bordeaux et or', '#5A1A28', '#B08A3E'], ['Sapin et laiton', '#1F4A3A', '#A8873D'], ['Anthracite et bleu', '#2B3138', '#3F7CAC'], ['Prune et rose poudré', '#3D2645', '#C08A8A']];
   var POLICES = ['Garamond', 'Georgia', 'Cambria', 'Times New Roman', 'Calibri', 'Aptos', 'Arial', 'Century Gothic', 'Verdana'];
+  /* ---- mise en page de l'application ---- */
+  var MISE_DEFAUT = { menu: 'cote', densite: 'standard', largeur: 'standard', texte: 'normal', angles: 'doux', fond: 'gris', pastilles: 'grille', police: 'sans', entete: 'fixe', animations: 'oui' };
+  var MISE_OPTIONS = [
+    ['menu', 'Menu', [['cote', 'Sur le côté'], ['haut', 'En haut'], ['icones', 'Icônes seules']], 'Sur ordinateur ; le téléphone garde sa barre en bas.'],
+    ['densite', 'Densité', [['aeree', 'Aérée'], ['standard', 'Standard'], ['compacte', 'Compacte']]],
+    ['largeur', 'Largeur', [['etroite', 'Étroite'], ['standard', 'Standard'], ['large', 'Pleine largeur']]],
+    ['texte', 'Taille du texte', [['petit', 'Petite'], ['normal', 'Normale'], ['grand', 'Grande'], ['tresgrand', 'Très grande']]],
+    ['fond', 'Fond', [['gris', 'Gris clair'], ['blanc', 'Blanc'], ['creme', 'Crème'], ['sombre', 'Sombre']]],
+    ['angles', 'Coins', [['droits', 'Droits'], ['doux', 'Adoucis'], ['ronds', 'Arrondis']]],
+    ['police', 'Police de l’écran', [['sans', 'Sans empattement'], ['serif', 'Avec empattement'], ['systeme', 'Police du système']]],
+    ['pastilles', 'Biens, donations, AV', [['grille', 'En grille'], ['liste', 'En liste']]],
+    ['entete', 'Bandeau des chiffres', [['fixe', 'Toujours visible'], ['defilant', 'Défile avec la page']]],
+    ['animations', 'Animations', [['oui', 'Activées'], ['non', 'Réduites']]]
+  ];
+  var MISE_PRESETS = [
+    ['Classique', {}],
+    ['Compacte', { densite: 'compacte', largeur: 'large', texte: 'petit', menu: 'icones', pastilles: 'liste' }],
+    ['Lecture confortable', { densite: 'aeree', largeur: 'etroite', texte: 'grand', police: 'serif', fond: 'creme' }],
+    ['Épurée', { menu: 'haut', fond: 'blanc', angles: 'droits', animations: 'non' }],
+    ['Nuit', { fond: 'sombre', angles: 'ronds' }]
+  ];
+  function appliquerMise() {
+    var m = Object.assign({}, MISE_DEFAUT, apparence.mise || {}), r = document.documentElement;
+    Object.keys(MISE_DEFAUT).forEach(function (k) { r.setAttribute('data-' + k, m[k]); });
+    r.setAttribute('data-theme', m.fond === 'sombre' ? 'dark' : 'light');
+    var cs = document.querySelector('meta[name="color-scheme"]'); if (cs) cs.setAttribute('content', m.fond === 'sombre' ? 'dark' : 'light only');
+    if (typeof dessinerArbre === 'function') setTimeout(function () { dessinerArbre(); placerBulle(); }, 0);
+  }
+  function reglagesMise() {
+    var m = Object.assign({}, MISE_DEFAUT, apparence.mise || {});
+    var actif = MISE_PRESETS.filter(function (p) { var c = Object.assign({}, MISE_DEFAUT, p[1]); return Object.keys(MISE_DEFAUT).every(function (k) { return c[k] === m[k]; }); })[0];
+    var html = '<details class="reglages"' + (reglagesMise.ouvert ? ' open' : '') + ' id="reglages-mise"><summary>Mise en page de l’application</summary><div class="rg">';
+    html += '<div class="presets">' + MISE_PRESETS.map(function (p, i) { return '<button type="button" class="preset' + (actif === p ? ' on' : '') + '" data-act="mise-preset" data-i="' + i + '">' + h(p[0]) + '</button>'; }).join('') + '</div>';
+    html += '<div class="mise-grille">' + MISE_OPTIONS.map(function (o) {
+      return '<div class="mise-opt"><span class="mise-lib">' + h(o[1]) + '</span><div class="segment" role="radiogroup" aria-label="' + h(o[1]) + '">' + o[2].map(function (v) { var on = m[o[0]] === v[0]; return '<button type="button" role="radio" aria-checked="' + on + '" class="' + (on ? 'on' : '') + '" data-act="mise" data-k="' + o[0] + '" data-v="' + v[0] + '">' + h(v[1]) + '</button>'; }).join('') + '</div>' + (o[3] ? '<small>' + h(o[3]) + '</small>' : '') + '</div>';
+    }).join('') + '</div>';
+    html += '<div class="exports"><button type="button" class="btn ghost petit" data-act="mise-defaut">Mise en page par défaut</button></div><p class="note">Appliqué immédiatement et mémorisé sur ce poste. Les couleurs, la police et le logo se règlent dans Exports.</p></div></details>';
+    return html;
+  }
   var apparence = (function () { try { return Object.assign({}, APP_DEFAUT, JSON.parse(localStorage.getItem(APP_KEY) || '{}')); } catch (e) { return Object.assign({}, APP_DEFAUT); } })();
   function sauverApparence() { try { localStorage.setItem(APP_KEY, JSON.stringify(apparence)); } catch (e) { } couleursApp(); if (LOCAL) api('PUT', 'reglages', apparence).catch(function () { }); }
   function apparencePersonnalisee() { return apparence.principale.toUpperCase() !== APP_DEFAUT.principale || apparence.accent.toUpperCase() !== APP_DEFAUT.accent || apparence.police !== APP_DEFAUT.police; }
@@ -4275,7 +4390,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var cur = courante();
     var ICO = { famille: 'frere', donations: 'don', patrimoine: 'rp', strategie: 'societe', hypotheses: 'autre', analyse: 'financier', leviers: 'av', exports: 'pro' };
     var COURT = { donations: 'Dons', patrimoine: 'Biens', strategie: 'Plan', hypotheses: 'Réglages', exports: 'Export' };
-    $('#nav').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '"' + (s.id === cur ? ' aria-current="page"' : '') + '><span class="ni">' + icone(ICO[s.id]) + '</span><span class="nl" data-court="' + h(COURT[s.id] || s.t) + '">' + h(s.t) + '</span></a>'; }).join('');
+    $('#nav').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '" title="' + h(s.t) + '"' + (s.id === cur ? ' aria-current="page"' : '') + '><span class="ni">' + icone(ICO[s.id]) + '</span><span class="nl" data-court="' + h(COURT[s.id] || s.t) + '">' + h(s.t) + '</span></a>'; }).join('');
     var sec = SECTIONS.filter(function (s) { return s.id === cur; })[0];
     var memeOnglet = cur === rendre.derniere;
     if (!memeOnglet) editeur = null;
@@ -4497,7 +4612,15 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       return;
     }
     if (a === 'palette') { var pal = PALETTES[+b.dataset.i]; apparence.principale = pal[1]; apparence.accent = pal[2]; sauverApparence(); reglagesApparence.ouvert = true; rendre(); return; }
-    if (a === 'apparence-defaut') { apparence = Object.assign({}, APP_DEFAUT); sauverApparence(); reglagesApparence.ouvert = true; rendre(); toast('Réglages par défaut rétablis.'); return; }
+    if (a === 'mise' || a === 'mise-preset' || a === 'mise-defaut') {
+      var mm = Object.assign({}, MISE_DEFAUT, apparence.mise || {});
+      if (a === 'mise') mm[b.dataset.k] = b.dataset.v;
+      else mm = Object.assign({}, MISE_DEFAUT, a === 'mise-preset' ? MISE_PRESETS[+b.dataset.i][1] : {});
+      apparence.mise = mm; reglagesMise.ouvert = true; sauverApparence(); rendre();
+      if (a !== 'mise') toast(a === 'mise-defaut' ? 'Mise en page par défaut rétablie.' : 'Mise en page « ' + MISE_PRESETS[+b.dataset.i][0] + ' » appliquée.');
+      return;
+    }
+    if (a === 'apparence-defaut') { apparence = Object.assign({}, APP_DEFAUT, { mise: apparence.mise }); sauverApparence(); reglagesApparence.ouvert = true; rendre(); toast('Réglages par défaut rétablis.'); return; }
     if (a === 'logo-defaut') { apparence.logo = null; sauverApparence(); reglagesApparence.ouvert = true; rendre(); return; }
     if (a === 'telecharger-modele') return enregistrer('Modèle Audit civil et fiscal.pptx', new Blob([await PPTX.personnaliser(modeleIntegre(), optionsApparence())], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
     if (a === 'oublier-modele') { modele = null; modeleInfo = null; await idbDel('modele'); appliquerTheme(null); toast('Retour au modèle intégré.'); }
@@ -4516,10 +4639,10 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var cible = null;
     function montrer(el) {
       cible = el; ib.textContent = el.getAttribute('data-tip'); ib.classList.add('on');
-      var r = el.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 24);
+      var r = echelle(el.getBoundingClientRect()), w = Math.min(320, (window.innerWidth / zoomEcran()) - 24);
       ib.style.width = w + 'px';
-      ib.style.left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), window.innerWidth - w - 12) + 'px';
-      var top = r.bottom + 8; if (top + ib.offsetHeight > window.innerHeight - 12) top = Math.max(12, r.top - ib.offsetHeight - 8);
+      ib.style.left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), (window.innerWidth / zoomEcran()) - w - 12) + 'px';
+      var top = r.bottom + 8; if (top + ib.offsetHeight > (window.innerHeight / zoomEcran()) - 12) top = Math.max(12, r.top - ib.offsetHeight - 8);
       ib.style.top = top + 'px';
     }
     function cacher() { cible = null; ib.classList.remove('on'); }
@@ -4574,6 +4697,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     if (perso) { r.style.setProperty('--brand', apparence.principale); r.style.setProperty('--accent', apparence.accent); }
     else if (themeModele && themeModele.colors && themeModele.colors.accent1) { r.style.setProperty('--brand', '#' + themeModele.colors.accent1); r.style.removeProperty('--accent'); }
     else { r.style.removeProperty('--brand'); r.style.removeProperty('--accent'); }
+    appliquerMise();
     var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', getComputedStyle(r).getPropertyValue('--brand').trim() || '#234E5C');
   }
   function normaliser(d) {
@@ -4665,9 +4789,9 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       if (window.matchMedia('(max-width: 600px)').matches) { dp.className = 'on sheet'; dp.style.left = dp.style.top = ''; return; }
       dp.className = 'on';
       var vivant = document.querySelector('input[data-path="' + st.path + '"]'); if (vivant) st.input = vivant;
-      var r = st.input.getBoundingClientRect(), w = 300;
-      dp.style.left = Math.min(Math.max(12, r.left), window.innerWidth - w - 12) + 'px';
-      var top = r.bottom + 6; if (top + dp.offsetHeight > window.innerHeight - 10) top = Math.max(10, r.top - dp.offsetHeight - 6);
+      var r = echelle(st.input.getBoundingClientRect()), w = 300;
+      dp.style.left = Math.min(Math.max(12, r.left), (window.innerWidth / zoomEcran()) - w - 12) + 'px';
+      var top = r.bottom + 6; if (top + dp.offsetHeight > (window.innerHeight / zoomEcran()) - 10) top = Math.max(10, r.top - dp.offsetHeight - 6);
       dp.style.top = top + 'px';
     }
     function ouvrir(input) {
@@ -4707,7 +4831,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     window.addEventListener('resize', function () { if (st) placer(); });
   })();
 
-  document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('reglages')) reglagesApparence.ouvert = e.target.open; }, true);
+  document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('reglages')) { if (e.target.id === 'reglages-mise') reglagesMise.ouvert = e.target.open; else reglagesApparence.ouvert = e.target.open; } }, true);
   /* ---------- Glisser-déposer d'un modèle .pptx ou d'un dossier .json ---------- */
   (function () {
     function fichiers(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0; }
