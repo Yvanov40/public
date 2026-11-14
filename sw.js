@@ -3,7 +3,7 @@
 // =====================================================================================
 //  Avant, le Suivi et l'Audit vivaient tous les deux à la racine et partageaient ce service.
 //  Maintenant chaque appli a son propre dossier et son propre service (suivi/sw.js, audit/sw.js,
-//  revision/sw.js). Mais les appareils qui avaient déjà l'ancien service le gardent tant qu'on ne
+//  revision/sw.js, pvi/sw.js, succession/sw.js). Mais les appareils qui avaient déjà l'ancien service le gardent tant qu'on ne
 //  lui dit pas de partir. Cette version-ci ne fait donc qu'une chose : se désinstaller.
 //  Quand tous vos appareils seront passés par le site, ce fichier pourra être supprimé.
 // =====================================================================================
