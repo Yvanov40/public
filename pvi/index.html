@@ -51,6 +51,10 @@ html{scroll-padding-top:150px}
 body{margin:0;background:var(--fond);color:var(--encre);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
   padding-bottom:env(safe-area-inset-bottom,0px)}
 button,input,select{font:inherit;color:inherit}
+html,body{overflow-x:clip;max-width:100%}
+.col-saisie,.col-res{min-width:0}
+#detail,#proj details,#recapT,#scComp{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:600px){th,td{padding:6px 5px;font-size:12.5px}.corps{padding:14px 12px}.carte>header{padding:12px 14px}.carte>header .ref{display:none}.ced-c{padding:10px}.tuiles{grid-template-columns:1fr 1fr}.t-ic{width:34px;height:34px}.seg button{white-space:normal}}
 button{cursor:pointer}
 
 /* ---------- En-tête ---------- */
@@ -231,6 +235,7 @@ button.inter.on .bille{transform:translateX(18px)}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 th,td{padding:7px 8px;border-bottom:1px solid var(--ligne);text-align:right;font-size:13.5px;vertical-align:top}
 th:first-child,td:first-child{text-align:left}
+td:not(:first-child),th:not(:first-child){white-space:nowrap}
 thead th{font-size:12px;color:var(--discret);font-weight:600}
 tr.gras td{font-weight:700}
 tr.tot td{font-weight:700;border-top:2px solid var(--bleu);background:var(--doux)}
@@ -460,26 +465,28 @@ const SECTIONS = [
    { id: "tvaCession", type: "montant", l: "TVA acquittée par le vendeur" },
  ]},
  { id: "acq", t: "Acquisition et prix de revient", ref: "CGI art. 150 VB", champs: [
-   { id: "modeAcq", type: "tuiles", l: "Mode d'acquisition", def: "onereux", plein: true, petit: true, opts: [["onereux", "Achat", "Vente, VEFA, adjudication", "cle"], ["gratuit", "Donation ou succession", "Valeur déclarée dans l'acte", "cadeau"], ["construction", "Construction", "Sur un terrain acquis par le cédant", "grue"]] },
-   { id: "dateAcq", type: "date", l: (f) => f.modeAcq === "construction" ? "Date d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Date de la donation ou du décès" : "Date d'acquisition", info: "Achat : date de l'acte (ou de levée des conditions suspensives). Succession : date du décès. Donation et donation-partage : date de l'acte. VEFA : date du contrat.",
+   { id: "fractions", type: "inter", l: "Bien acquis en plusieurs fois", desc: "Parts indivises achetées ou reçues à des dates différentes, usufruit puis nue-propriété, lots réunis… vendus en bloc (même acte, même acquéreur)" },
+   { id: "modeAcq", type: "tuiles", l: "Mode d'acquisition", def: "onereux", plein: true, petit: true, quand: (f) => !f.fractions, opts: [["onereux", "Achat", "Vente, VEFA, adjudication", "cle"], ["gratuit", "Donation ou succession", "Valeur déclarée dans l'acte", "cadeau"], ["construction", "Construction", "Sur un terrain acquis par le cédant", "grue"]] },
+   { id: "dateAcq", type: "date", l: (f) => f.modeAcq === "construction" ? "Date d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Date de la donation ou du décès" : "Date d'acquisition", quand: (f) => !f.fractions, info: "Achat : date de l'acte (ou de levée des conditions suspensives). Succession : date du décès. Donation et donation-partage : date de l'acte. VEFA : date du contrat.",
      extra: (f) => { const a = D(f.dateAcq), c = D(f.dateCession); if (!a || !c || a > c) return ""; const y = anneesDetention(a, c); const t = new Date(a); t.setFullYear(t.getFullYear() + y); let m = (c.getFullYear() - t.getFullYear()) * 12 + c.getMonth() - t.getMonth(); if (c.getDate() < t.getDate()) m--; return `Détention : ${y} an${y > 1 ? "s" : ""}${m > 0 ? " et " + m + " mois" : ""} à la cession`; } },
-   { id: "prixAcq", type: "montant", l: (f) => f.modeAcq === "construction" ? "Prix d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Valeur retenue dans l'acte ou la déclaration" : "Prix d'acquisition stipulé" },
-   { id: "ss1", type: "titre", l: "Frais d'acquisition", quand: (f) => f.modeAcq !== "gratuit" },
-   { id: "fraisMode", type: "segment", l: "Option", def: "auto", quand: (f) => f.modeAcq !== "gratuit", opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 7,5 %"], ["reel", "Réels"]], info: "Le forfait de 7,5 % du prix d'achat est ouvert aux acquisitions à titre onéreux (pas aux titres de sociétés). En cas de construction, il ne porte que sur le terrain.",
-     extra: (f) => num(f.prixAcq) > 0 && f.typeBien !== "parts" ? "Forfait : " + eur(.075 * num(f.prixAcq)) : "" },
-   { id: "fraisReel", type: "montant", l: "Frais réels justifiés", aide: "Notaire, droits d'enregistrement, commission à la charge de l'acquéreur", quand: (f) => f.modeAcq !== "gratuit" && f.fraisMode !== "forfait" },
-   { id: "fraisGratuit", type: "montant", l: "Frais d'acte et droits de mutation payés", aide: "Forfait de 7,5 % exclu. Droits de succession sur l'actif brut.", quand: (f) => f.modeAcq === "gratuit" },
-   { id: "ss2", type: "titre", l: "Construction", quand: (f) => f.modeAcq === "construction" },
-   { id: "coutConstr", type: "montant", l: "Coût de la construction (factures)", quand: (f) => f.modeAcq === "construction" },
-   { id: "dateDebutTrav", type: "date", l: "Début des travaux", aide: "Départ de la détention de la fraction « construction »", quand: (f) => f.modeAcq === "construction" },
-   { id: "dateAchev", type: "date", l: "Achèvement", aide: "Départ du délai de 5 ans du forfait de 15 %", quand: (f) => f.modeAcq === "construction" },
-   { id: "assiette15", type: "segment", l: "Assiette du forfait de 15 %", def: "terrain", plein: true, quand: (f) => f.modeAcq === "construction", opts: [["terrain", "Terrain seul (prudent)"], ["total", "Terrain + construction"]], info: "Les textes ne tranchent pas nettement ce point ; l'option prudente est retenue par défaut." },
+   { id: "prixAcq", type: "montant", quand: (f) => !f.fractions, l: (f) => f.modeAcq === "construction" ? "Prix d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Valeur retenue dans l'acte ou la déclaration" : "Prix d'acquisition stipulé" },
+   { id: "fracs", type: "fractions", plein: true, def: () => FRACTIONS_DEF(), quand: (f) => f.fractions },
+   { id: "ss1", type: "titre", l: "Frais d'acquisition", quand: (f) => f.fractions || f.modeAcq !== "gratuit" },
+   { id: "fraisMode", type: "segment", l: (f) => f.fractions ? "Option pour les fractions achetées" : "Option", def: "auto", quand: (f) => f.fractions || f.modeAcq !== "gratuit", opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 7,5 %"], ["reel", "Réels"]], info: "Le forfait de 7,5 % du prix d'achat est ouvert aux acquisitions à titre onéreux (pas aux titres de sociétés). En cas de construction, il ne porte que sur le terrain.",
+     extra: (f) => !f.fractions && num(f.prixAcq) > 0 && f.typeBien !== "parts" ? "Forfait : " + eur(.075 * num(f.prixAcq)) : "" },
+   { id: "fraisReel", type: "montant", l: "Frais réels justifiés", aide: "Notaire, droits d'enregistrement, commission à la charge de l'acquéreur", quand: (f) => !f.fractions && f.modeAcq !== "gratuit" && f.fraisMode !== "forfait" },
+   { id: "fraisGratuit", type: "montant", l: "Frais d'acte et droits de mutation payés", aide: "Forfait de 7,5 % exclu. Droits de succession sur l'actif brut.", quand: (f) => !f.fractions && f.modeAcq === "gratuit" },
+   { id: "ss2", type: "titre", l: "Construction", quand: (f) => !f.fractions && f.modeAcq === "construction" },
+   { id: "coutConstr", type: "montant", l: "Coût de la construction (factures)", quand: (f) => !f.fractions && f.modeAcq === "construction" },
+   { id: "dateDebutTrav", type: "date", l: "Début des travaux", aide: "Départ de la détention de la fraction « construction »", quand: (f) => !f.fractions && f.modeAcq === "construction" },
+   { id: "dateAchev", type: "date", l: "Achèvement", aide: "Départ du délai de 5 ans du forfait de 15 %", quand: (f) => !f.fractions && f.modeAcq === "construction" },
+   { id: "assiette15", type: "segment", l: "Assiette du forfait de 15 %", def: "terrain", plein: true, quand: (f) => !f.fractions && f.modeAcq === "construction", opts: [["terrain", "Terrain seul (prudent)"], ["total", "Terrain + construction"]], info: "Les textes ne tranchent pas nettement ce point ; l'option prudente est retenue par défaut." },
  ]},
  { id: "trav", t: "Travaux et amortissements", ref: "CGI art. 150 VB II 4° et III", champs: [
    { id: "travMode", type: "segment", l: "Travaux", def: "auto", plein: true, opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 15 %"], ["reel", "Réels"], ["aucun", "Aucun"]], info: "Forfait de 15 % du prix d'achat pour un immeuble bâti cédé plus de 5 ans après son acquisition, sans justificatif. Travaux réels : construction, reconstruction, agrandissement ou amélioration, réalisés par une entreprise et non déduits des revenus.",
-     extra: (f) => num(f.prixAcq) > 0 && (f.typeBien === "bati" || f.modeAcq === "construction") ? "Forfait : " + eur(.15 * num(f.prixAcq)) + " (bâti détenu plus de 5 ans)" : "" },
-   { id: "travReel", type: "montant", l: "Travaux réels justifiés", quand: (f) => f.travMode === "reel" || f.travMode === "auto" },
-   { id: "deficit", type: "montant", l: "Déficit foncier « travaux » non imputé", info: "Les déficits fonciers correspondant à des travaux et non encore imputés majorent le prix d'acquisition (BOI-RFPI-PVI-20-10-20-20 § 270)." },
+     extra: (f) => !f.fractions && num(f.prixAcq) > 0 && (f.typeBien === "bati" || f.modeAcq === "construction") ? "Forfait : " + eur(.15 * num(f.prixAcq)) + " (bâti détenu plus de 5 ans)" : "" },
+   { id: "travReel", type: "montant", l: "Travaux réels justifiés", extra: (f) => f.fractions ? "Ventilés entre les fractions au prorata de leur quote-part" : "", quand: (f) => f.travMode === "reel" || f.travMode === "auto" },
+   { id: "deficit", type: "montant", l: "Déficit foncier « travaux » non imputé", extra: (f) => f.fractions && num(f.deficit) ? "Ventilé au prorata des fractions" : "", info: "Les déficits fonciers correspondant à des travaux et non encore imputés majorent le prix d'acquisition (BOI-RFPI-PVI-20-10-20-20 § 270)." },
    { id: "ss3", type: "titre", l: "Réintégration des amortissements" },
    { id: "amortLMNP", type: "montant", l: "Amortissements LMNP déduits", info: "Cessions depuis le 15/02/2025 : les amortissements déduits en location meublée (régime réel) minorent le prix d'acquisition, même si le bien n'est plus loué meublé." },
    { id: "amortJB", type: "montant", l: "Amortissements « Jeanbrun » déduits" },
@@ -525,6 +532,8 @@ const SECTIONS = [
    { id: "tSol", type: "pas", l: "Prélèvement de solidarité", def: "7.5", step: 0.1, min: 0, max: 100, u: "%", info: "Non-résidents affiliés à un régime de sécurité sociale d'un État de l'EEE, de la Suisse ou du Royaume-Uni." },
  ]},
 ];
+const FRACTION = { nom: "Fraction", quote: "50", mode: "onereux", date: "", prix: "", frais: "" };
+function FRACTIONS_DEF() { return [{ ...FRACTION, nom: "Première acquisition" }, { ...FRACTION, nom: "Seconde acquisition" }]; }
 const CHAMPS = SECTIONS.flatMap((s) => s.champs || []).filter((c) => c.type !== "titre");
 const CEDANT = { nom: "Cédant 1", droit: "PP", quote: "100", resid: "FR", is: false, rp: false, rpPct: "100", rp244: false, bis: false, bisPct: "100", retraite: false, ifi: false, rfr: "", parts: "1", zone: "metro", ehpad: false, ehpadDelai: true, nr150: false, solid: false };
 // Les champs de chaque carte « cédant » (c = le cédant concerné)
@@ -575,42 +584,79 @@ function calculer(f) {
   if (num(f.mobilier)) L.push(["− Mobilier", -num(f.mobilier)]);
   if (num(f.tvaCession)) L.push(["− TVA acquittée", -num(f.tvaCession)]);
   L.push(["Prix de cession corrigé", P, "inter"]);
-  const constr = f.modeAcq === "construction", grat = f.modeAcq === "gratuit";
-  const A = num(f.prixAcq), C = constr ? num(f.coutConstr) : 0;
-  L.push([grat ? "Valeur retenue (donation / succession)" : constr ? "Prix d'acquisition du terrain" : "Prix d'acquisition stipulé", A]);
-  if (constr) L.push(["+ Coût de la construction", C]);
-  let frais = 0, fraisLib = "";
-  if (grat) { frais = num(f.fraisGratuit); fraisLib = "frais et droits réels"; }
-  else {
-    const forfOK = !parts, forf = forfOK ? .075 * A : 0, reel = num(f.fraisReel);
-    if (f.fraisMode === "forfait" && forfOK) { frais = forf; fraisLib = "forfait 7,5 %" + (constr ? " du terrain" : ""); }
-    else if (f.fraisMode === "reel" || !forfOK) { frais = reel; fraisLib = "frais réels"; }
-    else if (forf >= reel) { frais = forf; fraisLib = "forfait 7,5 %, plus favorable"; } else { frais = reel; fraisLib = "frais réels, plus favorables"; }
-    if (parts && f.fraisMode === "forfait") note("att", "Forfait de 7,5 % non applicable aux cessions de titres de sociétés : frais réels retenus.");
+  // --- Acquisition : un seul achat, une construction, ou plusieurs fractions (vente en bloc) ---
+  const frac = !!f.fractions && Array.isArray(f.fracs) && f.fracs.length > 0;
+  const constr = !frac && f.modeAcq === "construction", grat = !frac && f.modeAcq === "gratuit";
+  const A = frac ? f.fracs.reduce((t, x) => t + num(x.prix), 0) : num(f.prixAcq), C = constr ? num(f.coutConstr) : 0;
+  if (parts && f.fraisMode === "forfait") note("att", "Forfait de 7,5 % non applicable aux cessions de titres de sociétés : frais réels retenus.");
+  // Frais d'acquisition d'une acquisition de prix a (gratuit : frais réels seulement)
+  const fraisDe = (a, gratuit, reel) => {
+    if (gratuit) return [reel, "frais et droits réels"];
+    const forfOK = !parts, forf = forfOK ? .075 * a : 0;
+    if (f.fraisMode === "forfait" && forfOK) return [forf, "forfait 7,5 %" + (constr ? " du terrain" : "")];
+    if (f.fraisMode === "reel" || !forfOK) return [reel, "frais réels"];
+    return forf >= reel ? [forf, "forfait 7,5 %, plus favorable"] : [reel, "frais réels, plus favorables"];
+  };
+  // Travaux : forfait de 15 % si bâti détenu plus de 5 ans depuis « ref », ou montant réel
+  let avert15 = false;
+  const travDe = (base15, ref, reel) => {
+    const ok = (type === "bati" || constr) && !parts && ref && dc && (() => { const t = new Date(ref); t.setFullYear(t.getFullYear() + 5); return dc > t; })();
+    const forf = ok ? .15 * base15 : 0;
+    if (f.travMode === "forfait") { if (!ok) avert15 = true; return ok ? [forf, "forfait 15 %"] : [0, ""]; }
+    if (f.travMode === "reel") return [reel, "montant réel"];
+    if (f.travMode === "auto") { if (forf >= reel && forf > 0) return [forf, "forfait 15 %, plus favorable"]; if (reel > 0) return [reel, "réels, plus favorables"]; }
+    return [0, ""];
+  };
+  const def = num(f.deficit), lm = num(f.amortLMNP), jb = num(f.amortJB);
+  const lmOK = lm > 0 && dc && dc >= new Date("2025-02-15") && !f.lmnpExcept;
+  if (lm && !lmOK) note("info", "Amortissements LMNP non réintégrés (" + (f.lmnpExcept ? "résidence de services exclue" : "cession antérieure au 15/02/2025") + ").");
+  const amort = (lmOK ? lm : 0) + jb;
+  let PR, PVB, NIR, NPS, aIR, aPS, yT, yC, yMax, yMin, FR = null;
+  if (!frac) {
+    L.push([grat ? "Valeur retenue (donation / succession)" : constr ? "Prix d'acquisition du terrain" : "Prix d'acquisition stipulé", A]);
+    if (constr) L.push(["+ Coût de la construction", C]);
+    const [frais, fraisLib] = fraisDe(A, grat, num(grat ? f.fraisGratuit : f.fraisReel));
+    if (frais) L.push(["+ Frais d'acquisition (" + fraisLib + ")", frais]);
+    const [trav, travLib] = travDe(constr && f.assiette15 === "total" ? A + C : A, constr ? D(f.dateAchev) : da, num(f.travReel));
+    if (trav) L.push(["+ Travaux (" + travLib + ")", trav]);
+    if (def) L.push(["+ Déficit foncier « travaux » non imputé", def]);
+    if (lmOK) L.push(["− Amortissements LMNP réintégrés", -lm]);
+    if (jb) L.push(["− Amortissements Jeanbrun réintégrés", -jb]);
+    PR = A + C + frais + trav + def - amort;
+    L.push(["Prix de revient", PR, "inter"]);
+    PVB = P - PR;
+    L.push(["Plus-value brute (bien entier)", PVB, "tot"]);
+    yT = anneesDetention(da, dc); yC = constr ? anneesDetention(D(f.dateDebutTrav), dc) : yT;
+    const rT = constr && A + C > 0 ? A / (A + C) : 1;
+    aIR = rT * abatIR(yT) + (1 - rT) * abatIR(yC); aPS = rT * abatPS(yT) + (1 - rT) * abatPS(yC);
+    NIR = PVB * (1 - aIR); NPS = PVB * (1 - aPS);
+    yMax = Math.max(yT, yC); yMin = constr ? Math.min(yT, yC) : yT;
+  } else {
+    // Vente en bloc d'un bien acquis par fractions (BOI-RFPI-PVI-20-20 § 120 à 160) :
+    // une plus- ou moins-value par fraction, chacune avec sa durée ; les moins-values
+    // réduites de leur abattement s'imputent sur les plus-values des autres fractions.
+    const sq = f.fracs.reduce((t, x) => t + num(x.quote), 0) || 1;
+    if (Math.abs(sq - 100) > .01) note("att", "Somme des fractions : " + sq.toLocaleString("fr-FR") + " % du bien (100 % attendu). Le prix est ventilé au prorata des quotes-parts saisies.");
+    FR = f.fracs.map((x, j) => {
+      const q = num(x.quote) / sq, a = num(x.prix), g = x.mode === "gratuit", d = D(x.date), y = anneesDetention(d, dc);
+      const [fr, fl] = fraisDe(a, g, num(x.frais)), [tr, tl] = travDe(a, d, num(f.travReel) * q);
+      const pcs = P * q, pr = a + fr + tr + (def - amort) * q, pvb = pcs - pr, ai = abatIR(y), ap = abatPS(y);
+      return { nom: x.nom || "Fraction " + (j + 1), q, date: x.date, y, pcs, a, fr, fl, tr, tl, pr, pvb, ai, ap, nir: pvb * (1 - ai), nps: pvb * (1 - ap), g };
+    });
+    PR = FR.reduce((t, x) => t + x.pr, 0); PVB = FR.reduce((t, x) => t + x.pvb, 0);
+    NIR = FR.reduce((t, x) => t + x.nir, 0); NPS = FR.reduce((t, x) => t + x.nps, 0);
+    for (const x of FR) L.push([`${x.nom} (${pc(x.q, 1)} du bien, ${x.y} an${x.y > 1 ? "s" : ""}) : prix ventilé ${eur(x.pcs)} − prix de revient ${eur(x.pr)}`, x.pvb]);
+    if (def) L.push(["dont déficit foncier « travaux » ventilé", def]);
+    if (amort) L.push(["dont amortissements réintégrés, ventilés", -amort]);
+    L.push(["Prix de revient total", PR, "inter"]);
+    L.push(["Plus-value brute (somme des fractions)", PVB, "tot"]);
+    const ys = FR.map((x) => x.y); yMax = Math.max(...ys); yMin = Math.min(...ys); yT = yMax; yC = yMax;
+    aIR = PVB > 0 ? 1 - NIR / PVB : 0; aPS = PVB > 0 ? 1 - NPS / PVB : 0;
+    note("info", "Vente en bloc d'un bien acquis par fractions : plus- et moins-values calculées fraction par fraction ; les moins-values, réduites de l'abattement pour durée, s'imputent sur les plus-values des autres fractions (même acte, même acquéreur).");
+    if (FR.some((x) => x.pvb < 0) && NIR <= 0 && NPS <= 0) note("info", "Après imputation, le résultat est négatif : la moins-value nette ne peut pas s'imputer sur la vente d'autres biens.");
   }
-  if (frais) L.push(["+ Frais d'acquisition (" + fraisLib + ")", frais]);
-  const ref15 = constr ? D(f.dateAchev) : da;
-  const forf15OK = (type === "bati" || constr) && !parts && ref15 && dc && (() => { const t = new Date(ref15); t.setFullYear(t.getFullYear() + 5); return dc > t; })();
-  const base15 = constr && f.assiette15 === "total" ? A + C : A;
-  const forf15 = forf15OK ? .15 * base15 : 0, trR = num(f.travReel);
-  let trav = 0, travLib = "";
-  if (f.travMode === "forfait") { if (forf15OK) { trav = forf15; travLib = "forfait 15 %"; } else note("att", "Forfait travaux de 15 % non applicable : immeuble bâti détenu depuis plus de 5 ans requis (hors parts de sociétés)."); }
-  else if (f.travMode === "reel") { trav = trR; travLib = "montant réel"; }
-  else if (f.travMode === "auto") { if (forf15 >= trR && forf15 > 0) { trav = forf15; travLib = "forfait 15 %, plus favorable"; } else if (trR > 0) { trav = trR; travLib = "réels, plus favorables"; } }
-  if (trav) L.push(["+ Travaux (" + travLib + ")", trav]);
-  const def = num(f.deficit); if (def) L.push(["+ Déficit foncier « travaux » non imputé", def]);
-  let amort = 0; const lm = num(f.amortLMNP);
-  if (lm) { if (dc && dc >= new Date("2025-02-15") && !f.lmnpExcept) { amort += lm; L.push(["− Amortissements LMNP réintégrés", -lm]); } else note("info", "Amortissements LMNP non réintégrés (" + (f.lmnpExcept ? "résidence de services exclue" : "cession antérieure au 15/02/2025") + ")."); }
-  const jb = num(f.amortJB); if (jb) { amort += jb; L.push(["− Amortissements Jeanbrun réintégrés", -jb]); }
-  const PR = A + C + frais + trav + def - amort;
-  L.push(["Prix de revient", PR, "inter"]);
-  const PVB = P - PR;
-  L.push(["Plus-value brute (bien entier)", PVB, "tot"]);
-
-  const yT = anneesDetention(da, dc), yC = constr ? anneesDetention(D(f.dateDebutTrav), dc) : yT;
-  const rT = constr && A + C > 0 ? A / (A + C) : 1;
-  const aIR = rT * abatIR(yT) + (1 - rT) * abatIR(yC), aPS = rT * abatPS(yT) + (1 - rT) * abatPS(yC);
-  const yMax = Math.max(yT, yC), yMin = constr ? Math.min(yT, yC) : yT;
+  if (avert15) note("att", "Forfait travaux de 15 % non applicable : immeuble bâti détenu depuis plus de 5 ans requis (hors parts de sociétés).");
+  const datesOK = !!dc && (frac ? FR.every((x) => D(x.date)) : !!da);
   let fu = 0; if (f.demembre) fu = f.demMethode === "669" ? usufruit669(num(f.ageUsu)) : num(f.pctUsu) / 100;
   const fracDroit = (d) => !f.demembre || d === "PP" ? 1 : d === "US" ? fu : 1 - fu;
 
@@ -622,7 +668,7 @@ function calculer(f) {
     if (num(f.pctRemploiExpro) >= 90) gExo = (f.operation === "expro" ? "Expropriation" : "Droit de délaissement") + " avec remploi d'au moins 90 % sous 12 mois (CGI art. 150 U II 4°)";
     else note("err", "Remploi inférieur à 90 % : pas d'exonération pour expropriation ou délaissement (aucune exonération partielle).");
   }
-  if (!gExo && yMin >= 30 && da) gExo = "Détention de plus de 30 ans : exonération totale d'IR et de prélèvements sociaux";
+  if (!gExo && yMin >= 30 && datesOK) gExo = "Détention de plus de 30 ans : exonération totale d'IR et de prélèvements sociaux";
   let fLS = 0;
   if (f.operation === "logsoc") { if (dc && dc > new Date("2027-12-31")) note("att", "Exonération « logement social » limitée aux cessions jusqu'au 31/12/2027."); else { fLS = Math.min(1, num(f.pctLogSoc) / 100); if (f.orgSocial && fLS > .8) fLS = 1; } }
   const ve = num(f.abat150VE);
@@ -671,14 +717,14 @@ function calculer(f) {
       else { e = 1; r.exos.push("Pension de vieillesse ou carte d'invalidité, pas d'IFI et RFR N-2 ≤ " + eur(seuil) + " (CGI art. 150 U III)"); if (c.resid === "HUE") note("att", r.nom + " : pour un non-résident, exonération réservée aux ressortissants UE / EEE (ou clause de non-discrimination)."); }
     }
     r.e = e;
-    if (pvb <= 0) { r.pvIR = 0; r.pvPS = 0; }
+    const nI = Math.max(0, NIR) * s, nP = Math.max(0, NPS) * s;
+    if (pvb <= 0 && nI <= 0 && nP <= 0) { r.pvIR = 0; r.pvPS = 0; }
     else {
       const base = pvb * (1 - e);
       r.lignes.push(["Quote-part de plus-value brute", pvb, pvb]);
       if (e > 0) r.lignes.push(["− Fraction exonérée (" + pc(e, 1) + ")", -pvb * e, -pvb * e]);
-      const abI = base * aIR, abP = base * aPS;
-      r.lignes.push(["− Abattement pour durée (" + pc(aIR) + " / " + pc(aPS) + ")", -abI, -abP]);
-      let ir = base - abI, ps = base - abP;
+      let ir = nI * (1 - e), ps = nP * (1 - e);
+      r.lignes.push([FR ? "− Abattements pour durée, fraction par fraction, et imputation des moins-values" : "− Abattement pour durée (" + pc(aIR) + " / " + pc(aPS) + ")", ir - base, ps - base]);
       if (fLS > 0) { r.lignes.push(["− Exonération logement social (" + pc(fLS, 1) + ")", -ir * fLS, -ps * fLS]); ir *= 1 - fLS; ps *= 1 - fLS; }
       if (ve > 0) { r.lignes.push(["− Abattement exceptionnel art. 150 VE (" + pc(ve, 0) + ")", -ir * ve, -ps * ve]); ir *= 1 - ve; ps *= 1 - ve; }
       if (c.resid !== "FR" && c.nr150 && !(c.rp244 && e > 0)) {
@@ -717,16 +763,16 @@ function calculer(f) {
   const T = { IR: 0, PS: 0, sur: 0, tCom: 0, tNat: 0, total: 0, pvIR: 0, pvPS: 0 };
   for (const r of res) for (const k in T) T[k] += r[k] || 0;
 
-  if (!dc || !da) note("err", "Renseignez la date d'acquisition et la date de cession.");
-  else if (da > dc) note("err", "La date d'acquisition est postérieure à la date de cession.");
-  if (PVB < 0) note("info", "Moins-value brute : non imputable sur d'autres plus-values ni sur le revenu global (sauf vente en bloc d'un bien acquis par fractions).");
-  if (da && dc && yMin >= 22 && yMin < 30 && !gExo) note("ok", "Détention d'au moins 22 ans : exonération d'impôt sur le revenu ; seuls les prélèvements sociaux restent dus.");
-  if (da && dc && yMin < 22 && !gExo && PVB > 0) { const n = 22 - yMin; note("info", "Exonération d'IR dans " + n + " an" + (n > 1 ? "s" : "") + ", de prélèvements sociaux dans " + (30 - yMin) + " ans."); }
+  if (!datesOK) note("err", frac ? "Renseignez la date de cession et la date de chaque fraction." : "Renseignez la date d'acquisition et la date de cession.");
+  else if (!frac && da > dc) note("err", "La date d'acquisition est postérieure à la date de cession.");
+  if (PVB < 0 && !FR) note("info", "Moins-value brute : non imputable sur d'autres plus-values ni sur le revenu global (sauf vente en bloc d'un bien acquis par fractions).");
+  if (datesOK && yMin >= 22 && yMin < 30 && !gExo) note("ok", "Détention d'au moins 22 ans : exonération d'impôt sur le revenu ; seuls les prélèvements sociaux restent dus.");
+  if (datesOK && yMin < 22 && !gExo && PVB > 0) { const n = 22 - yMin; note("info", "Exonération d'IR dans " + n + " an" + (n > 1 ? "s" : "") + ", de prélèvements sociaux dans " + (30 - yMin) + " ans."); }
   if (type === "tab") note("info", "Terrain à bâtir : pas de surtaxe sur les plus-values élevées ; vérifiez les taxes sur les terrains devenus constructibles.");
   if (f.demembre && f.demMethode === "669") note("info", "Ventilation selon l'art. 669 : usufruit " + pc(fu, 0) + ", nue-propriété " + pc(1 - fu, 0) + ".");
   if (T.sur > 0) note("info", "Surtaxe sur les plus-values de plus de 50 000 € (CGI art. 1609 nonies G) : " + eur(T.sur) + ".");
   if (gExo) note("ok", gExo + ".");
-  return { L, P, PR, PVB, yT, yC, constr, aIR, aPS, res, T, tInfo, W, prix, frais: num(f.fraisCession), net: prix - num(f.fraisCession) - T.total, fu };
+  return { L, P, PR, PVB, NIR, NPS, FR, yMin, yMax, yT, yC, constr, aIR, aPS, res, T, tInfo, W, prix, frais: num(f.fraisCession), net: prix - num(f.fraisCession) - T.total, fu };
 }
 
 /* =====================================================================================
@@ -908,14 +954,64 @@ function mDate(spec, lire, ecrire, id) {
     if (d) ecrire(iso(d)); else if (!v) ecrire("");
   });
   e.addEventListener("blur", () => { const d = lireDateFr(e.value); e.classList.toggle("faux", !!e.value && !d); });
-  return cadre(spec, el("div", { class: "saisie date" }, e, el("button", { class: "dp-bt", type: "button", "data-cal": id, "aria-label": "Calendrier", html: ICAL })), id);
+  const boite = el("div", { class: "saisie date" }, e);
+  boite.append(el("button", { class: "dp-bt", type: "button", "aria-label": "Calendrier", html: ICAL, onclick: (ev) => { ev.stopPropagation(); const deja = $("cal").classList.contains("on") && cal.ancre === boite; fermer(); if (!deja) ouvrirCal({ lire, ecrire, input: e, ancre: boite }); } }));
+  return cadre(spec, boite, id);
 }
-const MODULES = { inter: mInter, tuiles: mTuiles, segment: mSegment, liste: mListe, montant: mMontant, curseur: mCurseur, pas: mPas, date: mDate };
+/* --- Fractions : une carte par acquisition (vente en bloc d'un bien acquis en plusieurs fois) --- */
+let boiteFracs = null, liensFr = [];
+function mFractions(spec, lire, ecrire, id) {
+  boiteFracs = el("div", { class: "fracs" });
+  dessinerFractions();
+  return el("div", { class: "ch plein", id: "w_" + id }, boiteFracs,
+    el("button", { type: "button", class: "bt", onclick: () => { etat.fracs.push({ ...FRACTION, nom: "Acquisition " + (etat.fracs.length + 1), quote: "0" }); dessinerFractions(); maj(); } }, "+ Ajouter une fraction"),
+    el("p", { class: "aide-bas" }, "Exemple : moitié indivise achetée en 2008, autre moitié reçue par succession en 2015. Chaque fraction a sa propre durée de détention ; travaux, déficits et amortissements saisis plus bas sont ventilés au prorata."));
+}
+function dessinerFractions() {
+  if (!boiteFracs) return;
+  if (!Array.isArray(etat.fracs) || !etat.fracs.length) etat.fracs = FRACTIONS_DEF();
+  boiteFracs.innerHTML = ""; liensFr = [];
+  etat.fracs.forEach((x, j) => {
+    const pastille = el("span", { class: "pastille" });
+    const majP = () => { pastille.textContent = String(Math.round(num(x.quote) * 100) / 100).replace(".", ",") + " %"; };
+    const titre = el("div", { class: "ced-t" }, el("span", { class: "avatar" }, String(j + 1)),
+      el("input", { value: x.nom, "aria-label": "Nom de la fraction", oninput: (e) => { x.nom = e.target.value; maj(); } }), pastille,
+      etat.fracs.length > 1 ? el("button", { type: "button", class: "bt mini danger", onclick: () => { etat.fracs.splice(j, 1); dessinerFractions(); maj(); } }, "Retirer") : null);
+    const g = x.mode === "gratuit";
+    const specs = [
+      { k: "quote", type: "curseur", l: "Quote-part du bien", presets: [25, 50, 75, 100], plein: true },
+      { k: "mode", type: "segment", l: "Origine", plein: true, opts: [["onereux", "Achat"], ["gratuit", "Donation ou succession"]] },
+      { k: "date", type: "date", l: g ? "Date de la donation ou du décès" : "Date d'acquisition" },
+      { k: "prix", type: "montant", l: g ? "Valeur retenue dans l'acte" : "Prix d'acquisition" },
+      { k: "frais", type: "montant", l: g ? "Frais d'acte et droits payés" : "Frais réels justifiés", quand: () => g || etat.fraisMode !== "forfait" },
+    ];
+    const grille = el("div", { class: "grille" });
+    for (const sp of specs) {
+      const w = MODULES[sp.type](sp, () => x[sp.k], (v) => { x[sp.k] = v; if (sp.k === "quote") majP(); if (sp.k === "mode") { dessinerFractions(); } maj(); }, null);
+      grille.append(w); if (sp.quand) liensFr.push([w, sp.quand]);
+    }
+    const note = el("div", { class: "ch plein note-c" }); note._j = j; grille.append(note); liensFr.push([note, null]);
+    majP();
+    boiteFracs.append(el("div", { class: "ced" }, titre, el("div", { class: "ced-c" }, grille)));
+  });
+  majFractions();
+}
+function majFractions() {
+  for (const [w, quand] of liensFr) {
+    if (quand) w.classList.toggle("cache", !quand());
+    if (w._j != null) {
+      const x = dernier && dernier.FR && dernier.FR[w._j];
+      w.classList.toggle("cache", !x || !x.date);
+      if (x && x.date) w.textContent = `${x.y} an${x.y > 1 ? "s" : ""} de détention · abattements ${pc(x.ai)} (IR) / ${pc(x.ap)} (PS) · ${x.pvb >= 0 ? "plus" : "moins"}-value brute ${eur(x.pvb)}`;
+    }
+  }
+}
+const MODULES = { fractions: mFractions, inter: mInter, tuiles: mTuiles, segment: mSegment, liste: mListe, montant: mMontant, curseur: mCurseur, pas: mPas, date: mDate };
 
 /* =====================================================================================
    5 bis. CONSTRUCTION DU FORMULAIRE ET DES CARTES « CÉDANT »
    ===================================================================================== */
-function ecrireChamp(id, v) { etat[id] = v; if (id === "detention" || id === "demembre") majCedants(); maj(); }
+function ecrireChamp(id, v) { etat[id] = v; if (id === "fractions" && v && (!Array.isArray(etat.fracs) || !etat.fracs.length)) { etat.fracs = FRACTIONS_DEF(); dessinerFractions(); } majCedants(); maj(); }
 function construireFormulaire() {
   const box = $("saisie"); box.innerHTML = "";
   box.append(el("div", { class: "astuce" }, el("b", {}, "Astuce"), " · dans les montants, tapez « 250k », « 1,2M » ou un calcul comme « 180000+12000 » ; dans les dates, « 12062013 » suffit."));
@@ -973,12 +1069,12 @@ function maj() {
   const fait = { bien: num(etat.prixCession) > 0 && !!etat.dateCession, acq: !!etat.dateAcq && (num(etat.prixAcq) > 0 || etat.modeAcq === "gratuit") };
   document.querySelectorAll("#etapes a[data-s]").forEach((a) => a.classList.toggle("fait", !!fait[a.dataset.s]));
 
-  const f = lireTout(), R = calculer(f); dernier = R;
+  const f = lireTout(), R = calculer(f); dernier = R; majFractions();
   const tauxPVB = R.PVB > 0 ? R.T.total / R.PVB : 0;
   $("hPVB").textContent = $("rPVB").textContent = eur(R.PVB);
   $("hTot").textContent = $("rTot").textContent = $("bTot").textContent = eur(R.T.total);
   $("hNet").textContent = $("rNet").textContent = $("bNet").textContent = eur(R.net);
-  $("rDet").textContent = R.constr ? `terrain ${R.yT} ans · construction ${R.yC} ans` : `${R.yT} an${R.yT > 1 ? "s" : ""} de détention`;
+  $("rDet").textContent = R.FR ? `${R.FR.length} fractions · ${R.yMin === R.yMax ? R.yMax : R.yMin + " à " + R.yMax} ans` : R.constr ? `terrain ${R.yT} ans · construction ${R.yC} ans` : `${R.yT} an${R.yT > 1 ? "s" : ""} de détention`;
   $("rTaux").textContent = R.PVB > 0 ? `${pc(tauxPVB, 1)} de la plus-value` : "aucune plus-value";
   dessinerCascade(R);
   dessinerDetail(R);
@@ -1004,7 +1100,7 @@ function dessinerDetail(R) {
   let h = "";
   if (ongletActif === 0 || !multi) {
     h += "<table><tbody>" + R.L.map(([l, v, c]) => `<tr class="${c || ""}"><td>${esc(l)}</td><td>${eur(v)}</td></tr>`).join("");
-    h += `<tr><td class="disc">Abattements pour durée de détention (IR / PS)</td><td class="disc">${pc(R.aIR)} / ${pc(R.aPS)}</td></tr></tbody></table>`;
+    h += R.FR ? "</tbody></table>" + tableFractions(R) : `<tr><td class="disc">Abattements pour durée de détention (IR / PS)</td><td class="disc">${pc(R.aIR)} / ${pc(R.aPS)}</td></tr></tbody></table>`;
     if (!multi && R.res[0]) h += tableCedant(R.res[0]);
     else {
       h += `<table style="margin-top:14px"><thead><tr><th>Cédant</th><th>Base IR</th><th>IR</th><th>PS</th><th>Surtaxe / taxes</th><th>Total</th></tr></thead><tbody>`;
@@ -1014,6 +1110,12 @@ function dessinerDetail(R) {
     if (R.tInfo.length) h += `<table style="margin-top:14px"><tbody><tr class="inter"><td colspan="2">Terrains devenus constructibles (bien entier)</td></tr>${R.tInfo.map(([l, v]) => `<tr><td>${esc(l)}</td><td>${eur(v)}</td></tr>`).join("")}</tbody></table>`;
   } else h += tableCedant(R.res[ongletActif - 1]);
   $("detail").innerHTML = h;
+}
+function tableFractions(R) {
+  let h = `<table style="margin-top:14px"><thead><tr><th>Vente en bloc · par fraction</th><th>Détention</th><th>PV / MV brute</th><th>Base IR</th><th>Base PS</th></tr></thead><tbody>`;
+  for (const x of R.FR) h += `<tr><td>${esc(x.nom)} <span class="pastille">${pc(x.q, 1)}</span></td><td>${x.y} ans</td><td>${eur(x.pvb)}</td><td>${eur(x.nir)}</td><td>${eur(x.nps)}</td></tr>`;
+  h += `<tr class="tot"><td>Après imputation des moins-values</td><td></td><td>${eur(R.PVB)}</td><td>${eur(Math.max(0, R.NIR))}</td><td>${eur(Math.max(0, R.NPS))}</td></tr></tbody></table>`;
+  return h + `<p class="aide-bas">Bases IR et PS de chaque fraction après son propre abattement pour durée ; les moins-values ainsi réduites s'imputent sur les plus-values (BOI-RFPI-PVI-20-20 § 150).</p>`;
 }
 function tableCedant(r) {
   let h = `<table style="margin-top:14px"><thead><tr><th>${esc(r.nom)} · quote-part ${pc(r.part, 2)}</th><th>Impôt sur le revenu</th><th>Prélèv. sociaux</th></tr></thead><tbody>`;
@@ -1062,6 +1164,7 @@ function lignesRecap(f) {
   const t = [];
   for (const s of SECTIONS) for (const c of s.champs || []) {
     if (c.type === "titre" || (c.quand && !c.quand(f))) continue;
+    if (c.type === "fractions") { (f.fracs || []).forEach((x) => t.push([x.nom, `${String(x.quote).replace(".", ",")} % · ${x.mode === "gratuit" ? "donation / succession" : "achat"} · ${dfr(x.date) || "date ?"} · ${eur(num(x.prix))}${num(x.frais) ? " · frais " + eur(num(x.frais)) : ""}`])); continue; }
     const v = f[c.id]; if (v === "" || v === false || v == null) continue;
     const lab = typeof c.l === "function" ? c.l(f) : c.l;
     let x = v;
@@ -1082,10 +1185,10 @@ function dessinerRecap(f) { $("recapT").innerHTML = "<table><tbody>" + lignesRec
    ===================================================================================== */
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const MOISL = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
-const cal = { champ: null, vue: "j", an: 2026, mois: 0, debut: 2016 };
-function ouvrirCal(id, ancre) {
-  const d = D(etat[id]) || new Date();
-  Object.assign(cal, { champ: id, ancre, vue: "j", an: d.getFullYear(), mois: d.getMonth(), debut: d.getFullYear() - 7 });
+const cal = { lire: () => "", ecrire: () => {}, input: null, ancre: null, vue: "j", an: 2026, mois: 0, debut: 2016 };
+function ouvrirCal(ctx) {
+  const d = D(ctx.lire()) || new Date();
+  Object.assign(cal, ctx, { vue: "j", an: d.getFullYear(), mois: d.getMonth(), debut: d.getFullYear() - 7 });
   dessinerCal(); $("cal").classList.add("on"); placerCal();
 }
 function placerCal() {
@@ -1093,7 +1196,7 @@ function placerCal() {
   c.style.top = top + "px"; c.style.left = Math.min(innerWidth - 310, Math.max(8, r.right - 300)) + "px";
 }
 function dessinerCal() {
-  const sel = D(etat[cal.champ]), auj = new Date(); let h = "", g = "";
+  const sel = D(cal.lire()), auj = new Date(); let h = "", g = "";
   const fil = `<div class="fil"><button data-v="m">${MOISL[cal.mois]}</button><button data-v="a">${cal.an}</button></div>`;
   if (cal.vue === "a") {
     h = `<div class="cal-h"><b style="padding:5px 4px">${cal.debut} – ${cal.debut + 15}</b><div class="nav"><button data-n="-16">‹</button><button data-n="16">›</button></div></div>`;
@@ -1110,7 +1213,7 @@ function dessinerCal() {
   }
   $("cal").innerHTML = h + g + `<div class="cal-b"><button data-x="eff">Effacer</button><button data-x="auj">Aujourd'hui</button></div>`;
 }
-function choisirDate(v) { etat[cal.champ] = v; $(cal.champ).value = dfr(v); $(cal.champ).classList.remove("faux"); $("cal").classList.remove("on"); maj(); }
+function choisirDate(v) { cal.input.value = dfr(v); cal.input.classList.remove("faux"); $("cal").classList.remove("on"); cal.ecrire(v); }
 $("cal").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
   if (b.dataset.v) cal.vue = b.dataset.v;
@@ -1199,7 +1302,7 @@ async function exportExcel() {
   const ligne = (cells, style) => { const r = ws.addRow(cells); r.eachCell((c) => { if (typeof c.value === "number") c.numFmt = EUR; c.border = { bottom: { style: "hair", color: { argb: "FFD9D4C8" } } }; }); if (style === "tot") r.eachCell((c) => { c.font = { name: "Grandview", size: 8, bold: true }; c.border = { top: { style: "medium", color: { argb: argb(or) } } }; }); if (style === "inter") r.eachCell((c) => { c.font = { name: "Grandview", size: 8, bold: true }; }); return r; };
   titre("Simulation de plus-value immobilière"); ws.addRow([`Cession du ${dfr(f.dateCession)} — édition du ${new Date().toLocaleDateString("fr-FR")}`]); ws.addRow([]);
   titre("Hypothèses"); entete(["Paramètre", "Valeur"]); for (const [a, b] of lignesRecap(f)) ligne([a, b]); ws.addRow([]);
-  titre("Détermination de la plus-value"); entete(["", "Montant"]); for (const [l, v, c] of R.L) ligne([l, v], c === "tot" ? "tot" : c ? "inter" : ""); ligne(["Abattements pour durée (IR / PS)", `${pc(R.aIR)} / ${pc(R.aPS)}`]); ws.addRow([]);
+  titre("Détermination de la plus-value"); entete(["", "Montant"]); for (const [l, v, c] of R.L) ligne([l, v], c === "tot" ? "tot" : c ? "inter" : ""); if (R.FR) { ws.addRow([]); entete(["Vente en bloc · fraction", "Détention (ans)", "PV / MV brute", "Base IR", "Base PS"]); for (const x of R.FR) ligne([`${x.nom} (${pc(x.q, 1)})`, x.y, x.pvb, x.nir, x.nps]).getCell(2).numFmt = "0"; ligne(["Après imputation des moins-values", "", R.PVB, Math.max(0, R.NIR), Math.max(0, R.NPS)], "tot"); } else ligne(["Abattements pour durée (IR / PS)", `${pc(R.aIR)} / ${pc(R.aPS)}`]); ws.addRow([]);
   for (const r of R.res) {
     titre(`${r.nom} — quote-part ${pc(r.part, 2)}`); entete(["", "Impôt sur le revenu", "Prélèvements sociaux"]);
     for (const x of r.exos) ligne(["Exonération : " + x]);
@@ -1238,8 +1341,6 @@ document.querySelectorAll(".voile").forEach((v) => v.addEventListener("click", (
 $("bVoir").onclick = () => $("res").scrollIntoView({ behavior: "smooth" });
 document.addEventListener("click", (e) => {
   const tip = e.target.closest(".info");
-  const calBt = e.target.closest("[data-cal]");
-  if (calBt) { e.preventDefault(); e.stopPropagation(); const on = $("cal").classList.contains("on") && cal.champ === calBt.dataset.cal; fermer(); if (!on) ouvrirCal(calBt.dataset.cal, calBt.parentElement); return; }
   if (tip) { e.preventDefault(); e.stopPropagation(); const bu = $("bulle"), on = bu.classList.contains("on") && bu.dataset.de === tip.dataset.tip; fermer(); if (on) return; bu.textContent = tip.dataset.tip; bu.dataset.de = tip.dataset.tip; bu.classList.add("on"); const r = tip.getBoundingClientRect(); bu.style.left = Math.max(8, Math.min(innerWidth - 330, r.left - 10)) + "px"; bu.style.top = (r.bottom + 8 + bu.offsetHeight > innerHeight ? r.top - bu.offsetHeight - 8 : r.bottom + 8) + "px"; return; }
   if (!e.target.closest("#cal,.menu,.fen,#bulle,#pop")) document.querySelectorAll(".menu.on,#cal.on,#bulle.on,#pop.on").forEach((x) => x.classList.remove("on"));
 });
