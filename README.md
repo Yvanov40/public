@@ -24,6 +24,15 @@ et sur vos autres appareils, et les montre dans la fiche du client et dans son o
 - `lien-suivi.source.js` : le module commun de la Succession, de la Plus-value et de l’Investissement immobilier (recopié dans leur page,
   entre les repères `lien-suivi : début` et `lien-suivi : fin`). Il n’est pas chargé par le site lui-même.
 
+## Identifiant et mot de passe
+
+Le Suivi et les simulateurs peuvent demander un identifiant et un mot de passe (menu ⋯ du Suivi). Le réglage se fait
+sur chaque appareil. Après un temps sans utilisation, les applis se verrouillent : les dossiers, les simulations et
+la clé GitHub gardés par le navigateur sont chiffrés (AES-GCM, clé tirée du mot de passe). Le fichier sur GitHub n'est
+pas concerné.
+
+- `verrou.source.js` : le module commun, recopié au début de chaque appli protégée (repères `verrou : début` / `verrou : fin`).
+
 ## Fichiers à la racine
 
 - `index.html` : la page d’accueil « Mes applis ».
