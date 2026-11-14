@@ -105,12 +105,17 @@
     // couleurs de l'agenda (rendez-vous, tâches, Dutreil, perso, retard) : d'origine tant qu'on n'y touche pas
     const CAL_DEFAUT = { rdv: "#7d9c7c", tache: "#c9a45c", dutreil: "#6b77b0", perso: "#8b68c1", retard: "#c0504d" };
     window.CAL_DEFAUT = CAL_DEFAUT;
+    // mise en page : taille, tuiles par ligne, cases de l'accueil, menu, onglets… (d'origine tant qu'on n'y touche pas)
+    const PAGE_DEFAUT = { taille: 100, tuiles: 3, accCols: 3, menu: "gauche", bas: "complet", coins: "arrondis", relief: "normal", largeur: "pleine",
+      ouverture: "accueil", masques: [], cartes: ["journee", "honoraires", "taches", "rdv", "etapes", "relancer", "dutreil"], cartesMasquees: [] };
+    const CARTES_ACCUEIL = ["journee", "honoraires", "taches", "rdv", "etapes", "relancer", "dutreil"];  // dans l'ordre de la page
+    window.PAGE_DEFAUT = PAGE_DEFAUT;
     window.APPARENCE_DEFAUT = DEFAUT;
     window.POLICES_APPARENCE = POLICES;
     window.lireApparence = () => {
       let a = {};
       try { a = JSON.parse(localStorage.getItem("suivi-gp-apparence")) || {}; } catch (e) {}
-      return { ...DEFAUT, ...a, cal: { ...CAL_DEFAUT, ...(a.cal || {}) } };
+      return { ...DEFAUT, ...a, cal: { ...CAL_DEFAUT, ...(a.cal || {}) }, page: { ...PAGE_DEFAUT, ...(a.page || {}) } };
     };
     window.appliquerApparence = () => {
       const a = window.lireApparence(), r = document.documentElement, st = r.style;
@@ -151,6 +156,33 @@
       r.classList.toggle("agenda-perso", calPerso);
       for (const k of Object.keys(CAL_DEFAUT)) { if (calPerso) st.setProperty("--cal-" + k, a.cal[k]); else st.removeProperty("--cal-" + k); }
       if (window.majCouleursAgenda) window.majCouleursAgenda(a.cal);
+      // ---- mise en page
+      const pg = a.page;
+      r.classList.toggle("barre-haut", pg.menu === "haut");
+      r.classList.toggle("bas-icones", pg.bas === "icones");
+      r.classList.toggle("coins-droits", pg.coins === "droits");
+      r.classList.toggle("coins-ronds", pg.coins === "ronds");
+      r.classList.toggle("relief-plat", pg.relief === "plat");
+      r.classList.toggle("relief-ombres", pg.relief === "ombres");
+      r.classList.toggle("largeur-centree", pg.largeur === "centree");
+      let css = "";
+      if (+pg.taille && +pg.taille !== 100) css += `html{zoom:${pg.taille / 100}}`;
+      if (+pg.tuiles !== 3) css += `#mTaches,#mDorment,#mDutreil,#mRdv,.m-sections .cartes,#mClients,.cal-tuiles,.natures-tuiles,.k-groupe .cartes{grid-template-columns:repeat(${pg.tuiles},minmax(0,1fr))!important}`;
+      if (+pg.accCols !== 3) css += `@media (min-width:901px){.acc-grille{grid-template-columns:repeat(${pg.accCols},minmax(0,1fr))!important}}`;
+      const ordre = [...pg.cartes.filter((k) => CARTES_ACCUEIL.includes(k)), ...CARTES_ACCUEIL.filter((k) => !pg.cartes.includes(k))];
+      if (ordre.join() !== CARTES_ACCUEIL.join() || pg.cartesMasquees.length) {
+        css += `@media (max-width:900px){.acc-grille{display:flex;flex-direction:column}}`;
+        CARTES_ACCUEIL.forEach((k, i) => {
+          css += `.acc-grille>.acc-carte:nth-child(${i + 1}){order:${ordre.indexOf(k)}${pg.cartesMasquees.includes(k) ? ";display:none!important" : ""}}`;
+        });
+      }
+      if (pg.masques.length) {
+        css += pg.masques.map((v) => `.onglets-haut [data-vue="${v}"],nav.bas [data-vue="${v}"]`).join(",") + "{display:none!important}";
+        css += `nav.bas{grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}`;
+      }
+      let feuille = document.getElementById("style-mise-en-page");
+      if (!feuille) { feuille = document.createElement("style"); feuille.id = "style-mise-en-page"; document.head.appendChild(feuille); }
+      feuille.textContent = css;
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute("content", perso ? (sombre ? melange(a.principale, "#000000", 0.55) : a.principale) : "#0c2d39");
     };
@@ -1608,6 +1640,36 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 .app-couleur span { font-size: 13.5px; }
 .app-couleur small { display: block; color: var(--discret); font-size: 11.5px; text-transform: uppercase; }
 
+/* ---------- mise en page choisie (Apparence) ---------- */
+.app-choix { display: flex; flex-wrap: wrap; gap: 6px; }
+.app-cartes { display: grid; gap: 4px; }
+.app-carte { display: flex; align-items: center; gap: 8px; border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 4px 6px 4px 10px; }
+.app-carte label { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+.app-carte label input[type=checkbox] { width: 18px !important; height: 18px; flex: none; margin: 0; }
+.app-carte label { justify-content: flex-start; text-align: left; min-width: 0; color: var(--texte); margin: 0; text-transform: none; }
+.app-carte.masquee label { color: var(--discret); text-decoration: line-through; }
+.app-carte button { width: 32px; height: 32px; border: 1px solid var(--bordure); background: var(--fond); border-radius: 8px; cursor: pointer; color: var(--texte); padding: 0; }
+.app-carte button:disabled { opacity: .3; cursor: default; }
+.app-styles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.app-style { border: 1px solid var(--bordure); background: var(--carte); border-radius: 12px; padding: 8px; text-align: left; cursor: pointer; color: var(--texte); display: grid; gap: 2px; }
+.app-style b { font-size: 13.5px; color: var(--bleu); } .app-style small { font-size: 11px; color: var(--discret); }
+@media (max-width: 900px) { .app-styles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 901px) {
+  html.largeur-centree main { max-width: 1180px; }
+  html.barre-haut .entete { position: sticky; top: 0; z-index: 30; }
+  html.barre-haut .entete-recherche { display: none !important; }
+}
+@media (max-width: 900px) {
+  html.bas-icones nav.bas a { font-size: 0 !important; gap: 0; padding: 11px 0 12px; }
+  html.bas-icones nav.bas a span { font-size: 22px; }
+}
+html.coins-droits *:not(i):not(.point):not(input[type=radio]) { border-radius: 3px !important; }
+html.coins-ronds :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile, .m-onglet, .indic, .section, .cal-tuiles .cal-element, .app-palette, .app-couleur, .feuille-boite, .tuile, .collab, .bouton, button.icone, input, select, textarea) { border-radius: 20px !important; }
+html.relief-plat *:not(.choisi):not(.ouverte):not(.feuille-boite) { box-shadow: none !important; }
+html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile, .m-onglet, .indic, .section, .cal-tuiles .cal-element, .tuile) {
+  box-shadow: 0 1px 2px rgba(12,45,57,.08), 0 4px 14px rgba(12,45,57,.10) !important; }
+:root[data-theme="dark"].relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile, .m-onglet, .indic, .section, .cal-tuiles .cal-element, .tuile) { box-shadow: 0 4px 14px rgba(0,0,0,.35) !important; }
+
 /* ---------- agenda : éléments en tuiles ---------- */
 .cal-tuiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 4px 0 6px; }
 .cal-tuiles:empty { display: none; }
@@ -1906,21 +1968,21 @@ tr.groupe-demandeur small, .clients-groupe small { color: var(--discret); font-s
 
 /* ---------- ordinateur : la barre bleue devient une colonne à gauche ---------- */
 @media (min-width: 901px) {
-  :root { --largeur-barre: 200px; }
-  body { padding-left: var(--largeur-barre); }
-  .entete { position: fixed; top: 0; left: 0; bottom: 0; width: var(--largeur-barre); height: 100vh; z-index: 30; overflow-y: auto; }
-  .entete-int { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto 1fr; grid-template-areas: "titre titre" "nav nav" "eclair menu";
+  html:not(.barre-haut) { --largeur-barre: 200px; }
+  html:not(.barre-haut) body { padding-left: var(--largeur-barre); }
+  html:not(.barre-haut) .entete { position: fixed; top: 0; left: 0; bottom: 0; width: var(--largeur-barre); height: 100vh; z-index: 30; overflow-y: auto; }
+  html:not(.barre-haut) .entete-int { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto 1fr; grid-template-areas: "titre titre" "nav nav" "eclair menu";
     align-items: start; height: 100%; min-height: 0; padding: 16px 12px 18px; gap: 18px 8px; max-width: none; box-sizing: border-box; }
-  .entete-int > div:first-child { grid-area: titre; padding: 0 4px; }
-  .entete h1 { font-size: 21px; line-height: 1.15; }
-  .etat-sync { display: flex; margin-top: 6px; font-size: 11.5px; line-height: 1.35; white-space: normal; }
-  .onglets-haut { grid-area: nav; flex-direction: column; margin-left: 0; gap: 2px; align-self: start; }
-  .onglets-haut a { padding: 10px 12px; border-bottom: 0; border-left: 3px solid transparent; border-radius: 8px; font-size: 14.5px; }
-  .onglets-haut a[aria-current="page"] { border-left-color: var(--barre-discret); background: rgba(255,255,255,.09); }
-  .onglets-haut .nb-clients { margin-left: auto; padding-left: 8px; }
-  .entete-int > #btnEclair { grid-area: eclair; align-self: end; justify-self: start; }
-  .entete-int > #btnMenu { grid-area: menu; align-self: end; }
-  .entete-recherche { display: none !important; }
+  html:not(.barre-haut) .entete-int > div:first-child { grid-area: titre; padding: 0 4px; }
+  html:not(.barre-haut) .entete h1 { font-size: 21px; line-height: 1.15; }
+  html:not(.barre-haut) .etat-sync { display: flex; margin-top: 6px; font-size: 11.5px; line-height: 1.35; white-space: normal; }
+  html:not(.barre-haut) .onglets-haut { grid-area: nav; flex-direction: column; margin-left: 0; gap: 2px; align-self: start; }
+  html:not(.barre-haut) .onglets-haut a { padding: 10px 12px; border-bottom: 0; border-left: 3px solid transparent; border-radius: 8px; font-size: 14.5px; }
+  html:not(.barre-haut) .onglets-haut a[aria-current="page"] { border-left-color: var(--barre-discret); background: rgba(255,255,255,.09); }
+  html:not(.barre-haut) .onglets-haut .nb-clients { margin-left: auto; padding-left: 8px; }
+  html:not(.barre-haut) .entete-int > #btnEclair { grid-area: eclair; align-self: end; justify-self: start; }
+  html:not(.barre-haut) .entete-int > #btnMenu { grid-area: menu; align-self: end; }
+  html:not(.barre-haut) .entete-recherche { display: none !important; }
 }
 
 /* ---------- ordinateur, barre à gauche : plus rien ne reste collé par-dessus le contenu au défilement ---------- */
@@ -2428,7 +2490,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       <button class="menu-tuile" id="btnDemandeurs"><span>🏛</span>Demandeurs et sociétés</button>
       <button class="menu-tuile" id="btnModeles"><span>☑</span>Modèles de tâches</button>
       <button class="menu-tuile" id="btnTheme"><span>🌓</span>Thème : automatique</button>
-      <button class="menu-tuile" id="btnApparence"><span>🎨</span>Apparence : couleurs, polices</button>
+      <button class="menu-tuile" id="btnApparence"><span>🎨</span>Apparence : couleurs, polices, mise en page</button>
     </div>
     <h4>Votre fichier</h4>
     <p id="infoFichier"></p>
@@ -6263,10 +6325,12 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
     }
     if (vueCourante() === "outils" || vueCourante() === "audit") return;  // ces onglets ne sont pas dans l'ordre de balayage
-    const i = ORDRE_VUES.indexOf(vueCourante()) + (dx < 0 ? 1 : -1);
-    if (i < 0 || i >= ORDRE_VUES.length) return;
+    const masques = window.lireApparence().page.masques;
+    const ordre = ORDRE_VUES.filter((v) => !masques.includes(v) || v === vueCourante());
+    const i = ordre.indexOf(vueCourante()) + (dx < 0 ? 1 : -1);
+    if (i < 0 || i >= ordre.length) return;
     sensVue = dx < 0 ? "depuis-droite" : "depuis-gauche";
-    location.hash = "#" + ORDRE_VUES[i];
+    location.hash = "#" + ordre[i];
   }, { passive: true });
 
   // ---- les autres applis du dépôt, ouvertes dans l'appli (même adresse : elles gardent leurs données) ----
@@ -8814,6 +8878,15 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     ["Noir et orange", "#1b1b1f", "#e07b1a"], ["Canard et sable", "#0f4c5c", "#c49a52"]
   ];
   const NOMS_POLICES = { plex: "IBM Plex Sans", inter: "Inter", nunito: "Nunito", systeme: "Celle de l’appareil", lora: "Lora", garamond: "EB Garamond", playfair: "Playfair Display", georgia: "Georgia" };
+  const NOMS_CARTES = { journee: "Ma journée", honoraires: "Honoraires", taches: "Tâches", rdv: "Prochains rendez-vous", etapes: "Étapes", relancer: "À relancer", dutreil: "Échéances Dutreil" };
+  const ONGLETS_PAGE = [["accueil", "Accueil"], ["kanban", "Kanban"], ["clients", "Clients"], ["calendrier", "Agenda"], ["dutreil", "Dutreil"], ["activite", "Activité"], ["audit", "Audit"]];
+  // styles prêts : quelques réglages de mise en page d'un coup (les couleurs ne changent pas)
+  const STYLES_PAGE = [
+    ["Classique", "Réglages d’origine", { taille: 100, tuiles: 3, accCols: 3, coins: "arrondis", relief: "normal", largeur: "pleine", bas: "complet" }],
+    ["Compact", "Plus d’infos à l’écran", { taille: 90, tuiles: 4, accCols: 4, coins: "arrondis", relief: "plat", largeur: "pleine", bas: "icones" }],
+    ["Aéré", "Gros caractères, moins de tuiles", { taille: 110, tuiles: 2, accCols: 2, coins: "ronds", relief: "ombres", largeur: "centree", bas: "complet" }],
+    ["Épuré", "Net, sans ombres ni arrondis", { taille: 100, tuiles: 3, accCols: 3, coins: "droits", relief: "plat", largeur: "centree", bas: "complet" }]
+  ];
   function ouvrirApparence() {
     fermerMenu();
     const garder = (changes) => {
@@ -8822,16 +8895,32 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       window.appliquerApparence();
       dessiner();
     };
+    // la mise en page : on garde la position dans la feuille, puis on redessine l'appli (montrerVue suit les onglets)
+    const garderPage = (changes) => {
+      const corps = $("corpsApparence"), haut = corps.scrollTop;
+      garder({ page: { ...window.lireApparence().page, ...changes } });
+      corps.scrollTop = haut;
+      if (donnees) afficherTout();
+    };
     const dessiner = () => {
       const a = window.lireApparence();
       // précharger les polices proposées, pour l'aperçu dans les cases
       for (const [cle, pol] of Object.entries(window.POLICES_APPARENCE)) if (pol[1] && !document.getElementById("police-" + cle)) {
         const l = document.createElement("link"); l.id = "police-" + cle; l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + pol[1] + "&display=swap"; document.head.appendChild(l);
       }
+      const tel = estTel();
+      const reglage = (lib, cle, options, aide) => el("div", { class: "champ" }, el("label", null, lib),
+        el("div", { class: "app-choix" }, options.map(([v, nom]) => el("button", { type: "button", class: "collab" + (String(a.page[cle]) === String(v) ? " choisi" : ""),
+          onclick: () => garderPage({ [cle]: v }) }, nom))), aide ? el("p", { class: "aide" }, aide) : null);
+      const ordreCartes = [...a.page.cartes.filter((k) => NOMS_CARTES[k]), ...Object.keys(NOMS_CARTES).filter((k) => !a.page.cartes.includes(k))];
+      const deplacerCarte = (i, sens) => { const o = [...ordreCartes]; [o[i], o[i + sens]] = [o[i + sens], o[i]]; garderPage({ cartes: o }); };
       const couleur = (cle, lib) => { const c = el("input", { type: "color", value: a[cle], "aria-label": lib }); c.addEventListener("input", () => garder({ [cle]: c.value })); return el("label", { class: "app-couleur" }, c, el("span", null, lib, el("small", null, a[cle]))); };
       const casesPolice = (cle, liste) => el("div", { class: "collabs" }, liste.map((k) => el("button", { type: "button", class: "collab" + (a[cle] === k ? " choisi" : ""),
         style: `font-family:${window.POLICES_APPARENCE[k][0]}`, onclick: () => garder({ [cle]: k }) }, NOMS_POLICES[k])));
       $("corpsApparence").replaceChildren(
+        el("h4", { class: "rubrique" }, "Styles prêts"),
+        el("div", { class: "app-styles" }, STYLES_PAGE.map(([nom, desc, reglages]) => el("button", { type: "button", class: "app-style",
+          onclick: () => { garderPage(reglages); informer("Style « " + nom + " » appliqué."); } }, el("b", null, nom), el("small", null, desc)))),
         el("h4", { class: "rubrique" }, "Palettes"),
         el("div", { class: "app-palettes" }, PALETTES.map(([nom, p1, p2]) => el("button", { type: "button", class: "app-palette" + (a.principale.toLowerCase() === p1 && a.accent.toLowerCase() === p2 ? " choisi" : ""),
           onclick: () => garder({ principale: p1, accent: p2 }) }, el("i", { style: `background:linear-gradient(135deg, ${p1} 0 62%, ${p2} 62%)` }), nom))),
@@ -8854,6 +8943,27 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
         casesPolice("texte", ["plex", "inter", "nunito", "systeme", "lora"]),
         el("h4", { class: "rubrique" }, "Police des titres"),
         casesPolice("titres", ["garamond", "playfair", "lora", "georgia", "inter", "nunito"]),
+        el("h4", { class: "rubrique" }, "Mise en page"),
+        reglage("Taille de l’affichage", "taille", [[90, "Petite"], [100, "Normale"], [110, "Grande"], [125, "Très grande"]]),
+        reglage("Tuiles par ligne", "tuiles", [[2, "2"], [3, "3"], [4, "4"]], "Tâches, rendez-vous, clients et cartes du Kanban sur le téléphone ; agenda et Kanban sur l’ordinateur."),
+        tel ? null : reglage("Colonnes de l’accueil", "accCols", [[2, "2"], [3, "3"], [4, "4"]]),
+        tel ? null : reglage("Menu des onglets", "menu", [["gauche", "À gauche"], ["haut", "En haut"]]),
+        tel ? null : reglage("Largeur de la page", "largeur", [["pleine", "Toute la largeur"], ["centree", "Centrée"]]),
+        tel ? reglage("Barre du bas", "bas", [["complet", "Icônes et noms"], ["icones", "Icônes seules"]]) : null,
+        reglage("Coins", "coins", [["arrondis", "Arrondis"], ["ronds", "Très arrondis"], ["droits", "Droits"]]),
+        reglage("Relief", "relief", [["plat", "Plat"], ["normal", "Normal"], ["ombres", "Ombres portées"]]),
+        reglage("Onglet à l’ouverture", "ouverture", ONGLETS_PAGE.filter(([v]) => !a.page.masques.includes(v)).map(([v, lib]) => [v, lib])),
+        el("div", { class: "champ" }, el("label", null, "Onglets affichés"),
+          el("div", { class: "app-choix" }, ONGLETS_PAGE.filter(([v]) => v !== "accueil").map(([v, lib]) => el("button", { type: "button", class: "collab" + (a.page.masques.includes(v) ? "" : " choisi"),
+            onclick: () => { const m = new Set(a.page.masques); m.has(v) ? m.delete(v) : m.add(v); garderPage({ masques: [...m], ouverture: m.has(a.page.ouverture) ? "accueil" : a.page.ouverture }); } }, lib))),
+          el("p", { class: "aide" }, "Un onglet masqué disparaît seulement de la barre : ses données ne sont pas touchées, et vous pouvez le réafficher ici.")),
+        el("div", { class: "champ" }, el("label", null, "Cases de l’accueil : ordre et affichage"),
+          el("div", { class: "app-cartes" }, ordreCartes.map((k, i) => el("div", { class: "app-carte" + (a.page.cartesMasquees.includes(k) ? " masquee" : "") },
+            el("label", null, el("input", { type: "checkbox", checked: !a.page.cartesMasquees.includes(k), onchange: (e) => {
+              const m = new Set(a.page.cartesMasquees); e.target.checked ? m.delete(k) : m.add(k); garderPage({ cartesMasquees: [...m] }); } }), NOMS_CARTES[k]),
+            el("button", { type: "button", "aria-label": "Monter", disabled: i === 0, onclick: () => deplacerCarte(i, -1) }, "↑"),
+            el("button", { type: "button", "aria-label": "Descendre", disabled: i === ordreCartes.length - 1, onclick: () => deplacerCarte(i, 1) }, "↓"))))),
+        el("button", { type: "button", class: "lien-sous-champ", onclick: () => { garder({ page: { ...window.PAGE_DEFAUT } }); if (donnees) afficherTout(); } }, "↺ Mise en page d’origine"),
         el("p", { class: "aide" }, "Tout s’applique tout de suite, sur cet appareil seulement. Le fond choisi vaut pour le thème clair ; en thème sombre, les couleurs sont éclaircies pour rester lisibles. Les polices autres que celles d’origine demandent une connexion la première fois."),
         el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => { try { localStorage.removeItem("suivi-gp-apparence"); } catch (e) {} window.appliquerApparence(); dessiner(); if (donnees) afficherTout(); informer("Apparence d’origine rétablie."); } }, "↺ Rétablir l’apparence d’origine")));
     };
@@ -9237,6 +9347,11 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   if (estTelephone()) document.documentElement.classList.add("telephone");
 
   // ---------------------------------------------------------------- démarrage
+  // l'onglet choisi dans Apparence › Mise en page s'ouvre au lancement (si aucun onglet n'est demandé dans l'adresse)
+  try {
+    const pg = window.lireApparence().page;
+    if (!location.hash && pg.ouverture && pg.ouverture !== "accueil" && !pg.masques.includes(pg.ouverture)) history.replaceState(null, "", "#" + pg.ouverture);
+  } catch (e) {}
   try {
     const a = JSON.parse(localStorage.getItem(CLE_AFFICHAGE) || "null");
     if (a) { repliees = new Set(a.repliees || []); dejaVues = new Set(a.dejaVues || []); }
