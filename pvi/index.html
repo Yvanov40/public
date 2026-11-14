@@ -105,10 +105,6 @@ nav.etapes{position:sticky;top:var(--hh,62px);z-index:15;background:color-mix(in
 .saisie.avec-u input{padding-right:34px}
 .saisie input.faux{border-color:var(--err);box-shadow:0 0 0 3px var(--err-doux)}
 .ch select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23888' stroke-width='1.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-.case{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--ligne);border-radius:10px;background:var(--champ);cursor:pointer;font-size:14px;line-height:1.4;transition:border-color .12s,background .12s}
-.case:hover{border-color:color-mix(in srgb,var(--or) 60%,var(--ligne))}
-.case input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--bleu);flex:none}
-.case:has(input:checked){border-color:var(--or);background:var(--or-doux)}
 .ss{grid-column:1/-1;margin:6px 0 -4px;font:600 13px var(--sans);color:var(--bleu-txt);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
 .ss::after{content:"";flex:1;height:1px;background:var(--ligne)}
 .cache{display:none!important}
@@ -120,6 +116,84 @@ nav.etapes{position:sticky;top:var(--hh,62px);z-index:15;background:color-mix(in
 .seg button{flex:1;border:0;background:none;border-radius:8px;padding:7px 10px;font-size:13.5px;font-weight:600;color:var(--discret);white-space:nowrap}
 .seg button.on{background:var(--carte);color:var(--bleu-txt);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 
+/* ---------- Modules de saisie maison ---------- */
+.astuce{font-size:13px;color:var(--discret);background:var(--carte);border:1px dashed var(--ligne);border-radius:12px;padding:9px 14px;margin-bottom:14px}
+.astuce b{color:var(--or)}
+.extra{font-size:12.5px;font-weight:600;color:var(--bleu-txt)}
+.extra:empty{display:none}
+.aide-bas{font-size:12.5px;color:var(--discret);margin:10px 0 0}
+/* interrupteur */
+button.inter{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:11px 14px;border:1px solid var(--ligne);border-radius:12px;background:var(--champ);transition:border-color .15s,background .15s}
+button.inter:hover{border-color:color-mix(in srgb,var(--or) 55%,var(--ligne))}
+button.inter.on{border-color:var(--or);background:var(--or-doux)}
+button.inter:focus-visible,.tuiles button:focus-visible,.liste:focus-visible,.seg button:focus-visible,.puces button:focus-visible{outline:2px solid var(--or);outline-offset:2px}
+.inter-t{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.inter-t b{font-weight:600;font-size:14.5px}
+.inter-t small{font-size:12.5px;color:var(--discret);line-height:1.35}
+.piste{flex:none;width:44px;height:26px;border-radius:13px;background:color-mix(in srgb,var(--discret) 40%,var(--ligne));position:relative;transition:background .2s}
+.bille{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s cubic-bezier(.3,1.4,.6,1)}
+button.inter.on .piste{background:var(--bleu)}
+:root[data-theme="sombre"] button.inter.on .piste{background:var(--or)}
+button.inter.on .bille{transform:translateX(18px)}
+/* tuiles */
+.tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px}
+.tuiles.petites{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.tuiles button{display:flex;align-items:center;gap:11px;text-align:left;padding:11px 12px;border:1px solid var(--ligne);border-radius:12px;background:var(--champ);transition:border-color .15s,background .15s,box-shadow .15s}
+.tuiles button:hover{border-color:color-mix(in srgb,var(--or) 55%,var(--ligne))}
+.tuiles button.on{border-color:var(--or);background:var(--or-doux);box-shadow:inset 0 0 0 1px var(--or)}
+.t-ic{flex:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:var(--doux);color:var(--bleu-txt);transition:.15s}
+.t-ic svg{width:22px;height:22px}
+.tuiles button.on .t-ic{background:var(--bleu);color:#fff}
+:root[data-theme="sombre"] .tuiles button.on .t-ic{background:var(--or)}
+.t-tx{display:flex;flex-direction:column;min-width:0}
+.t-tx b{font-size:14px;font-weight:600;line-height:1.25}
+.t-tx small{font-size:12px;color:var(--discret);line-height:1.3;margin-top:2px}
+/* liste déroulante */
+.liste{display:flex;align-items:center;gap:10px;width:100%;text-align:left;min-height:46px;padding:8px 12px;border:1px solid var(--ligne);border-radius:10px;background:var(--champ)}
+.liste:hover{border-color:color-mix(in srgb,var(--or) 55%,var(--ligne))}
+.liste span{flex:1;display:flex;flex-direction:column;min-width:0}
+.liste b{font-weight:600}
+.liste small{font-size:12.5px;color:var(--discret);line-height:1.35}
+.liste i{color:var(--discret);display:grid;font-style:normal}
+#pop{position:fixed;z-index:56;display:none;background:var(--carte);border:1px solid var(--ligne);border-radius:12px;box-shadow:var(--ombre);padding:6px;max-height:min(440px,70vh);overflow:auto}
+#pop.on{display:block}
+#pop button{display:flex;flex-direction:column;width:100%;text-align:left;border:0;background:none;border-radius:8px;padding:9px 12px 9px 32px;position:relative}
+#pop button b{font-weight:600;font-size:14px}
+#pop button small{font-size:12.5px;color:var(--discret);line-height:1.35}
+#pop button.act{background:var(--doux)}
+#pop button.sel::before{content:"✓";position:absolute;left:11px;top:9px;color:var(--or);font-weight:700}
+@media(max-width:600px){#pop.on{left:0!important;right:0;bottom:0;top:auto!important;width:auto!important;max-height:75vh;border-radius:18px 18px 0 0;padding:12px 10px calc(14px + env(safe-area-inset-bottom,0px))}}
+/* montant */
+.montant-w{display:flex;flex-direction:column;gap:4px}
+.apercu{font-size:12.5px;font-weight:700;color:var(--or)}
+.apercu:empty{display:none}
+.saisie.calc input{border-color:var(--or)}
+/* curseur */
+.curseur{display:flex;flex-direction:column;gap:9px}
+.cur-l{display:flex;align-items:center;gap:16px}
+.glis{flex:1;height:30px;position:relative;cursor:pointer;touch-action:none;outline:none}
+.glis-r{position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:linear-gradient(90deg,var(--or) var(--p,0%),color-mix(in srgb,var(--discret) 22%,var(--ligne)) var(--p,0%))}
+.glis-b{position:absolute;top:50%;left:var(--p,0%);width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--carte);border:2px solid var(--or);box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .12s,box-shadow .12s}
+.glis:focus-visible .glis-b,.glis.tient .glis-b{transform:scale(1.15);box-shadow:0 0 0 6px var(--or-doux)}
+.cur-v{display:flex;align-items:center;gap:3px;border:1px solid var(--ligne);border-radius:9px;background:var(--champ);padding:0 10px;min-height:40px;width:98px;flex:none;cursor:text}
+.cur-v input{border:0;background:none;width:100%;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;outline:none;padding:0}
+.cur-v i{font-style:normal;color:var(--discret)}
+.cur-v:focus-within,.pas:focus-within{border-color:var(--or);box-shadow:0 0 0 3px var(--or-doux)}
+.puces{display:flex;gap:6px;flex-wrap:wrap}
+.puces button{border:1px solid var(--ligne);background:var(--champ);border-radius:14px;padding:3px 11px;font-size:12.5px;font-weight:600;color:var(--discret)}
+.puces button:hover{border-color:var(--or)}
+.puces button.on{background:var(--bleu);border-color:var(--bleu);color:#fff}
+/* pas à pas */
+.pas{display:flex;align-items:stretch;border:1px solid var(--ligne);border-radius:10px;background:var(--champ);overflow:hidden;min-height:42px}
+.pas button{width:42px;border:0;background:var(--doux);color:var(--bleu-txt);font-size:20px;font-weight:600;flex:none;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.pas button:hover{background:var(--or-doux)}
+.pas-v{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 8px;cursor:text}
+.pas-v input{border:0;background:none;width:100%;min-width:0;text-align:center;font-weight:600;font-size:15px;outline:none;font-variant-numeric:tabular-nums;padding:0}
+.pas-v i{font-style:normal;color:var(--discret)}
+.note-c{font-size:12.5px;color:var(--bleu-txt);background:var(--doux);border-radius:9px;padding:8px 11px}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--bleu);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+:root[data-theme="sombre"] .avatar{background:var(--or)}
+.ced-c .grille{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 /* cédants */
 .ced{border:1px solid var(--ligne);border-radius:12px;margin-bottom:12px;overflow:hidden}
 .ced-t{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--doux)}
@@ -325,6 +399,7 @@ footer.pied{max-width:1440px;margin:0 auto;padding:0 24px 30px;color:var(--discr
 </div></div></div>
 
 <div id="cal"></div>
+<div id="pop"></div>
 <div id="bulle"></div>
 <div class="toast" id="toast"></div>
 
@@ -363,81 +438,126 @@ function seuilRFR(zone, parts, type) {
 
 /* =====================================================================================
    3. LE FORMULAIRE, DÉCRIT SOUS FORME DE LISTE
-   Chaque champ : id, type (montant, nombre, pourcent, date, choix, case, segment), libellé,
-   aide (texte sous le champ), info (bulle « i »), quand (condition d'affichage).
+   Chaque champ : id, type de module de saisie, libellé (l), aide (texte sous le champ),
+   info (bulle « i »), quand (condition d'affichage), def (valeur par défaut).
+   Modules : tuiles (grandes cartes à icône), segment (boutons accolés), liste (menu
+   déroulant maison avec descriptions), montant (accepte 250k, 1,2M, 180000+12000),
+   curseur (glissière + valeur + raccourcis), pas (− valeur +), inter (interrupteur),
+   date (saisie jj/mm/aaaa + calendrier), titre (intertitre).
    ===================================================================================== */
-const OUI = (f) => true;
 const SECTIONS = [
  { id: "bien", t: "Bien et cession", ref: "CGI art. 150 U, 150 VA", champs: [
-   { id: "typeBien", type: "choix", l: "Nature du bien cédé", def: "bati", plein: true, opts: [["bati", "Immeuble bâti (logement, local, dépendance…)"], ["tab", "Terrain à bâtir"], ["terrain", "Terrain non bâti (hors terrain à bâtir)"], ["foret", "Bois et forêts / peuplement forestier"], ["parts", "Parts de société à prépondérance immobilière (SCI, SCPI…)"], ["surelev", "Droit de surélévation"]] },
+   { id: "typeBien", type: "tuiles", l: "Nature du bien cédé", def: "bati", plein: true, opts: [
+     ["bati", "Immeuble bâti", "Logement, local, dépendance", "maison"], ["tab", "Terrain à bâtir", "Constructible (PLU)", "grue"],
+     ["terrain", "Terrain non bâti", "Hors terrain à bâtir", "champ"], ["foret", "Bois et forêts", "Peuplement forestier", "arbre"],
+     ["parts", "Parts de société", "SCI, SCPI à prépondérance immobilière", "parts"], ["surelev", "Droit de surélévation", "Exonéré jusqu'au 31/12/2026", "surelev"]] },
    { id: "detention", type: "segment", l: "Le bien est cédé", def: "direct", plein: true, opts: [["direct", "En direct (seul, indivision, communauté)"], ["sci", "Par une société à l'IR (SCI…)"]], info: "Société de personnes relevant des articles 8 à 8 ter du CGI qui vend elle-même l'immeuble. Le seuil de la surtaxe s'apprécie alors au niveau de la société, sur la quote-part des associés imposables." },
    { id: "dateCession", type: "date", l: "Date de cession (acte)", def: () => iso(new Date()), info: "Date de l'acte authentique. Promesse synallagmatique avec transfert rétroactif : date de la promesse." },
    { id: "prixCession", type: "montant", l: "Prix de cession stipulé", info: "Viager : valeur en capital de la rente + bouquet. Prix à terme : total des échéances, hors intérêts. Échange : valeur du bien reçu ± soulte." },
    { id: "fraisCession", type: "montant", l: "Frais de cession supportés", aide: "Agence (mandat vendeur), diagnostics, mainlevée, indemnité d'éviction…" },
-   { id: "charges", type: "montant", l: "Charges et indemnités au profit du cédant", aide: "Majorent le prix (ex. remboursements mis à la charge de l'acquéreur)" },
-   { id: "mobilier", type: "montant", l: "Valeur des meubles vendus (justifiée)" },
+   { id: "charges", type: "montant", l: "Charges au profit du cédant", aide: "Majorent le prix (ex. remboursements mis à la charge de l'acquéreur)" },
+   { id: "mobilier", type: "montant", l: "Meubles vendus (valeur justifiée)" },
    { id: "tvaCession", type: "montant", l: "TVA acquittée par le vendeur" },
  ]},
  { id: "acq", t: "Acquisition et prix de revient", ref: "CGI art. 150 VB", champs: [
-   { id: "modeAcq", type: "segment", l: "Mode d'acquisition", def: "onereux", plein: true, opts: [["onereux", "Achat"], ["gratuit", "Donation / succession"], ["construction", "Construction par le cédant"]] },
-   { id: "dateAcq", type: "date", l: (f) => f.modeAcq === "construction" ? "Date d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Date de la donation ou du décès" : "Date d'acquisition", info: "Achat : date de l'acte (ou de levée des conditions suspensives). Succession : date du décès. Donation et donation-partage : date de l'acte. VEFA : date du contrat." },
+   { id: "modeAcq", type: "tuiles", l: "Mode d'acquisition", def: "onereux", plein: true, petit: true, opts: [["onereux", "Achat", "Vente, VEFA, adjudication", "cle"], ["gratuit", "Donation ou succession", "Valeur déclarée dans l'acte", "cadeau"], ["construction", "Construction", "Sur un terrain acquis par le cédant", "grue"]] },
+   { id: "dateAcq", type: "date", l: (f) => f.modeAcq === "construction" ? "Date d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Date de la donation ou du décès" : "Date d'acquisition", info: "Achat : date de l'acte (ou de levée des conditions suspensives). Succession : date du décès. Donation et donation-partage : date de l'acte. VEFA : date du contrat.",
+     extra: (f) => { const a = D(f.dateAcq), c = D(f.dateCession); if (!a || !c || a > c) return ""; const y = anneesDetention(a, c); const t = new Date(a); t.setFullYear(t.getFullYear() + y); let m = (c.getFullYear() - t.getFullYear()) * 12 + c.getMonth() - t.getMonth(); if (c.getDate() < t.getDate()) m--; return `Détention : ${y} an${y > 1 ? "s" : ""}${m > 0 ? " et " + m + " mois" : ""} à la cession`; } },
    { id: "prixAcq", type: "montant", l: (f) => f.modeAcq === "construction" ? "Prix d'acquisition du terrain" : f.modeAcq === "gratuit" ? "Valeur retenue dans l'acte ou la déclaration" : "Prix d'acquisition stipulé" },
    { id: "ss1", type: "titre", l: "Frais d'acquisition", quand: (f) => f.modeAcq !== "gratuit" },
-   { id: "fraisMode", type: "segment", l: "Option", def: "auto", quand: (f) => f.modeAcq !== "gratuit", opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 7,5 %"], ["reel", "Réels"]], info: "Le forfait de 7,5 % du prix d'achat est ouvert aux acquisitions à titre onéreux (pas aux titres de sociétés). En cas de construction, il ne porte que sur le terrain." },
+   { id: "fraisMode", type: "segment", l: "Option", def: "auto", quand: (f) => f.modeAcq !== "gratuit", opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 7,5 %"], ["reel", "Réels"]], info: "Le forfait de 7,5 % du prix d'achat est ouvert aux acquisitions à titre onéreux (pas aux titres de sociétés). En cas de construction, il ne porte que sur le terrain.",
+     extra: (f) => num(f.prixAcq) > 0 && f.typeBien !== "parts" ? "Forfait : " + eur(.075 * num(f.prixAcq)) : "" },
    { id: "fraisReel", type: "montant", l: "Frais réels justifiés", aide: "Notaire, droits d'enregistrement, commission à la charge de l'acquéreur", quand: (f) => f.modeAcq !== "gratuit" && f.fraisMode !== "forfait" },
    { id: "fraisGratuit", type: "montant", l: "Frais d'acte et droits de mutation payés", aide: "Forfait de 7,5 % exclu. Droits de succession sur l'actif brut.", quand: (f) => f.modeAcq === "gratuit" },
    { id: "ss2", type: "titre", l: "Construction", quand: (f) => f.modeAcq === "construction" },
    { id: "coutConstr", type: "montant", l: "Coût de la construction (factures)", quand: (f) => f.modeAcq === "construction" },
    { id: "dateDebutTrav", type: "date", l: "Début des travaux", aide: "Départ de la détention de la fraction « construction »", quand: (f) => f.modeAcq === "construction" },
    { id: "dateAchev", type: "date", l: "Achèvement", aide: "Départ du délai de 5 ans du forfait de 15 %", quand: (f) => f.modeAcq === "construction" },
-   { id: "assiette15", type: "choix", l: "Assiette du forfait de 15 %", def: "terrain", quand: (f) => f.modeAcq === "construction", opts: [["terrain", "Prix du terrain seul (prudent)"], ["total", "Terrain + construction"]], info: "Les textes ne tranchent pas nettement ce point ; l'option prudente est retenue par défaut." },
+   { id: "assiette15", type: "segment", l: "Assiette du forfait de 15 %", def: "terrain", plein: true, quand: (f) => f.modeAcq === "construction", opts: [["terrain", "Terrain seul (prudent)"], ["total", "Terrain + construction"]], info: "Les textes ne tranchent pas nettement ce point ; l'option prudente est retenue par défaut." },
  ]},
  { id: "trav", t: "Travaux et amortissements", ref: "CGI art. 150 VB II 4° et III", champs: [
-   { id: "travMode", type: "segment", l: "Travaux", def: "auto", plein: true, opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 15 %"], ["reel", "Réels"], ["aucun", "Aucun"]], info: "Forfait de 15 % du prix d'achat pour un immeuble bâti cédé plus de 5 ans après son acquisition, sans justificatif. Travaux réels : construction, reconstruction, agrandissement ou amélioration, réalisés par une entreprise et non déduits des revenus." },
+   { id: "travMode", type: "segment", l: "Travaux", def: "auto", plein: true, opts: [["auto", "Le plus favorable"], ["forfait", "Forfait 15 %"], ["reel", "Réels"], ["aucun", "Aucun"]], info: "Forfait de 15 % du prix d'achat pour un immeuble bâti cédé plus de 5 ans après son acquisition, sans justificatif. Travaux réels : construction, reconstruction, agrandissement ou amélioration, réalisés par une entreprise et non déduits des revenus.",
+     extra: (f) => num(f.prixAcq) > 0 && (f.typeBien === "bati" || f.modeAcq === "construction") ? "Forfait : " + eur(.15 * num(f.prixAcq)) + " (bâti détenu plus de 5 ans)" : "" },
    { id: "travReel", type: "montant", l: "Travaux réels justifiés", quand: (f) => f.travMode === "reel" || f.travMode === "auto" },
    { id: "deficit", type: "montant", l: "Déficit foncier « travaux » non imputé", info: "Les déficits fonciers correspondant à des travaux et non encore imputés majorent le prix d'acquisition (BOI-RFPI-PVI-20-10-20-20 § 270)." },
    { id: "ss3", type: "titre", l: "Réintégration des amortissements" },
    { id: "amortLMNP", type: "montant", l: "Amortissements LMNP déduits", info: "Cessions depuis le 15/02/2025 : les amortissements déduits en location meublée (régime réel) minorent le prix d'acquisition, même si le bien n'est plus loué meublé." },
    { id: "amortJB", type: "montant", l: "Amortissements « Jeanbrun » déduits" },
-   { id: "lmnpExcept", type: "case", l: "Résidence étudiante ou seniors, EHPAD, établissement pour personnes handicapées : pas de réintégration", quand: (f) => num(f.amortLMNP) > 0, plein: true },
+   { id: "lmnpExcept", type: "inter", l: "Résidence de services exclue de la réintégration", desc: "Résidence étudiante ou seniors, EHPAD, établissement pour personnes handicapées", quand: (f) => num(f.amortLMNP) > 0 },
  ]},
  { id: "dem", t: "Démembrement", ref: "CGI art. 669", champs: [
-   { id: "demembre", type: "case", l: "Bien démembré, cédé en pleine propriété par l'usufruitier et le nu-propriétaire", plein: true },
+   { id: "demembre", type: "inter", l: "Le bien est démembré", desc: "Cédé en pleine propriété par l'usufruitier et le nu-propriétaire, chacun imposé sur son droit" },
    { id: "demMethode", type: "segment", l: "Ventilation du prix", def: "669", quand: (f) => f.demembre, opts: [["669", "Barème fiscal (art. 669)"], ["eco", "Valeur économique"]], info: "L'administration admet le barème de l'article 669 selon l'âge de l'usufruitier au jour de la vente ; une valorisation économique est à privilégier." },
-   { id: "ageUsu", type: "nombre", l: "Âge de l'usufruitier à la cession", u: "ans", quand: (f) => f.demembre && f.demMethode === "669" },
-   { id: "pctUsu", type: "pourcent", l: "Valeur de l'usufruit", quand: (f) => f.demembre && f.demMethode === "eco" },
+   { id: "ageUsu", type: "pas", l: "Âge de l'usufruitier à la cession", u: "ans", min: 0, max: 110, depart: 70, quand: (f) => f.demembre && f.demMethode === "669",
+     extra: (f) => f.ageUsu === "" ? "" : `Usufruit ${pc(usufruit669(num(f.ageUsu)), 0)} · nue-propriété ${pc(1 - usufruit669(num(f.ageUsu)), 0)}` },
+   { id: "pctUsu", type: "curseur", l: "Valeur économique de l'usufruit", presets: [20, 30, 40, 50, 60], quand: (f) => f.demembre && f.demMethode === "eco" },
  ]},
  { id: "ced", t: "Cédants et exonérations personnelles", ref: "CGI art. 150 U II, 244 bis A", special: "cedants" },
  { id: "ops", t: "Opérations et régimes particuliers", ref: "CGI art. 150 U II, 150 VE, 150 VF", champs: [
-   { id: "operation", type: "choix", l: "Nature de l'opération", def: "normale", plein: true, opts: [["normale", "Cession ordinaire"], ["expro", "Expropriation pour utilité publique (avec remploi)"], ["delaiss", "Droit de délaissement (avec remploi)"], ["logsoc", "Cession pour le logement social"], ["partage", "Partage ou licitation familiale (hors champ)"], ["remembr", "Remembrement / échange intercalaire"]] },
-   { id: "pctRemploiExpro", type: "pourcent", l: "Indemnité remployée sous 12 mois", def: "100", aide: "Remploi intégral réputé satisfait à 90 %", quand: (f) => f.operation === "expro" || f.operation === "delaiss" },
-   { id: "pctLogSoc", type: "pourcent", l: "Surface de logements sociaux ou intermédiaires", aide: "Rapportée à la surface totale du permis de construire", quand: (f) => f.operation === "logsoc" },
-   { id: "orgSocial", type: "case", l: "Cession directe à un organisme de logement social (exonération totale au-delà de 80 %)", plein: true, quand: (f) => f.operation === "logsoc" },
-   { id: "abat150VE", type: "choix", l: "Abattement exceptionnel démolition-reconstruction (art. 150 VE)", def: "0", plein: true, opts: [["0", "Non applicable"], ["0.70", "70 % – GOU / ORT, promesse 2021-2023"], ["0.60", "60 % – zone A, A bis ou B1, promesse 2024-2025"], ["0.75", "75 % – GOU / ORT / OIN, promesse 2024-2025"], ["0.85", "85 % – logements sociaux ou intermédiaires ≥ 50 % (25 % en commune carencée)"]], info: "Cession au plus tard le 31/12/2027, acquéreur sans lien de dépendance, engagement de démolir puis construire (ou réhabiliter) des logements collectifs sous 4 ans. S'applique après l'abattement pour durée, à l'IR, aux PS et à la surtaxe." },
-   { id: "hectares", type: "nombre", l: "Surface boisée cédée", u: "ha", quand: (f) => f.typeBien === "foret", info: "Réduction de l'impôt sur le revenu (pas des PS) de 10 € par hectare et par année de détention." },
+   { id: "operation", type: "liste", l: "Nature de l'opération", def: "normale", plein: true, opts: [
+     ["normale", "Cession ordinaire", "Vente de gré à gré, adjudication, apport…"],
+     ["expro", "Expropriation pour utilité publique", "Exonération si l'indemnité est remployée sous 12 mois (CGI art. 150 U II 4°)"],
+     ["delaiss", "Droit de délaissement", "Même régime que l'expropriation, remploi sous 12 mois"],
+     ["logsoc", "Cession pour le logement social", "Au profit d'un bailleur social ou d'un acquéreur qui s'engage à construire (jusqu'au 31/12/2027)"],
+     ["partage", "Partage ou licitation familiale", "Indivision successorale, conjugale ou issue d'une donation-partage : hors champ"],
+     ["remembr", "Remembrement ou échange intercalaire", "Imposition reportée à la revente du bien reçu"]] },
+   { id: "pctRemploiExpro", type: "curseur", l: "Part de l'indemnité remployée sous 12 mois", def: "100", presets: [80, 90, 100], aide: "Remploi intégral réputé satisfait à 90 %", quand: (f) => f.operation === "expro" || f.operation === "delaiss" },
+   { id: "pctLogSoc", type: "curseur", l: "Surface de logements sociaux ou intermédiaires", presets: [25, 50, 80, 100], aide: "Rapportée à la surface totale du permis de construire", quand: (f) => f.operation === "logsoc" },
+   { id: "orgSocial", type: "inter", l: "Cession directe à un organisme de logement social", desc: "Exonération totale si la part de logements sociaux dépasse 80 %", quand: (f) => f.operation === "logsoc" },
+   { id: "abat150VE", type: "liste", l: "Abattement exceptionnel démolition-reconstruction (art. 150 VE)", def: "0", plein: true, opts: [
+     ["0", "Non applicable", ""],
+     ["0.70", "70 % – GOU ou ORT", "Promesse signée entre 2021 et 2023"],
+     ["0.60", "60 % – zone A, A bis ou B1", "Promesse signée en 2024 ou 2025"],
+     ["0.75", "75 % – GOU, ORT ou OIN", "Promesse signée en 2024 ou 2025"],
+     ["0.85", "85 % – logements sociaux ou intermédiaires", "Au moins 50 % de la surface (25 % en commune carencée)"]],
+     info: "Cession au plus tard le 31/12/2027, acquéreur sans lien de dépendance, engagement de démolir puis construire (ou réhabiliter) des logements collectifs sous 4 ans. S'applique après l'abattement pour durée, à l'IR, aux PS et à la surtaxe." },
+   { id: "hectares", type: "pas", l: "Surface boisée cédée", u: "ha", step: 0.5, min: 0, quand: (f) => f.typeBien === "foret", info: "Réduction de l'impôt sur le revenu (pas des PS) de 10 € par hectare et par année de détention." },
    { id: "ss4", type: "titre", l: "Terrains devenus constructibles", quand: (f) => f.typeBien === "tab" },
-   { id: "coefErosion", type: "nombre", l: "Coefficient d'érosion monétaire", def: "1", quand: (f) => f.typeBien === "tab", info: "BOI-ANNX-000097, version de l'année de la cession. Le prix d'acquisition actualisé n'est ni majoré des frais ni des travaux." },
-   { id: "anneeConstr", type: "nombre", l: "Année de classement constructible", quand: (f) => f.typeBien === "tab" },
-   { id: "taxeCommunale", type: "case", l: "Taxe communale (art. 1529) instituée – classé constructible depuis moins de 18 ans", plein: true, quand: (f) => f.typeBien === "tab" },
-   { id: "taxe2tiers", type: "case", l: "Pas d'élément de référence : assiette = 2/3 du prix de cession", plein: true, quand: (f) => f.typeBien === "tab" && f.taxeCommunale },
-   { id: "taxeNationale", type: "case", l: "Taxe nationale (art. 1605 nonies) – première cession depuis le classement", plein: true, quand: (f) => f.typeBien === "tab" },
+   { id: "coefErosion", type: "pas", l: "Coefficient d'érosion monétaire", def: "1", step: 0.001, min: 1, quand: (f) => f.typeBien === "tab", info: "BOI-ANNX-000097, version de l'année de la cession. Le prix d'acquisition actualisé n'est majoré ni des frais ni des travaux." },
+   { id: "anneeConstr", type: "pas", l: "Année de classement constructible", min: 1950, max: 2100, depart: 2010, sansMilliers: true, quand: (f) => f.typeBien === "tab" },
+   { id: "taxeCommunale", type: "inter", l: "Taxe communale (art. 1529)", desc: "Instituée par la commune ; terrain classé constructible depuis moins de 18 ans", quand: (f) => f.typeBien === "tab" },
+   { id: "taxe2tiers", type: "inter", l: "Pas d'élément de référence", desc: "Assiette forfaitaire égale aux 2/3 du prix de cession", quand: (f) => f.typeBien === "tab" && f.taxeCommunale },
+   { id: "taxeNationale", type: "inter", l: "Taxe nationale (art. 1605 nonies)", desc: "Première cession depuis le classement, si le prix dépasse 10 fois le prix d'acquisition actualisé", quand: (f) => f.typeBien === "tab" },
    { id: "ss5", type: "titre", l: "Localisation et taux" },
-   { id: "corse", type: "case", l: "Corse, zone de surtaxe renforcée (taux × 5 si détention ≤ 22 ans)", plein: true },
-   { id: "tIR", type: "pourcent", l: "Impôt sur le revenu", def: "19" },
-   { id: "tPS", type: "pourcent", l: "Prélèvements sociaux", def: "17.2" },
-   { id: "tSol", type: "pourcent", l: "Prélèvement de solidarité", def: "7.5", info: "Non-résidents affiliés à un régime de sécurité sociale d'un État de l'EEE, de la Suisse ou du Royaume-Uni." },
+   { id: "corse", type: "inter", l: "Corse, zone de surtaxe renforcée", desc: "Taux de la surtaxe multipliés par 5 si la détention ne dépasse pas 22 ans" },
+   { id: "tIR", type: "pas", l: "Impôt sur le revenu", def: "19", step: 0.1, min: 0, max: 100, u: "%" },
+   { id: "tPS", type: "pas", l: "Prélèvements sociaux", def: "17.2", step: 0.1, min: 0, max: 100, u: "%" },
+   { id: "tSol", type: "pas", l: "Prélèvement de solidarité", def: "7.5", step: 0.1, min: 0, max: 100, u: "%", info: "Non-résidents affiliés à un régime de sécurité sociale d'un État de l'EEE, de la Suisse ou du Royaume-Uni." },
  ]},
 ];
 const CHAMPS = SECTIONS.flatMap((s) => s.champs || []).filter((c) => c.type !== "titre");
 const CEDANT = { nom: "Cédant 1", droit: "PP", quote: "100", resid: "FR", is: false, rp: false, rpPct: "100", rp244: false, bis: false, bisPct: "100", retraite: false, ifi: false, rfr: "", parts: "1", zone: "metro", ehpad: false, ehpadDelai: true, nr150: false, solid: false };
+// Les champs de chaque carte « cédant » (c = le cédant concerné)
+const CHAMPS_CED = [
+  { k: "quote", type: "curseur", l: "Quote-part dans le droit cédé", presets: [25, 50, 75, 100], step: 0.01, plein: true },
+  { k: "droit", type: "segment", l: "Droit détenu", plein: true, opts: [["PP", "Pleine propriété"], ["US", "Usufruit"], ["NP", "Nue-propriété"]], quand: () => etat.demembre },
+  { k: "resid", type: "segment", l: "Résidence fiscale", plein: true, opts: [["FR", "France"], ["UE", "Non-résident UE / EEE"], ["HUE", "Non-résident hors UE"]] },
+  { k: "is", type: "inter", l: "Associé soumis à l'impôt sur les sociétés", desc: "Sa quote-part sort du régime des plus-values des particuliers", quand: () => etat.detention === "sci" },
+  { type: "titre", l: "Exonérations liées au cédant" },
+  { k: "rp", type: "inter", l: "Résidence principale", desc: "Au jour de la cession, ou jusqu'à la mise en vente si la vente intervient dans un délai normal (CGI art. 150 U II 1°)" },
+  { k: "rpPct", type: "curseur", l: "Surface occupée à titre privatif", presets: [50, 75, 100], plein: true, quand: (c) => c.rp },
+  { k: "rp244", type: "inter", l: "Ancienne RP d'un contribuable parti à l'étranger", desc: "Cédée au plus tard le 31/12 de l'année suivant le départ, ni louée ni prêtée (CGI art. 244 bis A)", quand: (c) => c.resid !== "FR" },
+  { k: "bis", type: "inter", l: "Première cession d'un logement avec remploi", desc: "Pas propriétaire de sa RP depuis 4 ans, remploi du prix dans une RP sous 24 mois (CGI art. 150 U II 1° bis)" },
+  { k: "bisPct", type: "curseur", l: "Part du prix destinée au remploi", presets: [25, 50, 75, 100], plein: true, quand: (c) => c.bis },
+  { k: "retraite", type: "inter", l: "Retraité ou invalide", desc: "Pension de vieillesse ou carte d'invalidité (lui ou son conjoint), sous conditions d'IFI et de revenus (CGI art. 150 U III)" },
+  { k: "ehpad", type: "inter", l: "Résident en EHPAD", desc: "Ancienne RP inoccupée, entrée en établissement pour personnes âgées ou handicapées (CGI art. 150 U II 1° ter)" },
+  { k: "ehpadDelai", type: "inter", l: "Vente dans les 2 ans de l'entrée", desc: "Logement non occupé depuis le départ", quand: (c) => c.ehpad },
+  { k: "rfr", type: "montant", l: "Revenu fiscal de référence N-2", quand: (c) => c.retraite || c.ehpad },
+  { k: "parts", type: "pas", l: "Nombre de parts", step: 0.5, min: 1, max: 20, quand: (c) => c.retraite || c.ehpad },
+  { k: "zone", type: "segment", l: "Zone", plein: true, opts: [["metro", "Métropole"], ["dom", "Antilles, Réunion"], ["guy", "Guyane, Mayotte"]], quand: (c) => c.retraite || c.ehpad },
+  { k: "ifi", type: "inter", l: "Passible de l'IFI au titre de N-2", desc: "Exclut l'exonération retraité / invalide et celle du résident en EHPAD", quand: (c) => c.retraite || c.ehpad },
+  { type: "note", quand: (c) => c.retraite || c.ehpad, txt: (c) => { const p = num(c.parts) || 1, t = []; if (c.retraite) t.push("retraité / invalide : " + eur(seuilRFR(c.zone, p, "retraite"))); if (c.ehpad) t.push("EHPAD : " + eur(seuilRFR(c.zone, p, "ehpad")) + " (barème métropole)"); const ok = c.rfr !== "" ? (num(c.rfr) <= seuilRFR(c.zone, p, c.retraite ? "retraite" : "ehpad") && !c.ifi ? " — conditions de revenus remplies ✓" : " — conditions non remplies") : ""; return "Seuils de RFR 2026 · " + t.join(" · ") + ok; } },
+  { type: "titre", l: "Non-résident", quand: (c) => c.resid !== "FR" },
+  { k: "nr150", type: "inter", l: "Exonération de 150 000 €", desc: "Ressortissant UE / EEE, domicilié en France au moins 2 ans, logement détenu en direct, libre disposition ou vente dans les 10 ans du départ (une seule fois)", quand: (c) => c.resid !== "FR" },
+  { k: "solid", type: "inter", l: "Prélèvement de solidarité au lieu des PS", desc: "Affilié à la sécurité sociale d'un État de l'EEE, de la Suisse ou du Royaume-Uni", quand: (c) => c.resid !== "FR" },
+];
 let etat = {};          // valeurs du formulaire
 let cedants = [];       // liste des cédants
 let ongletActif = 0;
 
-function valDef(c) { return typeof c.def === "function" ? c.def() : (c.def ?? (c.type === "case" ? false : "")); }
+function valDef(c) { return typeof c.def === "function" ? c.def() : (c.def ?? (c.type === "inter" ? false : "")); }
 function defauts() { const o = {}; for (const c of CHAMPS) o[c.id] = valDef(c); return o; }
 function lireTout() { return { ...etat, cedants: JSON.parse(JSON.stringify(cedants)) }; }
-
 /* =====================================================================================
    4. MOTEUR DE CALCUL (vérifié sur les exemples chiffrés des fiches PVI)
    ===================================================================================== */
@@ -610,146 +730,245 @@ function calculer(f) {
 }
 
 /* =====================================================================================
-   5. CONSTRUCTION DU FORMULAIRE
+   5. MODULES DE SAISIE (composants maison, sans les contrôles standard du navigateur)
+   Chaque module reçoit sa description (spec), une fonction qui lit la valeur (lire)
+   et une fonction qui l'enregistre (ecrire). Il construit lui-même son affichage.
    ===================================================================================== */
 const ICAL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
-function htmlChamp(c) {
-  const lab = typeof c.l === "function" ? c.l(etat) : c.l;
-  const info = c.info ? `<button class="info" data-tip="${esc(c.info)}" type="button">i</button>` : "";
-  const aide = c.aide ? `<span class="aide">${esc(c.aide)}</span>` : "";
-  const w = `class="ch${c.plein ? " plein" : ""}" id="w_${c.id}"`;
-  switch (c.type) {
-    case "titre": return `<div class="ss" id="w_${c.id}">${esc(lab)}</div>`;
-    case "case": return `<div ${w}><label class="case"><input type="checkbox" id="${c.id}"><span>${esc(lab)} ${info}</span></label></div>`;
-    case "choix": return `<div ${w}><label for="${c.id}"><span id="l_${c.id}">${esc(lab)}</span>${info}</label><select id="${c.id}">${c.opts.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join("")}</select>${aide}</div>`;
-    case "segment": return `<div ${w}><span class="lbl">${esc(lab)}${info}</span><div class="seg" id="${c.id}">${c.opts.map(([v, t]) => `<button type="button" data-v="${v}">${esc(t)}</button>`).join("")}</div>${aide}</div>`;
-    case "date": return `<div ${w}><label for="${c.id}"><span id="l_${c.id}">${esc(lab)}</span>${info}</label><div class="saisie date"><input id="${c.id}" inputmode="numeric" placeholder="jj/mm/aaaa" autocomplete="off"><button class="dp-bt" type="button" data-cal="${c.id}" aria-label="Calendrier">${ICAL}</button></div>${aide}</div>`;
-    default: {
-      const u = c.type === "montant" ? "€" : c.type === "pourcent" ? "%" : (c.u || "");
-      return `<div ${w}><label for="${c.id}"><span id="l_${c.id}">${esc(lab)}</span>${info}</label><div class="saisie${u ? " avec-u" : ""}"><input id="${c.id}" inputmode="decimal" autocomplete="off" data-t="${c.type}">${u ? `<span class="u">${u}</span>` : ""}</div>${aide}</div>`;
-    }
+const CHEV = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>';
+const ICONES = {
+  maison: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  grue: '<path d="M6 21V4h2v17M4 21h6M8 5h13l-3 3M8 5l4 4h6v4"/><rect x="15" y="13" width="5" height="4"/>',
+  champ: '<path d="M2 20h20M4 20l4-9 4 9M12 20l4-6 4 6"/><circle cx="18" cy="6" r="2.5"/>',
+  arbre: '<path d="M12 22v-6M12 3l6 8h-3l4 5H5l4-5H6z"/>',
+  parts: '<path d="M12 3v9h9"/><path d="M20.5 15A9 9 0 1 1 9 3.5"/>',
+  surelev: '<rect x="5" y="11" width="14" height="10"/><path d="M9 21v-4h6v4M12 2v6M9 5l3-3 3 3"/>',
+  cle: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
+  cadeau: '<rect x="3" y="9" width="18" height="12" rx="1"/><path d="M3 13h18M12 9v12M12 9c-2-4-6-4-6-1.5S10 9 12 9c2 0 6-.5 6-3S14 5 12 9"/>',
+};
+// Petite fabrique d'éléments HTML : el("div", {class: "x"}, enfant1, enfant2…)
+function el(tag, attrs = {}, ...enfants) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v; else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? "" : v);
   }
+  for (const x of enfants.flat()) if (x != null && x !== false) e.append(x.nodeType ? x : document.createTextNode(x));
+  return e;
 }
-function construireFormulaire() {
-  $("saisie").innerHTML = SECTIONS.map((s, i) => `
-    <section class="carte" id="s_${s.id}"><header><span class="n">${i + 1}</span><h2>${esc(s.t)}</h2><span class="ref">${esc(s.ref)}</span></header>
-    <div class="corps">${s.special === "cedants" ? '<div id="cedants"></div><button class="bt" id="bAjCed" type="button">+ Ajouter un cédant</button><p class="aide" style="font-size:12.5px;color:var(--discret);margin:10px 0 0">Bien commun d\'époux : deux cédants à 50 % (seuil de la surtaxe apprécié par quote-part). En société : quote-part de chaque associé.</p>' : `<div class="grille">${s.champs.map(htmlChamp).join("")}</div>`}</div></section>`).join("");
-  $("etapes").innerHTML = SECTIONS.map((s, i) => `<a href="#s_${s.id}" data-s="${s.id}"><i>${i + 1}</i>${esc(s.t.split(" et ")[0])}</a>`).join("") + `<a href="#res" class="voir-res"><i>✓</i>Résultat</a>`;
-  // Écouteurs
-  for (const c of CHAMPS) {
-    const e = $(c.id); if (!e) continue;
-    const redessine = () => { if (c.id === "detention" || c.id === "demembre") dessinerCedants(); };
-    if (c.type === "case") e.addEventListener("change", () => { etat[c.id] = e.checked; redessine(); maj(); });
-    else if (c.type === "choix") e.addEventListener("change", () => { etat[c.id] = e.value; maj(); });
-    else if (c.type === "segment") e.querySelectorAll("button").forEach((b) => b.onclick = () => { etat[c.id] = b.dataset.v; redessine(); maj(); });
-    else if (c.type === "date") brancherDate(e, (v) => { etat[c.id] = v; maj(); });
-    else brancherNombre(e, c.type, (v) => { etat[c.id] = v; maj(true); });
-  }
-  $("bAjCed").onclick = () => { cedants.push({ ...CEDANT, nom: "Cédant " + (cedants.length + 1), quote: "0" }); dessinerCedants(); maj(); };
+const libelle = (spec) => typeof spec.l === "function" ? spec.l(etat) : spec.l;
+const bInfo = (t) => el("button", { type: "button", class: "info", "data-tip": t, "aria-label": "Aide" }, "i");
+// Cadre commun : libellé, bulle d'aide, module, texte d'aide, ligne de calcul « extra »
+function cadre(spec, corps, id) {
+  const w = el("div", { class: "ch" + (spec.plein ? " plein" : ""), id: id ? "w_" + id : null });
+  if (spec.l) w.append(el("div", { class: "lbl" }, el("span", { id: id ? "l_" + id : null }, libelle(spec)), spec.info ? bInfo(spec.info) : null));
+  w.append(corps);
+  if (spec.aide) w.append(el("span", { class: "aide" }, spec.aide));
+  if (spec.extra) w.append(el("span", { class: "extra", id: id ? "x_" + id : null }));
+  return w;
 }
-// Champs numériques : séparateur de milliers à la sortie du champ
-function fmtSaisie(v, t) { if (v === "" || v == null) return ""; const n = num(v); if (!isFinite(n)) return v; return t === "montant" ? n.toLocaleString("fr-FR", { maximumFractionDigits: 2 }) : String(v).replace(".", ","); }
-function brancherNombre(e, t, cb) {
-  e.addEventListener("input", () => { e.value = e.value.replace(/[^\d\s,.\-  ]/g, ""); cb(e.value.trim() === "" ? "" : String(num(e.value))); });
-  e.addEventListener("blur", () => { e.value = fmtSaisie(e.value, t); });
+
+/* --- Interrupteur : une ligne cliquable avec titre, explication et bascule --- */
+function mInter(spec, lire, ecrire, id) {
+  const b = el("button", { type: "button", class: "inter", role: "switch" },
+    el("span", { class: "inter-t" }, el("b", {}, libelle(spec)), spec.desc ? el("small", {}, spec.desc) : null),
+    el("span", { class: "piste" }, el("span", { class: "bille" })));
+  const aff = () => { const on = !!lire(); b.classList.toggle("on", on); b.setAttribute("aria-checked", on); };
+  b.onclick = () => { ecrire(!lire()); aff(); };
+  aff();
+  return el("div", { class: "ch plein", id: id ? "w_" + id : null }, b);
 }
-// Champs date : saisie libre jj/mm/aaaa (les barres s'ajoutent toutes seules) + calendrier
+/* --- Tuiles : grandes cartes à icône --- */
+function mTuiles(spec, lire, ecrire, id) {
+  const g = el("div", { class: "tuiles" + (spec.petit ? " petites" : ""), role: "radiogroup" });
+  const aff = () => g.querySelectorAll("button").forEach((b) => { const on = b.dataset.v === lire(); b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+  for (const [v, t, d, ic] of spec.opts) g.append(el("button", { type: "button", role: "radio", "data-v": v, onclick: () => { ecrire(v); aff(); } },
+    el("span", { class: "t-ic", html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONES[ic] || ""}</svg>` }),
+    el("span", { class: "t-tx" }, el("b", {}, t), d ? el("small", {}, d) : null)));
+  aff(); return cadre(spec, g, id);
+}
+/* --- Segment : boutons accolés pour 2 à 4 choix courts --- */
+function mSegment(spec, lire, ecrire, id) {
+  const g = el("div", { class: "seg", role: "radiogroup" });
+  const aff = () => g.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === lire()));
+  for (const [v, t] of spec.opts) g.append(el("button", { type: "button", role: "radio", "data-v": v, onclick: () => { ecrire(v); aff(); } }, t));
+  aff(); return cadre(spec, g, id);
+}
+/* --- Liste : menu déroulant maison, chaque choix avec une ligne d'explication --- */
+function mListe(spec, lire, ecrire, id) {
+  const b = el("button", { type: "button", class: "liste", "aria-haspopup": "listbox" });
+  const aff = () => { const o = spec.opts.find((o) => o[0] === lire()) || spec.opts[0]; b.innerHTML = `<span><b>${esc(o[1])}</b>${o[2] ? `<small>${esc(o[2])}</small>` : ""}</span><i>${CHEV}</i>`; };
+  b.onclick = (e) => { e.stopPropagation(); ouvrirListe(b, spec.opts, lire(), (v) => { ecrire(v); aff(); }); };
+  aff(); return cadre(spec, b, id);
+}
+let liste = null;
+function ouvrirListe(ancre, opts, val, choisir) {
+  const p = $("pop"), dejaOuvert = p.classList.contains("on") && liste && liste.ancre === ancre; fermer(); if (dejaOuvert) return;
+  liste = { ancre, opts, choisir, i: Math.max(0, opts.findIndex((o) => o[0] === val)) };
+  p.innerHTML = ""; p.setAttribute("role", "listbox");
+  opts.forEach(([v, t, d], i) => p.append(el("button", { type: "button", role: "option", class: v === val ? "sel" : "", "data-i": i, onclick: () => { choisir(v); fermer(); ancre.focus(); } }, el("b", {}, t), d ? el("small", {}, d) : null)));
+  p.classList.add("on"); placerListe(); surligner();
+}
+function placerListe() {
+  const p = $("pop"), r = liste.ancre.getBoundingClientRect(), w = Math.max(r.width, 280);
+  p.style.width = w + "px"; p.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + "px";
+  const h = p.offsetHeight; p.style.top = (r.bottom + 6 + h > innerHeight && r.top > h + 6 ? r.top - h - 6 : r.bottom + 6) + "px";
+}
+function surligner() {
+  const p = $("pop"); p.querySelectorAll("button").forEach((b, i) => b.classList.toggle("act", i === liste.i));
+  const a = p.querySelector(".act"); if (!a) return;   // on fait défiler la liste elle-même, jamais la page
+  if (a.offsetTop < p.scrollTop) p.scrollTop = a.offsetTop - 6; else if (a.offsetTop + a.offsetHeight > p.scrollTop + p.clientHeight) p.scrollTop = a.offsetTop + a.offsetHeight - p.clientHeight + 6;
+}
+document.addEventListener("keydown", (e) => {
+  if (!$("pop").classList.contains("on") || !liste) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); liste.i = (liste.i + (e.key === "ArrowDown" ? 1 : -1) + liste.opts.length) % liste.opts.length; surligner(); }
+  if (e.key === "Enter") { e.preventDefault(); liste.choisir(liste.opts[liste.i][0]); const a = liste.ancre; fermer(); a.focus(); }
+});
+/* --- Montant : accepte « 250 000 », « 250k », « 1,2M », « 180000+12000 », « 7,5%*250k » --- */
+function evaluer(s) {
+  s = String(s ?? "").toLowerCase().replace(/[\s  €]/g, "").replace(/,/g, ".").replace(/×/g, "*");
+  if (!s) return null; let i = 0;
+  const nombre = () => { const m = s.slice(i).match(/^\d+(\.\d+)?/); if (!m) return null; i += m[0].length; let v = parseFloat(m[0]); if (s[i] === "k") { v *= 1e3; i++; } else if (s[i] === "m") { v *= 1e6; i++; } else if (s[i] === "%") { v /= 100; i++; } return v; };
+  const facteur = () => { if (s[i] === "-") { i++; const v = facteur(); return v == null ? null : -v; } if (s[i] === "(") { i++; const v = somme(); if (s[i] !== ")") return null; i++; return v; } return nombre(); };
+  const produit = () => { let v = facteur(); while (v != null && (s[i] === "*" || s[i] === "x" || s[i] === "/")) { const op = s[i++], w = facteur(); if (w == null || (op === "/" && w === 0)) return null; v = op === "/" ? v / w : v * w; } return v; };
+  const somme = () => { let v = produit(); while (v != null && (s[i] === "+" || s[i] === "-")) { const op = s[i++], w = produit(); if (w == null) return null; v = op === "+" ? v + w : v - w; } return v; };
+  const v = somme(); return v != null && i === s.length && isFinite(v) ? Math.round(v * 100) / 100 : null;
+}
+const fmtMontant = (v) => v === "" || v == null ? "" : num(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+function mMontant(spec, lire, ecrire, id) {
+  const i = el("input", { id, inputmode: "decimal", autocomplete: "off", placeholder: "0", "aria-label": libelle(spec) || "Montant" });
+  const ap = el("span", { class: "apercu" });
+  const boite = el("div", { class: "saisie avec-u montant" }, i, el("span", { class: "u" }, "€"));
+  i.value = fmtMontant(lire());
+  i.addEventListener("input", () => {
+    const t = i.value.trim(), r = evaluer(t), calc = /[+*/()kmx%]|\d-/i.test(t.replace(/\s/g, ""));
+    if (!t) { ecrire(""); ap.textContent = ""; }
+    else if (r != null) { ecrire(String(r)); ap.textContent = calc ? "= " + eur(r, r % 1 ? 2 : 0) : ""; i.classList.remove("faux"); }
+    else ap.textContent = calc ? "calcul incomplet…" : "";
+    boite.classList.toggle("calc", !!ap.textContent);
+  });
+  i.addEventListener("blur", () => { const t = i.value.trim(); if (!t) return; const r = evaluer(t); if (r == null) i.classList.add("faux"); else { i.value = fmtMontant(r); ap.textContent = ""; boite.classList.remove("calc"); } });
+  i.addEventListener("keydown", (e) => { if (e.key === "Enter") i.blur(); });
+  return cadre(spec, el("div", { class: "montant-w" }, boite, ap), id);
+}
+/* --- Curseur : glissière, valeur modifiable et raccourcis --- */
+function mCurseur(spec, lire, ecrire, id) {
+  const min = spec.min ?? 0, max = spec.max ?? 100;
+  const piste = el("div", { class: "glis", tabindex: 0, role: "slider", "aria-valuemin": min, "aria-valuemax": max, "aria-label": libelle(spec) },
+    el("div", { class: "glis-r" }), el("div", { class: "glis-b" }));
+  const n = el("input", { id, class: "cur-n", inputmode: "decimal", autocomplete: "off" });
+  const puces = spec.presets ? el("div", { class: "puces" }, spec.presets.map((p) => el("button", { type: "button", "data-p": p, onclick: () => { ecrire(String(p)); aff(); } }, String(p).replace(".", ",") + " %"))) : null;
+  const aff = (garderSaisie) => {
+    const v = Math.min(max, Math.max(min, num(lire()))), p = (v - min) / (max - min) * 100;
+    piste.style.setProperty("--p", p + "%"); piste.setAttribute("aria-valuenow", v);
+    if (!garderSaisie) n.value = String(Math.round(v * 100) / 100).replace(".", ",");
+    puces && puces.querySelectorAll("button").forEach((b) => b.classList.toggle("on", +b.dataset.p === v));
+  };
+  const depuis = (x) => { const r = piste.getBoundingClientRect(); let v = min + Math.min(1, Math.max(0, (x - r.left) / r.width)) * (max - min); v = Math.round(v); ecrire(String(v)); aff(); };
+  piste.addEventListener("pointerdown", (e) => { piste.setPointerCapture(e.pointerId); piste.classList.add("tient"); depuis(e.clientX); });
+  piste.addEventListener("pointermove", (e) => { if (piste.hasPointerCapture(e.pointerId)) depuis(e.clientX); });
+  piste.addEventListener("pointerup", () => piste.classList.remove("tient"));
+  piste.addEventListener("keydown", (e) => { const d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[e.key]; if (d) { e.preventDefault(); ecrire(String(Math.min(max, Math.max(min, num(lire()) + d)))); aff(); } });
+  n.addEventListener("input", () => { n.value = n.value.replace(/[^\d,.]/g, ""); ecrire(n.value === "" ? "" : String(Math.min(max, Math.max(min, num(n.value))))); aff(true); });
+  n.addEventListener("blur", () => aff());
+  aff();
+  return cadre(spec, el("div", { class: "curseur" }, el("div", { class: "cur-l" }, piste, el("label", { class: "cur-v" }, n, el("i", {}, spec.u || "%"))), puces), id);
+}
+/* --- Pas à pas : bouton −, valeur modifiable, bouton + (maintenir pour défiler) --- */
+function mPas(spec, lire, ecrire, id) {
+  const step = spec.step || 1, min = spec.min ?? -Infinity, max = spec.max ?? Infinity, dec = (String(step).split(".")[1] || "").length;
+  const n = el("input", { id, inputmode: "decimal", autocomplete: "off", "aria-label": libelle(spec) });
+  const fmt = (v) => v === "" ? "" : num(v).toLocaleString("fr-FR", { maximumFractionDigits: Math.max(dec, 3), useGrouping: !spec.sansMilliers });
+  const aff = () => { n.value = fmt(lire()); };
+  const pousse = (d) => { const g = lire(); let v = g === "" ? (spec.depart ?? Math.max(0, min)) : num(g) + d * step; v = Math.min(max, Math.max(min, +v.toFixed(dec))); ecrire(String(v)); aff(); };
+  let tempo = null; const stop = () => { clearTimeout(tempo); clearInterval(tempo); tempo = null; };
+  const bouton = (d, t) => el("button", { type: "button", "aria-label": d > 0 ? "Augmenter" : "Diminuer",
+    onpointerdown: (e) => { e.preventDefault(); pousse(d); tempo = setTimeout(() => { tempo = setInterval(() => pousse(d), 70); }, 380); },
+    onpointerup: stop, onpointerleave: stop, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pousse(d); } } }, t);
+  n.addEventListener("input", () => { n.value = n.value.replace(/[^\d,.\s\-]/g, ""); ecrire(n.value.trim() === "" ? "" : String(num(n.value))); });
+  n.addEventListener("blur", aff);
+  n.addEventListener("keydown", (e) => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); pousse(e.key === "ArrowUp" ? 1 : -1); } });
+  aff();
+  return cadre(spec, el("div", { class: "pas" }, bouton(-1, "−"), el("label", { class: "pas-v" }, n, spec.u ? el("i", {}, spec.u) : null), bouton(1, "+")), id);
+}
+/* --- Date : saisie libre jj/mm/aaaa (les barres s'ajoutent toutes seules) + calendrier --- */
 function lireDateFr(s) {
   const m = String(s).trim().match(/^(\d{1,2})[\/.\-\s]?(\d{1,2})[\/.\-\s]?(\d{4})$/); if (!m) return null;
   const d = new Date(+m[3], +m[2] - 1, +m[1]); return d.getDate() === +m[1] && d.getMonth() === +m[2] - 1 ? d : null;
 }
-function brancherDate(e, cb) {
+function mDate(spec, lire, ecrire, id) {
+  const e = el("input", { id, inputmode: "numeric", placeholder: "jj/mm/aaaa", autocomplete: "off" }); e.value = dfr(lire());
   e.addEventListener("input", (ev) => {
-    if (ev.inputType && ev.inputType.startsWith("delete")) { if (!e.value) cb(""); return; }
+    if (ev.inputType && ev.inputType.startsWith("delete")) { if (!e.value) ecrire(""); return; }
     let v = e.value.replace(/[^\d]/g, "").slice(0, 8);
     if (v.length > 4) v = v.slice(0, 2) + "/" + v.slice(2, 4) + "/" + v.slice(4); else if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
     e.value = v; const d = lireDateFr(v);
     e.classList.toggle("faux", v.length === 10 && !d);
-    if (d) cb(iso(d)); else if (!v) cb("");
+    if (d) ecrire(iso(d)); else if (!v) ecrire("");
   });
   e.addEventListener("blur", () => { const d = lireDateFr(e.value); e.classList.toggle("faux", !!e.value && !d); });
+  return cadre(spec, el("div", { class: "saisie date" }, e, el("button", { class: "dp-bt", type: "button", "data-cal": id, "aria-label": "Calendrier", html: ICAL })), id);
 }
+const MODULES = { inter: mInter, tuiles: mTuiles, segment: mSegment, liste: mListe, montant: mMontant, curseur: mCurseur, pas: mPas, date: mDate };
 
-/* Cédants : une carte par personne */
-function dessinerCedants() {
-  const multi = cedants.length > 1;
-  $("cedants").innerHTML = cedants.map((c, i) => {
-    const nr = c.resid !== "FR";
-    const cs = (k, t, extra = "") => `<label class="case"${extra}><input type="checkbox" data-k="${k}"${c[k] ? " checked" : ""}><span>${t}</span></label>`;
-    const nb = (k, t, u, v) => `<div class="ch"><label>${t}</label><div class="saisie${u ? " avec-u" : ""}"><input data-k="${k}" inputmode="decimal" value="${esc(fmtSaisie(v, u === "€" ? "montant" : ""))}" data-t="${u === "€" ? "montant" : "pourcent"}">${u ? `<span class="u">${u}</span>` : ""}</div></div>`;
-    return `<div class="ced" data-i="${i}">
-      <div class="ced-t"><input data-k="nom" value="${esc(c.nom)}" aria-label="Nom du cédant"><span class="pastille" data-part>${esc(c.quote)} %</span>${multi ? `<button class="bt mini danger" data-sup="${i}" type="button">Retirer</button>` : ""}</div>
-      <div class="ced-c"><div class="grille">
-        ${nb("quote", "Quote-part dans le droit cédé", "%", c.quote)}
-        <div class="ch${etat.demembre ? "" : " cache"}"><label>Droit détenu</label><select data-k="droit">${[["PP", "Pleine propriété"], ["US", "Usufruit"], ["NP", "Nue-propriété"]].map(([v, t]) => `<option value="${v}"${c.droit === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
-        <div class="ch"><label>Résidence fiscale</label><select data-k="resid">${[["FR", "France"], ["UE", "Non-résident – UE / EEE"], ["HUE", "Non-résident – hors UE / EEE"]].map(([v, t]) => `<option value="${v}"${c.resid === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
-        ${etat.detention === "sci" ? `<div class="ch plein">${cs("is", "Associé <b>soumis à l'impôt sur les sociétés</b> (sa quote-part sort du régime des particuliers)")}</div>` : ""}
-        <div class="ss">Exonérations liées au cédant</div>
-        <div class="ch plein">${cs("rp", "Le bien est sa <b>résidence principale</b> au jour de la cession (ou jusqu'à la mise en vente, vente dans un délai normal)")}</div>
-        ${c.rp ? nb("rpPct", "Surface occupée à titre privatif", "%", c.rpPct) : ""}
-        ${nr ? `<div class="ch plein">${cs("rp244", "<b>Ancienne RP</b> cédée après le départ de France, au plus tard le 31/12 de l'année suivante, ni louée ni prêtée (art. 244 bis A)")}</div>` : ""}
-        <div class="ch plein">${cs("bis", "<b>Première cession d'un logement</b> autre que la RP, sans avoir été propriétaire de sa RP depuis 4 ans, avec remploi dans une RP sous 24 mois (1° bis)")}</div>
-        ${c.bis ? nb("bisPct", "Part du prix destinée au remploi", "%", c.bisPct) : ""}
-        <div class="ch plein">${cs("retraite", "Titulaire d'une <b>pension de vieillesse</b> ou d'une <b>carte d'invalidité</b> (lui ou son conjoint soumis à imposition commune)")}</div>
-        <div class="ch plein">${cs("ehpad", "Ancienne RP inoccupée d'un résident en <b>EHPAD</b> ou établissement pour personnes handicapées (1° ter)")}</div>
-        ${c.ehpad ? `<div class="ch plein">${cs("ehpadDelai", "Vente dans les 2 ans de l'entrée dans l'établissement, logement non occupé depuis")}</div>` : ""}
-        ${(c.retraite || c.ehpad) ? `${nb("rfr", "Revenu fiscal de référence N-2", "€", c.rfr)}${nb("parts", "Nombre de parts", "", c.parts)}
-          <div class="ch"><label>Zone</label><select data-k="zone">${[["metro", "Métropole"], ["dom", "Martinique, Guadeloupe, Réunion"], ["guy", "Guyane, Mayotte"]].map(([v, t]) => `<option value="${v}"${c.zone === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
-          <div class="ch plein">${cs("ifi", "Passible de l'IFI au titre de N-2")}</div>
-          <div class="ch plein aide" data-seuil></div>` : ""}
-        ${nr ? `<div class="ss">Non-résident</div>
-          <div class="ch plein">${cs("nr150", "<b>Exonération de 150 000 €</b> : ressortissant UE / EEE, domicilié en France au moins 2 ans, logement détenu en direct, libre disposition depuis le 1/1 N-1 ou vente dans les 10 ans du départ (une seule fois)")}</div>
-          <div class="ch plein">${cs("solid", "Affilié à la sécurité sociale d'un État de l'EEE, de la Suisse ou du Royaume-Uni (prélèvement de solidarité)")}</div>` : ""}
-      </div></div></div>`;
-  }).join("");
-  $("cedants").querySelectorAll(".ced").forEach((el) => {
-    const c = cedants[+el.dataset.i];
-    el.querySelectorAll("[data-k]").forEach((inp) => {
-      const k = inp.dataset.k;
-      if (inp.type === "checkbox") inp.onchange = () => { c[k] = inp.checked; dessinerCedants(); maj(); };
-      else if (inp.tagName === "SELECT") inp.onchange = () => { c[k] = inp.value; dessinerCedants(); maj(); };
-      else if (k === "nom") inp.oninput = () => { c.nom = inp.value; maj(true); };
-      else brancherNombre(inp, inp.dataset.t, (v) => { c[k] = v; if (k === "quote") el.querySelector("[data-part]").textContent = (v || 0).toString().replace(".", ",") + " %"; majSeuils(); maj(true); });
-    });
-    el.querySelector("[data-sup]")?.addEventListener("click", () => { cedants.splice(+el.dataset.i, 1); dessinerCedants(); maj(); });
+/* =====================================================================================
+   5 bis. CONSTRUCTION DU FORMULAIRE ET DES CARTES « CÉDANT »
+   ===================================================================================== */
+function ecrireChamp(id, v) { etat[id] = v; if (id === "detention" || id === "demembre") majCedants(); maj(); }
+function construireFormulaire() {
+  const box = $("saisie"); box.innerHTML = "";
+  box.append(el("div", { class: "astuce" }, el("b", {}, "Astuce"), " · dans les montants, tapez « 250k », « 1,2M » ou un calcul comme « 180000+12000 » ; dans les dates, « 12062013 » suffit."));
+  SECTIONS.forEach((s, i) => {
+    const corps = el("div", { class: "corps" });
+    if (s.special === "cedants") corps.append(el("div", { id: "cedants" }), el("button", { class: "bt", id: "bAjCed", type: "button", onclick: () => { cedants.push({ ...CEDANT, nom: "Cédant " + (cedants.length + 1), quote: "0" }); dessinerCedants(); maj(); } }, "+ Ajouter un cédant"),
+      el("p", { class: "aide-bas" }, "Bien commun d'époux : deux cédants à 50 % (seuil de la surtaxe apprécié par quote-part). En société : la quote-part de chaque associé."));
+    else corps.append(el("div", { class: "grille" }, s.champs.map((c) => c.type === "titre" ? el("div", { class: "ss", id: "w_" + c.id }, c.l) : MODULES[c.type](c, () => etat[c.id], (v) => ecrireChamp(c.id, v), c.id))));
+    box.append(el("section", { class: "carte", id: "s_" + s.id }, el("header", {}, el("span", { class: "n" }, i + 1), el("h2", {}, s.t), el("span", { class: "ref" }, s.ref)), corps));
   });
-  majSeuils();
-}
-function majSeuils() {
-  $("cedants").querySelectorAll(".ced").forEach((el) => {
-    const c = cedants[+el.dataset.i], z = el.querySelector("[data-seuil]"); if (!z) return;
-    const p = num(c.parts) || 1, t = [];
-    if (c.retraite) t.push("seuil retraité / invalide : " + eur(seuilRFR(c.zone, p, "retraite")));
-    if (c.ehpad) t.push("seuil 1° ter : " + eur(seuilRFR(c.zone, p, "ehpad")) + " (barème métropole)");
-    z.textContent = "Seuils de RFR pour les cessions 2026 — " + t.join(" · ");
-  });
-}
-
-/* Remplit les champs à partir de l'état (au démarrage, après import ou chargement d'un scénario) */
-function remplir() {
-  for (const c of CHAMPS) {
-    const e = $(c.id), v = etat[c.id]; if (!e) continue;
-    if (c.type === "case") e.checked = !!v;
-    else if (c.type === "choix") e.value = v;
-    else if (c.type === "date") { e.value = dfr(v); e.classList.remove("faux"); }
-    else if (c.type !== "segment") e.value = fmtSaisie(v, c.type);
-  }
+  $("etapes").innerHTML = SECTIONS.map((s, i) => `<a href="#s_${s.id}" data-s="${s.id}"><i>${i + 1}</i>${esc(s.t.split(" et ")[0])}</a>`).join("") + `<a href="#res"><i>✓</i>Résultat</a>`;
   dessinerCedants();
 }
-
+let liensCed = [];   // [élément, condition, cédant] pour afficher / masquer sans tout reconstruire
+function dessinerCedants() {
+  const box = $("cedants"); box.innerHTML = ""; liensCed = [];
+  cedants.forEach((c, i) => {
+    const pastille = el("span", { class: "pastille" });
+    const majPastille = () => { pastille.textContent = String(Math.round(num(c.quote) * 100) / 100).replace(".", ",") + " %"; };
+    const titre = el("div", { class: "ced-t" },
+      el("span", { class: "avatar" }, (c.nom || "?").trim().charAt(0).toUpperCase() || "?"),
+      el("input", { value: c.nom, "aria-label": "Nom du cédant", oninput: (e) => { c.nom = e.target.value; titre.firstChild.textContent = (c.nom || "?").trim().charAt(0).toUpperCase() || "?"; maj(); } }),
+      pastille, cedants.length > 1 ? el("button", { type: "button", class: "bt mini danger", onclick: () => { cedants.splice(i, 1); dessinerCedants(); maj(); } }, "Retirer") : null);
+    const grille = el("div", { class: "grille" });
+    for (const spec of CHAMPS_CED) {
+      let w;
+      if (spec.type === "titre") w = el("div", { class: "ss" }, spec.l);
+      else if (spec.type === "note") { w = el("div", { class: "ch plein note-c" }); w._txt = spec.txt; }
+      else w = MODULES[spec.type](spec, () => c[spec.k], (v) => { c[spec.k] = v; if (spec.k === "quote") majPastille(); majCedants(); maj(); }, null);
+      grille.append(w); if (spec.quand || spec.type === "note") liensCed.push([w, spec.quand, c]);
+    }
+    majPastille();
+    box.append(el("div", { class: "ced" }, titre, el("div", { class: "ced-c" }, grille)));
+  });
+  majCedants();
+}
+function majCedants() {
+  for (const [w, quand, c] of liensCed) { w.classList.toggle("cache", !!(quand && !quand(c))); if (w._txt) w.textContent = w._txt(c); }
+}
+// Recharge tout le formulaire à partir de l'état (démarrage, import, scénario)
+function remplir() { construireFormulaire(); if (typeof obs !== "undefined") SECTIONS.forEach((s) => obs.observe($("s_" + s.id))); }
 /* =====================================================================================
    6. MISE À JOUR DE L'ÉCRAN
    ===================================================================================== */
 let dernier = null;
-function maj(saisieEnCours) {
+function maj() {
   // visibilité, libellés et segments
   for (const c of SECTIONS.flatMap((s) => s.champs || [])) {
     const w = $("w_" + c.id); if (!w) continue;
     w.classList.toggle("cache", !!(c.quand && !c.quand(etat)));
     if (typeof c.l === "function" && $("l_" + c.id)) $("l_" + c.id).textContent = c.l(etat);
-    if (c.type === "segment") $(c.id).querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === etat[c.id]));
+    if (c.extra && $("x_" + c.id)) $("x_" + c.id).textContent = c.extra(etat);
   }
-  if (!saisieEnCours) $("cedants").querySelectorAll('select[data-k="droit"]').forEach((s) => s.closest(".ch").classList.toggle("cache", !etat.demembre));
   // état des étapes
   const fait = { bien: num(etat.prixCession) > 0 && !!etat.dateCession, acq: !!etat.dateAcq && (num(etat.prixAcq) > 0 || etat.modeAcq === "gratuit") };
   document.querySelectorAll("#etapes a[data-s]").forEach((a) => a.classList.toggle("fait", !!fait[a.dataset.s]));
@@ -846,7 +1065,7 @@ function lignesRecap(f) {
     const v = f[c.id]; if (v === "" || v === false || v == null) continue;
     const lab = typeof c.l === "function" ? c.l(f) : c.l;
     let x = v;
-    if (c.type === "case") x = "oui"; else if (c.type === "montant") x = eur(num(v)); else if (c.type === "pourcent") x = String(v).replace(".", ",") + " %"; else if (c.type === "date") x = dfr(v);
+    if (c.type === "inter") x = "oui"; else if (c.type === "montant") x = eur(num(v)); else if (c.type === "curseur") x = String(v).replace(".", ",") + " %"; else if (c.type === "pas") x = String(v).replace(".", ",") + (c.u ? " " + c.u : ""); else if (c.type === "date") x = dfr(v);
     else if (c.opts) x = (c.opts.find((o) => o[0] === v) || [, v])[1];
     t.push([lab, x]);
   }
@@ -866,10 +1085,12 @@ const MOISL = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
 const cal = { champ: null, vue: "j", an: 2026, mois: 0, debut: 2016 };
 function ouvrirCal(id, ancre) {
   const d = D(etat[id]) || new Date();
-  Object.assign(cal, { champ: id, vue: "j", an: d.getFullYear(), mois: d.getMonth(), debut: d.getFullYear() - 7 });
-  dessinerCal(); const el = $("cal"); el.classList.add("on");
-  const r = ancre.getBoundingClientRect(); let top = r.bottom + 6; if (top + 360 > innerHeight) top = Math.max(8, r.top - 366);
-  el.style.top = top + "px"; el.style.left = Math.min(innerWidth - 310, Math.max(8, r.right - 300)) + "px";
+  Object.assign(cal, { champ: id, ancre, vue: "j", an: d.getFullYear(), mois: d.getMonth(), debut: d.getFullYear() - 7 });
+  dessinerCal(); $("cal").classList.add("on"); placerCal();
+}
+function placerCal() {
+  const c = $("cal"), r = cal.ancre.getBoundingClientRect(); let top = r.bottom + 6; if (top + 360 > innerHeight) top = Math.max(8, r.top - 366);
+  c.style.top = top + "px"; c.style.left = Math.min(innerWidth - 310, Math.max(8, r.right - 300)) + "px";
 }
 function dessinerCal() {
   const sel = D(etat[cal.champ]), auj = new Date(); let h = "", g = "";
@@ -1009,7 +1230,7 @@ $("fImport").onchange = async () => { const fi = $("fImport").files[0]; if (!fi)
 /* =====================================================================================
    11. FENÊTRES, MENUS, BULLES D'AIDE
    ===================================================================================== */
-function fermer() { document.querySelectorAll(".voile.on,.menu.on,#cal.on,#bulle.on").forEach((x) => x.classList.remove("on")); }
+function fermer() { document.querySelectorAll(".voile.on,.menu.on,#cal.on,#bulle.on,#pop.on").forEach((x) => x.classList.remove("on")); }
 $("bRegl").onclick = () => { fermer(); $("vRegl").classList.add("on"); };
 $("bScen").onclick = () => { fermer(); dessinerScenarios(); $("vScen").classList.add("on"); setTimeout(() => $("scNom").focus(), 50); };
 $("bExport").onclick = (e) => { e.stopPropagation(); const m = $("mExport"), on = m.classList.contains("on"); fermer(); if (on) return; const r = e.currentTarget.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 250, r.right - 240)) + "px"; m.classList.add("on"); };
@@ -1020,10 +1241,16 @@ document.addEventListener("click", (e) => {
   const calBt = e.target.closest("[data-cal]");
   if (calBt) { e.preventDefault(); e.stopPropagation(); const on = $("cal").classList.contains("on") && cal.champ === calBt.dataset.cal; fermer(); if (!on) ouvrirCal(calBt.dataset.cal, calBt.parentElement); return; }
   if (tip) { e.preventDefault(); e.stopPropagation(); const bu = $("bulle"), on = bu.classList.contains("on") && bu.dataset.de === tip.dataset.tip; fermer(); if (on) return; bu.textContent = tip.dataset.tip; bu.dataset.de = tip.dataset.tip; bu.classList.add("on"); const r = tip.getBoundingClientRect(); bu.style.left = Math.max(8, Math.min(innerWidth - 330, r.left - 10)) + "px"; bu.style.top = (r.bottom + 8 + bu.offsetHeight > innerHeight ? r.top - bu.offsetHeight - 8 : r.bottom + 8) + "px"; return; }
-  if (!e.target.closest("#cal,.menu,.fen,#bulle")) document.querySelectorAll(".menu.on,#cal.on,#bulle.on").forEach((x) => x.classList.remove("on"));
+  if (!e.target.closest("#cal,.menu,.fen,#bulle,#pop")) document.querySelectorAll(".menu.on,#cal.on,#bulle.on,#pop.on").forEach((x) => x.classList.remove("on"));
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") fermer(); });
-addEventListener("scroll", () => document.querySelectorAll("#cal.on,#bulle.on,.menu.on").forEach((x) => x.classList.remove("on")), { passive: true });
+// Au défilement : la liste et le calendrier suivent leur champ (fermés s'il sort de l'écran) ; bulles et menus se ferment
+addEventListener("scroll", () => {
+  document.querySelectorAll("#bulle.on,.menu.on").forEach((x) => x.classList.remove("on"));
+  const visible = (a) => { const r = a.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
+  if ($("pop").classList.contains("on") && liste) { if (visible(liste.ancre)) placerListe(); else $("pop").classList.remove("on"); }
+  if ($("cal").classList.contains("on") && cal.ancre && innerWidth > 600) { if (visible(cal.ancre)) placerCal(); else $("cal").classList.remove("on"); }
+}, { passive: true });
 // Étape active dans la barre de navigation, selon la section visible
 const obs = new IntersectionObserver((ents) => { for (const en of ents) if (en.isIntersecting) document.querySelectorAll("#etapes a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id)); }, { rootMargin: "-140px 0px -60% 0px" });
 
@@ -1032,8 +1259,6 @@ const obs = new IntersectionObserver((ents) => { for (const en of ents) if (en.i
    ===================================================================================== */
 const hauteur = () => document.documentElement.style.setProperty("--hh", document.querySelector("header.haut").offsetHeight + "px");
 hauteur(); addEventListener("resize", hauteur);
-construireFormulaire();
-SECTIONS.forEach((s) => obs.observe($("s_" + s.id)));
 const sauve = stock.lire("pvi-etat", null);
 if (sauve) charger(sauve); else { etat = defauts(); cedants = [{ ...CEDANT }]; remplir(); }
 appliquerReglages();

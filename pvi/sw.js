@@ -3,7 +3,7 @@
    Il garde une copie de l'appli sur l'appareil : elle s'ouvre même sans Internet.
    Pour forcer une mise à jour des copies, augmenter VERSION (pvi-v2, pvi-v3…).
    ===================================================================================== */
-const VERSION = "pvi-v1";
+const VERSION = "pvi-v2";
 const LOCAL = ["./", "./index.html", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png", "./apple-touch-icon.png", "./logo.svg"];
 const CDN = ["https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"];
 
