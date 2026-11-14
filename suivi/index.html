@@ -2015,6 +2015,15 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 .coordonnees [hidden] { display: none !important; }
 
 .coord-plan { text-decoration: none; margin-left: 4px; }
+
+/* Téléphone tenu à l'horizontale alors que le verrouillage n'a pas pu s'appliquer : on invite à le redresser. */
+.redresser { display: none; }
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  html.telephone .redresser { display: flex; position: fixed; inset: 0; z-index: 99999; background: var(--fond, #0c2d39);
+    color: var(--texte, #fff); align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    font-size: 16px; text-align: center; padding: 20px; }
+  html.telephone .redresser span { font-size: 40px; }
+}
 </style>
 </head>
 <body>
@@ -9214,6 +9223,19 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((r) => r.update()).catch(() => {});
   }
 
+  // ---------------------------------------------------------------- téléphone : rester en portrait
+  // Sur un téléphone, on demande au système de garder l'écran en portrait.
+  // Cela marche dans l'appli installée (Android) ; dans un simple onglet, le navigateur peut refuser :
+  // on ignore alors l'erreur et un petit message invite à remettre le téléphone droit.
+  const estTelephone = () => matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 600;
+  function figerPortrait() {
+    if (!estTelephone()) return;
+    try { screen.orientation && screen.orientation.lock && screen.orientation.lock("portrait").catch(() => {}); } catch (e) {}
+  }
+  figerPortrait();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) figerPortrait(); });
+  if (estTelephone()) document.documentElement.classList.add("telephone");
+
   // ---------------------------------------------------------------- démarrage
   try {
     const a = JSON.parse(localStorage.getItem(CLE_AFFICHAGE) || "null");
@@ -9241,5 +9263,6 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   }
 })();
 </script>
+<div class="redresser" aria-hidden="true"><span>📱</span>Tournez le téléphone en portrait</div>
 </body>
 </html>
