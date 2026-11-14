@@ -2088,15 +2088,19 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 /* agenda sur téléphone : le mois replié (bouton « Mois »), trois journées côte à côte */
 .btn-mois { display: none; }
 @media (max-width: 900px) {
-  /* entête : le titre sur sa ligne, puis les boutons, puis les types */
-  .cal-entete { gap: 6px; }
-  .cal-entete h2, .cal-entete h2.titre-deux { flex: 0 0 100%; min-width: 0; margin: 0 0 2px; font-size: 21px; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cal-entete h2:not(.titre-deux)::first-letter { text-transform: uppercase; }
-  .cal-entete > button { padding: 7px 11px; font-size: 14px; }
-  .btn-mois { display: inline-flex; margin-left: auto; }
+  /* entête sur une seule ligne : titre court, flèches, « Auj. », types en pastilles, mois, horaires */
+  .cal-entete { gap: 3px; flex-wrap: nowrap; margin-bottom: 6px; }
+  .cal-entete h2, .cal-entete h2.titre-deux { flex: 1 1 auto; min-width: 0; margin: 0 2px 0 0; font-size: 18px; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-entete > button { padding: 6px 7px; font-size: 13px; flex: none; }
+  .btn-mois { display: inline-flex; }
   .btn-mois[aria-pressed="true"] { background: var(--bleu) !important; color: var(--carte) !important; border-color: var(--bleu) !important; }
-  .cal-entete .btn-horaires { padding: 7px 10px; }
-  .cal-entete .cal-types { flex: 0 0 100%; }
+  .cal-entete .btn-horaires { padding: 6px 7px; }
+  .cal-entete .cal-types { order: 5; flex: none; margin: 0; gap: 2px; flex-wrap: nowrap; width: auto; }
+  .cal-entete .cal-types button { font-size: 0; padding: 0; width: 23px; height: 30px; display: inline-grid; place-items: center; border-radius: 8px; text-decoration: none !important; }
+  .cal-entete .cal-types button i { width: 11px; height: 11px; margin: 0; border-radius: 6px; }
+  .cal-entete .cal-types button[aria-pressed="false"] i { background: transparent !important; box-shadow: inset 0 0 0 2px var(--discret); }
+  .cal-entete .btn-mois { order: 6; } .cal-entete .btn-horaires { order: 7; }
+  .cal.mois-cache .cal-panneau { padding-top: 4px; padding-bottom: 4px; }
   .cal.mois-cache #calGrille { display: none; }
   .semaine.deux-jours { border-top: 0; }
   .semaine.deux-jours .semaine-tete { padding: 6px 1px; gap: 4px; }
@@ -5337,8 +5341,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 
   // ---- la journée en frise : chaque élément à sa place ; glisser pour déplacer, tirer le bas pour allonger ----
   const DEBUT_FRISE = 8 * 60, FIN_FRISE = 20 * 60;
-  function friseJour(elements, iso = jourCalendrier, compacte = false) {
-    const pxMin = compacte ? 0.95 : 1.1;  // 1 h = 66 px : un créneau de 15 min reste lisible
+  function friseJour(elements, iso = jourCalendrier, compacte = false, pxImpose = 0) {
+    const pxMin = pxImpose || (compacte ? 0.95 : 1.1);  // 1 h = 66 px : un créneau de 15 min reste lisible
     const marge = compacte ? 2 : 44;      // place laissée aux heures à gauche
     const frise = el("div", { class: "frise" + (compacte ? " compacte" : ""), "data-jour": iso, style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` });
     // double-clic dans un endroit libre : nouvelle tâche ce jour-là, à l'heure visée (arrondie au quart d'heure)
@@ -5610,9 +5614,9 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     $("calSemaine").replaceChildren(grilleJours(ev, jours));
   }
   // des colonnes de jours, heure par heure (7 jours sur ordinateur, 2 jours sur téléphone)
-  function grilleJours(ev, jours, tel = false) {
+  function grilleJours(ev, jours, tel = false, pxImpose = 0) {
     const auj = enIso(aujourdhui());
-    const pxMin = tel ? 1.05 : 0.95;
+    const pxMin = pxImpose || (tel ? 1.05 : 0.95);
     const axe = el("div", { class: "semaine-axe", style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` },
       ...[...Array((FIN_FRISE - DEBUT_FRISE) / 60 + 1).keys()].map((k) => el("span", { style: `top:${k * 60 * pxMin}px` }, `${DEBUT_FRISE / 60 + k} h`)));
     const colonnes = jours.map((d) => {
@@ -5632,7 +5636,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
           puce.addEventListener("contextmenu", (x) => { x.preventDefault(); ouvrirRoue(x.clientX, x.clientY, e, false); });
           return puce;
         })),
-        friseJour(avecHeure, iso, true));
+        friseJour(avecHeure, iso, true, pxMin));
     });
     const gabarit = tel ? `34px ${jours.map(() => "minmax(0, 1fr)").join(" ")}` : `46px ${jours.map((d) => (jourTravaille(enIso(d)) ? "minmax(0, 1fr)" : "minmax(0, .5fr)")).join(" ")}`;
     const grille = el("div", { class: "semaine" + (tel ? " deux-jours" : ""), style: `grid-template-columns:${gabarit}` }, el("div", { class: "semaine-axe-col" }, el("div", { class: "semaine-tete vide" }), el("div", { class: "semaine-sans-heure vide" }), axe), ...colonnes);
@@ -5664,6 +5668,21 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     for (let k = 0; k < JOURS_TEL; k++) x = jourSuivantUtile(x, ev, sens);
     changerJourCalendrier(Math.round((versDate(x) - versDate(jourCalendrier)) / 86400000));
   }
+  // téléphone : hauteur d'une minute, calculée pour que les trois journées tiennent dans l'écran, sans défiler.
+  // 0 = à mesurer : on dessine grand, on mesure ce qu'il y a au-dessus et en dessous, puis on redessine à la bonne hauteur.
+  let pxMinTel = 0;
+  function ajusterHauteurTel() {
+    const frise = document.querySelector("#calPanneau .semaine.deux-jours .frise");
+    if (!frise || pxMinTel || vueCourante() !== "calendrier" || !document.querySelector(".cal.mois-cache") || !frise.offsetHeight) return;
+    const page = document.scrollingElement, r = frise.getBoundingClientRect();
+    const dessus = r.top + window.scrollY, dessous = page.scrollHeight - (r.bottom + window.scrollY);
+    const hauteur = window.innerHeight - dessus - dessous - 8;
+    // taille d'affichage agrandie (zoom) : les hauteurs écrites en CSS sont multipliées à l'écran
+    const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+    pxMinTel = Math.max(0.35, Math.min(1.3, hauteur / zoom / (FIN_FRISE - DEBUT_FRISE)));
+    afficherCalendrier();
+  }
+  addEventListener("resize", () => { if (estTel() && pxMinTel) { pxMinTel = 0; afficherCalendrier(); } });
   // téléphone : le calendrier du mois est replié par défaut (bouton « Mois »)
   let moisTel = (() => { try { return localStorage.getItem("suivi-gp-cal-mois-tel") === "1"; } catch (e) { return false; } })();
 
@@ -5777,23 +5796,25 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const tel = estTel(), moisCache = tel && !moisTel;
     const joursT = tel ? joursTel(ev) : null, j2 = tel ? joursT[joursT.length - 1] : null;
     const court = (iso) => versDate(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
-    const titreDeux = tel ? `${court(jourCalendrier)} – ${court(j2)} ${versDate(j2).toLocaleDateString("fr-FR", { month: "short" })}` : "";
+    const d1 = tel ? versDate(jourCalendrier) : null, dN = tel ? versDate(j2) : null;
+    const titreDeux = tel ? (d1.getMonth() === dN.getMonth() ? `${d1.getDate()}–${dN.getDate()} ${dN.toLocaleDateString("fr-FR", { month: "short" })}`
+      : `${d1.getDate()} ${d1.toLocaleDateString("fr-FR", { month: "short" })}–${dN.getDate()} ${dN.toLocaleDateString("fr-FR", { month: "short" })}`) : "";
     const changerSemaine = (n) => { const d = versDate(jourCalendrier); d.setDate(d.getDate() + 7 * n); jourCalendrier = enIso(d); moisCalendrier = new Date(d.getFullYear(), d.getMonth(), 1); afficherCalendrier(); };
     const lundi = lundiDe(jourCalendrier), dimanche = new Date(lundi); dimanche.setDate(dimanche.getDate() + 6);
     const titreSemaine = `Semaine du ${lundi.getDate()}${lundi.getMonth() !== dimanche.getMonth() ? " " + lundi.toLocaleDateString("fr-FR", { month: "long" }) : ""} au ${dimanche.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`;
     $("calEntete").replaceChildren(
-      el("h2", { class: semaine ? "titre-semaine" : moisCache ? "titre-deux" : null }, semaine ? titreSemaine : moisCache ? titreDeux : titreMois),
+      el("h2", { class: semaine ? "titre-semaine" : moisCache ? "titre-deux" : null }, semaine ? titreSemaine : moisCache ? titreDeux : tel ? moisCalendrier.toLocaleDateString("fr-FR", { month: "short", year: "numeric" }) : titreMois),
       el("button", { type: "button", "aria-label": semaine ? "Semaine précédente" : moisCache ? "Jours précédents" : "Mois précédent", onclick: () => (semaine ? changerSemaine(-1) : moisCache ? changerDeuxJours(-1) : changerMois(-1)) }, "‹"),
-      el("button", { type: "button", onclick: () => { const d = aujourdhui(); d.setDate(1); moisCalendrier = d; jourCalendrier = auj; afficherCalendrier(); } }, "Aujourd’hui"),
+      el("button", { type: "button", title: "Aujourd’hui", onclick: () => { const d = aujourdhui(); d.setDate(1); moisCalendrier = d; jourCalendrier = auj; afficherCalendrier(); } }, tel ? "Auj." : "Aujourd’hui"),
       el("button", { type: "button", "aria-label": semaine ? "Semaine suivante" : moisCache ? "Jours suivants" : "Mois suivant", onclick: () => (semaine ? changerSemaine(1) : moisCache ? changerDeuxJours(1) : changerMois(1)) }, "›"),
       tel ? el("button", { type: "button", class: "btn-mois", "aria-pressed": String(moisTel), onclick: () => {
         moisTel = !moisTel; try { localStorage.setItem("suivi-gp-cal-mois-tel", moisTel ? "1" : "0"); } catch (e) {}
         afficherCalendrier();
-      }, title: moisTel ? "Masquer le mois" : "Afficher le mois" }, "📅 Mois") : null,
+      }, title: moisTel ? "Masquer le mois" : "Afficher le mois", "aria-label": moisTel ? "Masquer le mois" : "Afficher le mois" }, "📅") : null,
       el("button", { type: "button", class: "btn-horaires", title: "Horaires et congés", "aria-label": "Horaires et congés", onclick: ouvrirReglagesAgenda }, estTel() ? "⚙" : "⚙ Horaires"),
       el("div", { class: "cal-modes ordi" }, [["mois", "Mois"], ["semaine", "Semaine"]].map(([m, lib]) =>
         el("button", { type: "button", "aria-pressed": String(modeCalendrier === m), onclick: () => { modeCalendrier = m; memoriserFiltres(); afficherCalendrier(); } }, lib))),
-      el("div", { class: "cal-types" }, ["rdv", "tache", "dutreil"].map((t) => el("button", { type: "button", "aria-pressed": String(typesCalendrier.has(t)),
+      el("div", { class: "cal-types" }, ["rdv", "tache", "dutreil"].map((t) => el("button", { type: "button", "aria-pressed": String(typesCalendrier.has(t)), title: NOMS_CAL[t], "aria-label": NOMS_CAL[t],
         onclick: () => { typesCalendrier.has(t) ? typesCalendrier.delete(t) : typesCalendrier.add(t); memoriserFiltres(); afficherCalendrier(); } },
         el("i", { style: `background:${COULEURS_CAL[t]}` }), NOMS_CAL[t]))));
     // grille : 6 semaines, lundi en premier
@@ -5866,18 +5887,9 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       if (ev[iso]) suite.push([iso, ev[iso]]);
     }
     if (tel) {
-      // téléphone : deux journées côte à côte, puis les jours qui suivent
-      const apres = [];
-      for (let k = 1; k <= 14; k++) {
-        const iso = enIso(new Date(versDate(j2).getFullYear(), versDate(j2).getMonth(), versDate(j2).getDate() + k));
-        if (ev[iso]) apres.push([iso, ev[iso]]);
-      }
-      $("calPanneau").replaceChildren(
-        grilleJours(ev, joursT.map(versDate), true),
-        el("p", { class: "aide", style: "margin:10px 0 0" }, "Glissez de côté pour changer de jours ; bouton + pour ajouter."),
-        apres.length ? el("div", { class: "cal-avenir" }, ...apres.map(([iso, l]) => el("div", null,
-          el("h4", null, versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }), el("small", null, ` · ${l.length}`)),
-          el("div", { class: "cal-tuiles" }, l.map(ligne))))) : "");
+      // téléphone : trois journées côte à côte, à la hauteur de l'écran (mois replié) ; rien en dessous
+      $("calPanneau").replaceChildren(grilleJours(ev, joursT.map(versDate), true, moisCache ? (pxMinTel || 1.3) : 0));
+      if (moisCache) requestAnimationFrame(ajusterHauteurTel);
       return;
     }
     $("calPanneau").replaceChildren(
@@ -7237,6 +7249,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "simulations"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
     if (v === "outils") afficherOutils();
     if (v === "simulations") { depuisToutesApps(); afficherSimulations(); }
+    if (v === "calendrier" && estTel()) requestAnimationFrame(ajusterHauteurTel);
     // la recherche dit ce qu'elle cherche selon l'onglet
     $("recherche").placeholder = v === "dutreil" ? "Rechercher un pacte, une société, un client…" : v === "calendrier" ? "Rechercher un client, une tâche…" : "Filtrer les dossiers… (« / »)";
     if (donnees) majPortee();
