@@ -56,33 +56,83 @@
   }
 
   // ---------------------------------------------------------------- le prêt, année par année
-  function pret(capital, tauxAnnuel, dureeAns, assurancePct) {
+  //  remb (facultatif) : { an, montant } = remboursement anticipé à la fin de l'année « an » ;
+  //  la durée ne change pas, la mensualité (et l'assurance) baissent d'autant.
+  function pret(capital, tauxAnnuel, dureeAns, assurancePct, remb) {
     const n = Math.round(dureeAns * 12), t = tauxAnnuel / 100 / 12;
-    const mensualite = capital <= 0 || n <= 0 ? 0 : (t === 0 ? capital / n : capital * t / (1 - Math.pow(1 + t, -n)));
-    const assuranceMois = capital * (assurancePct / 100) / 12;
+    const mens = (c, k) => c <= 0 || k <= 0 ? 0 : (t === 0 ? c / k : c * t / (1 - Math.pow(1 + t, -k)));
+    let mensualite = mens(capital, n);
+    let assuranceMois = capital * (assurancePct / 100) / 12;
+    const mensualite0 = mensualite, assurance0 = assuranceMois;
     const annees = [];
-    let crd = capital;
+    let crd = capital, mois = 0;
     for (let a = 1; a <= Math.ceil(n / 12) + 60; a++) {
-      let interets = 0, amort = 0, assu = 0;
+      let interets = 0, amort = 0, assu = 0, anticipe = 0;
       for (let m = 0; m < 12; m++) {
         if (crd <= 0.005) break;
         const i = crd * t, c = Math.min(crd, mensualite - i);
-        interets += i; amort += c; assu += assuranceMois; crd -= c;
+        interets += i; amort += c; assu += assuranceMois; crd -= c; mois++;
       }
-      annees.push({ interets, capital: amort, assurance: assu, crd: Math.max(0, crd) });
+      if (remb && remb.an === a && crd > 0) {
+        anticipe = Math.min(crd, Math.max(0, remb.montant));
+        const avant = crd; crd -= anticipe;
+        mensualite = mens(crd, n - mois); assuranceMois = avant > 0 ? assuranceMois * crd / avant : 0;
+      }
+      annees.push({ interets, capital: amort, assurance: assu, crd: Math.max(0, crd), anticipe });
       if (crd <= 0.005 && a >= dureeAns) break;
+      if (crd <= 0.005 && anticipe) break;
     }
-    return { mensualite, assuranceMois, annees, an: (a) => annees[a - 1] || { interets: 0, capital: 0, assurance: 0, crd: 0 } };
+    return { mensualite: mensualite0, assuranceMois: assurance0, annees, an: (a) => annees[a - 1] || { interets: 0, capital: 0, assurance: 0, crd: 0, anticipe: 0 } };
+  }
+  // plusieurs prêts additionnés (banque + holding)
+  function prets(liste) {
+    return { mensualite: liste.reduce((s, p) => s + p.mensualite, 0), assuranceMois: liste.reduce((s, p) => s + p.assuranceMois, 0),
+      annees: liste.reduce((m, p) => p.annees.length > m.length ? p.annees : m, []),
+      an: (a) => liste.map((p) => p.an(a)).reduce((s, x) => ({ interets: s.interets + x.interets, capital: s.capital + x.capital, assurance: s.assurance + x.assurance, crd: s.crd + x.crd, anticipe: s.anticipe + (x.anticipe || 0) }), { interets: 0, capital: 0, assurance: 0, crd: 0, anticipe: 0 }) };
+  }
+  // impôt sur le revenu foncier d'un foyer, année par année, avec ses déficits reportables (10 ans)
+  function creerFoncier(R, tmi) {
+    const reports = [];
+    return {
+      an(a, resultat, interets) {
+        let imposable = 0, economie = 0;
+        if (resultat >= 0) {
+          imposable = resultat;
+          for (const r of reports) { if (imposable <= 0) break; if (a - r.an > 10) continue; const u = Math.min(r.montant, imposable); r.montant -= u; imposable -= u; }
+        } else {
+          const deficit = -resultat, partInterets = Math.min(deficit, interets), surGlobal = Math.min(deficit - partInterets, R.deficitGlobal);
+          economie = surGlobal * tmi; reports.push({ montant: deficit - surGlobal, an: a });
+        }
+        const impotIR = imposable * tmi, impotPS = imposable * R.psFoncier / 100;
+        return { imposable, economie, impotIR, impotPS, impot: impotIR + impotPS - economie };
+      }
+    };
+  }
+  // l'IS d'une société qui a déjà d'autres bénéfices (holding) : taux marginal, déficits reportés
+  function creerSocieteIS(taux) {
+    let deficit = 0;
+    return { an(resultat) { let b = resultat; if (b > 0 && deficit > 0) { const u = Math.min(deficit, b); deficit -= u; b -= u; } else if (b < 0) { deficit += -b; b = 0; } return { base: b, is: b * taux }; } };
+  }
+  // valeur économique d'un usufruit temporaire : les loyers nets qu'il rapporte, actualisés
+  function valeurUsufruit(B, h, duree, R) {
+    const r = (+h.usufruitTaux || 0) / 100;
+    let v = 0;
+    for (let a = 1; a <= duree; a++) {
+      const y = B.ans[a - 1] || B.ans[B.ans.length - 1];
+      v += (y.loyerNu - y.charges - y.loyerNu * B.gestion) / Math.pow(1 + r, a);
+    }
+    return Math.max(0, v);
   }
 
   // ---------------------------------------------------------------- les éléments communs à tous les montages
-  function base(h, R, meuble) {
+  function base(h, R, meuble, opts) {
+    opts = opts || {};
     const prix = +h.prix || 0;
     const frais = h.fraisAuto ? prix * (h.neuf ? 0.025 : 0.08) : (+h.frais || 0);
     const travaux = +h.travaux || 0, mobilier = meuble ? (+h.mobilier || 0) : 0;   // le mobilier ne s'achète qu'en meublé
     const coutSansMobilier = prix + frais + travaux;
     const emprunt = Math.max(0, coutSansMobilier + mobilier - (+h.apport || 0));
-    const P = pret(emprunt, +h.taux || 0, +h.duree || 0, +h.assurance || 0);
+    const P = opts.pret || pret(emprunt, +h.taux || 0, +h.duree || 0, +h.assurance || 0);
     const N = Math.max(1, Math.round(+h.horizon || 1));
     const g = (+h.revalLoyer || 0) / 100, gc = (+h.revalCharges || 0) / 100;
     const vacance = Math.min(12, Math.max(0, +h.vacance || 0)) / 12;
@@ -212,11 +262,32 @@
   }
 
   // 5. SCI à l'IR (location nue, régime réel) : le résultat est imposé chez chaque associé, selon ses parts
-  function sciIR(h, R) {
-    const B = base(h, R, false);
-    const associes = (h.associes && h.associes.length ? h.associes : [{ nom: "Associé", parts: 100, tmi: h.tmi }]).map((x) => ({ ...x, q: (+x.parts || 0) / 100, tmi: (+x.tmi || 0) / 100, reports: [] }));
-    const totalParts = associes.reduce((s, x) => s + x.q, 0) || 1;
-    associes.forEach((x) => { x.q = x.q / totalParts; });
+  //    opts.inegal  : le résultat se partage selon la clause des statuts (« part des résultats »), le capital selon les parts
+  //    opts.holding : une partie du financement est prêtée par votre holding à l'IS (intérêts déductibles dans la SCI,
+  //                   imposés à l'IS dans la holding)
+  function sciIR(h, R, opts) {
+    opts = opts || {};
+    let B = base(h, R, false), societe = null;
+    if (opts.holding) {
+      const montant = Math.min(Math.max(0, +h.holdingMontant || 0), B.emprunt);
+      const banque = pret(B.emprunt - montant, +h.taux || 0, +h.duree || 0, +h.assurance || 0);
+      const parHolding = pret(montant, +h.holdingTaux || 0, +h.holdingDuree || 0, 0);
+      B = base(h, R, false, { pret: prets([banque, parHolding]) });
+      // la holding : elle prête (sortie de trésorerie), reçoit intérêts et capital, et le solde à la revente
+      const tauxIS = (+h.isSociete || 0) / 100, flux = [-montant], lignesS = [];
+      let impots = 0;
+      for (let a = 1; a <= B.N; a++) {
+        const x = parHolding.an(a), is = x.interets * tauxIS;
+        impots += is;
+        lignesS.push({ a, recettes: x.interets, is, cash: x.interets - is + x.capital });
+        flux.push(x.interets - is + x.capital + (a === B.N ? x.crd : 0));
+      }
+      societe = { nom: "holding prêteuse", montant, flux, impots, lignes: lignesS, gain: flux.reduce((s, f) => s + f, 0) };
+    }
+    const associes = (h.associes && h.associes.length ? h.associes : [{ nom: "Associé", parts: 100, tmi: h.tmi }]).map((x) => ({ ...x,
+      q: (+x.parts || 0) / 100, qr: (opts.inegal ? (x.resultat ?? x.parts) : x.parts) / 100, tmi: (+x.tmi || 0) / 100, reports: [] }));
+    const totalParts = associes.reduce((s, x) => s + x.q, 0) || 1, totalRes = associes.reduce((s, x) => s + x.qr, 0) || 1;
+    associes.forEach((x) => { x.q = x.q / totalParts; x.qr = x.qr / totalRes; });
     const compta = +h.comptaSCI || 0, constitution = +h.constitution || 0;
     const lignes = [];
     for (const y of B.ans) {
@@ -227,7 +298,7 @@
       const resultat = loyers - y.charges - gestion - travauxAn - fraisSCI - interets;
       let impotIR = 0, impotPS = 0, economie = 0, imposableTotal = 0;
       for (const x of associes) {
-        const r = resultat * x.q, int = interets * x.q;
+        const r = resultat * x.qr, int = interets * x.qr;
         if (r >= 0) {
           let imp = r;
           for (const d of x.reports) { if (imp <= 0) break; if (y.a - d.an > 10) continue; const u = Math.min(d.montant, imp); d.montant -= u; imp -= u; }
@@ -246,7 +317,110 @@
     const parAssocie = associes.map((x) => ({ nom: x.nom, q: x.q, ...plusValueParticuliers(B, R, { travauxDeduits: B.travauxEntretien, quote: x.q }) }));
     const pv = parAssocie.reduce((s, x) => ({ brute: s.brute + x.brute, ir: s.ir + x.ir, ps: s.ps + x.ps, surtaxe: s.surtaxe + x.surtaxe, total: s.total + x.total }), { brute: 0, ir: 0, ps: 0, surtaxe: 0, total: 0 });
     Object.assign(pv, { prixRevient: parAssocie[0] ? parAssocie[0].prixRevient : 0, abatIR: abatIR(B.N), abatPS: abatPS(B.N), parAssocie });
-    return terminer(B, lignes, pv, {});
+    // ce que chaque associé a déclaré sur la durée (utile pour la répartition inégale)
+    const declare = associes.map((x) => ({ nom: x.nom, partCapital: x.q, partResultats: x.qr }));
+    return terminer(B, lignes, pv, { societe, associes: declare });
+  }
+
+  // 7. cession temporaire d'usufruit : vous achetez le bien, puis cédez l'usufruit pour quelques années à votre société à l'IS.
+  //    Le prix (valeur économique) est imposé chez vous comme un revenu foncier (art. 13, 5 du CGI) et peut rembourser
+  //    le prêt par anticipation ; la société encaisse les loyers et amortit l'usufruit ; à la fin, vous retrouvez la
+  //    pleine propriété sans impôt, puis louez jusqu'à la revente.
+  function cessionUsufruit(h, R) {
+    const B0 = base(h, R, false), tmi = (+h.tmi || 0) / 100;
+    const D = Math.max(1, Math.min(Math.round(+h.usufruitDuree || 1), B0.N));
+    const prixUs = h.usufruitManuel ? B0.prix * (+h.usufruitPct || 0) / 100 : valeurUsufruit(B0, h, D, R);
+    const fraisUs = prixUs * (+h.fraisUsufruit || 0) / 100;   // droits et frais payés par la société
+    // impôt estimé sur le prix (année 1), pour savoir ce qui reste à rembourser au prêt
+    const impotPrixEstime = pos(prixUs - B0.ans[0].interets - B0.ans[0].assurance - (B0.travauxEntretien ? B0.travaux : 0)) * (tmi + R.psFoncier / 100);
+    const anticipe = h.usufruitRembourser ? Math.max(0, prixUs - impotPrixEstime) : 0;
+    const P = pret(B0.emprunt, +h.taux || 0, +h.duree || 0, +h.assurance || 0, anticipe ? { an: 1, montant: anticipe } : null);
+    const B = base(h, R, false, { pret: P });
+    const F = creerFoncier(R, tmi), lignes = [];
+    for (const y of B.ans) {
+      const demembre = y.a <= D;
+      const interets = y.interets + y.assurance;
+      let loyers = 0, charges = 0, resultat, f;
+      if (demembre) {
+        // pendant l'usufruit : pas de loyers ni de charges courantes ; le prix est un revenu foncier de l'année 1
+        if (y.a === 1) {
+          charges = B.travauxEntretien ? B.travaux : 0;
+          resultat = prixUs - charges - interets;
+          f = F.an(1, resultat, interets);
+        } else {
+          // ensuite, les intérêts ne se déduisent que de vos autres revenus fonciers (option)
+          resultat = h.autresFonciers ? -interets : 0;
+          const eco = h.autresFonciers ? interets * (tmi + R.psFoncier / 100) : 0;
+          f = { imposable: 0, impotIR: 0, impotPS: 0, economie: eco, impot: -eco };
+        }
+      } else {
+        loyers = y.loyerNu; const gestion = loyers * B.gestion;
+        charges = y.charges + gestion;
+        resultat = loyers - charges - interets;
+        f = F.an(y.a, resultat, interets);
+      }
+      const prixRecu = y.a === 1 ? prixUs - anticipe : 0;
+      const cash = loyers - (demembre ? 0 : charges) - (y.interets + y.assurance + y.capitalRembourse) - f.impot + prixRecu;
+      lignes.push({ a: y.a, loyers: loyers + (y.a === 1 ? prixUs : 0), charges, interets, amort: 0, resultat, imposable: f.imposable, impotIR: f.impotIR, impotPS: f.impotPS, economie: f.economie, impot: f.impot,
+        mensualites: y.interets + y.assurance + y.capitalRembourse, cashflow: cash, crd: y.crd, note: demembre ? (y.a === 1 ? "prix de l'usufruit encaissé" + (anticipe ? ", " + Math.round(anticipe).toLocaleString("fr-FR") + " € remboursés au prêt" : "") : "usufruit chez la société") : "" });
+    }
+    const societe = societeUsufruitiere(B0, h, R, D, prixUs + fraisUs, "société usufruitière");
+    societe.prix = prixUs; societe.frais = fraisUs; societe.duree = D;
+    const pv = plusValueParticuliers(B0, R, { travauxDeduits: B0.travauxEntretien });
+    return terminer(B, lignes, pv, { societe, usufruit: { prix: prixUs, duree: D, anticipe, part: prixUs / (B0.prix || 1) } });
+  }
+
+  // la société à l'IS qui détient l'usufruit temporaire : elle paie le prix, encaisse les loyers, amortit l'usufruit
+  function societeUsufruitiere(B0, h, R, D, cout, nom) {
+    const S = creerSocieteIS((+h.isSociete || 0) / 100), flux = [-cout], lignesS = [];
+    let impots = 0;
+    for (let a = 1; a <= B0.N; a++) {
+      if (a > D) { flux.push(0); continue; }
+      const y = B0.ans[a - 1], loyers = y.loyerNu, charges = y.charges + loyers * B0.gestion + (+h.comptaHolding || 0);
+      const amort = cout / D, x = S.an(loyers - charges - amort);
+      impots += x.is;
+      lignesS.push({ a, recettes: loyers, charges, amort, is: x.is, cash: loyers - charges - x.is });
+      flux.push(loyers - charges - x.is);
+    }
+    return { nom, montant: cout, flux, impots, lignes: lignesS, gain: flux.reduce((s, f) => s + f, 0) };
+  }
+
+  // 8. coacquisition démembrée : vous achetez la nue-propriété, votre société à l'IS l'usufruit temporaire.
+  //    Pendant le démembrement, vous n'avez ni loyers ni charges courantes (et rien à déclarer) ; la société loue.
+  //    À la fin, vous recevez la pleine propriété sans impôt ; à la revente, le prix d'achat retenu est celui de la nue-propriété.
+  function coacquisition(h, R) {
+    const B0 = base(h, R, false), tmi = (+h.tmi || 0) / 100;
+    const D = Math.max(1, Math.min(Math.round(+h.usufruitDuree || 1), B0.N));
+    const prixUs = h.usufruitManuel ? B0.prix * (+h.usufruitPct || 0) / 100 : valeurUsufruit(B0, h, D, R);
+    const u = Math.min(0.9, prixUs / (B0.prix || 1));
+    const prixNP = B0.prix * (1 - u), fraisNP = B0.frais * (1 - u), fraisUs = B0.frais * u;
+    const cout = prixNP + fraisNP + B0.travaux;   // les travaux de l'achat sont à la charge du nu-propriétaire
+    const apport = Math.min(+h.apport || 0, cout), emprunt = Math.max(0, cout - apport);
+    const P = pret(emprunt, +h.taux || 0, +h.duree || 0, +h.assurance || 0);
+    const B = Object.assign({}, base(h, R, false, { pret: P }), { prix: prixNP, frais: fraisNP, emprunt, apport, P });
+    const F = creerFoncier(R, tmi), lignes = [];
+    for (const y of B.ans) {
+      const demembre = y.a <= D, interets = y.interets + y.assurance;
+      let loyers = 0, charges = 0, resultat = 0, f;
+      if (demembre) {
+        // intérêts de l'achat de la nue-propriété : déductibles seulement de vos autres revenus fonciers (option)
+        resultat = h.autresFonciers ? -interets : 0;
+        f = { imposable: 0, impotIR: 0, impotPS: 0, economie: h.autresFonciers ? interets * (tmi + R.psFoncier / 100) : 0 };
+        f.impot = -f.economie;
+      } else {
+        loyers = y.loyerNu; charges = y.charges + loyers * B.gestion;
+        resultat = loyers - charges - interets;
+        f = F.an(y.a, resultat, interets);
+      }
+      const cash = loyers - charges - (y.interets + y.assurance + y.capitalRembourse) - f.impot;
+      lignes.push({ a: y.a, loyers, charges, interets, amort: 0, resultat, imposable: f.imposable, impotIR: f.impotIR, impotPS: f.impotPS, economie: f.economie, impot: f.impot,
+        mensualites: y.interets + y.assurance + y.capitalRembourse, cashflow: cash, crd: y.crd, note: demembre ? "usufruit chez la société" : "" });
+    }
+    const societe = societeUsufruitiere(B0, h, R, D, prixUs + fraisUs, "société usufruitière");
+    societe.prix = prixUs; societe.frais = fraisUs; societe.duree = D;
+    // plus-value : prix d'acquisition = celui de la nue-propriété (l'extinction de l'usufruit n'ajoute rien)
+    const pv = plusValueParticuliers({ ...B0, prix: prixNP, frais: fraisNP }, R, { travauxDeduits: false });
+    return terminer(B, lignes, pv, { societe, usufruit: { prix: prixUs, duree: D, part: u, prixNP } });
   }
 
   // 6. SCI à l'IS (location nue) : la société paie l'IS ; les associés financent par compte courant
@@ -324,10 +498,15 @@
     const effortPendantPret = -lignes.slice(0, dureePret).reduce((s, l) => s + l.cashflow, 0) / Math.max(1, dureePret) / 12;
     let cumul = -apport;
     const tresorerieCumulee = lignes.map((l) => (cumul += l.cashflow));
+    // montages avec votre société à l'IS : on compte aussi ce qu'elle gagne (avant la flat tax d'une éventuelle sortie)
+    const S = extra.societe;
+    const fluxGroupe = S ? flux.map((f, i) => f + (S.flux[i] || 0)) : flux;
     return {
-      lignes, pv, netRevente, flux, tri: tri(flux), cashCumul, impotsDetention, impotRevente: pv.total, effortMensuel, effortPendantPret,
-      enrichissement, tresorerieCumulee, apport, emprunt: B.emprunt, mensualite: B.P.mensualite + B.P.assuranceMois, prixRevente: B.prixRevente, crdFin: crd,
-      coutTotal: B.prix + B.frais + B.travaux + B.mobilier, extra
+      lignes, pv, netRevente, flux: fluxGroupe, fluxFoyer: flux, tri: tri(fluxGroupe), triFoyer: tri(flux), cashCumul, impotsDetention: impotsDetention + (S ? S.impots : 0), impotsFoyer: impotsDetention,
+      impotRevente: pv.total, effortMensuel, effortPendantPret,
+      enrichissement: enrichissement + (S ? S.gain : 0), enrichissementFoyer: enrichissement, gainSociete: S ? S.gain : 0, miseSociete: S ? S.montant : 0,
+      tresorerieCumulee, apport, emprunt: B.emprunt, mensualite: B.P.mensualite + B.P.assuranceMois, prixRevente: B.prixRevente, crdFin: crd,
+      coutTotal: B.prix + B.frais + B.travaux + B.mobilier + (extra.usufruit && extra.usufruit.prixNP != null ? S.montant : 0), extra
     };
   }
 
@@ -337,7 +516,12 @@
     { id: "lmnpMicro", nom: "LMNP · micro-BIC", court: "LMNP micro", calc: (h, R) => lmnp(h, R, "micro") },
     { id: "lmnpReel", nom: "LMNP · réel", court: "LMNP réel", calc: (h, R) => lmnp(h, R, "reel") },
     { id: "sciIR", nom: "SCI à l'IR", court: "SCI IR", calc: sciIR },
-    { id: "sciIS", nom: "SCI à l'IS", court: "SCI IS", calc: sciIS }
+    { id: "sciIS", nom: "SCI à l'IS", court: "SCI IS", calc: sciIS },
+    // montages patrimoniaux
+    { id: "sciIRInegal", nom: "SCI à l'IR · répartition inégale des résultats", court: "SCI IR inégale", patrimonial: true, calc: (h, R) => sciIR(h, R, { inegal: true }) },
+    { id: "sciIRHolding", nom: "SCI à l'IR · financée par votre holding", court: "SCI IR + holding", patrimonial: true, societe: true, calc: (h, R) => sciIR(h, R, { holding: true }) },
+    { id: "cessionUsufruit", nom: "Cession temporaire d'usufruit à votre société", court: "Cession d'usufruit", patrimonial: true, societe: true, calc: cessionUsufruit },
+    { id: "coacquisition", nom: "Coacquisition démembrée (nue-propriété + usufruit de votre société)", court: "Coacquisition démembrée", patrimonial: true, societe: true, calc: coacquisition }
   ];
 
   function calculerTout(h, reglages) {
@@ -347,6 +531,6 @@
     return res;
   }
 
-  const Moteur = { REGLAGES_DEFAUT, MONTAGES, calculerTout, pret, tri, abatIR, abatPS, surtaxe, impotSocietes, plusValueParticuliers, base, arrondi };
+  const Moteur = { REGLAGES_DEFAUT, MONTAGES, calculerTout, pret, prets, valeurUsufruit, tri, abatIR, abatPS, surtaxe, impotSocietes, plusValueParticuliers, base, arrondi };
   if (typeof module !== "undefined" && module.exports) module.exports = Moteur; else racine.Moteur = Moteur;
 })(typeof window !== "undefined" ? window : globalThis);

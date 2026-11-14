@@ -28,19 +28,19 @@
   --fond: #f7f4ee; --carte: #fffdf9; --section: #efe9de; --bordure: #e2dacb; --texte: #1c2a30; --discret: #7c7466;
   --vert: #2f7d5b; --rouge: #b4473b;
   --ui: "IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; --titre: "EB Garamond", Georgia, serif;
-  --c1: #0c2d39; --c2: #a77d2f; --c3: #4f7f8f; --c4: #c86b4a; --c5: #6f8f4e; --c6: #8a6bb5;
+  --c1: #0c2d39; --c2: #a77d2f; --c3: #4f7f8f; --c4: #c86b4a; --c5: #6f8f4e; --c6: #8a6bb5; --c7: #2f8a78; --c8: #9b5a2f; --c9: #4f63b0; --c10: #b0577a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bleu: #9cc3d1; --or: #d4ad62; --or-doux: #3a3020; --bleu-doux: #1d3540;
     --fond: #0f1b20; --carte: #16262d; --section: #1b2e36; --bordure: #27404a; --texte: #e8e3d9; --discret: #9aa7a9;
-    --vert: #6cc39b; --rouge: #e48a7f; --c1: #9cc3d1; --c2: #d4ad62; --c3: #7fb3c4; --c4: #e39b7f; --c5: #9fc27e; --c6: #b89be0;
+    --vert: #6cc39b; --rouge: #e48a7f; --c1: #9cc3d1; --c2: #d4ad62; --c3: #7fb3c4; --c4: #e39b7f; --c5: #9fc27e; --c6: #b89be0; --c7: #6cc3b0; --c8: #d39a6b; --c9: #93a4e6; --c10: #e094b3;
   }
 }
 :root[data-theme="dark"] {
   --bleu: #9cc3d1; --or: #d4ad62; --or-doux: #3a3020; --bleu-doux: #1d3540;
   --fond: #0f1b20; --carte: #16262d; --section: #1b2e36; --bordure: #27404a; --texte: #e8e3d9; --discret: #9aa7a9;
-  --vert: #6cc39b; --rouge: #e48a7f; --c1: #9cc3d1; --c2: #d4ad62; --c3: #7fb3c4; --c4: #e39b7f; --c5: #9fc27e; --c6: #b89be0;
+  --vert: #6cc39b; --rouge: #e48a7f; --c1: #9cc3d1; --c2: #d4ad62; --c3: #7fb3c4; --c4: #e39b7f; --c5: #9fc27e; --c6: #b89be0; --c7: #6cc3b0; --c8: #d39a6b; --c9: #93a4e6; --c10: #e094b3;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -102,7 +102,13 @@ select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); borde
 .case { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
 .case input { width: 18px; height: 18px; accent-color: var(--bleu); }
 .associes { display: grid; gap: 8px; }
-.associe { display: grid; grid-template-columns: 1fr 86px 92px 32px; gap: 6px; align-items: end; }
+.associe { display: grid; grid-template-columns: 1fr 76px 76px 84px 32px; gap: 6px; align-items: end; }
+.sous-titre { margin: 8px 0 -2px; font: 600 15px var(--titre); color: var(--bleu); border-top: 1px solid var(--bordure); padding-top: 10px; }
+.puces-titre { font-size: 12px; color: var(--discret); margin: 10px 0 6px; }
+.puces-titre:first-child { margin-top: 0; }
+.societe { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--bleu-doux); }
+.societe .t { font: 600 16px var(--titre); color: var(--bleu); display: block; margin-bottom: 6px; }
+.societe .tableau td, .societe .tableau th { background: transparent; }
 .associe input[type=text] { width: 100%; padding: 9px 10px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); }
 .mini { border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
 .mini.x { padding: 0; height: 38px; color: var(--rouge); }
@@ -174,7 +180,10 @@ select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); borde
   .actions { margin-left: auto; }
   .bt-h { padding: 8px 9px; }
   .grille { grid-template-columns: 1fr 1fr; gap: 8px 10px; }
-  .associe { grid-template-columns: 1fr 70px 80px 32px; }
+  /* téléphone : le nom sur une ligne, capital / résultats / TMI sur la suivante */
+  .associe { grid-template-columns: 1fr 1fr 1fr 38px; padding-bottom: 8px; border-bottom: 1px dashed var(--bordure); }
+  .associe > .champ:first-child { grid-column: 1 / 4; grid-row: 1; }
+  .associe > button.x { grid-column: 4; grid-row: 1; }
   .menu-export { right: 10px; top: 54px; }
   .tableau th, .tableau td { padding: 7px 8px; }
   /* le comparatif défile de côté ; la colonne des libellés reste en place */
@@ -484,8 +493,8 @@ const eurS = (n) => isFinite(n) ? (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(
 const pct = (x, d = 1) => x == null || !isFinite(x) ? "–" : (x * 100).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }) + " %";
 const stock = { lire(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, ecrire(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2400); }
-const COULEURS = { nuMicro: "var(--c3)", nuReel: "var(--c1)", lmnpMicro: "var(--c5)", lmnpReel: "var(--c2)", sciIR: "var(--c4)", sciIS: "var(--c6)" };
-const COUL_HEX = { nuMicro: "4F7F8F", nuReel: "0C2D39", lmnpMicro: "6F8F4E", lmnpReel: "A77D2F", sciIR: "C86B4A", sciIS: "8A6BB5" };
+const COULEURS = { nuMicro: "var(--c3)", nuReel: "var(--c1)", lmnpMicro: "var(--c5)", lmnpReel: "var(--c2)", sciIR: "var(--c4)", sciIS: "var(--c6)", sciIRInegal: "var(--c7)", sciIRHolding: "var(--c8)", cessionUsufruit: "var(--c9)", coacquisition: "var(--c10)" };
+const COUL_HEX = { nuMicro: "4F7F8F", nuReel: "0C2D39", lmnpMicro: "6F8F4E", lmnpReel: "A77D2F", sciIR: "C86B4A", sciIS: "8A6BB5", sciIRInegal: "2F8A78", sciIRHolding: "9B5A2F", cessionUsufruit: "4F63B0", coacquisition: "B0577A" };
 
 // =====================================================================================
 //  2. LE PROJET : valeurs par défaut et description des champs
@@ -495,7 +504,10 @@ const DEFAUT = {
   loyerNu: 850, loyerMeuble: 980, vacance: 0.5, copro: 1200, taxeFonciere: 1100, pno: 150, gestion: 0, cfe: 250,
   revalLoyer: 1.5, revalCharges: 2,
   apport: 30000, taux: 3.4, duree: 20, assurance: 0.25,
-  tmi: 30, associes: [{ nom: "Associé 1", parts: 50, tmi: 30 }, { nom: "Associé 2", parts: 50, tmi: 30 }],
+  tmi: 30, associes: [{ nom: "Associé 1", parts: 50, resultat: 50, tmi: 30 }, { nom: "Associé 2", parts: 50, resultat: 50, tmi: 30 }],
+  // montages patrimoniaux
+  isSociete: 15, holdingMontant: 80000, holdingTaux: 4, holdingDuree: 15,
+  usufruitDuree: 10, usufruitTaux: 4, usufruitManuel: false, usufruitPct: 35, fraisUsufruit: 7, usufruitRembourser: true, autresFonciers: false,
   comptaLMNP: 450, comptaSCI: 600, comptaIS: 1500, constitution: 1500, distribuer: false,
   horizon: 15, revalPrix: 1.5, fraisCession: 0,
   montages: ["nuMicro", "nuReel", "lmnpMicro", "lmnpReel", "sciIR", "sciIS"]
@@ -544,6 +556,22 @@ const SECTIONS = [
     F("constitution", "Création de la SCI", "€"),
     { caseCle: "distribuer", lib: "SCI à l'IS : distribuer chaque année le bénéfice (sinon : mis en réserve, et remboursement du compte courant)", plein: true }
   ] },
+  { id: "patrimonial", titre: "Montages patrimoniaux", resume: () => "usufruit " + h.usufruitDuree + " ans · IS " + h.isSociete + " %", champs: [
+    { select: "isSociete", lib: "Votre société à l'IS (holding) : taux marginal d'IS", options: [[15, "15 % (bénéfices jusqu'à 42 500 €)"], [25, "25 %"]], plein: true },
+    { titre: "SCI à l'IR financée par votre holding" },
+    F("holdingMontant", "Montant prêté par la holding", "€", "Le reste est emprunté à la banque."),
+    F("holdingTaux", "Taux du prêt de la holding", "%"),
+    F("holdingDuree", "Durée du prêt de la holding", "ans"),
+    { titre: "Usufruit temporaire (cession ou coacquisition)" },
+    F("usufruitDuree", "Durée de l'usufruit", "ans"),
+    F("usufruitTaux", "Taux d'actualisation", "%", "Valeur économique : loyers nets de la période, actualisés."),
+    { caseCle: "usufruitManuel", lib: "Fixer moi-même la valeur de l'usufruit", plein: true },
+    F("usufruitPct", "Valeur de l'usufruit", "% du prix"),
+    F("fraisUsufruit", "Frais d'achat de l'usufruit (société)", "% du prix", "Droits de mutation et frais de l'acte de cession."),
+    { valeurUsufruit: true },
+    { caseCle: "usufruitRembourser", lib: "Cession d'usufruit : le prix (après impôt) rembourse le prêt par anticipation", plein: true },
+    { caseCle: "autresFonciers", lib: "J'ai d'autres revenus fonciers (les intérêts de la nue-propriété s'y déduisent)", plein: true }
+  ] },
   { id: "revente", titre: "Revente", resume: () => "dans " + h.horizon + " ans", champs: [
     F("horizon", "Durée de détention", "ans"),
     F("revalPrix", "Valorisation du bien", "%/an"),
@@ -559,7 +587,9 @@ function champHTML(c) {
   if (c.seg) return `<div class="champ ${c.plein ? "plein" : ""}"><span class="lib">${esc(c.lib)}</span><div class="seg">${c.options.map(([v, l]) => `<button type="button" data-seg="${c.seg}" data-val='${JSON.stringify(v)}' class="${h[c.seg] === v ? "on" : ""}">${esc(l)}</button>`).join("")}</div>${c.aide ? `<p class="aide">${esc(c.aide)}</p>` : ""}</div>`;
   if (c.select) return `<div class="champ ${c.plein ? "plein" : ""}"><label for="s-${c.select}">${esc(c.lib)}</label><select id="s-${c.select}" data-select="${c.select}">${c.options.map(([v, l]) => `<option value="${v}" ${+h[c.select] === +v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>`;
   if (c.caseCle) return `<label class="case plein"><input type="checkbox" data-case="${c.caseCle}" ${h[c.caseCle] ? "checked" : ""}> ${esc(c.lib)}</label>`;
-  if (c.associes) return `<div class="champ plein"><span class="lib">Associés de la SCI (parts et TMI de chacun)</span><div class="associes" id="associes"></div><button type="button" class="mini" id="ajoutAssocie" style="justify-self:start">＋ Associé</button></div>`;
+  if (c.titre) return `<p class="sous-titre plein">${esc(c.titre)}</p>`;
+  if (c.valeurUsufruit) return `<p class="aide plein" id="valeurUsufruit"></p>`;
+  if (c.associes) return `<div class="champ plein"><span class="lib">Associés de la SCI : part du capital, part des résultats (clause des statuts, montage « SCI IR inégale ») et TMI</span><div class="associes" id="associes"></div><button type="button" class="mini" id="ajoutAssocie" style="justify-self:start">＋ Associé</button></div>`;
   const auto = c.auto && h[c.auto];
   const valeur = auto ? Math.round(h.prix * (h.neuf ? 0.025 : 0.08)) : h[c.cle];
   return `<div class="champ ${c.plein ? "plein" : ""}"><label for="c-${c.cle}">${esc(c.lib)}</label>
@@ -580,13 +610,22 @@ function dessinerAssocies() {
   const tmis = [0, 11, 30, 41, 45];
   z.innerHTML = (h.associes || []).map((a, i) => `<div class="associe" data-i="${i}">
       <div class="champ"><span class="lib">Nom</span><input type="text" data-asso="nom" value="${esc(a.nom)}"></div>
-      <div class="champ"><span class="lib">Parts</span><div class="saisie-u"><input data-asso="parts" inputmode="decimal" value="${esc(formatSaisie(a.parts))}"><i>%</i></div></div>
+      <div class="champ"><span class="lib">Capital</span><div class="saisie-u"><input data-asso="parts" inputmode="decimal" value="${esc(formatSaisie(a.parts))}"><i>%</i></div></div>
+      <div class="champ"><span class="lib" title="Part des résultats prévue par les statuts (montage « SCI IR inégale »)">Résultats</span><div class="saisie-u"><input data-asso="resultat" inputmode="decimal" value="${esc(formatSaisie(a.resultat ?? a.parts))}"><i>%</i></div></div>
       <div class="champ"><span class="lib">TMI</span><select data-asso="tmi">${tmis.map((t) => `<option value="${t}" ${+a.tmi === t ? "selected" : ""}>${t} %</option>`).join("")}</select></div>
       <button type="button" class="mini x" data-suppr-asso="${i}" aria-label="Retirer" ${h.associes.length < 2 ? "disabled" : ""}>✕</button></div>`).join("");
   const total = (h.associes || []).reduce((s, a) => s + (+a.parts || 0), 0);
   if (Math.round(total) !== 100) z.insertAdjacentHTML("beforeend", `<p class="aide" style="color:var(--rouge)">Total des parts : ${total.toLocaleString("fr-FR")} % (les calculs les ramènent à 100 %).</p>`);
 }
-function majResumes() { for (const s of SECTIONS) { const e = document.querySelector(`[data-resume="${s.id}"]`); if (e) e.textContent = s.resume(); } }
+function majResumes() {
+  for (const s of SECTIONS) { const e = document.querySelector(`[data-resume="${s.id}"]`); if (e) e.textContent = s.resume(); }
+  const z = $("valeurUsufruit");
+  if (z) {
+    const B = Moteur.base(h, R, false), D = Math.max(1, Math.min(Math.round(h.usufruitDuree || 1), B.N));
+    const v = h.usufruitManuel ? B.prix * (h.usufruitPct || 0) / 100 : Moteur.valeurUsufruit(B, h, D, R);
+    z.innerHTML = `Valeur de l'usufruit sur ${D} ans : <b>${eur(v)}</b>, soit ${pct(v / (B.prix || 1), 1)} du prix${h.usufruitManuel ? " (fixée)" : " (valeur économique)"}. À titre de repère, le barème fiscal de l'usufruit temporaire est de 23 % par période de 10 ans.`;
+  }
+}
 let attente;
 function changer() {
   stock.ecrire("immo-etat", h);
@@ -633,7 +672,9 @@ const LIGNES = [
   ["Impôts pendant la détention", (r) => r.impotsDetention, eur, -1, "impôt sur le revenu, prélèvements sociaux, IS, flat tax"],
   ["Impôts à la revente", (r) => r.impotRevente, eur, -1, "plus-value, ou IS et liquidation"],
   ["Net en poche à la revente", (r) => r.netRevente, eur, +1, "après remboursement du prêt et impôts"],
-  ["Enrichissement net", (r) => r.enrichissement, eurS, +1, "net à la revente − apport − efforts d'épargne", true],
+  ["Mise de fonds de votre société", (r) => r.miseSociete, eur, 0, "prêt de la holding, ou prix de l'usufruit", false, true],
+  ["Gain de votre société", (r) => r.gainSociete, eurS, +1, "après IS, avant la flat tax d'une sortie", false, true],
+  ["Enrichissement net", (r) => r.enrichissement, eurS, +1, "net à la revente − apport − efforts d'épargne (+ gain de la société)", true],
   ["Rendement de l'apport (TRI)", (r) => r.tri, (x) => pct(x, 2), +1, "taux de rendement interne de vos versements", true]
 ];
 function calculer() {
@@ -649,14 +690,16 @@ function dessinerResultats() {
   const best = meilleurId();
   $("meilleur").innerHTML = best ? `<span>Meilleur enrichissement</span><b>${esc(courtM(best))} · ${eurS(res[best].enrichissement)}</b>` : "";
   if (!ids.includes(detail)) detail = ids[0];
-  const puces = MONTAGES.map((m) => `<button type="button" class="puce ${h.montages.includes(m.id) ? "on" : ""}" data-montage="${m.id}" style="--c:${COULEURS[m.id]}" aria-pressed="${h.montages.includes(m.id)}"><i></i>${esc(m.court)}</button>`).join("");
+  const puce = (m) => `<button type="button" class="puce ${h.montages.includes(m.id) ? "on" : ""}" data-montage="${m.id}" style="--c:${COULEURS[m.id]}" aria-pressed="${h.montages.includes(m.id)}"><i></i>${esc(m.court)}</button>`;
+  const puces = `<p class="puces-titre">Classiques</p><div class="choix-montages">${MONTAGES.filter((m) => !m.patrimonial).map(puce).join("")}</div>
+    <p class="puces-titre">Patrimoniaux</p><div class="choix-montages">${MONTAGES.filter((m) => m.patrimonial).map(puce).join("")}</div>`;
   $("resultats").innerHTML = `
-    <div class="carte"><h2>Montages comparés</h2><div class="corps"><div class="choix-montages">${puces}</div></div></div>
+    <div class="carte"><h2>Montages comparés</h2><div class="corps">${puces}</div></div>
     ${ids.length ? `
     <div class="carte"><h2>Comparatif sur ${h.horizon} ans</h2><div class="corps defile">${tableauComparatif(ids, best)}</div></div>
     <div class="graphes">
       <div class="carte graphe"><h2>Enrichissement net</h2><div class="corps">${grapheBarres(ids)}</div></div>
-      <div class="carte graphe"><h2>Trésorerie cumulée</h2><div class="corps">${grapheCourbes(ids)}<p class="aide">Apport, puis efforts ou gains de chaque année, après impôts (avant la revente).</p></div></div>
+      <div class="carte graphe"><h2>Trésorerie cumulée</h2><div class="corps">${grapheCourbes(ids)}<p class="aide">Apport, puis efforts ou gains de chaque année, après impôts (avant la revente) ; pour le foyer, sans la société.</p></div></div>
     </div>
     <div class="carte"><h2>Détail par montage</h2><div class="corps">
       <div class="onglets">${ids.map((id) => `<button type="button" data-detail="${id}" class="${id === detail ? "on" : ""}">${esc(courtM(id))}</button>`).join("")}</div>
@@ -668,7 +711,8 @@ function dessinerResultats() {
 const LIMITES = "Simulation indicative, à affiner avec un conseil. L'impôt sur le revenu est calculé à la tranche marginale saisie (sans recalcul du barème, du quotient familial ni des plafonnements). Achat au 1er janvier de l'année 1, revente le 31 décembre de la dernière année, prêt soldé à la revente sans indemnité. Taux et barèmes : menu Réglages.";
 function tableauComparatif(ids, best) {
   const tete = `<thead><tr><th></th>${ids.map((id) => `<th style="--c:${COULEURS[id]}"><b><i></i>${esc(courtM(id))}</b>${id === best ? "★ le meilleur" : ""}</th>`).join("")}</tr></thead>`;
-  const corps = LIGNES.map(([lib, f, fmt, sens, aide, fort]) => {
+  const avecSociete = ids.some((id) => res[id].extra.societe);
+  const corps = LIGNES.filter((x) => !x[6] || avecSociete).map(([lib, f, fmt, sens, aide, fort]) => {
     const vals = ids.map((id) => f(res[id]));
     const valides = vals.filter((v) => v != null && isFinite(v));
     const cible = sens > 0 ? Math.max(...valides) : sens < 0 ? Math.min(...valides) : null;
@@ -678,7 +722,7 @@ function tableauComparatif(ids, best) {
 }
 // graphique en barres : enrichissement net par montage
 function grapheBarres(ids) {
-  const L = 360, H = 30 * ids.length + 20, g = 92;
+  const L = 420, H = 30 * ids.length + 20, g = 150;
   const vals = ids.map((id) => res[id].enrichissement);
   const max = Math.max(1, ...vals.map(Math.abs)), neg = vals.some((v) => v < 0);
   const zero = neg ? g + (L - g - 70) * (Math.abs(Math.min(0, ...vals)) / (max + Math.abs(Math.min(0, ...vals)))) : g;
@@ -718,7 +762,19 @@ function detailMontage(id) {
       <div class="chiffre"><span>TRI</span><b>${pct(r.tri, 2)}</b></div></div>
     <div class="defile"><table class="tableau"><thead><tr>${tete.map((t) => `<th>${esc(t)}</th>`).join("")}</tr></thead>
       <tbody>${lignes.map((l) => `<tr>${l.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-    ${blocRevente(id, r)}`;
+    ${blocRevente(id, r)}${blocSociete(id, r)}`;
+}
+function blocSociete(id, r) {
+  const S = r.extra.societe; if (!S) return "";
+  const us = r.extra.usufruit;
+  const intro = id === "sciIRHolding"
+    ? `Votre holding prête ${eur(S.montant)} à la SCI. Elle encaisse les intérêts (imposés à l'IS à ${h.isSociete} %) et récupère son capital.`
+    : `Votre société paie ${eur(us.prix)} l'usufruit pour ${us.duree} ans (${pct(us.part, 1)} du prix), plus ${eur(S.montant - us.prix)} de frais. Elle encaisse les loyers, paie les charges et amortit l'usufruit sur sa durée ; à la fin, il s'éteint sans impôt.`
+      + (id === "coacquisition" ? ` Vous payez la nue-propriété ${eur(us.prixNP)}.` : us.anticipe ? ` Avec le prix, ${eur(us.anticipe)} sont remboursés au prêt par anticipation.` : "");
+  const lignes = S.lignes.map((l) => `<tr><td>${l.a}</td><td>${eur(l.recettes)}</td>${id === "sciIRHolding" ? "" : `<td>${eur(l.charges)}</td><td>${eur(l.amort)}</td>`}<td>${eur(l.is)}</td><td>${eurS(l.cash)}</td></tr>`).join("");
+  return `<div class="societe"><span class="t">Votre société</span><p class="aide" style="margin-bottom:8px">${esc(intro)}</p>
+    <div class="defile"><table class="tableau"><thead><tr><th>Année</th><th>${id === "sciIRHolding" ? "Intérêts reçus" : "Loyers"}</th>${id === "sciIRHolding" ? "" : "<th>Charges</th><th>Amortissement</th>"}<th>IS</th><th>Trésorerie</th></tr></thead><tbody>${lignes}</tbody></table></div>
+    <p class="aide" style="margin-top:8px">Gain de la société sur l'opération : <b>${eurS(S.gain)}</b> (après IS, avant la flat tax d'une éventuelle distribution). Gain du foyer : <b>${eurS(r.enrichissementFoyer)}</b>.</p></div>`;
 }
 function blocRevente(id, r) {
   const p = r.pv, L = [];
@@ -727,7 +783,7 @@ function blocRevente(id, r) {
     L.push(["Valeur nette comptable (après " + eur(p.amortCumul) + " d'amortissements)", eur(p.vnc)], ["Plus-value imposable à l'IS", eur(p.brute)], ["IS sur la plus-value (après déficits)", eur(p.is)],
       ["Comptes courants rendus aux associés (sans impôt)", eur(p.rendCCA)], ["Boni de liquidation", eur(p.boni)], ["Droit de partage", eur(p.droitPartage)], ["Flat tax sur le boni", eur(p.pfu)]);
   } else {
-    L.push(["Prix de revient retenu (forfaits compris)", eur(p.prixRevient)]);
+    L.push([id === "coacquisition" ? "Prix de revient : celui de la nue-propriété (forfaits compris)" : "Prix de revient retenu (forfaits compris)", eur(p.prixRevient)]);
     if (p.amortReintegres) L.push(["Amortissements réintégrés (LMNP, depuis 2025)", eur(p.amortReintegres)]);
     L.push(["Plus-value brute", eur(Math.max(0, p.brute))], [`Impôt sur le revenu 19 % (abattement ${pct(p.abatIR, 0)})`, eur(p.ir)], [`Prélèvements sociaux (abattement ${pct(p.abatPS, 1)})`, eur(p.ps)]);
     if (p.surtaxe) L.push(["Surtaxe sur plus-value élevée", eur(p.surtaxe)]);
@@ -748,6 +804,11 @@ function vigilance(ids) {
   if (ids.includes("sciIR") && Math.round((h.associes || []).reduce((s, a) => s + (+a.parts || 0), 0)) !== 100) A.push(["SCI à l'IR", "le total des parts des associés n'est pas égal à 100 %."]);
   if (ids.includes("sciIR")) A.push(["SCI à l'IR", "chaque associé est imposé sur sa quote-part, qu'il la perçoive ou non ; la SCI ne peut pas louer meublé de façon habituelle sans risquer l'IS."]);
   if (ids.includes("sciIS")) A.push(["SCI à l'IS", `pas d'abattement pour durée de détention : la plus-value se calcule sur la valeur nette comptable, après amortissements (${eur(res.sciIS.pv.amortCumul)}). La sortie de l'argent passe par la flat tax (${String(R.pfu).replace(".", ",")} %), sauf le compte courant.`]);
+  if (ids.includes("sciIRInegal")) A.push(["Répartition inégale", "la clause des statuts doit reposer sur une contrepartie réelle (apport en industrie, gestion, financement…) et ne pas être léonine (art. 1844-1 du Code civil). Sans justification, l'administration peut y voir un abus de droit ou une donation indirecte entre associés."]);
+  if (ids.includes("sciIRHolding")) A.push(["Holding prêteuse", `le taux doit être un taux de marché, justifiable (sinon acte anormal de gestion) ; une convention de prêt écrite est indispensable. Le prêt entre sociétés liées échappe au monopole bancaire. L'argent reste dans la holding : le distribuer coûterait la flat tax (${String(R.pfu).replace(".", ",")} %).`]);
+  if (ids.includes("cessionUsufruit")) A.push(["Cession temporaire d'usufruit", `le prix (${eur(res.cessionUsufruit.extra.usufruit.prix)}) est imposé en une fois comme un revenu foncier (art. 13, 5 du CGI) : le montage convient surtout à une TMI faible. La valeur doit être économique et documentée ; la société doit y trouver son intérêt. Risque d'abus de droit si le seul but est fiscal.`]);
+  if (ids.includes("coacquisition")) A.push(["Coacquisition démembrée", "la clé de répartition du prix doit refléter la valeur économique de l'usufruit (un usufruit surévalué avantage le nu-propriétaire). Pendant le démembrement, pas de loyers pour vous et des intérêts non déductibles, sauf autres revenus fonciers. À la revente, la plus-value se calcule sur le seul prix de la nue-propriété."]);
+  if ((ids.includes("cessionUsufruit") || ids.includes("coacquisition")) && h.usufruitDuree > h.horizon) A.push(["Durée de l'usufruit", "elle dépasse la durée de détention : le calcul l'arrête à la revente."]);
   if (h.horizon < 6) A.push(["Revente rapide", "avant 6 ans de détention, aucun abattement sur la plus-value des particuliers ; le forfait travaux de 15 % n'est pas ouvert avant 5 ans."]);
   if (ids.some((id) => res[id].lignes.some((l) => l.note))) ids.forEach((id) => { const l = res[id].lignes.find((x) => x.note); if (l) A.push([courtM(id), l.note]); });
   if (!A.length) A.push(["Rien de particulier", "aucun seuil dépassé avec ces chiffres."]);
@@ -848,7 +909,9 @@ async function exporterExcel() {
   const tete = ws.addRow(["Comparatif sur " + h.horizon + " ans", ...ids.map(courtM)]);
   tete.font = { bold: true, color: { argb: "FFFFFFFF" } };
   tete.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0C2D39" } }; });
-  for (const [lib, f, , , , ] of LIGNES) {
+  const avecSociete = ids.some((id) => res[id].extra.societe);
+  for (const [lib, f, , , , , soc] of LIGNES) {
+    if (soc && !avecSociete) continue;
     const row = ws.addRow([lib, ...ids.map((id) => { const v = f(res[id]); return v == null ? null : (lib.includes("TRI") ? v : Math.round(v)); })]);
     row.eachCell((c, i) => { if (i > 1) c.numFmt = lib.includes("TRI") ? "0.00 %" : fmtE; });
   }
@@ -874,6 +937,15 @@ async function exporterExcel() {
     f.addRow(["Net en poche", Math.round(r.netRevente)]).getCell(2).numFmt = fmtE;
     f.addRow(["Enrichissement net", Math.round(r.enrichissement)]).getCell(2).numFmt = fmtE;
     const tr = f.addRow(["TRI", r.tri]); tr.getCell(2).numFmt = "0.00 %";
+    if (r.extra.societe) {
+      const S = r.extra.societe;
+      f.addRow([]); f.addRow(["Votre société (" + S.nom + ")"]).font = { bold: true };
+      f.addRow(["Mise de fonds", Math.round(S.montant)]).getCell(2).numFmt = fmtE;
+      const ts = f.addRow(["Année", "Recettes", "IS", "Trésorerie"]); ts.font = { bold: true };
+      S.lignes.forEach((l) => { const row = f.addRow([l.a, Math.round(l.recettes), Math.round(l.is), Math.round(l.cash)]); row.eachCell((c, i) => { if (i > 1) c.numFmt = fmtE; }); });
+      f.addRow(["Gain de la société (après IS)", Math.round(S.gain)]).getCell(2).numFmt = fmtE;
+      f.addRow(["Enrichissement du foyer", Math.round(r.enrichissementFoyer)]).getCell(2).numFmt = fmtE;
+    }
     f.columns.forEach((c, i) => { c.width = i ? 16 : 26; });
   }
   const buf = await wb.xlsx.writeBuffer();
@@ -902,12 +974,14 @@ async function exporterPowerPoint() {
   // 3. comparatif
   s = p.addSlide(); titre(s, "Comparatif des montages", best ? "Meilleur enrichissement : " + courtM(best) : "");
   const lignesT = [[{ text: "", options: { fill: { color: BLEU } } }, ...ids.map((id) => ({ text: courtM(id), options: { bold: true, color: "FFFFFF", fill: { color: COUL_HEX[id] }, align: "center" } }))]];
-  for (const [lib, f, fmt, sens, , fort] of LIGNES) {
+  const avecSoc = ids.some((id) => res[id].extra.societe);
+  for (const [lib, f, fmt, sens, , fort, soc] of LIGNES) {
+    if (soc && !avecSoc) continue;
     const vals = ids.map((id) => f(res[id])), ok = vals.filter((v) => v != null && isFinite(v));
     const cible = sens > 0 ? Math.max(...ok) : sens < 0 ? Math.min(...ok) : null;
     lignesT.push([{ text: lib, options: { bold: !!fort, color: BLEU } }, ...vals.map((v) => ({ text: fmt(v), options: { align: "right", bold: !!fort || (sens && v === cible), color: sens && v === cible ? "2F7D5B" : "1C2A30" } }))]);
   }
-  s.addTable(lignesT, { x: 0.5, y: 1.45, w: 12.3, colW: [3.3, ...ids.map(() => 9 / ids.length)], fontFace: POL, fontSize: 11, border: { type: "solid", pt: 0.5, color: "E2DACB" }, rowH: 0.42 });
+  s.addTable(lignesT, { x: 0.5, y: 1.45, w: 12.3, colW: [3.3, ...ids.map(() => 9 / ids.length)], fontFace: POL, fontSize: ids.length > 6 ? 8.5 : 11, border: { type: "solid", pt: 0.5, color: "E2DACB" }, rowH: 0.42 });
   // 4. graphiques
   s = p.addSlide(); titre(s, "Enrichissement net et trésorerie");
   s.addChart(p.ChartType.bar, [{ name: "Enrichissement net", labels: ids.map(courtM), values: ids.map((id) => Math.round(res[id].enrichissement)) }],
