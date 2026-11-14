@@ -47,7 +47,7 @@
   --ombre:0 10px 30px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
-html{scroll-padding-top:150px}
+
 body{margin:0;background:var(--fond);color:var(--encre);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
   padding-bottom:env(safe-area-inset-bottom,0px)}
 button,input,select{font:inherit;color:inherit}
@@ -87,7 +87,7 @@ nav.etapes{position:sticky;top:var(--hh,62px);z-index:15;background:color-mix(in
 
 /* ---------- Mise en page ---------- */
 .page{max-width:1440px;margin:0 auto;padding:22px 24px 40px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.92fr);gap:24px}
-.col-res{position:sticky;top:calc(var(--hh,62px) + 60px);align-self:start;max-height:calc(100vh - var(--hh,62px) - 74px);overflow:auto;padding-right:2px;scrollbar-width:thin}
+.col-res{position:sticky;align-self:start;overflow:auto;padding-right:2px;scrollbar-width:thin}
 @media(max-width:1100px){.page{grid-template-columns:1fr;padding:14px 12px 90px}.col-res{position:static;max-height:none;overflow:visible}}
 
 /* ---------- Cartes de saisie ---------- */
@@ -261,6 +261,130 @@ details.recap table td{font-size:12.8px}
   .bas div{display:flex;flex-direction:column;line-height:1.2}.bas small{font-size:11px;opacity:.75}.bas b{font:600 17px var(--serif)}
   .bas button{margin-left:auto;background:var(--or);border:0;color:#fff;border-radius:9px;padding:9px 14px;font-weight:600}}
 
+/* ---------- Mise en page personnalisable (voir Réglages) ---------- */
+:root{--maxw:1440px;--cg:52fr;--cd:48fr;--zoom:1;--navh:46px;--r:14px}
+:root[data-nav="masquee"]{--navh:0px}
+.haut-in,.etapes-in,footer.pied{max-width:var(--maxw)}
+.page{max-width:var(--maxw);grid-template-columns:minmax(0,var(--cg)) minmax(0,var(--cd));zoom:var(--zoom)}
+.col-res{display:flex;flex-direction:column;top:calc(var(--hh,62px) + var(--navh) + 14px);max-height:calc(100vh - var(--hh,62px) - var(--navh) - 28px)}
+.col-res>*{flex:none}
+html{scroll-padding-top:calc(var(--hh,62px) + var(--navh) + 20px)}
+nav.etapes{scrollbar-width:none}
+:root[data-nav="masquee"] nav.etapes{display:none}
+:root[data-dispo="inverse"] .col-res{order:-1}
+:root[data-dispo="empile"] .page,:root[data-dispo="haut"] .page{grid-template-columns:minmax(0,1fr);max-width:min(var(--maxw),1000px)}
+:root[data-dispo="empile"] .col-res,:root[data-dispo="haut"] .col-res{position:static;max-height:none;overflow:visible}
+:root[data-dispo="haut"] .col-res{order:-1}
+.pas-nav{display:none}
+:root[data-dispo="pas"] .col-saisie .carte:not(.actif){display:none}
+:root[data-dispo="pas"] .pas-nav{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--ligne)}
+.pas-c{font-size:12.5px;color:var(--discret)}
+@media(min-width:1101px){
+  :root[data-nav="laterale"]{--navh:0px}
+  :root[data-nav="laterale"] nav.etapes{position:fixed;top:var(--hh,62px);left:0;bottom:0;width:210px;border-bottom:0;border-right:1px solid var(--ligne);background:var(--fond)}
+  :root[data-nav="laterale"] .etapes-in{flex-direction:column;padding:16px 12px;gap:4px;overflow:auto}
+  :root[data-nav="laterale"] .etapes a{padding:8px 12px 8px 8px;border-radius:10px}
+  :root[data-nav="laterale"] .page,:root[data-nav="laterale"] footer.pied{margin-left:210px}
+  :root[data-nav="laterale"][data-largeur] .page{margin-right:auto}
+}
+/* densité */
+:root[data-densite="compact"] .corps{padding:10px 14px}
+:root[data-densite="compact"] .grille{gap:9px 12px}
+:root[data-densite="compact"] .carte{margin-bottom:10px}
+:root[data-densite="compact"] .carte>header{padding:9px 14px}
+:root[data-densite="compact"] .saisie input,:root[data-densite="compact"] .liste{min-height:34px}
+:root[data-densite="compact"] button.inter{padding:7px 11px}
+:root[data-densite="compact"] .tuiles button{padding:7px 9px}
+:root[data-densite="compact"] .t-ic{width:30px;height:30px}
+:root[data-densite="compact"] .page{gap:16px;padding-top:14px}
+:root[data-densite="aere"] .corps{padding:24px 26px}
+:root[data-densite="aere"] .grille{gap:20px 22px}
+:root[data-densite="aere"] .carte{margin-bottom:24px}
+:root[data-densite="aere"] .page{gap:32px;padding-top:30px}
+/* style des blocs */
+.carte,.rk{border-radius:var(--r)}
+:root[data-cartes="net"]{--r:4px}
+:root[data-cartes="net"] .ced,:root[data-cartes="net"] button.inter,:root[data-cartes="net"] .tuiles button,:root[data-cartes="net"] .saisie input,:root[data-cartes="net"] .liste,:root[data-cartes="net"] .pas,:root[data-cartes="net"] .cur-v,:root[data-cartes="net"] .seg,:root[data-cartes="net"] .seg button{border-radius:3px}
+:root[data-cartes="ombre"] .carte,:root[data-cartes="ombre"] .rk{border-color:transparent;box-shadow:0 6px 22px rgba(12,30,40,.09)}
+:root[data-cartes="ombre"][data-theme="sombre"] .carte{box-shadow:0 6px 22px rgba(0,0,0,.4)}
+:root[data-cartes="plat"] .col-saisie .carte,:root[data-cartes="plat"] .col-res .carte{background:transparent;border:0;box-shadow:none;border-radius:0}
+:root[data-cartes="plat"] .carte>header{border-bottom:2px solid var(--or);padding-left:0;padding-right:0}
+:root[data-cartes="plat"] .carte>.corps{padding-left:0;padding-right:0}
+/* en-tête */
+:root[data-entete="or"] header.haut{background:var(--or)}
+:root[data-entete="clair"] header.haut{background:var(--carte);color:var(--encre);box-shadow:none;border-bottom:1px solid var(--ligne)}
+:root[data-entete="clair"] .marque small,:root[data-entete="clair"] .kpi .k{color:var(--discret)}
+:root[data-entete="clair"] .kpi{border-color:var(--ligne)}
+:root[data-entete="clair"] .kpi.net .v{color:var(--or)}
+:root[data-entete="clair"] .bt-h{color:var(--encre);border-color:var(--ligne)}
+:root[data-entete="clair"] .bt-h:hover{background:var(--doux)}
+:root[data-entete="or"] .kpi.net .v{color:#fff}
+/* éléments masquables */
+:root[data-kpi="non"] .kpis{display:none}
+:root[data-bas="non"] .bas{display:none!important}
+:root[data-num="non"] .carte>header .n{display:none}
+:root[data-refs="non"] .carte>header .ref{display:none}
+:root[data-aides="non"] .ch .aide,:root[data-aides="non"] .aide-bas{display:none}
+:root[data-astuce="non"] .astuce{display:none}
+/* ---------- Panneau de réglages ---------- */
+.fen.large{width:min(900px,100%)}
+.fen>header .sous-t{font-size:12.5px;color:var(--discret);margin-left:12px}
+.regl{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:440px}
+.regl-nav{border-right:1px solid var(--ligne);padding:10px;display:flex;flex-direction:column;gap:2px}
+.regl-nav button{border:0;background:none;text-align:left;padding:9px 12px;border-radius:9px;font-weight:600;font-size:14px;color:var(--discret)}
+.regl-nav button:hover{background:var(--doux)}
+.regl-nav button.on{background:var(--bleu);color:#fff}
+.regl-corps{padding:16px 18px;min-width:0}
+.plein-l{grid-column:1/-1;margin:0}
+@media(max-width:700px){.fen>header .sous-t{display:none}.ambiances{grid-template-columns:1fr 1fr}.ambiances small{display:none}.mini{height:44px;grid-template-rows:8px 26px}.regl{grid-template-columns:1fr}.regl-nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--ligne)}.regl-nav button{white-space:nowrap}}
+.ambiances{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.ambiances>button{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--ligne);background:var(--champ);border-radius:12px;padding:10px}
+.ambiances>button:hover{border-color:var(--or)}
+.ambiances b{font-size:14.5px}.ambiances small{font-size:12px;color:var(--discret);line-height:1.3}
+.mini{display:grid;grid-template-columns:3fr 2fr;grid-template-rows:9px 34px;gap:4px;height:52px;margin-bottom:6px;padding:5px;border-radius:7px;background:var(--fond)}
+.mini i{border-radius:3px;background:var(--ligne)}
+.mini .mh{grid-column:1/-1;background:var(--bleu)}
+.mini .m2{background:var(--or);opacity:.75}
+.mini[data-a="moderne"] .mh,.mini[data-a="minimal"] .mh{background:var(--carte);border:1px solid var(--ligne)}
+.mini[data-a="moderne"] i,.mini[data-a="compact"] i,.mini[data-a="cockpit"] i{border-radius:1px}
+.mini[data-a="elegant"] .m1,.mini[data-a="elegant"] .m2{box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.mini[data-a="minimal"] .m1{background:none;border-bottom:2px solid var(--or)}
+.mini[data-a="lecture"],.mini[data-a="assistant"]{grid-template-columns:1fr}
+.mini[data-a="lecture"]{grid-template-rows:9px 20px 10px}
+.mini[data-a="assistant"]{grid-template-columns:3fr 2fr}
+.mini[data-a="assistant"] .m1{background:linear-gradient(90deg,var(--ligne) 70%,var(--or) 70% 74%,var(--ligne) 74%)}
+.mini[data-a="cockpit"]{grid-template-columns:1fr 2fr 3fr}
+.mini[data-a="cockpit"] .mh{grid-column:1/-1}
+.mini[data-a="cockpit"] .m2{grid-column:2;grid-row:2}
+.mini[data-a="cockpit"] .m1{grid-column:3;grid-row:2}
+.mini[data-a="cockpit"]::before{content:"";grid-column:1;grid-row:2;border-radius:1px;background:color-mix(in srgb,var(--bleu) 25%,var(--ligne))}
+.tuiles.schemas{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.t-ic.schema svg{width:26px;height:26px;fill:color-mix(in srgb,var(--discret) 35%,transparent);stroke:var(--discret);stroke-width:1}
+.t-ic.schema .r{fill:var(--or);stroke:var(--or)}
+.tuiles button.on .t-ic.schema svg{stroke:#fff;fill:rgba(255,255,255,.3)}
+.tuiles button.on .t-ic.schema .r{fill:var(--or)}
+.coul{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pastille-c{width:46px;height:40px;border-radius:10px;border:1px solid var(--ligne);cursor:pointer;box-shadow:inset 0 0 0 3px var(--champ)}
+.cache-v{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.rvb-w{width:170px}
+.rvb-w input{text-align:left}
+.hex{font-size:12.5px;color:var(--discret);font-variant-numeric:tabular-nums}
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.apercu-pol{background:var(--doux);border-radius:10px;padding:12px 14px}
+.apercu-pol b{font:600 20px var(--serif)}
+.apercu-pol span{font-family:var(--sans);font-size:14px;color:var(--discret)}
+.blocs{display:flex;flex-direction:column;gap:8px}
+.bloc-l{display:flex;align-items:center;gap:8px}
+.bloc-l>.ch{flex:1}
+.fleches{display:flex;flex-direction:column;gap:2px}
+.fleches button{border:1px solid var(--ligne);background:var(--champ);border-radius:6px;width:30px;height:20px;font-size:10px;color:var(--discret);padding:0}
+.fleches button:disabled{opacity:.35;cursor:default}
+.actions-r{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+@media(max-width:1100px){
+  .page{grid-template-columns:minmax(0,1fr)}
+  .col-res{position:static;max-height:none;overflow:visible}
+  :root[data-dispo="inverse"] .col-res{order:0}
+}
 /* ---------- Fenêtres, menus, bulles ---------- */
 .voile{position:fixed;inset:0;background:rgba(10,20,26,.45);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
 .voile.on{display:flex}
@@ -317,7 +441,7 @@ details.recap table td{font-size:12.8px}
 .cal-b{display:flex;justify-content:space-between;margin-top:10px}
 .cal-b button{border:0;background:none;color:var(--bleu-txt);font-weight:600;padding:6px 4px}
 
-footer.pied{max-width:1440px;margin:0 auto;padding:0 24px 30px;color:var(--discret);font-size:12.5px}
+footer.pied{max-width:var(--maxw);margin:0 auto;padding:0 24px 30px;color:var(--discret);font-size:12.5px}
 
 /* ---------- Impression : seulement les résultats et les hypothèses ---------- */
 @media print{
@@ -356,16 +480,16 @@ footer.pied{max-width:1440px;margin:0 auto;padding:0 24px 30px;color:var(--discr
 
   <div class="col-res" id="res">
     <h1 class="print-titre">Simulation de plus-value immobilière</h1>
-    <div class="res-k">
+    <div class="res-k" data-bloc="chiffres">
       <div class="rk"><div class="k">Plus-value brute</div><div class="v" id="rPVB">–</div><div class="s" id="rDet">–</div></div>
       <div class="rk"><div class="k">Impôt total</div><div class="v" id="rTot">–</div><div class="s" id="rTaux">–</div></div>
       <div class="rk fort"><div class="k">Net vendeur après impôt</div><div class="v" id="rNet">–</div><div class="s">après frais de cession</div></div>
     </div>
-    <section class="carte"><header><h2>Répartition du prix de vente</h2></header><div class="corps"><div class="cascade" id="cascade"></div><div class="leg" id="legende"></div></div></section>
-    <section class="carte"><header><h2>Calcul détaillé</h2></header><div class="corps"><div class="onglets" id="onglets"></div><div id="detail"></div></div></section>
-    <section class="carte"><header><h2>Points de vigilance</h2></header><div class="corps"><div class="alertes" id="alertes"></div></div></section>
-    <section class="carte"><header><h2>Et si je vendais plus tard ?</h2><span class="ref">même prix, mêmes hypothèses</span></header><div class="corps" id="proj"></div></section>
-    <section class="carte"><div class="corps"><details class="recap" id="recap"><summary>Hypothèses retenues</summary><div id="recapT"></div></details></div></section>
+    <section class="carte" data-bloc="repartition"><header><h2>Répartition du prix de vente</h2></header><div class="corps"><div class="cascade" id="cascade"></div><div class="leg" id="legende"></div></div></section>
+    <section class="carte" data-bloc="calcul"><header><h2>Calcul détaillé</h2></header><div class="corps"><div class="onglets" id="onglets"></div><div id="detail"></div></div></section>
+    <section class="carte" data-bloc="vigilance"><header><h2>Points de vigilance</h2></header><div class="corps"><div class="alertes" id="alertes"></div></div></section>
+    <section class="carte" data-bloc="projection"><header><h2>Et si je vendais plus tard ?</h2><span class="ref">même prix, mêmes hypothèses</span></header><div class="corps" id="proj"></div></section>
+    <section class="carte" data-bloc="hypotheses"><div class="corps"><details class="recap" id="recap"><summary>Hypothèses retenues</summary><div id="recapT"></div></details></div></section>
   </div>
 </div>
 <footer class="pied">Outil d'aide au calcul, à visée indicative, construit sur les fiches « Plus-value immobilière : principes généraux » et « Exonérations » (mises à jour oct. 2026). Les conditions d'exonération relèvent de l'appréciation des faits ; il ne remplace pas la déclaration 2048-IMM établie par le notaire.</footer>
@@ -382,20 +506,8 @@ footer.pied{max-width:1440px;margin:0 auto;padding:0 24px 30px;color:var(--discr
 </div>
 <input type="file" id="fImport" accept=".json,application/json" class="cache">
 
-<div class="voile" id="vRegl"><div class="fen"><header><h3>Réglages</h3><button data-ferme>×</button></header><div class="corps">
-  <div><div class="lbl" style="margin-bottom:8px">Couleurs de l'appli</div>
-    <div class="coul">
-      <label><input type="color" id="cBleu"> Couleur principale</label><input type="text" id="cBleuT" placeholder="12 45 57">
-    </div>
-    <div class="coul" style="margin-top:10px">
-      <label><input type="color" id="cOr"> Couleur d'accent</label><input type="text" id="cOrT" placeholder="165 125 47">
-    </div>
-    <div class="aide" style="font-size:12px;color:var(--discret);margin-top:6px">Saisie possible en RVB (« 165 125 47 ») ou en hexadécimal (« #a57d2f »).</div>
-  </div>
-  <div><div class="lbl" style="margin-bottom:8px">Palettes</div><div class="presets" id="presets"></div></div>
-  <div><div class="lbl" style="margin-bottom:8px">Thème</div><div class="seg" id="segTheme"><button data-v="clair">Clair</button><button data-v="sombre">Sombre</button><button data-v="auto">Automatique</button></div></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="bt" id="bCoulDef">Couleurs par défaut (or et bleu)</button><button class="bt danger" id="bRAZ">Effacer la simulation</button></div>
-</div></div></div>
+<div class="voile" id="vRegl"><div class="fen large"><header><h3>Réglages</h3><span class="sous-t">Les changements s'appliquent tout de suite</span><button data-ferme>×</button></header>
+  <div class="regl"><nav class="regl-nav" id="reglNav"></nav><div class="regl-corps" id="reglCorps"></div></div></div></div>
 
 <div class="voile" id="vScen"><div class="fen"><header><h3>Scénarios</h3><button data-ferme>×</button></header><div class="corps">
   <div style="display:flex;gap:8px"><div class="saisie" style="flex:1"><input type="text" id="scNom" placeholder="Nom du scénario (ex. Vente 2027 – forfait 15 %)" style="width:100%;min-height:40px;padding:8px 11px;border:1px solid var(--ligne);border-radius:9px;background:var(--champ)"></div><button class="bt prim" id="scAjout">Enregistrer</button></div>
@@ -1020,7 +1132,11 @@ function construireFormulaire() {
     if (s.special === "cedants") corps.append(el("div", { id: "cedants" }), el("button", { class: "bt", id: "bAjCed", type: "button", onclick: () => { cedants.push({ ...CEDANT, nom: "Cédant " + (cedants.length + 1), quote: "0" }); dessinerCedants(); maj(); } }, "+ Ajouter un cédant"),
       el("p", { class: "aide-bas" }, "Bien commun d'époux : deux cédants à 50 % (seuil de la surtaxe apprécié par quote-part). En société : la quote-part de chaque associé."));
     else corps.append(el("div", { class: "grille" }, s.champs.map((c) => c.type === "titre" ? el("div", { class: "ss", id: "w_" + c.id }, c.l) : MODULES[c.type](c, () => etat[c.id], (v) => ecrireChamp(c.id, v), c.id))));
-    box.append(el("section", { class: "carte", id: "s_" + s.id }, el("header", {}, el("span", { class: "n" }, i + 1), el("h2", {}, s.t), el("span", { class: "ref" }, s.ref)), corps));
+    const navPas = el("div", { class: "pas-nav" },
+      i > 0 ? el("button", { type: "button", class: "bt", onclick: () => allerPas(i - 1) }, "‹ " + SECTIONS[i - 1].t.split(" et ")[0]) : el("span"),
+      el("span", { class: "pas-c" }, `Étape ${i + 1} sur ${SECTIONS.length}`),
+      i < SECTIONS.length - 1 ? el("button", { type: "button", class: "bt prim", onclick: () => allerPas(i + 1) }, SECTIONS[i + 1].t.split(" et ")[0] + " ›") : el("button", { type: "button", class: "bt or", onclick: () => $("res").scrollIntoView({ behavior: "smooth" }) }, "Voir le résultat ›"));
+    box.append(el("section", { class: "carte", id: "s_" + s.id }, el("header", {}, el("span", { class: "n" }, i + 1), el("h2", {}, s.t), el("span", { class: "ref" }, s.ref)), corps, navPas));
   });
   $("etapes").innerHTML = SECTIONS.map((s, i) => `<a href="#s_${s.id}" data-s="${s.id}"><i>${i + 1}</i>${esc(s.t.split(" et ")[0])}</a>`).join("") + `<a href="#res"><i>✓</i>Résultat</a>`;
   dessinerCedants();
@@ -1052,7 +1168,7 @@ function majCedants() {
   for (const [w, quand, c] of liensCed) { w.classList.toggle("cache", !!(quand && !quand(c))); if (w._txt) w.textContent = w._txt(c); }
 }
 // Recharge tout le formulaire à partir de l'état (démarrage, import, scénario)
-function remplir() { construireFormulaire(); if (typeof obs !== "undefined") SECTIONS.forEach((s) => obs.observe($("s_" + s.id))); }
+function remplir() { construireFormulaire(); if (typeof obs !== "undefined") SECTIONS.forEach((s) => obs.observe($("s_" + s.id))); majPas(); }
 /* =====================================================================================
    6. MISE À JOUR DE L'ÉCRAN
    ===================================================================================== */
@@ -1148,7 +1264,15 @@ function dessinerProjection(f, R) {
   const yy = (v) => H - b - v / mx * (H - b - 12);
   let s = `<svg class="graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="Impôt selon l'année de vente">`;
   for (let i = 0; i <= 3; i++) { const v = mx * i / 3, y = yy(v); s += `<line x1="${g}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--ligne)"/><text x="${g - 4}" y="${y + 4}" text-anchor="end">${v >= 1000 ? Math.round(v / 1000) + " k" : Math.round(v)}</text>`; }
-  pts.forEach((p, i) => {
+  if (regl.graphe === "courbe") {
+    const X = (i) => g + i * bw + bw / 2, ligne = (k) => pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${yy(k(p)).toFixed(1)}`).join(" ");
+    s += `<path d="${ligne((p) => p.tot)} L${X(n - 1)},${H - b} L${X(0)},${H - b} Z" fill="${or}" opacity=".12"/>`;
+    s += `<path d="${ligne((p) => p.tot)}" fill="none" stroke="${or}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    s += `<path d="${ligne((p) => p.IR)}" fill="none" stroke="${bleu}" stroke-width="1.8" stroke-dasharray="4 3"/>`;
+    s += `<path d="${ligne((p) => p.PS)}" fill="none" stroke="color-mix(in srgb, ${bleu} 55%, #fff)" stroke-width="1.8"/>`;
+    pts.forEach((p, i) => { s += `<circle cx="${X(i)}" cy="${yy(p.tot)}" r="${i === 0 ? 5 : 3}" fill="${i === 0 ? or : "var(--carte)"}" stroke="${or}" stroke-width="1.5"><title>Vente en ${p.an} (${p.y} ans) : ${eur(p.tot)}</title></circle>`;
+      if (i === 0 || p.y === 22 || p.y === 30 || p.y % 5 === 0) s += `<text x="${X(i)}" y="${H - 8}" text-anchor="middle"${p.y === 22 || p.y === 30 ? ` style="fill:${or};font-weight:700"` : ""}>${i === 0 ? "auj." : p.y + " a"}</text>`; });
+  } else pts.forEach((p, i) => {
     const x = g + i * bw + bw * .15, w = bw * .7; let y = H - b;
     for (const [v, c] of [[p.IR, bleu], [p.PS, `color-mix(in srgb, ${bleu} 55%, #fff)`], [p.sur, or]]) { if (v <= 0) continue; const h = v / mx * (H - b - 12); y -= h; s += `<rect class="barre" x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" rx="1.5"><title>Vente en ${p.an} (${p.y} ans) : ${eur(p.tot)}</title></rect>`; }
     if (i === 0) s += `<rect x="${x - 2}" y="${yy(p.tot) - 3}" width="${w + 4}" height="${H - b - yy(p.tot) + 3}" fill="none" stroke="${or}" stroke-width="1.5" rx="3"/>`;
@@ -1156,7 +1280,7 @@ function dessinerProjection(f, R) {
   });
   s += "</svg>";
   const lignes = pts.filter((p, i) => i <= 8 || [22, 30].includes(p.y) || p.y % 5 === 0);
-  s += `<div class="leg" style="margin:6px 0 10px"><div><i style="background:${bleu}"></i>IR</div><div><i style="background:color-mix(in srgb, ${bleu} 55%, #fff)"></i>Prélèvements sociaux</div><div><i style="background:${or}"></i>Surtaxe et taxes</div></div>`;
+  s += `<div class="leg" style="margin:6px 0 10px"><div><i style="background:${bleu}"></i>IR</div><div><i style="background:color-mix(in srgb, ${bleu} 55%, #fff)"></i>Prélèvements sociaux</div><div><i style="background:${or}"></i>${regl.graphe === "courbe" ? "Impôt total" : "Surtaxe et taxes"}</div></div>`;
   s += `<details><summary style="cursor:pointer;font-weight:600;color:var(--bleu-txt)">Tableau par année</summary><table><thead><tr><th>Vente en</th><th>Détention</th><th>IR</th><th>PS</th><th>Surtaxe</th><th>Total</th><th>Économie</th></tr></thead><tbody>${lignes.map((p) => `<tr${p.k === 0 ? ' class="inter"' : ""}><td>${p.k === 0 ? "Date saisie" : p.an}</td><td>${p.y} ans</td><td>${eur(p.IR)}</td><td>${eur(p.PS)}</td><td>${eur(p.sur)}</td><td><b>${eur(p.tot)}</b></td><td>${p.k ? eur(pts[0].tot - p.tot) : "–"}</td></tr>`).join("")}</tbody></table></details>`;
   $("proj").innerHTML = s;
 }
@@ -1227,34 +1351,179 @@ $("cal").addEventListener("click", (e) => {
 });
 
 /* =====================================================================================
-   8. COULEURS ET THÈME
+   8. RÉGLAGES : COULEURS, POLICES, DISPOSITION, AFFICHAGE, RÉSULTATS
+   Tout est rangé dans l'objet « regl », enregistré sur l'appareil. appliquerReglages()
+   le traduit en variables CSS (--or, --bleu, --serif…) et en attributs data-… sur <html>,
+   que la feuille de style utilise pour changer la mise en page.
    ===================================================================================== */
-const PALETTES = [["Or et bleu", "#a57d2f", "#0c2d39"], ["Bleu pétrole", "#b08a3e", "#234e5c"], ["Bordeaux", "#b38b4d", "#5a1f2b"], ["Vert anglais", "#b8955a", "#1f3d2f"], ["Ardoise", "#c06a3a", "#2f3a48"], ["Marine", "#3f8fc4", "#132a4a"]];
-const hex2rgb = (h) => { const m = h.replace("#", "").match(/^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i); return m ? [1, 2, 3].map((i) => parseInt(m[i], 16)) : null; };
+const PALETTES = [["Or et bleu", "#a57d2f", "#0c2d39"], ["Bleu pétrole", "#b08a3e", "#234e5c"], ["Bordeaux", "#b38b4d", "#5a1f2b"], ["Vert anglais", "#b8955a", "#1f3d2f"], ["Ardoise", "#c06a3a", "#2f3a48"], ["Marine", "#3f8fc4", "#132a4a"], ["Prune", "#c49a5a", "#3d2440"], ["Graphite", "#8a8f98", "#22262b"]];
+// [nom, libellé, réglage de graisses pour Google Fonts ("" = police locale)]
+const POLICES_T = [["Source Serif 4", "Source Serif 4 (par défaut)", "opsz,wght@8..60,500;8..60,600"], ["Playfair Display", "Playfair Display", "wght@500;600;700"], ["Lora", "Lora", "wght@500;600;700"], ["Libre Baskerville", "Libre Baskerville", "wght@400;700"], ["Cormorant Garamond", "Cormorant Garamond", "wght@500;600;700"], ["DM Serif Display", "DM Serif Display", ""], ["Georgia", "Georgia (système)", null], ["Inter", "Inter (sans empattement)", "wght@500;600;700"], ["Montserrat", "Montserrat (sans empattement)", "wght@500;600;700"]];
+const POLICES_C = [["Source Sans 3", "Source Sans 3 (par défaut)", "wght@400;500;600;700"], ["Inter", "Inter", "wght@400;500;600;700"], ["Lato", "Lato", "wght@400;700"], ["Nunito Sans", "Nunito Sans", "wght@400;600;700"], ["Open Sans", "Open Sans", "wght@400;500;600;700"], ["Roboto", "Roboto", "wght@400;500;700"], ["Work Sans", "Work Sans", "wght@400;500;600;700"], ["IBM Plex Sans", "IBM Plex Sans", "wght@400;500;600;700"], ["Grandview", "Grandview (si installée sur l'appareil)", null], ["system-ui", "Police du système", null]];
+const BLOCS = [["chiffres", "Chiffres clés"], ["repartition", "Répartition du prix de vente"], ["calcul", "Calcul détaillé"], ["vigilance", "Points de vigilance"], ["projection", "Et si je vendais plus tard ?"], ["hypotheses", "Hypothèses retenues"]];
+const REGL_DEF = {
+  or: "#a57d2f", bleu: "#0c2d39", theme: "clair",
+  policeT: "Source Serif 4", policeC: "Source Sans 3", taille: "100",
+  dispo: "cote", ratio: "52", largeur: "1440", nav: "barre", densite: "confort",
+  cartes: "arrondi", entete: "fonce", kpi: true, bas: true, num: true, refs: true, aides: true, astuce: true,
+  graphe: "barres", blocs: BLOCS.map(([id]) => ({ id, on: true })),
+};
+// Ambiances : des combinaisons toutes prêtes (les couleurs ne changent pas)
+const AMBIANCES = [
+  ["classique", "Classique", "Serif élégant, en-tête foncé, deux colonnes", {}],
+  ["moderne", "Moderne", "Inter, en-tête clair, coins nets", { policeT: "Inter", policeC: "Inter", entete: "clair", cartes: "net" }],
+  ["elegant", "Élégant", "Playfair et Lato, cartes ombrées, aéré", { policeT: "Playfair Display", policeC: "Lato", cartes: "ombre", densite: "aere" }],
+  ["compact", "Compact", "Tout tient à l'écran, idéal sur portable", { densite: "compact", taille: "95", cartes: "net", astuce: false, aides: false, ratio: "56" }],
+  ["minimal", "Minimal", "Sans cadres ni décor, l'essentiel", { cartes: "plat", entete: "clair", nav: "masquee", astuce: false, num: false, refs: false }],
+  ["lecture", "Lecture", "Une colonne, grands caractères", { dispo: "empile", taille: "110", densite: "aere", largeur: "1100" }],
+  ["assistant", "Assistant", "Une étape à la fois, résultats à côté", { dispo: "pas", astuce: true }],
+  ["cockpit", "Cockpit", "Menu latéral, résultats à gauche, pleine largeur", { nav: "laterale", dispo: "inverse", largeur: "plein", densite: "compact" }],
+];
+const hex2rgb = (h) => { const m = String(h).replace("#", "").match(/^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i); return m ? [1, 2, 3].map((i) => parseInt(m[i], 16)) : [0, 0, 0]; };
 const rgb2hex = (r) => "#" + r.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0")).join("");
 function lireCouleur(s) { s = String(s).trim(); if (/^#?[\da-f]{6}$/i.test(s)) return "#" + s.replace("#", "").toLowerCase(); const n = s.match(/\d+(\.\d+)?/g); return n && n.length === 3 ? rgb2hex(n.map(Number)) : null; }
-let regl = stock.lire("pvi-reglages", { or: "#a57d2f", bleu: "#0c2d39", theme: "clair" });
-function appliquerReglages() {
-  const r = document.documentElement;
-  r.style.setProperty("--or", regl.or); r.style.setProperty("--bleu", regl.bleu);
+function lireRegl() {
+  const r = { ...REGL_DEF, ...stock.lire("pvi-reglages", {}) };
+  const vus = new Set((r.blocs || []).map((b) => b.id));
+  r.blocs = (r.blocs || []).filter((b) => BLOCS.some(([id]) => id === b.id)).concat(BLOCS.filter(([id]) => !vus.has(id)).map(([id]) => ({ id, on: true })));
+  return r;
+}
+let regl = lireRegl();
+function chargerPolice(liste, nom) {
+  const p = liste.find((x) => x[0] === nom); if (!p || p[2] === null || document.getElementById("gf-" + nom)) return;
+  document.head.append(el("link", { id: "gf-" + nom, rel: "stylesheet", href: `https://fonts.googleapis.com/css2?family=${nom.replace(/ /g, "+")}${p[2] ? ":" + p[2] : ""}&display=swap` }));
+}
+function appliquerReglages(sansCalcul) {
+  const r = document.documentElement, st = r.style;
+  st.setProperty("--or", regl.or); st.setProperty("--bleu", regl.bleu);
   const sombre = regl.theme === "sombre" || (regl.theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
   r.dataset.theme = sombre ? "sombre" : "clair";
-  document.querySelector('meta[name="theme-color"]').content = regl.bleu;
-  $("cOr").value = regl.or; $("cBleu").value = regl.bleu;
-  $("cOrT").value = hex2rgb(regl.or).join(" "); $("cBleuT").value = hex2rgb(regl.bleu).join(" ");
-  $("segTheme").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === regl.theme));
+  chargerPolice(POLICES_T, regl.policeT); chargerPolice(POLICES_C, regl.policeC);
+  const repli = (n, serif) => n === "system-ui" ? 'system-ui,-apple-system,"Segoe UI",sans-serif' : `"${n}",${serif ? 'Georgia,"Times New Roman",serif' : '"Segoe UI",system-ui,sans-serif'}`;
+  const tSerif = !["Inter", "Montserrat"].includes(regl.policeT);
+  st.setProperty("--serif", repli(regl.policeT, tSerif)); st.setProperty("--sans", repli(regl.policeC, false));
+  st.setProperty("--zoom", num(regl.taille) / 100);
+  st.setProperty("--cg", num(regl.ratio) + "fr"); st.setProperty("--cd", (100 - num(regl.ratio)) + "fr");
+  st.setProperty("--maxw", regl.largeur === "plein" ? "100%" : regl.largeur + "px");
+  Object.assign(r.dataset, { dispo: regl.dispo, nav: regl.nav, densite: regl.densite, cartes: regl.cartes, entete: regl.entete,
+    kpi: regl.kpi ? "oui" : "non", bas: regl.bas ? "oui" : "non", num: regl.num ? "oui" : "non", refs: regl.refs ? "oui" : "non", aides: regl.aides ? "oui" : "non", astuce: regl.astuce ? "oui" : "non" });
+  document.querySelector('meta[name="theme-color"]').content = regl.entete === "clair" ? (sombre ? "#151d21" : "#fffdf9") : regl.entete === "or" ? regl.or : regl.bleu;
+  // ordre et affichage des blocs de résultats
+  regl.blocs.forEach((b, i) => { const e = document.querySelector(`[data-bloc="${b.id}"]`); if (e) { e.style.order = i; e.classList.toggle("cache", !b.on); } });
   stock.ecrire("pvi-reglages", regl);
-  if (dernier) maj();
+  requestAnimationFrame(() => { if (typeof hauteur === "function") hauteur(); });
+  if (typeof majPas === "function") majPas();
+  if (dernier && !sansCalcul) maj();
 }
-$("presets").innerHTML = PALETTES.map(([n, o, b], i) => `<button data-p="${i}"><i><b style="background:${b}"></b><b style="background:${o}"></b></i>${n}</button>`).join("");
-$("presets").onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; const p = PALETTES[+b.dataset.p]; regl.or = p[1]; regl.bleu = p[2]; appliquerReglages(); };
-$("cOr").oninput = () => { regl.or = $("cOr").value; appliquerReglages(); };
-$("cBleu").oninput = () => { regl.bleu = $("cBleu").value; appliquerReglages(); };
-$("cOrT").onchange = () => { const c = lireCouleur($("cOrT").value); if (c) { regl.or = c; appliquerReglages(); } else toast("Couleur non reconnue"); };
-$("cBleuT").onchange = () => { const c = lireCouleur($("cBleuT").value); if (c) { regl.bleu = c; appliquerReglages(); } else toast("Couleur non reconnue"); };
-$("segTheme").onclick = (e) => { const b = e.target.closest("button"); if (b) { regl.theme = b.dataset.v; appliquerReglages(); } };
-$("bCoulDef").onclick = () => { regl.or = "#a57d2f"; regl.bleu = "#0c2d39"; appliquerReglages(); toast("Or (165 125 47) et bleu (12 45 57) rétablis"); };
-$("bRAZ").onclick = () => { etat = defauts(); cedants = [{ ...CEDANT }]; remplir(); maj(); fermer(); toast("Simulation effacée"); };
+function changerRegl(k, v) { regl[k] = v; appliquerReglages(); }
+
+/* --- Panneau de réglages à onglets, construit avec les mêmes modules que le formulaire --- */
+const ONGLETS_R = [["ambiances", "Ambiances"], ["couleurs", "Couleurs"], ["polices", "Polices et texte"], ["dispo", "Disposition"], ["affichage", "Affichage"], ["resultats", "Résultats"], ["donnees", "Données"]];
+let ongletR = "ambiances";
+const R_ = (spec) => MODULES[spec.type](spec, () => regl[spec.k], (v) => changerRegl(spec.k, v), null);
+const SCHEMAS = { // petits schémas des dispositions (gris = saisie, or = résultats)
+  cote: '<rect x="2" y="4" width="11" height="16" rx="1.5"/><rect x="15" y="4" width="7" height="16" rx="1.5" class="r"/>',
+  inverse: '<rect x="2" y="4" width="7" height="16" rx="1.5" class="r"/><rect x="11" y="4" width="11" height="16" rx="1.5"/>',
+  empile: '<rect x="5" y="2" width="14" height="11" rx="1.5"/><rect x="5" y="15" width="14" height="7" rx="1.5" class="r"/>',
+  haut: '<rect x="5" y="2" width="14" height="7" rx="1.5" class="r"/><rect x="5" y="11" width="14" height="11" rx="1.5"/>',
+  pas: '<rect x="2" y="4" width="11" height="16" rx="1.5"/><path d="M5 17h5M8.5 15.5l1.5 1.5-1.5 1.5"/><rect x="15" y="4" width="7" height="16" rx="1.5" class="r"/>',
+};
+function tuileSchema(spec) {
+  const g = el("div", { class: "tuiles schemas" });
+  const aff = () => g.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === regl[spec.k]));
+  for (const [v, t, d] of spec.opts) g.append(el("button", { type: "button", "data-v": v, onclick: () => { changerRegl(spec.k, v); aff(); } },
+    el("span", { class: "t-ic schema", html: `<svg viewBox="0 0 24 24">${SCHEMAS[v]}</svg>` }), el("span", { class: "t-tx" }, el("b", {}, t), el("small", {}, d))));
+  aff(); return el("div", { class: "ch plein" }, el("div", { class: "lbl" }, spec.l), g);
+}
+function construireReglages() {
+  $("reglNav").innerHTML = "";
+  for (const [id, t] of ONGLETS_R) $("reglNav").append(el("button", { type: "button", class: id === ongletR ? "on" : "", onclick: () => { ongletR = id; construireReglages(); } }, t));
+  const c = $("reglCorps"); c.innerHTML = ""; const g = el("div", { class: "grille" }); c.append(g);
+  const titre = (t) => g.append(el("div", { class: "ss" }, t));
+  if (ongletR === "ambiances") {
+    g.append(el("p", { class: "aide-bas plein-l" }, "Une ambiance règle d'un coup les polices, la disposition et l'affichage. Vous pouvez ensuite tout ajuster dans les autres onglets ; vos couleurs sont conservées."));
+    const box = el("div", { class: "ambiances" });
+    for (const [id, t, d, o] of AMBIANCES) {
+      const apercu = el("span", { class: "mini", "data-a": id }, el("i", { class: "mh" }), el("i", { class: "m1" }), el("i", { class: "m2" }));
+      box.append(el("button", { type: "button", onclick: () => { const garde = { or: regl.or, bleu: regl.bleu, theme: regl.theme, blocs: regl.blocs }; regl = { ...REGL_DEF, ...o, ...garde }; appliquerReglages(); construireReglages(); toast("Ambiance « " + t + " » appliquée"); } }, apercu, el("b", {}, t), el("small", {}, d)));
+    }
+    g.append(el("div", { class: "ch plein" }, box));
+  }
+  if (ongletR === "couleurs") {
+    const ligneCouleur = (k, t) => {
+      const pick = el("input", { type: "color", value: regl[k], class: "cache-v", oninput: (e) => { changerRegl(k, e.target.value); maj1(); } });
+      const pastille = el("button", { type: "button", class: "pastille-c", onclick: () => pick.click(), "aria-label": "Choisir " + t });
+      const txt = el("input", { class: "rvb", inputmode: "text", onchange: (e) => { const v = lireCouleur(e.target.value); if (v) { changerRegl(k, v); maj1(); } else toast("Couleur non reconnue"); } });
+      const hex = el("span", { class: "hex" });
+      const maj1 = () => { pastille.style.background = regl[k]; txt.value = hex2rgb(regl[k]).join(" "); hex.textContent = regl[k].toUpperCase(); pick.value = regl[k]; };
+      maj1();
+      return el("div", { class: "ch plein" }, el("div", { class: "lbl" }, t), el("div", { class: "coul" }, pastille, pick, el("label", { class: "cur-v rvb-w" }, txt, el("i", {}, "RVB")), hex));
+    };
+    g.append(ligneCouleur("bleu", "Couleur principale (en-tête, boutons, titres)"), ligneCouleur("or", "Couleur d'accent (montants clés, sélection, graphiques)"));
+    g.append(el("span", { class: "aide-bas plein-l" }, "Saisie en RVB (« 165 125 47 ») ou en hexadécimal (« #a57d2f »)."));
+    titre("Palettes");
+    g.append(el("div", { class: "ch plein" }, el("div", { class: "presets" }, PALETTES.map(([n, o, b]) => el("button", { type: "button", onclick: () => { regl.or = o; regl.bleu = b; appliquerReglages(); construireReglages(); } }, el("i", {}, el("b", { style: `background:${b}` }), el("b", { style: `background:${o}` })), n)))));
+    g.append(R_({ k: "theme", type: "segment", l: "Thème", plein: true, opts: [["clair", "Clair"], ["sombre", "Sombre"], ["auto", "Comme l'appareil"]] }));
+    g.append(el("div", { class: "ch plein" }, el("button", { type: "button", class: "bt", onclick: () => { regl.or = REGL_DEF.or; regl.bleu = REGL_DEF.bleu; appliquerReglages(); construireReglages(); toast("Or (165 125 47) et bleu (12 45 57) rétablis"); } }, "Couleurs par défaut (or et bleu)")));
+  }
+  if (ongletR === "polices") {
+    g.append(R_({ k: "policeT", type: "liste", l: "Police des titres et des montants", plein: true, opts: POLICES_T.map(([v, t]) => [v, t, ""]) }));
+    g.append(R_({ k: "policeC", type: "liste", l: "Police du texte et des champs", plein: true, opts: POLICES_C.map(([v, t]) => [v, t, ""]) }));
+    g.append(R_({ k: "taille", type: "segment", l: "Taille du texte", plein: true, opts: [["90", "Petite"], ["100", "Normale"], ["110", "Grande"], ["120", "Très grande"]] }));
+    g.append(el("div", { class: "ch plein apercu-pol" }, el("b", {}, "Plus-value nette imposable : 100 625 €"), el("span", {}, "Abattement pour durée de détention de 30 % au titre de l'impôt sur le revenu.")));
+  }
+  if (ongletR === "dispo") {
+    g.append(tuileSchema({ k: "dispo", l: "Disposition", opts: [["cote", "Côte à côte", "Saisie à gauche, résultats à droite"], ["inverse", "Inversée", "Résultats à gauche"], ["empile", "Une colonne", "Résultats sous la saisie"], ["haut", "Résultats d'abord", "Une colonne, résultats en haut"], ["pas", "Pas à pas", "Une étape à la fois"]] }));
+    g.append(R_({ k: "ratio", type: "curseur", l: "Part de la colonne de saisie", min: 35, max: 70, presets: [45, 52, 60], plein: true }));
+    g.append(R_({ k: "largeur", type: "segment", l: "Largeur de la page", plein: true, opts: [["1100", "Étroite"], ["1440", "Standard"], ["1800", "Large"], ["plein", "Tout l'écran"]] }));
+    g.append(R_({ k: "nav", type: "segment", l: "Navigation entre les étapes", plein: true, opts: [["barre", "Barre en haut"], ["laterale", "Menu latéral"], ["masquee", "Masquée"]] }));
+    g.append(R_({ k: "densite", type: "segment", l: "Densité", plein: true, opts: [["compact", "Compacte"], ["confort", "Confortable"], ["aere", "Aérée"]] }));
+  }
+  if (ongletR === "affichage") {
+    g.append(R_({ k: "entete", type: "segment", l: "En-tête", plein: true, opts: [["fonce", "Couleur principale"], ["or", "Couleur d'accent"], ["clair", "Clair"]] }));
+    g.append(R_({ k: "cartes", type: "segment", l: "Style des blocs", plein: true, opts: [["arrondi", "Arrondis"], ["net", "Coins nets"], ["ombre", "Ombrés"], ["plat", "Sans cadre"]] }));
+    titre("Éléments affichés");
+    g.append(R_({ k: "kpi", type: "inter", l: "Chiffres clés dans l'en-tête", desc: "Plus-value, impôt et net vendeur toujours visibles en haut" }));
+    g.append(R_({ k: "bas", type: "inter", l: "Barre de résultat en bas (téléphone)", desc: "Impôt total et net vendeur pendant la saisie" }));
+    g.append(R_({ k: "num", type: "inter", l: "Numéros des sections" }));
+    g.append(R_({ k: "refs", type: "inter", l: "Références CGI dans les titres" }));
+    g.append(R_({ k: "aides", type: "inter", l: "Textes d'aide sous les champs" }));
+    g.append(R_({ k: "astuce", type: "inter", l: "Astuce de saisie en haut du formulaire" }));
+  }
+  if (ongletR === "resultats") {
+    g.append(el("p", { class: "aide-bas plein-l" }, "Choisissez les blocs affichés et leur ordre."));
+    const liste = el("div", { class: "blocs" });
+    regl.blocs.forEach((b, i) => {
+      const nom = (BLOCS.find(([id]) => id === b.id) || [, b.id])[1];
+      const bouge = (d) => { const j = i + d; if (j < 0 || j >= regl.blocs.length) return; [regl.blocs[i], regl.blocs[j]] = [regl.blocs[j], regl.blocs[i]]; appliquerReglages(); construireReglages(); };
+      const sw = mInter({ l: nom }, () => b.on, (v) => { b.on = v; appliquerReglages(); }, null);
+      liste.append(el("div", { class: "bloc-l" }, el("div", { class: "fleches" }, el("button", { type: "button", "aria-label": "Monter", disabled: i === 0 || null, onclick: () => bouge(-1) }, "▲"), el("button", { type: "button", "aria-label": "Descendre", disabled: i === regl.blocs.length - 1 || null, onclick: () => bouge(1) }, "▼")), sw));
+    });
+    g.append(el("div", { class: "ch plein" }, liste));
+    g.append(R_({ k: "graphe", type: "segment", l: "Graphique « Et si je vendais plus tard ? »", plein: true, opts: [["barres", "Barres empilées"], ["courbe", "Courbe"]] }));
+  }
+  if (ongletR === "donnees") {
+    g.append(el("div", { class: "ch plein" }, el("div", { class: "actions-r" },
+      el("button", { type: "button", class: "bt", onclick: () => { regl = { ...REGL_DEF, blocs: REGL_DEF.blocs.map((b) => ({ ...b })) }; appliquerReglages(); construireReglages(); toast("Apparence par défaut rétablie"); } }, "Rétablir toute l'apparence par défaut"),
+      el("button", { type: "button", class: "bt", onclick: async () => { try { await navigator.clipboard.writeText(JSON.stringify(regl)); toast("Réglages copiés"); } catch (e) { toast("Copie refusée par le navigateur"); } } }, "Copier mes réglages"),
+      el("button", { type: "button", class: "bt", onclick: async () => { const t = prompt("Collez ici des réglages copiés :"); if (!t) return; try { regl = { ...REGL_DEF, ...JSON.parse(t) }; appliquerReglages(); construireReglages(); toast("Réglages appliqués"); } catch (e) { toast("Réglages illisibles"); } } }, "Coller des réglages"),
+      el("button", { type: "button", class: "bt danger", onclick: () => { etat = defauts(); cedants = [{ ...CEDANT }]; remplir(); maj(); fermer(); toast("Simulation effacée"); } }, "Effacer la simulation en cours"))));
+    g.append(el("p", { class: "aide-bas plein-l" }, "« Copier mes réglages » permet de retrouver la même apparence sur un autre appareil."));
+  }
+}
+
+/* --- Mode « pas à pas » : une section visible à la fois --- */
+let pasIdx = 0;
+function majPas() {
+  const on = regl.dispo === "pas";
+  SECTIONS.forEach((s, i) => { const e = $("s_" + s.id); if (e) e.classList.toggle("actif", !on || i === pasIdx); });
+  if (on) document.querySelectorAll("#etapes a[data-s]").forEach((a, i) => a.classList.toggle("on", i === pasIdx));
+}
+function allerPas(i) { pasIdx = Math.max(0, Math.min(SECTIONS.length - 1, i)); majPas(); scrollTo({ top: 0, behavior: "smooth" }); }
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("#etapes a[data-s]");
+  if (a && regl.dispo === "pas") { e.preventDefault(); allerPas(SECTIONS.findIndex((s) => s.id === a.dataset.s)); }
+});
 
 /* =====================================================================================
    9. SCÉNARIOS ENREGISTRÉS
@@ -1334,7 +1603,7 @@ $("fImport").onchange = async () => { const fi = $("fImport").files[0]; if (!fi)
    11. FENÊTRES, MENUS, BULLES D'AIDE
    ===================================================================================== */
 function fermer() { document.querySelectorAll(".voile.on,.menu.on,#cal.on,#bulle.on,#pop.on").forEach((x) => x.classList.remove("on")); }
-$("bRegl").onclick = () => { fermer(); $("vRegl").classList.add("on"); };
+$("bRegl").onclick = () => { fermer(); construireReglages(); $("vRegl").classList.add("on"); };
 $("bScen").onclick = () => { fermer(); dessinerScenarios(); $("vScen").classList.add("on"); setTimeout(() => $("scNom").focus(), 50); };
 $("bExport").onclick = (e) => { e.stopPropagation(); const m = $("mExport"), on = m.classList.contains("on"); fermer(); if (on) return; const r = e.currentTarget.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 250, r.right - 240)) + "px"; m.classList.add("on"); };
 document.querySelectorAll(".voile").forEach((v) => v.addEventListener("click", (e) => { if (e.target === v || e.target.closest("[data-ferme]")) fermer(); }));
@@ -1353,7 +1622,7 @@ addEventListener("scroll", () => {
   if ($("cal").classList.contains("on") && cal.ancre && innerWidth > 600) { if (visible(cal.ancre)) placerCal(); else $("cal").classList.remove("on"); }
 }, { passive: true });
 // Étape active dans la barre de navigation, selon la section visible
-const obs = new IntersectionObserver((ents) => { for (const en of ents) if (en.isIntersecting) document.querySelectorAll("#etapes a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id)); }, { rootMargin: "-140px 0px -60% 0px" });
+const obs = new IntersectionObserver((ents) => { if (regl.dispo === "pas") return; for (const en of ents) if (en.isIntersecting) document.querySelectorAll("#etapes a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id)); }, { rootMargin: "-140px 0px -60% 0px" });
 
 /* =====================================================================================
    12. DÉMARRAGE
