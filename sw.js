@@ -3,7 +3,7 @@
 // =====================================================================================
 //  Avant, le Suivi et l'Audit vivaient tous les deux à la racine et partageaient ce service.
 //  Maintenant chaque appli a son propre dossier et son propre service (suivi/sw.js, audit/sw.js,
-//  revision/sw.js, pvi/sw.js, succession/sw.js). Mais les appareils qui avaient déjà l'ancien service le gardent tant qu'on ne
+//  revision/sw.js, pvi/sw.js, succession/sw.js, immo/sw.js). Mais les appareils qui avaient déjà l'ancien service le gardent tant qu'on ne
 //  lui dit pas de partir. Cette version-ci ne fait donc qu'une chose : se désinstaller.
 //  Quand tous vos appareils seront passés par le site, ce fichier pourra être supprimé.
 // =====================================================================================
@@ -15,9 +15,9 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     // On jette les anciennes copies de l'ancien service, en épargnant celles des nouveaux
-    // services (leurs noms commencent par suivi-, audit-, revision-, pvi- ou succession-). /^(suivi|audit|revision|pvi|succession)-/ est
+    // services (leurs noms commencent par suivi-, audit-, revision-, pvi-, succession- ou immo-). /^(suivi|audit|revision|pvi|succession|immo)-/ est
     // un « motif » : il reconnaît les noms qui COMMENCENT par l'un de ces préfixes.
-    for (const k of await caches.keys()) if (!/^(suivi|audit|revision|pvi|succession)-/.test(k)) await caches.delete(k);
+    for (const k of await caches.keys()) if (!/^(suivi|audit|revision|pvi|succession|immo)-/.test(k)) await caches.delete(k);
     await self.registration.unregister();      // on se désinscrit : le navigateur oublie ce service
     // Chaque fenêtre ouverte du site est rechargée, pour repartir proprement sans l'ancien service.
     for (const c of await self.clients.matchAll({ type: "window" })) c.navigate(c.url);

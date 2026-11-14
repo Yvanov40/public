@@ -11,16 +11,17 @@ s’installe séparément sur le téléphone ou l’ordinateur (son manifeste, s
 | `audit/`       | Audit civil et fiscal (transmission)                          | sur l’appareil ; recopié dans le Suivi (section `audits`)      |
 | `succession/`  | Simulateur de succession (options du conjoint survivant)      | sur l’appareil ; recopié dans le Suivi (section `simulations`) |
 | `pvi/`         | Simulateur de plus-value immobilière                          | sur l’appareil ; recopié dans le Suivi (section `simulations`) |
+| `immo/`        | Investissement immobilier : nu, LMNP, SCI à l’IR ou à l’IS comparés | sur l’appareil ; recopié dans le Suivi (section `simulations`) |
 | `revision/`    | Révision de la base : QCM, vrai ou faux, fiches               | `revision/data/` (état partagé et sessions préparées)          |
 
 ## Simulations rattachées aux clients
 
-L’Audit, la Succession et la Plus-value restent des applis autonomes. Chacune garde plusieurs simulations,
+L’Audit, la Succession, la Plus-value et l’Investissement immobilier restent des applis autonomes. Chacune garde plusieurs simulations,
 et chaque simulation peut être rattachée à un client du Suivi (depuis l’appli, bouton « Simulations »,
 ou depuis la fiche du client dans le Suivi). Le Suivi les enregistre dans `suivi_gp.json`, donc sur GitHub
 et sur vos autres appareils, et les montre dans la fiche du client et dans son onglet « Simulations ».
 
-- `lien-suivi.source.js` : le module commun de la Succession et de la Plus-value (recopié dans leur page,
+- `lien-suivi.source.js` : le module commun de la Succession, de la Plus-value et de l’Investissement immobilier (recopié dans leur page,
   entre les repères `lien-suivi : début` et `lien-suivi : fin`). Il n’est pas chargé par le site lui-même.
 
 ## Fichiers à la racine

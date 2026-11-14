@@ -2002,11 +2002,11 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
 /* ---------- onglet Simulations : les filtres des dossiers n'y servent pas ---------- */
 body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none !important; }
 
-/* ---------- simulations (Audit, Succession, Plus-value) ---------- */
+/* ---------- simulations (Audit, Succession, Plus-value, Investissement) ---------- */
 #vue-simulations:not([hidden]) { display: grid; gap: 12px; align-content: start; }
 #vue-simulations .m-h2 { margin: 4px 0 0; font: 600 22px var(--titre); color: var(--bleu); }
 #vue-simulations > .aide { margin: 0; }
-.simu-applis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.simu-applis { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 .simu-appli { display: grid; gap: 3px; align-content: start; text-align: left; border: 1px solid var(--bordure); background: var(--carte); border-radius: 14px; padding: 12px 14px; cursor: pointer; color: var(--texte); }
 .simu-appli .ic { font-size: 24px; } .simu-appli b { color: var(--bleu); font-size: 15px; } .simu-appli span:not(.ic) { color: var(--discret); font-size: 12.5px; }
 .simu-appli i { font-style: normal; color: var(--or); font-size: 12.5px; font-weight: 600; margin-top: 4px; }
@@ -2471,7 +2471,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     <div class="menu-grille">
       <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Tarifs</button>
       <button class="menu-tuile" id="btnPersoEmol"><span>✎</span>Personnaliser les prestations</button>
-      <button class="menu-tuile" id="btnAudit"><span>🧮</span>Simulations : Audit, Succession, Plus-value</button>
+      <button class="menu-tuile" id="btnAudit"><span>🧮</span>Simulations : Audit, Succession, Plus-value, Investissement</button>
     </div>
     <h4>Réglages</h4>
     <div class="menu-grille">
@@ -3020,11 +3020,11 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   // audits (appli Audit civil et fiscal) : { liste: { id: { nom, maj, data } }, liens: { id: client }, supprimes: { id: date } }
   // (seul le Suivi efface un audit partout : « effaces ». Une suppression ou une remise à zéro faite dans l'Audit reste locale.)
   var auditsSuivi = (() => { try { const a = JSON.parse(localStorage.getItem("suivi-gp-donnees-audits")) || {}; return { liste: a.liste || {}, liens: a.liens || {}, effaces: a.effaces || {} }; } catch (e) { return { liste: {}, liens: {}, effaces: {} }; } })();
-  // simulations des autres applis (Succession, Plus-value) : même forme que les audits, une partie par appli
-  //   { succession: { liste, liens, effaces }, pvi: { liste, liens, effaces } }
+  // simulations des autres applis (Succession, Plus-value, Investissement) : même forme que les audits, une partie par appli
+  //   { succession: { liste, liens, effaces }, pvi: { … }, immo: { … } }
   var simulationsSuivi = (() => {
     let a = {}; try { a = JSON.parse(localStorage.getItem("suivi-gp-donnees-simulations")) || {}; } catch (e) {}
-    const r = {}; for (const k of ["succession", "pvi"]) { const x = a[k] || {}; r[k] = { liste: x.liste || {}, liens: x.liens || {}, effaces: x.effaces || {} }; }
+    const r = {}; for (const k of ["succession", "pvi", "immo"]) { const x = a[k] || {}; r[k] = { liste: x.liste || {}, liens: x.liens || {}, effaces: x.effaces || {} }; }
     return r;
   })();
   let emolPerso = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-emoluments")) || {}; } catch (e) { return {}; } })();
@@ -3045,9 +3045,9 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     if (contenu.modeles) { modelesTaches = contenu.modeles; localStorage.setItem("suivi-gp-donnees-modeles", JSON.stringify(modelesTaches)); }
     if (contenu.audits) { auditsSuivi = { liste: contenu.audits.liste || {}, liens: contenu.audits.liens || {}, effaces: contenu.audits.effaces || {} }; localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); if (typeof appsPretes !== "undefined" && appsPretes) versApp("audit"); }
     if (contenu.simulations) {
-      for (const k of ["succession", "pvi"]) { const x = contenu.simulations[k] || {}; simulationsSuivi[k] = { liste: x.liste || {}, liens: x.liens || {}, effaces: x.effaces || {} }; }
+      for (const k of ["succession", "pvi", "immo"]) { const x = contenu.simulations[k] || {}; simulationsSuivi[k] = { liste: x.liste || {}, liens: x.liens || {}, effaces: x.effaces || {} }; }
       localStorage.setItem("suivi-gp-donnees-simulations", JSON.stringify(simulationsSuivi));
-      if (typeof appsPretes !== "undefined" && appsPretes) { versApp("succession"); versApp("pvi"); }
+      if (typeof appsPretes !== "undefined" && appsPretes) { versApp("succession"); versApp("pvi"); versApp("immo"); }
     }
     if (contenu.emoluments) { emolPerso = contenu.emoluments; localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso)); if (typeof reconstruireBaremes === "function") reconstruireBaremes(); }
   }
@@ -3381,7 +3381,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     for (const k of ["dutreil", "agenda", "societes", "modeles", "emoluments"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
     pris.audits = fusionnerAudits(base.audits, ici.audits, contenu.audits);
     pris.simulations = {};
-    for (const k of ["succession", "pvi"]) pris.simulations[k] = fusionnerAudits((base.simulations || {})[k], ici.simulations[k], (contenu.simulations || {})[k]);
+    for (const k of ["succession", "pvi", "immo"]) pris.simulations[k] = fusionnerAudits((base.simulations || {})[k], ici.simulations[k], (contenu.simulations || {})[k]);
     appliquerAnnexes(pris);
     setTimeout(() => { if (reparerAgenda()) afficherTout(); }, 300);   // après une fusion : doublons et chevauchements
     shaDistant = sha;
@@ -6375,7 +6375,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   var APPS_SIMU = {
     audit:      { nom: "Audit civil et fiscal", court: "Audit", ic: "🧭", cle: "audit-dossiers-v1", dossier: "audit", desc: "Transmission : successions, démembrement, assurance-vie, levier société." },
     succession: { nom: "Simulateur de succession", court: "Succession", ic: "🕊", cle: "succession-dossiers-v1", dossier: "succession", desc: "Options du conjoint survivant : usufruit, ¼ PP, ¼ PP + ¾ US, quotité disponible." },
-    pvi:        { nom: "Plus-value immobilière", court: "Plus-value", ic: "🏠", cle: "pvi-dossiers-v1", dossier: "pvi", desc: "Abattements, exonérations, surtaxe, démembrement, non-résidents." }
+    pvi:        { nom: "Plus-value immobilière", court: "Plus-value", ic: "🏠", cle: "pvi-dossiers-v1", dossier: "pvi", desc: "Abattements, exonérations, surtaxe, démembrement, non-résidents." },
+    immo:       { nom: "Investissement immobilier", court: "Investissement", ic: "🏢", cle: "immo-dossiers-v1", dossier: "immo", desc: "Nu, LMNP, SCI à l'IR ou à l'IS : les montages comparés côte à côte." }
   };
   var IDS_APPS = Object.keys(APPS_SIMU);
   // la partie du fichier de suivi qui correspond à chaque appli
@@ -9193,6 +9194,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     ["🧭", "Ouvrir l’Audit civil et fiscal", "audit transmission", () => ouvrirSimulation("audit")],
     ["🕊", "Ouvrir le simulateur de succession", "succession conjoint survivant usufruit", () => ouvrirSimulation("succession")],
     ["🏠", "Ouvrir le simulateur de plus-value", "plus-value pvi immobilière cession", () => ouvrirSimulation("pvi")],
+    ["🏢", "Ouvrir le simulateur d’investissement immobilier", "investissement locatif lmnp sci is ir rentabilité", () => ouvrirSimulation("immo")],
     ["🧮", "Tarifs", "calculatrice tarif prestation émoluments frais notaire vente donation apport", () => ouvrirEmoluments()],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],

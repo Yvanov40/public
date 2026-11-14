@@ -1,0 +1,971 @@
+<!doctype html>
+<!-- =====================================================================================
+     Investissement immobilier — comparateur de montages
+     Un projet (le bien, les loyers, le prêt, les associés, la revente) et plusieurs façons de le
+     détenir, calculées côte à côte : location nue en direct (micro-foncier ou réel), LMNP
+     (micro-BIC ou réel), SCI à l'IR, SCI à l'IS.
+     Fichiers : index.html (cette page : l'affichage), moteur.js (le calcul), vendor/ (bibliothèques
+     des exports Excel et PowerPoint, chargées seulement quand on exporte).
+     Les simulations se rattachent aux clients du Suivi des dossiers (bouton « Simulations »).
+     ===================================================================================== -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Investissement immobilier</title>
+<meta name="description" content="Comparateur de montages d'investissement immobilier : nu, LMNP, SCI à l'IR, SCI à l'IS.">
+<meta name="theme-color" content="#0c2d39">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icone-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------- couleurs et polices (clair, puis sombre) ---------- */
+:root {
+  --bleu: #0c2d39; --or: #a77d2f; --or-doux: #f3e9d4; --bleu-doux: #e3ebee;
+  --fond: #f7f4ee; --carte: #fffdf9; --section: #efe9de; --bordure: #e2dacb; --texte: #1c2a30; --discret: #7c7466;
+  --vert: #2f7d5b; --rouge: #b4473b;
+  --ui: "IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; --titre: "EB Garamond", Georgia, serif;
+  --c1: #0c2d39; --c2: #a77d2f; --c3: #4f7f8f; --c4: #c86b4a; --c5: #6f8f4e; --c6: #8a6bb5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bleu: #9cc3d1; --or: #d4ad62; --or-doux: #3a3020; --bleu-doux: #1d3540;
+    --fond: #0f1b20; --carte: #16262d; --section: #1b2e36; --bordure: #27404a; --texte: #e8e3d9; --discret: #9aa7a9;
+    --vert: #6cc39b; --rouge: #e48a7f; --c1: #9cc3d1; --c2: #d4ad62; --c3: #7fb3c4; --c4: #e39b7f; --c5: #9fc27e; --c6: #b89be0;
+  }
+}
+:root[data-theme="dark"] {
+  --bleu: #9cc3d1; --or: #d4ad62; --or-doux: #3a3020; --bleu-doux: #1d3540;
+  --fond: #0f1b20; --carte: #16262d; --section: #1b2e36; --bordure: #27404a; --texte: #e8e3d9; --discret: #9aa7a9;
+  --vert: #6cc39b; --rouge: #e48a7f; --c1: #9cc3d1; --c2: #d4ad62; --c3: #7fb3c4; --c4: #e39b7f; --c5: #9fc27e; --c6: #b89be0;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 14.5px/1.45 var(--ui); }
+button, input, select { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--titre); font-weight: 600; color: var(--bleu); margin: 0; }
+
+/* ---------- en-tête ---------- */
+header.haut { position: sticky; top: 0; z-index: 20; background: #0c2d39; color: #fff; }
+.haut-in { display: flex; align-items: center; gap: 16px; padding: 10px 18px; max-width: 1600px; margin: 0 auto; }
+.marque { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; min-width: 0; }
+.marque img { width: 38px; height: 38px; border-radius: 10px; flex: none; }
+.marque div { min-width: 0; }
+.marque b { display: block; font: 600 20px/1.1 var(--titre); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.marque small { display: block; font-size: 12px; color: rgba(255,255,255,.65); }
+.meilleur { margin-left: auto; text-align: right; line-height: 1.2; }
+.meilleur span { display: block; font-size: 11.5px; color: rgba(255,255,255,.6); }
+.meilleur b { font: 600 18px var(--titre); color: #e3c27f; }
+.actions { display: flex; gap: 8px; }
+.bt-h { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); color: #fff; border-radius: 10px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.bt-h:hover { background: rgba(255,255,255,.14); }
+.bt-h svg { width: 18px; height: 18px; flex: none; }
+.menu-export { position: absolute; right: 18px; top: 58px; background: var(--carte); color: var(--texte); border: 1px solid var(--bordure); border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.18); padding: 6px; display: grid; min-width: 220px; z-index: 30; }
+.menu-export button { text-align: left; border: 0; background: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; gap: 10px; align-items: center; }
+.menu-export button:hover { background: var(--section); }
+.menu-export small { display: block; color: var(--discret); font-size: 11.5px; }
+
+/* ---------- mise en page : saisie à gauche, résultats à droite ---------- */
+main { max-width: 1600px; margin: 0 auto; padding: 16px 18px 40px; display: grid; grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.seg.bascule { display: none; }
+.saisie { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.resultats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.carte { background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px; }
+.carte > h2 { font-size: 19px; padding: 12px 16px 0; }
+.carte .corps { padding: 10px 16px 16px; }
+details.carte > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+details.carte > summary::-webkit-details-marker { display: none; }
+details.carte > summary h2 { font-size: 18px; flex: 1; }
+details.carte > summary .resume { font-size: 12px; color: var(--discret); text-align: right; }
+details.carte > summary::after { content: "›"; transform: rotate(90deg); color: var(--discret); font-size: 18px; transition: transform .15s; }
+details.carte:not([open]) > summary::after { transform: rotate(0); }
+details.carte > .corps { padding-top: 0; }
+.num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 12px; background: var(--bleu); color: var(--carte); font: 600 12.5px var(--ui); flex: none; }
+
+/* ---------- champs ---------- */
+.grille { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; align-items: start; }
+.grille .plein { grid-column: 1 / -1; }
+.champ { display: grid; gap: 4px; min-width: 0; }
+.champ > label, .champ > .lib { font-size: 12.5px; color: var(--discret); }
+.saisie-u { position: relative; }
+.saisie-u input { width: 100%; padding: 9px 38px 9px 11px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); font-variant-numeric: tabular-nums; }
+.saisie-u input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--or) 60%, transparent); outline-offset: 0; border-color: var(--or); }
+.saisie-u i { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--discret); font-size: 12.5px; pointer-events: none; }
+select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); }
+.aide { font-size: 12px; color: var(--discret); margin: 0; }
+.seg { display: flex; background: var(--section); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { flex: 1; border: 0; background: none; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--discret); }
+.seg button.on { background: var(--carte); color: var(--texte); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.case { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+.case input { width: 18px; height: 18px; accent-color: var(--bleu); }
+.associes { display: grid; gap: 8px; }
+.associe { display: grid; grid-template-columns: 1fr 86px 92px 32px; gap: 6px; align-items: end; }
+.associe input[type=text] { width: 100%; padding: 9px 10px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); }
+.mini { border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+.mini.x { padding: 0; height: 38px; color: var(--rouge); }
+
+/* ---------- résultats ---------- */
+.choix-montages { display: flex; flex-wrap: wrap; gap: 6px; }
+.puce { border: 1px solid var(--bordure); background: var(--carte); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
+.puce i { width: 10px; height: 10px; border-radius: 5px; background: var(--c); display: inline-block; }
+.puce.on { border-color: var(--bleu); background: var(--bleu-doux); font-weight: 600; }
+.puce:not(.on) { color: var(--discret); }
+.puce:not(.on) i { opacity: .35; }
+.tableau { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tableau th, .tableau td { padding: 8px 10px; border-bottom: 1px solid var(--bordure); text-align: right; white-space: nowrap; }
+.tableau th:first-child, .tableau td:first-child { text-align: left; white-space: normal; }
+.tableau thead th { font-size: 12px; color: var(--discret); font-weight: 600; vertical-align: bottom; }
+.tableau thead th b { display: block; color: var(--texte); font-size: 13.5px; }
+.tableau thead th i { display: inline-block; width: 10px; height: 10px; border-radius: 5px; background: var(--c); margin-right: 5px; }
+.tableau td.top { color: var(--vert); font-weight: 600; }
+.tableau tr.fort td { font-weight: 600; background: var(--section); }
+.tableau tr.fort td.top { background: color-mix(in srgb, var(--vert) 14%, var(--section)); }
+.tableau td small { display: block; color: var(--discret); font-weight: 400; font-size: 11px; }
+.defile { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.graphes { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; }
+.graphe svg { width: 100%; height: auto; display: block; }
+.graphe text { font: 11px var(--ui); fill: var(--discret); }
+.graphe .val { fill: var(--texte); font-weight: 600; }
+.legende { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--discret); margin-top: 6px; }
+.legende span { display: inline-flex; align-items: center; gap: 5px; }
+.legende i { width: 12px; height: 3px; background: var(--c); display: inline-block; border-radius: 2px; }
+.onglets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.onglets button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+.onglets button.on { background: var(--bleu); border-color: var(--bleu); color: var(--carte); font-weight: 600; }
+.chiffres { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.chiffre { background: var(--section); border-radius: 10px; padding: 8px 10px; }
+.chiffre span { display: block; font-size: 11.5px; color: var(--discret); }
+.chiffre b { font: 600 18px var(--titre); color: var(--bleu); font-variant-numeric: lining-nums tabular-nums; }
+.revente { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; font-variant-numeric: tabular-nums; margin-top: 12px; padding: 12px; border: 1px dashed var(--bordure); border-radius: 10px; }
+.revente .t { grid-column: 1 / -1; font: 600 16px var(--titre); color: var(--bleu); }
+.revente span { color: var(--discret); }
+.revente b { text-align: right; }
+.revente .total { border-top: 1px solid var(--bordure); padding-top: 6px; }
+.alertes { display: grid; gap: 6px; }
+.alerte { border-left: 3px solid var(--or); background: var(--or-doux); padding: 8px 10px; border-radius: 0 8px 8px 0; font-size: 13px; }
+.alerte b { color: var(--bleu); }
+.limites { font-size: 12px; color: var(--discret); }
+
+/* ---------- réglages ---------- */
+.voile { position: fixed; inset: 0; background: rgba(10,20,25,.45); z-index: 40; display: flex; align-items: flex-start; justify-content: center; padding: 5vh 14px; }
+.fen { background: var(--fond); width: min(640px, 100%); max-height: 90vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.fen header { display: flex; align-items: center; gap: 10px; background: #0c2d39; color: #fff; padding: 12px 16px; }
+.fen header h3 { color: #fff; font-size: 19px; flex: 1; }
+.fen header button { border: 0; background: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1; }
+.fen .corps { padding: 14px 16px 18px; overflow-y: auto; display: grid; gap: 14px; }
+.fen h4 { margin: 4px 0 -4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--discret); }
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: #0c2d39; color: #fff; padding: 10px 16px; border-radius: 10px; opacity: 0; transition: .2s; z-index: 60; pointer-events: none; max-width: 90vw; }
+#toast.on { opacity: 1; transform: translateX(-50%); }
+
+/* ---------- téléphone : un onglet Saisie / Résultats ---------- */
+@media (max-width: 980px) {
+  main { grid-template-columns: minmax(0, 1fr); padding: 10px 12px calc(30px + env(safe-area-inset-bottom, 0px)); }
+  .seg.bascule { display: flex; position: sticky; top: 58px; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,.06); }
+  body:not(.voir-resultats) .resultats, body.voir-resultats .saisie { display: none; }
+  .graphes { grid-template-columns: 1fr; }
+  .chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .haut-in { padding: 8px 12px; gap: 10px; }
+  .marque small, .meilleur, .bt-h span { display: none; }
+  .actions { margin-left: auto; }
+  .bt-h { padding: 8px 9px; }
+  .grille { grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .associe { grid-template-columns: 1fr 70px 80px 32px; }
+  .menu-export { right: 10px; top: 54px; }
+  .tableau th, .tableau td { padding: 7px 8px; }
+  /* le comparatif défile de côté ; la colonne des libellés reste en place */
+  .tableau td small { display: none; }
+  .tableau th:first-child, .tableau td:first-child { position: sticky; left: 0; z-index: 1; background: var(--carte); min-width: 128px; box-shadow: 1px 0 0 var(--bordure); }
+  .tableau tr.fort td:first-child { background: var(--section); }
+}
+
+/* ---------- impression (PDF) : seulement le rapport ---------- */
+#impression { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm 12mm; }
+  body { background: #fff; color: #111; font-size: 11px; }
+  header.haut, main, .bascule, #toast, .voile, .menu-export, .ls-voile { display: none !important; }
+  #impression { display: block; }
+  #impression h1 { font-size: 24px; color: #0c2d39; margin-bottom: 2px; }
+  #impression h2 { font-size: 16px; color: #0c2d39; margin: 16px 0 6px; break-after: avoid; }
+  #impression .sous { color: #555; margin: 0 0 12px; }
+  #impression .tableau th, #impression .tableau td { padding: 4px 6px; border-color: #ccc; }
+  #impression .tableau thead th { color: #333; }
+  #impression .page { break-before: page; }
+  #impression .hyp { columns: 2; column-gap: 24px; font-size: 10.5px; }
+  #impression .hyp div { display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 2px 0; break-inside: avoid; }
+  #impression .graphe text { fill: #444; }
+  #impression .alerte { background: #f6f0e3; }
+}
+</style>
+</head>
+<body>
+
+<header class="haut">
+  <div class="haut-in">
+    <a class="marque" href="../" title="Retour à Mes applis"><img src="icone-192.png" alt=""><div><b>Investissement immobilier</b><small>Comparateur de montages · règles 2026</small></div></a>
+    <div class="meilleur" id="meilleur"></div>
+    <div class="actions">
+      <button class="bt-h" id="bExport" type="button" title="Exporter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg><span>Exporter</span></button>
+      <button class="bt-h" id="bRegl" type="button" title="Réglages fiscaux"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>Réglages</span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="seg bascule" role="tablist">
+    <button type="button" class="on" data-voir="saisie">Saisie</button>
+    <button type="button" data-voir="resultats">Résultats</button>
+  </div>
+  <section class="saisie" id="saisie"></section>
+  <section class="resultats" id="resultats"></section>
+</main>
+<div id="impression"></div>
+<div id="toast" role="status"></div>
+
+<!-- lien-suivi : début (module commun, voir lien-suivi.source.js à la racine du dépôt) -->
+<script>
+window.LIEN_SUIVI = {
+  cle: "immo-dossiers-v1",
+  cles: ["immo-etat"],
+  nomAuto: function (d) {                         // nom proposé : le prix du bien
+    var x = d["immo-etat"]; return x && x.prix ? "bien de " + Math.round(x.prix).toLocaleString("fr-FR") + " €" : "";
+  },
+  vierge: null,                                   // nouvelle simulation : les valeurs par défaut de l'appli
+  bouton: function () {
+    var b = document.createElement("button"); b.className = "bt-h"; b.type = "button";
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg><span class="ls-nom">Simulations</span>';
+    var a = document.querySelector("header.haut .actions"); if (!a) return null; a.prepend(b); return b;
+  }
+};
+// =====================================================================================
+//  Lien avec le Suivi des dossiers — module commun, recopié tel quel dans pvi/ et succession/
+//  (chaque appli reste autonome : ce bloc est collé dans sa page, entre les repères
+//   « lien-suivi : début » et « lien-suivi : fin ». Modifier ici, puis recopier.)
+// -------------------------------------------------------------------------------------
+//  Ce qu'il fait :
+//   • plusieurs simulations enregistrées dans l'appli (au lieu d'une seule) ;
+//   • chacune peut être rattachée à un client du Suivi ;
+//   • le Suivi lit ces simulations (même site, même mémoire du navigateur), les enregistre
+//     dans suivi_gp.json (donc GitHub et vos autres appareils), et les montre dans la fiche du client ;
+//   • le Suivi peut ouvrir une simulation précise : adresse « …/pvi/?ouvrir=IDENTIFIANT ».
+//  Comment : l'appli garde son travail en cours dans ses propres clés (ex. « pvi-etat ») ;
+//  ce module recopie ces clés dans la simulation ouverte, toutes les secondes et demie.
+//  Rangement : localStorage[cle] = { courant: id, liste: { id: { nom, maj, data, client, nomFixe } }, effaces: { id: date } }
+//  (même forme que les dossiers de l'Audit, « audit-dossiers-v1 »)
+// =====================================================================================
+(function () {
+  var C = window.LIEN_SUIVI;            // réglages propres à l'appli, posés juste avant ce bloc
+  if (!C) return;
+  var CLE = C.cle;
+  var maintenant = function () { return new Date().toISOString(); };
+  var uid = function () { return "S" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); };
+  function lire() {
+    try { var s = JSON.parse(localStorage.getItem(CLE)); if (s && s.liste) { s.effaces = s.effaces || {}; return s; } } catch (e) {}
+    return { courant: null, liste: {}, effaces: {} };
+  }
+  function ecrire(s) { try { localStorage.setItem(CLE, JSON.stringify(s)); } catch (e) {} }
+  // le travail en cours de l'appli, tel qu'elle le range elle-même
+  function natif() {
+    var o = {};
+    C.cles.forEach(function (k) { var v = null; try { v = JSON.parse(localStorage.getItem(k)); } catch (e) {} o[k] = v; });
+    return o;
+  }
+  function poserNatif(data) {
+    C.cles.forEach(function (k) {
+      var v = data ? data[k] : null;
+      try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+    });
+  }
+  function nomPar(rec) {
+    if (rec.nomFixe) return rec.nom;
+    var auto = rec.data ? C.nomAuto(rec.data) : "";
+    if (auto && rec.client && auto.toLowerCase() === rec.client.toLowerCase()) auto = "";
+    return rec.client ? rec.client + (auto ? " · " + auto : "") : (auto || (rec.nom !== "Nouvelle simulation" && rec.nom) || "Simulation");
+  }
+
+  // ---- 1. au démarrage, AVANT l'appli : on pose la simulation demandée (ou la dernière ouverte) ----
+  var s = lire();
+  var demande = null;
+  try { demande = new URLSearchParams(location.search).get("ouvrir"); } catch (e) {}
+  if (demande && s.liste[demande]) s.courant = demande;
+  if (!s.courant || !s.liste[s.courant]) {
+    // première fois : le travail en cours devient la première simulation
+    var n = natif(), plein = C.cles.some(function (k) { return n[k] != null; });
+    var id0 = uid();
+    s.liste[id0] = { nom: "Simulation", maj: maintenant(), data: plein ? n : null };
+    s.liste[id0].nom = nomPar(s.liste[id0]);
+    s.courant = id0;
+  }
+  var courant = s.courant;
+  var rec = s.liste[courant];
+  if (rec.data == null && C.vierge) rec.data = C.vierge(rec);
+  rec.nom = nomPar(rec);
+  poserNatif(rec.data);
+  ecrire(s);
+  if (demande) try { history.replaceState(null, "", location.pathname + location.hash); } catch (e) {}
+  var vu = JSON.stringify(natif());
+
+  // ---- 2. en continu : ce que l'appli a changé part dans la simulation ouverte ----
+  var parti = false;   // on change de simulation : la page va se recharger, plus rien à recopier
+  function capter() {
+    if (parti) return;
+    var n = natif(), j = JSON.stringify(n);
+    if (j === vu) return;
+    vu = j;
+    var s = lire(), r = s.liste[courant];
+    if (!r) { if (s.effaces[courant]) return; r = { nom: "Simulation" }; }   // retirée ailleurs pendant qu'on travaillait : on la garde
+    r.data = n; r.maj = maintenant(); r.nom = nomPar(r);
+    s.liste[courant] = r; s.courant = courant;
+    ecrire(s); majBouton();
+  }
+  setInterval(capter, 1500);
+  addEventListener("pagehide", capter);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) capter(); });
+  // le Suivi (ou une autre fenêtre) a écrit : client changé, ou version plus récente reçue de GitHub
+  addEventListener("storage", function (e) {
+    if (e.key !== CLE) return;
+    var r = lire().liste[courant];
+    if (r && r.data && JSON.stringify(r.data) !== vu && JSON.stringify(r.data) !== JSON.stringify(natif())) {
+      capter();   // d'abord ce qu'on a en cours…
+      var r2 = lire().liste[courant];
+      if (r2 && JSON.stringify(r2.data) !== vu) { parti = true; poserNatif(r2.data); location.reload(); return; }   // …puis la version reçue
+    }
+    majBouton(); if (voile && voile.parentNode) dessiner();
+  });
+
+  // ---- 3. clients connus du Suivi (lus dans sa mémoire, sur ce navigateur) ----
+  function clientsSuivi() {
+    var noms = {};
+    try {
+      var d = JSON.parse(localStorage.getItem("suivi-gp-donnees")) || {};
+      // d'abord les noms des dossiers (écrits comme dans le Suivi), puis les clients sans dossier
+      (d.dossiers || []).forEach(function (x) { if (x && x.client) { var k = String(x.client).trim(); if (!noms[k.toLowerCase()]) noms[k.toLowerCase()] = k; } });
+      Object.keys(d.clients || {}).forEach(function (k) { if (!noms[k.trim().toLowerCase()]) noms[k.trim().toLowerCase()] = k.trim(); });
+    } catch (e) {}
+    return Object.keys(noms).map(function (k) { return noms[k]; }).sort(function (a, b) { return a.localeCompare(b, "fr"); });
+  }
+
+  // ---- 4. le bouton « Simulations » et sa fenêtre ----
+  var bouton = null, voile = null;
+  var h = function (tag, attrs, enfants) {
+    var e = document.createElement(tag);
+    for (var k in (attrs || {})) { if (k === "onclick" || k === "oninput" || k === "onchange") e[k] = attrs[k]; else if (attrs[k] != null && attrs[k] !== false) e.setAttribute(k, attrs[k]); }
+    [].concat(enfants || []).forEach(function (c) { if (c != null && c !== false) e.append(c); });
+    return e;
+  };
+  function majBouton() {
+    if (!bouton) return;
+    var r = lire().liste[courant] || {};
+    bouton.querySelector(".ls-nom").textContent = r.client ? "👤 " + r.client : "Simulations";
+    bouton.title = (r.nom || "Simulation") + (r.client ? " — rattachée à " + r.client : " — pas rattachée à un client");
+  }
+  function ouvrir(id, nouvelle) {
+    capter();
+    var s = lire();
+    if (nouvelle) {
+      id = uid();
+      s.liste[id] = { nom: "Nouvelle simulation", maj: maintenant(), data: null, client: nouvelle.client || "" };
+    }
+    s.courant = id; ecrire(s);
+    var r = s.liste[id];
+    if (r.data == null && C.vierge) r.data = C.vierge(r);
+    if (r.data != null) ecrire(s);
+    parti = true;
+    poserNatif(r.data);
+    location.reload();
+  }
+  function dessiner() {
+    var s = lire(), r = s.liste[courant] || {};
+    var clients = clientsSuivi();
+    var dl = h("datalist", { id: "ls-clients" }, clients.map(function (n) { return h("option", { value: n }); }));
+    var champNom = h("input", { type: "text", value: r.nom || "", placeholder: "Nom de la simulation" });
+    champNom.onchange = function () { var s = lire(), x = s.liste[courant]; if (!x) return; x.nom = champNom.value.trim() || nomPar(Object.assign({}, x, { nomFixe: false })); x.nomFixe = !!champNom.value.trim(); x.maj = maintenant(); ecrire(s); majBouton(); };
+    var champClient = h("input", { type: "text", value: r.client || "", list: "ls-clients", placeholder: clients.length ? "Choisir un client du Suivi…" : "Nom du client" });
+    var lier = function (nom) {
+      var s = lire(), x = s.liste[courant]; if (!x) return;
+      var connu = clients.find(function (c) { return c.toLowerCase() === nom.toLowerCase(); });
+      x.client = connu || nom; x.maj = maintenant(); x.nom = nomPar(x); ecrire(s); majBouton(); dessiner();
+    };
+    var autres = Object.keys(s.liste).filter(function (id) { return id !== courant; })
+      .sort(function (a, b) { return String(s.liste[b].maj || "").localeCompare(String(s.liste[a].maj || "")); });
+    var date = function (x) { return x.maj ? new Date(x.maj).toLocaleDateString("fr-FR") : ""; };
+    var fen = h("div", { class: "ls-fen", role: "dialog", "aria-modal": "true", "aria-label": "Simulations" }, [
+      h("div", { class: "ls-tete" }, [h("b", null, "Simulations"), h("button", { type: "button", class: "ls-x", "aria-label": "Fermer", onclick: fermer }, "×")]),
+      h("div", { class: "ls-corps" }, [
+        h("p", { class: "ls-titre" }, "Simulation ouverte"),
+        h("label", { class: "ls-champ" }, [h("span", null, "Nom"), champNom]),
+        h("label", { class: "ls-champ" }, [h("span", null, "Client du Suivi"), champClient, dl]),
+        h("div", { class: "ls-ligne-bt" }, [
+          h("button", { type: "button", class: "ls-bt ls-plein", onclick: function () { var v = champClient.value.trim(); if (v) lier(v); } }, r.client ? "Changer de client" : "Rattacher"),
+          r.client ? h("button", { type: "button", class: "ls-bt", onclick: function () { lier(""); } }, "Détacher") : null]),
+        h("p", { class: "ls-aide" }, clients.length
+          ? "La simulation apparaîtra dans la fiche du client, dans le Suivi, et sera enregistrée avec votre fichier de suivi."
+          : "Ouvrez le Suivi une fois sur ce navigateur pour retrouver ici la liste de vos clients."),
+        h("button", { type: "button", class: "ls-bt ls-large", onclick: function () { ouvrir(null, { client: "" }); } }, "＋ Nouvelle simulation"),
+        r.client ? h("button", { type: "button", class: "ls-bt ls-large", onclick: function () { ouvrir(null, { client: r.client }); } }, "＋ Nouvelle simulation pour " + r.client) : null,
+        autres.length ? h("p", { class: "ls-titre" }, "Autres simulations") : null,
+        h("div", { class: "ls-liste" }, autres.map(function (id) {
+          var x = s.liste[id];
+          return h("div", { class: "ls-item" }, [
+            h("button", { type: "button", class: "ls-ouvrir", onclick: function () { ouvrir(id); } }, [h("b", null, x.nom || "Simulation"), h("small", null, (x.client ? "👤 " + x.client + " · " : "") + date(x))]),
+            h("button", { type: "button", class: "ls-suppr", title: "Supprimer", "aria-label": "Supprimer", onclick: function () {
+              if (!confirm("Supprimer « " + (x.nom || "Simulation") + " » ?\nElle sera aussi retirée de votre fichier de suivi (et de vos autres appareils).")) return;
+              var s = lire(); delete s.liste[id]; s.effaces[id] = maintenant(); ecrire(s); dessiner();
+            } }, "🗑")]);
+        }))])]);
+    voile.replaceChildren(fen);
+  }
+  function fermer() { if (voile) voile.remove(); }
+  function panneau() {
+    capter();
+    voile = voile || h("div", { class: "ls-voile", onclick: function (e) { if (e.target === voile) fermer(); } });
+    document.body.append(voile);
+    dessiner();
+  }
+  addEventListener("keydown", function (e) { if (e.key === "Escape" && voile && voile.parentNode) fermer(); });
+  function installer() {
+    var st = document.createElement("style");
+    st.textContent = [
+      ".ls-voile{position:fixed;inset:0;z-index:9999;background:rgba(10,20,25,.42);display:flex;align-items:flex-start;justify-content:center;padding:6vh 14px 14px;font-size:14px;line-height:1.4}",
+      ".ls-fen{background:#fbfaf7;color:#1c2a30;width:min(480px,100%);max-height:86vh;display:flex;flex-direction:column;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden;font-family:inherit}",
+      ".ls-tete{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#0c2d39;color:#fff}.ls-tete b{font-size:17px}",
+      ".ls-x{border:0;background:none;color:#fff;font-size:24px;line-height:1;cursor:pointer;padding:0 4px}",
+      ".ls-corps{padding:12px 16px 16px;overflow-y:auto;display:grid;gap:8px}",
+      ".ls-titre{margin:6px 0 0;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#7c7466;font-weight:600}",
+      ".ls-champ{display:grid;gap:3px}.ls-champ span{font-size:12px;color:#7c7466}",
+      ".ls-champ input{font:inherit;font-size:15px;padding:9px 11px;border:1px solid #d9d2c4;border-radius:10px;background:#fff;color:inherit;width:100%;box-sizing:border-box}",
+      ".ls-ligne-bt{display:flex;gap:8px;flex-wrap:wrap}",
+      ".ls-bt{font:inherit;font-size:14px;border:1px solid #d9d2c4;background:#fff;color:#0c2d39;border-radius:10px;padding:8px 12px;cursor:pointer}",
+      ".ls-plein{background:#0c2d39;border-color:#0c2d39;color:#fff}.ls-large{width:100%;text-align:left}",
+      ".ls-aide{margin:0;font-size:12px;color:#7c7466}",
+      ".ls-liste{display:grid;gap:6px}.ls-item{display:flex;gap:6px}",
+      ".ls-ouvrir{flex:1;min-width:0;text-align:left;display:grid;gap:1px;font:inherit;border:1px solid #e2dacb;background:#fff;border-radius:10px;padding:8px 10px;cursor:pointer;color:inherit}",
+      ".ls-ouvrir b{font-weight:600;color:#0c2d39;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ls-ouvrir small{font-size:12px;color:#7c7466}",
+      ".ls-suppr{width:40px;border:1px solid #e2dacb;background:#fff;border-radius:10px;cursor:pointer}",
+      ".ls-bouton .ls-nom{max-width:16ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}",
+      "@media (prefers-color-scheme: dark){.ls-fen{background:#16262d;color:#e8e3d9}.ls-champ input,.ls-bt,.ls-ouvrir,.ls-suppr{background:#0f1b20;border-color:#27404a;color:#e8e3d9}.ls-ouvrir b,.ls-bt{color:#e8e3d9}.ls-plein{background:#3d6f80;border-color:#3d6f80}}",
+      "@media (max-width:700px){.ls-voile{align-items:flex-end;padding:0}.ls-fen{border-radius:18px 18px 0 0;max-height:88vh}.ls-bouton .ls-nom{display:none!important}}"
+    ].join("\n");
+    document.head.append(st);
+    bouton = C.bouton();          // l'appli fabrique le bouton à son image
+    if (!bouton) return;
+    bouton.classList.add("ls-bouton");
+    bouton.onclick = panneau;
+    majBouton();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+  window.lienSuivi = { ouvrirPanneau: panneau, courant: function () { return courant; } };
+})();
+</script>
+<!-- lien-suivi : fin -->
+<script src="moteur.js"></script>
+<script>
+"use strict";
+// =====================================================================================
+//  1. OUTILS
+// =====================================================================================
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// lit un nombre saisi « à la française » : espaces de milliers, virgule ; « 250k », « 1,2M » acceptés
+function lireNombre(v) {
+  let t = String(v ?? "").trim().toLowerCase().replace(/[\s  €%]/g, "").replace(",", ".");
+  let mult = 1;
+  if (/k$/.test(t)) { mult = 1e3; t = t.slice(0, -1); } else if (/m$/.test(t)) { mult = 1e6; t = t.slice(0, -1); }
+  const x = parseFloat(t);
+  return isFinite(x) ? x * mult : 0;
+}
+const eur = (n) => isFinite(n) ? Math.round(n).toLocaleString("fr-FR") + " €" : "–";
+const eurS = (n) => isFinite(n) ? (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(Math.round(n)).toLocaleString("fr-FR") + " €" : "–";
+const pct = (x, d = 1) => x == null || !isFinite(x) ? "–" : (x * 100).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }) + " %";
+const stock = { lire(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, ecrire(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2400); }
+const COULEURS = { nuMicro: "var(--c3)", nuReel: "var(--c1)", lmnpMicro: "var(--c5)", lmnpReel: "var(--c2)", sciIR: "var(--c4)", sciIS: "var(--c6)" };
+const COUL_HEX = { nuMicro: "4F7F8F", nuReel: "0C2D39", lmnpMicro: "6F8F4E", lmnpReel: "A77D2F", sciIR: "C86B4A", sciIS: "8A6BB5" };
+
+// =====================================================================================
+//  2. LE PROJET : valeurs par défaut et description des champs
+// =====================================================================================
+const DEFAUT = {
+  prix: 200000, neuf: false, fraisAuto: true, frais: 16000, travaux: 15000, natureTravaux: "entretien", mobilier: 8000, terrain: 15,
+  loyerNu: 850, loyerMeuble: 980, vacance: 0.5, copro: 1200, taxeFonciere: 1100, pno: 150, gestion: 0, cfe: 250,
+  revalLoyer: 1.5, revalCharges: 2,
+  apport: 30000, taux: 3.4, duree: 20, assurance: 0.25,
+  tmi: 30, associes: [{ nom: "Associé 1", parts: 50, tmi: 30 }, { nom: "Associé 2", parts: 50, tmi: 30 }],
+  comptaLMNP: 450, comptaSCI: 600, comptaIS: 1500, constitution: 1500, distribuer: false,
+  horizon: 15, revalPrix: 1.5, fraisCession: 0,
+  montages: ["nuMicro", "nuReel", "lmnpMicro", "lmnpReel", "sciIR", "sciIS"]
+};
+let h = Object.assign({}, DEFAUT, stock.lire("immo-etat", {}));
+let R = Object.assign({}, Moteur.REGLAGES_DEFAUT, stock.lire("immo-reglages", {}));
+let res = {}, detail = h.detail || "nuReel";
+
+// un champ numérique : [clé, libellé, unité, aide]
+const F = (cle, lib, unite, aide, cls) => ({ cle, lib, unite, aide, cls });
+const SECTIONS = [
+  { id: "bien", titre: "Le bien", resume: () => eur(h.prix) + (h.travaux ? " + " + eur(h.travaux) + " de travaux" : ""), champs: [
+    { seg: "neuf", lib: "Type", options: [[false, "Ancien"], [true, "Neuf (VEFA)"]] },
+    F("prix", "Prix d'achat (net vendeur)", "€"),
+    { cle: "frais", lib: "Frais d'acquisition", unite: "€", auto: "fraisAuto", aide: "Calcul auto : 8 % dans l'ancien, 2,5 % dans le neuf." },
+    F("travaux", "Travaux à l'achat", "€"),
+    { seg: "natureTravaux", lib: "Nature des travaux", options: [["entretien", "Entretien, réparation, amélioration"], ["amelioration", "Construction, agrandissement"]], plein: true,
+      aide: "Les premiers se déduisent des loyers (nu) ou en charges (meublé, IS) ; les seconds s'amortissent (meublé, IS) ou s'ajoutent au prix de revient." },
+    F("mobilier", "Mobilier (meublé seulement)", "€"),
+    F("terrain", "Part du terrain (non amortissable)", "%", "Souvent 15 à 20 % ; davantage en centre-ville.")
+  ] },
+  { id: "loyers", titre: "Loyers et charges", resume: () => eur(h.loyerNu) + " nu · " + eur(h.loyerMeuble) + " meublé /mois", champs: [
+    F("loyerNu", "Loyer nu, hors charges", "€/mois"),
+    F("loyerMeuble", "Loyer meublé, hors charges", "€/mois"),
+    F("vacance", "Vacance locative", "mois/an"),
+    F("gestion", "Frais de gestion", "% loyers"),
+    F("copro", "Charges de copro. non récupérables", "€/an"),
+    F("taxeFonciere", "Taxe foncière", "€/an"),
+    F("pno", "Assurance propriétaire non occupant", "€/an"),
+    F("cfe", "CFE (meublé)", "€/an"),
+    F("revalLoyer", "Hausse des loyers", "%/an"),
+    F("revalCharges", "Hausse des charges", "%/an")
+  ] },
+  { id: "pret", titre: "Financement", resume: () => eur(h.apport) + " d'apport · " + String(h.taux).replace(".", ",") + " % sur " + h.duree + " ans", champs: [
+    F("apport", "Apport", "€"),
+    F("taux", "Taux du prêt", "%"),
+    F("duree", "Durée", "ans"),
+    F("assurance", "Assurance emprunteur", "%/an", "En % du capital emprunté, par an.")
+  ] },
+  { id: "foyer", titre: "Fiscalité des investisseurs", resume: () => "TMI " + h.tmi + " %" + ((h.associes || []).length ? " · " + h.associes.length + " associé" + (h.associes.length > 1 ? "s" : "") : ""), champs: [
+    { select: "tmi", lib: "Tranche marginale d'imposition (en direct)", options: [0, 11, 30, 41, 45].map((x) => [x, x + " %"]), plein: true },
+    { associes: true },
+    F("comptaLMNP", "Comptable LMNP (réel)", "€/an"),
+    F("comptaSCI", "Frais annuels SCI à l'IR", "€/an"),
+    F("comptaIS", "Comptable SCI à l'IS", "€/an"),
+    F("constitution", "Création de la SCI", "€"),
+    { caseCle: "distribuer", lib: "SCI à l'IS : distribuer chaque année le bénéfice (sinon : mis en réserve, et remboursement du compte courant)", plein: true }
+  ] },
+  { id: "revente", titre: "Revente", resume: () => "dans " + h.horizon + " ans", champs: [
+    F("horizon", "Durée de détention", "ans"),
+    F("revalPrix", "Valorisation du bien", "%/an"),
+    F("fraisCession", "Frais de vente (diagnostics, agence…)", "% prix")
+  ] }
+];
+
+// =====================================================================================
+//  3. LA SAISIE
+// =====================================================================================
+const formatSaisie = (v) => v === "" || v == null ? "" : (Math.abs(v) >= 1000 ? Math.round(v * 100) / 100 : v).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+function champHTML(c) {
+  if (c.seg) return `<div class="champ ${c.plein ? "plein" : ""}"><span class="lib">${esc(c.lib)}</span><div class="seg">${c.options.map(([v, l]) => `<button type="button" data-seg="${c.seg}" data-val='${JSON.stringify(v)}' class="${h[c.seg] === v ? "on" : ""}">${esc(l)}</button>`).join("")}</div>${c.aide ? `<p class="aide">${esc(c.aide)}</p>` : ""}</div>`;
+  if (c.select) return `<div class="champ ${c.plein ? "plein" : ""}"><label for="s-${c.select}">${esc(c.lib)}</label><select id="s-${c.select}" data-select="${c.select}">${c.options.map(([v, l]) => `<option value="${v}" ${+h[c.select] === +v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>`;
+  if (c.caseCle) return `<label class="case plein"><input type="checkbox" data-case="${c.caseCle}" ${h[c.caseCle] ? "checked" : ""}> ${esc(c.lib)}</label>`;
+  if (c.associes) return `<div class="champ plein"><span class="lib">Associés de la SCI (parts et TMI de chacun)</span><div class="associes" id="associes"></div><button type="button" class="mini" id="ajoutAssocie" style="justify-self:start">＋ Associé</button></div>`;
+  const auto = c.auto && h[c.auto];
+  const valeur = auto ? Math.round(h.prix * (h.neuf ? 0.025 : 0.08)) : h[c.cle];
+  return `<div class="champ ${c.plein ? "plein" : ""}"><label for="c-${c.cle}">${esc(c.lib)}</label>
+    <div class="saisie-u"><input id="c-${c.cle}" data-cle="${c.cle}" inputmode="decimal" autocomplete="off" value="${esc(formatSaisie(valeur))}" ${auto ? "readonly" : ""}><i>${esc(c.unite)}</i></div>
+    ${c.auto ? `<label class="case" style="font-size:12px"><input type="checkbox" data-case="${c.auto}" ${auto ? "checked" : ""}> calcul automatique</label>` : ""}
+    ${c.aide && !c.auto ? `<p class="aide">${esc(c.aide)}</p>` : c.aide ? `<p class="aide">${esc(c.aide)}</p>` : ""}</div>`;
+}
+function dessinerSaisie() {
+  const ouverts = h.ouverts || ["bien", "loyers", "pret"];
+  $("saisie").innerHTML = SECTIONS.map((s, i) => `<details class="carte" data-section="${s.id}" ${ouverts.includes(s.id) ? "open" : ""}>
+      <summary><span class="num">${i + 1}</span><h2>${esc(s.titre)}</h2><span class="resume" data-resume="${s.id}">${esc(s.resume())}</span></summary>
+      <div class="corps"><div class="grille">${s.champs.map(champHTML).join("")}</div></div></details>`).join("")
+    + `<p class="aide" style="padding:0 4px">Astuce : tapez « 250k » ou « 1,2M » dans les montants.</p>`;
+  dessinerAssocies();
+}
+function dessinerAssocies() {
+  const z = $("associes"); if (!z) return;
+  const tmis = [0, 11, 30, 41, 45];
+  z.innerHTML = (h.associes || []).map((a, i) => `<div class="associe" data-i="${i}">
+      <div class="champ"><span class="lib">Nom</span><input type="text" data-asso="nom" value="${esc(a.nom)}"></div>
+      <div class="champ"><span class="lib">Parts</span><div class="saisie-u"><input data-asso="parts" inputmode="decimal" value="${esc(formatSaisie(a.parts))}"><i>%</i></div></div>
+      <div class="champ"><span class="lib">TMI</span><select data-asso="tmi">${tmis.map((t) => `<option value="${t}" ${+a.tmi === t ? "selected" : ""}>${t} %</option>`).join("")}</select></div>
+      <button type="button" class="mini x" data-suppr-asso="${i}" aria-label="Retirer" ${h.associes.length < 2 ? "disabled" : ""}>✕</button></div>`).join("");
+  const total = (h.associes || []).reduce((s, a) => s + (+a.parts || 0), 0);
+  if (Math.round(total) !== 100) z.insertAdjacentHTML("beforeend", `<p class="aide" style="color:var(--rouge)">Total des parts : ${total.toLocaleString("fr-FR")} % (les calculs les ramènent à 100 %).</p>`);
+}
+function majResumes() { for (const s of SECTIONS) { const e = document.querySelector(`[data-resume="${s.id}"]`); if (e) e.textContent = s.resume(); } }
+let attente;
+function changer() {
+  stock.ecrire("immo-etat", h);
+  majResumes();
+  clearTimeout(attente); attente = setTimeout(calculer, 120);
+}
+$("saisie").addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.cle) { h[t.dataset.cle] = lireNombre(t.value); if (t.dataset.cle === "prix" && h.fraisAuto) { const f = $("c-frais"); if (f) f.value = formatSaisie(Math.round(h.prix * (h.neuf ? 0.025 : 0.08))); } changer(); }
+  else if (t.dataset.asso) { const i = +t.closest(".associe").dataset.i; const a = h.associes[i]; a[t.dataset.asso] = t.dataset.asso === "nom" ? t.value : lireNombre(t.value); changer(); }
+});
+$("saisie").addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.dataset.cle) t.value = formatSaisie(h[t.dataset.cle]);
+  if (t.dataset.select) { h[t.dataset.select] = +t.value; changer(); }
+  if (t.dataset.asso === "tmi") { h.associes[+t.closest(".associe").dataset.i].tmi = +t.value; changer(); }
+  if (t.dataset.asso === "parts") dessinerAssocies();
+  if (t.dataset.case) { h[t.dataset.case] = t.checked; if (t.dataset.case === "fraisAuto") { if (!t.checked) h.frais = Math.round(h.prix * (h.neuf ? 0.025 : 0.08)); dessinerSaisie(); } changer(); }
+});
+$("saisie").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.seg) { h[b.dataset.seg] = JSON.parse(b.dataset.val); dessinerSaisie(); changer(); }
+  if (b.id === "ajoutAssocie") { h.associes.push({ nom: "Associé " + (h.associes.length + 1), parts: 0, tmi: h.tmi }); dessinerAssocies(); changer(); }
+  if (b.dataset.supprAsso != null) { h.associes.splice(+b.dataset.supprAsso, 1); dessinerAssocies(); changer(); }
+});
+$("saisie").addEventListener("toggle", (e) => {
+  if (!e.target.matches("details")) return;
+  h.ouverts = [...document.querySelectorAll("#saisie details[open]")].map((d) => d.dataset.section);
+  stock.ecrire("immo-etat", h);
+}, true);
+
+// =====================================================================================
+//  4. LES RÉSULTATS
+// =====================================================================================
+const MONTAGES = Moteur.MONTAGES;
+const nomM = (id) => MONTAGES.find((m) => m.id === id).nom;
+const courtM = (id) => MONTAGES.find((m) => m.id === id).court;
+// lignes du comparatif : [libellé, valeur, format, sens (+1 : plus c'est mieux), aide, fort]
+const LIGNES = [
+  ["Coût total de l'opération", (r) => r.coutTotal, eur, 0, "prix, frais, travaux (et mobilier en meublé)"],
+  ["Montant emprunté", (r) => r.emprunt, eur, 0],
+  ["Mensualité (prêt + assurance)", (r) => r.mensualite, eur, 0],
+  ["Effort d'épargne moyen", (r) => r.effortMensuel, (x) => (x > 0 ? eur(x) : "aucun (" + eur(-x) + " de gain)") + " /mois", -1, "ce que vous ajoutez chaque mois, après impôts, sur toute la durée"],
+  ["Impôts pendant la détention", (r) => r.impotsDetention, eur, -1, "impôt sur le revenu, prélèvements sociaux, IS, flat tax"],
+  ["Impôts à la revente", (r) => r.impotRevente, eur, -1, "plus-value, ou IS et liquidation"],
+  ["Net en poche à la revente", (r) => r.netRevente, eur, +1, "après remboursement du prêt et impôts"],
+  ["Enrichissement net", (r) => r.enrichissement, eurS, +1, "net à la revente − apport − efforts d'épargne", true],
+  ["Rendement de l'apport (TRI)", (r) => r.tri, (x) => pct(x, 2), +1, "taux de rendement interne de vos versements", true]
+];
+function calculer() {
+  res = Moteur.calculerTout(h, R);
+  dessinerResultats();
+}
+function meilleurId() {
+  const ids = Object.keys(res); if (!ids.length) return null;
+  return ids.reduce((a, b) => res[b].enrichissement > res[a].enrichissement ? b : a);
+}
+function dessinerResultats() {
+  const ids = MONTAGES.map((m) => m.id).filter((id) => res[id]);
+  const best = meilleurId();
+  $("meilleur").innerHTML = best ? `<span>Meilleur enrichissement</span><b>${esc(courtM(best))} · ${eurS(res[best].enrichissement)}</b>` : "";
+  if (!ids.includes(detail)) detail = ids[0];
+  const puces = MONTAGES.map((m) => `<button type="button" class="puce ${h.montages.includes(m.id) ? "on" : ""}" data-montage="${m.id}" style="--c:${COULEURS[m.id]}" aria-pressed="${h.montages.includes(m.id)}"><i></i>${esc(m.court)}</button>`).join("");
+  $("resultats").innerHTML = `
+    <div class="carte"><h2>Montages comparés</h2><div class="corps"><div class="choix-montages">${puces}</div></div></div>
+    ${ids.length ? `
+    <div class="carte"><h2>Comparatif sur ${h.horizon} ans</h2><div class="corps defile">${tableauComparatif(ids, best)}</div></div>
+    <div class="graphes">
+      <div class="carte graphe"><h2>Enrichissement net</h2><div class="corps">${grapheBarres(ids)}</div></div>
+      <div class="carte graphe"><h2>Trésorerie cumulée</h2><div class="corps">${grapheCourbes(ids)}<p class="aide">Apport, puis efforts ou gains de chaque année, après impôts (avant la revente).</p></div></div>
+    </div>
+    <div class="carte"><h2>Détail par montage</h2><div class="corps">
+      <div class="onglets">${ids.map((id) => `<button type="button" data-detail="${id}" class="${id === detail ? "on" : ""}">${esc(courtM(id))}</button>`).join("")}</div>
+      ${detailMontage(detail)}
+    </div></div>
+    <div class="carte"><h2>Points de vigilance</h2><div class="corps"><div class="alertes">${vigilance(ids).map((a) => `<div class="alerte"><b>${esc(a[0])}</b> · ${esc(a[1])}</div>`).join("")}</div></div></div>
+    <p class="limites">${LIMITES}</p>` : `<p class="aide">Choisissez au moins un montage.</p>`}`;
+}
+const LIMITES = "Simulation indicative, à affiner avec un conseil. L'impôt sur le revenu est calculé à la tranche marginale saisie (sans recalcul du barème, du quotient familial ni des plafonnements). Achat au 1er janvier de l'année 1, revente le 31 décembre de la dernière année, prêt soldé à la revente sans indemnité. Taux et barèmes : menu Réglages.";
+function tableauComparatif(ids, best) {
+  const tete = `<thead><tr><th></th>${ids.map((id) => `<th style="--c:${COULEURS[id]}"><b><i></i>${esc(courtM(id))}</b>${id === best ? "★ le meilleur" : ""}</th>`).join("")}</tr></thead>`;
+  const corps = LIGNES.map(([lib, f, fmt, sens, aide, fort]) => {
+    const vals = ids.map((id) => f(res[id]));
+    const valides = vals.filter((v) => v != null && isFinite(v));
+    const cible = sens > 0 ? Math.max(...valides) : sens < 0 ? Math.min(...valides) : null;
+    return `<tr class="${fort ? "fort" : ""}"><td>${esc(lib)}${aide ? `<small>${esc(aide)}</small>` : ""}</td>${vals.map((v) => `<td class="${sens && v === cible && ids.length > 1 ? "top" : ""}">${esc(fmt(v))}</td>`).join("")}</tr>`;
+  }).join("");
+  return `<table class="tableau">${tete}<tbody>${corps}</tbody></table>`;
+}
+// graphique en barres : enrichissement net par montage
+function grapheBarres(ids) {
+  const L = 360, H = 30 * ids.length + 20, g = 92;
+  const vals = ids.map((id) => res[id].enrichissement);
+  const max = Math.max(1, ...vals.map(Math.abs)), neg = vals.some((v) => v < 0);
+  const zero = neg ? g + (L - g - 70) * (Math.abs(Math.min(0, ...vals)) / (max + Math.abs(Math.min(0, ...vals)))) : g;
+  const ech = (L - zero - 70) / max;
+  return `<svg viewBox="0 0 ${L} ${H}" role="img" aria-label="Enrichissement net par montage">
+    <line x1="${zero}" y1="4" x2="${zero}" y2="${H - 8}" stroke="var(--bordure)"/>
+    ${ids.map((id, i) => { const v = vals[i], w = Math.abs(v) * ech, y = 10 + i * 30;
+      return `<text x="0" y="${y + 14}">${esc(courtM(id))}</text><rect x="${v >= 0 ? zero : zero - w}" y="${y}" width="${Math.max(1, w)}" height="20" rx="4" fill="${COULEURS[id]}"/>
+        <text class="val" x="${v >= 0 ? zero + w + 6 : zero + 6}" y="${y + 14}">${esc(eurS(v))}</text>`; }).join("")}</svg>`;
+}
+// graphique en courbes : trésorerie cumulée de chaque montage, année par année
+function grapheCourbes(ids) {
+  const L = 520, H = 240, gx = 62, gy = 14, bas = H - 26;
+  const N = h.horizon;
+  const series = ids.map((id) => [-res[id].apport, ...res[id].tresorerieCumulee]);
+  const tout = series.flat(); const min = Math.min(0, ...tout), max = Math.max(0, ...tout);
+  const X = (a) => gx + (L - gx - 10) * a / N, Y = (v) => gy + (bas - gy) * (max - v) / ((max - min) || 1);
+  const pas = Math.pow(10, Math.floor(Math.log10(((max - min) || 1) / 4))), unite = [1, 2, 5, 10].map((k) => k * pas).find((u) => (max - min) / u <= 5) || pas * 10;
+  const graduations = []; for (let v = Math.ceil(min / unite) * unite; v <= max; v += unite) graduations.push(v);
+  const ansG = []; const pasA = N <= 10 ? 1 : N <= 20 ? 2 : 5; for (let a = 0; a <= N; a += pasA) ansG.push(a);
+  return `<svg viewBox="0 0 ${L} ${H}" role="img" aria-label="Trésorerie cumulée">
+    ${graduations.map((v) => `<line x1="${gx}" x2="${L - 10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--bordure)" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/><text x="${gx - 6}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v / 1000).toLocaleString("fr-FR")} k€</text>`).join("")}
+    ${ansG.map((a) => `<text x="${X(a)}" y="${H - 8}" text-anchor="middle">${a === 0 ? "achat" : "an " + a}</text>`).join("")}
+    ${series.map((s, i) => `<polyline fill="none" stroke="${COULEURS[ids[i]]}" stroke-width="2.4" stroke-linejoin="round" points="${s.map((v, a) => X(a) + "," + Y(v)).join(" ")}"/>`).join("")}
+  </svg><div class="legende">${ids.map((id) => `<span style="--c:${COULEURS[id]}"><i></i>${esc(courtM(id))}</span>`).join("")}</div>`;
+}
+// le détail d'un montage : chiffres clés, tableau année par année, revente
+function detailMontage(id) {
+  const r = res[id]; if (!r) return "";
+  const estIS = id === "sciIS";
+  const tete = ["Année", "Loyers", "Charges", "Intérêts et assurance", estIS || id === "lmnpReel" ? "Amortissements" : null, "Résultat", estIS ? "IS + flat tax" : "Impôts (IR + PS)", "Cash-flow après impôts", estIS ? "Compte courant" : null, "Capital restant dû"].filter(Boolean);
+  const lignes = r.lignes.map((l) => [l.a, eur(l.loyers), eur(l.charges), eur(l.interets), estIS || id === "lmnpReel" ? eur(l.amort) : null, eurS(l.resultat), eurS(l.impot), eurS(l.cashflow), estIS ? eur(l.cca) : null, eur(l.crd)].filter((x) => x !== null));
+  return `<div class="chiffres">
+      <div class="chiffre"><span>Effort moyen</span><b>${r.effortMensuel > 0 ? eur(r.effortMensuel) : eur(0)}</b> /mois</div>
+      <div class="chiffre"><span>Impôts pendant la détention</span><b>${eur(r.impotsDetention)}</b></div>
+      <div class="chiffre"><span>Enrichissement net</span><b>${eurS(r.enrichissement)}</b></div>
+      <div class="chiffre"><span>TRI</span><b>${pct(r.tri, 2)}</b></div></div>
+    <div class="defile"><table class="tableau"><thead><tr>${tete.map((t) => `<th>${esc(t)}</th>`).join("")}</tr></thead>
+      <tbody>${lignes.map((l) => `<tr>${l.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    ${blocRevente(id, r)}`;
+}
+function blocRevente(id, r) {
+  const p = r.pv, L = [];
+  L.push(["Prix de revente estimé", eur(r.prixRevente)]);
+  if (id === "sciIS") {
+    L.push(["Valeur nette comptable (après " + eur(p.amortCumul) + " d'amortissements)", eur(p.vnc)], ["Plus-value imposable à l'IS", eur(p.brute)], ["IS sur la plus-value (après déficits)", eur(p.is)],
+      ["Comptes courants rendus aux associés (sans impôt)", eur(p.rendCCA)], ["Boni de liquidation", eur(p.boni)], ["Droit de partage", eur(p.droitPartage)], ["Flat tax sur le boni", eur(p.pfu)]);
+  } else {
+    L.push(["Prix de revient retenu (forfaits compris)", eur(p.prixRevient)]);
+    if (p.amortReintegres) L.push(["Amortissements réintégrés (LMNP, depuis 2025)", eur(p.amortReintegres)]);
+    L.push(["Plus-value brute", eur(Math.max(0, p.brute))], [`Impôt sur le revenu 19 % (abattement ${pct(p.abatIR, 0)})`, eur(p.ir)], [`Prélèvements sociaux (abattement ${pct(p.abatPS, 1)})`, eur(p.ps)]);
+    if (p.surtaxe) L.push(["Surtaxe sur plus-value élevée", eur(p.surtaxe)]);
+  }
+  L.push(["Capital restant dû remboursé", eur(r.crdFin)]);
+  return `<div class="revente"><span class="t">Revente dans ${h.horizon} ans</span>${L.map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join("")}
+    <span class="total">Net en poche</span><b class="total">${esc(eur(r.netRevente))}</b></div>`;
+}
+// points de vigilance, selon les montages affichés et les chiffres
+function vigilance(ids) {
+  const A = [], an1 = (id) => res[id] && res[id].lignes[0];
+  const loyerNuAn = (h.loyerNu || 0) * 12, loyerMeubleAn = (h.loyerMeuble || 0) * 12;
+  if (ids.includes("nuMicro") && loyerNuAn > R.microFoncierPlafond) A.push(["Micro-foncier", `loyers bruts de ${eur(loyerNuAn)} : au-delà de ${eur(R.microFoncierPlafond)}, le régime réel s'impose (tous biens nus du foyer confondus).`]);
+  if (ids.includes("nuReel") && res.nuReel.lignes.some((l) => l.economie > 0)) A.push(["Déficit foncier", `imputé sur le revenu global dans la limite de ${eur(R.deficitGlobal)} par an : le bien doit rester loué jusqu'au 31 décembre de la 3e année suivante, sinon l'avantage est repris.`]);
+  if (ids.includes("lmnpMicro") && loyerMeubleAn > R.microBICPlafond) A.push(["Micro-BIC", `recettes au-delà de ${eur(R.microBICPlafond)} : régime réel obligatoire.`]);
+  if ((ids.includes("lmnpReel") || ids.includes("lmnpMicro")) && loyerMeubleAn > R.seuilLMP) A.push(["Statut LMP", `recettes supérieures à ${eur(R.seuilLMP)} : si elles dépassent aussi les autres revenus d'activité du foyer, le loueur devient professionnel (cotisations sociales, plus-values professionnelles).`]);
+  if (ids.includes("lmnpReel")) A.push(["LMNP au réel", `les amortissements déduits (${eur(res.lmnpReel.pv.amortReintegres || 0)} ici) sont réintégrés dans la plus-value à la revente depuis 2025 (sauf résidences services). Les BIC supportent ${String(R.psBIC).replace(".", ",")} % de prélèvements sociaux. Prévoir un comptable.`]);
+  if (ids.includes("sciIR") && Math.round((h.associes || []).reduce((s, a) => s + (+a.parts || 0), 0)) !== 100) A.push(["SCI à l'IR", "le total des parts des associés n'est pas égal à 100 %."]);
+  if (ids.includes("sciIR")) A.push(["SCI à l'IR", "chaque associé est imposé sur sa quote-part, qu'il la perçoive ou non ; la SCI ne peut pas louer meublé de façon habituelle sans risquer l'IS."]);
+  if (ids.includes("sciIS")) A.push(["SCI à l'IS", `pas d'abattement pour durée de détention : la plus-value se calcule sur la valeur nette comptable, après amortissements (${eur(res.sciIS.pv.amortCumul)}). La sortie de l'argent passe par la flat tax (${String(R.pfu).replace(".", ",")} %), sauf le compte courant.`]);
+  if (h.horizon < 6) A.push(["Revente rapide", "avant 6 ans de détention, aucun abattement sur la plus-value des particuliers ; le forfait travaux de 15 % n'est pas ouvert avant 5 ans."]);
+  if (ids.some((id) => res[id].lignes.some((l) => l.note))) ids.forEach((id) => { const l = res[id].lignes.find((x) => x.note); if (l) A.push([courtM(id), l.note]); });
+  if (!A.length) A.push(["Rien de particulier", "aucun seuil dépassé avec ces chiffres."]);
+  return A.filter((a, i) => A.findIndex((b) => b[0] === a[0] && b[1] === a[1]) === i);
+}
+$("resultats").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.montage) {
+    const m = new Set(h.montages); m.has(b.dataset.montage) ? m.delete(b.dataset.montage) : m.add(b.dataset.montage);
+    h.montages = MONTAGES.map((x) => x.id).filter((id) => m.has(id)); changer();
+  }
+  if (b.dataset.detail) { detail = b.dataset.detail; h.detail = detail; stock.ecrire("immo-etat", h); dessinerResultats(); }
+});
+// téléphone : Saisie / Résultats
+document.querySelector(".bascule").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-voir]"); if (!b) return;
+  document.body.classList.toggle("voir-resultats", b.dataset.voir === "resultats");
+  document.querySelectorAll(".bascule button").forEach((x) => x.classList.toggle("on", x === b));
+  window.scrollTo(0, 0);
+});
+
+// =====================================================================================
+//  5. LES RÉGLAGES FISCAUX
+// =====================================================================================
+const REGL = [
+  ["Prélèvements sociaux", [["psFoncier", "Revenus fonciers", "%"], ["psBIC", "BIC du LMNP", "%"], ["psPV", "Plus-values immobilières", "%"], ["pfu", "Flat tax (dividendes, boni)", "%"]]],
+  ["Plus-value des particuliers", [["irPV", "Impôt sur le revenu", "%"], ["forfaitFrais", "Forfait frais d'acquisition", "%"], ["forfaitTravaux", "Forfait travaux (après 5 ans)", "%"]]],
+  ["Impôt sur les sociétés", [["isReduit", "Taux réduit", "%"], ["isSeuil", "Jusqu'à", "€"], ["isNormal", "Taux normal", "%"], ["droitPartage", "Droit de partage (liquidation)", "%"]]],
+  ["Régimes", [["microFoncierAbat", "Micro-foncier : abattement", "%"], ["microFoncierPlafond", "Micro-foncier : plafond", "€"], ["microBICAbat", "Micro-BIC : abattement", "%"], ["microBICPlafond", "Micro-BIC : plafond", "€"], ["deficitGlobal", "Déficit foncier sur revenu global", "€/an"], ["seuilLMP", "Seuil de recettes LMP", "€"]]],
+  ["Amortissements", [["dureeBati", "Bâti", "ans"], ["dureeTravaux", "Travaux", "ans"], ["dureeMobilier", "Mobilier", "ans"]]]
+];
+function ouvrirReglages() {
+  const v = document.createElement("div"); v.className = "voile";
+  v.innerHTML = `<div class="fen" role="dialog" aria-modal="true"><header><h3>Réglages fiscaux</h3><button type="button" data-ferme aria-label="Fermer">×</button></header>
+    <div class="corps">${REGL.map(([t, l]) => `<h4>${esc(t)}</h4><div class="grille">${l.map(([k, lib, u]) => `<div class="champ"><label>${esc(lib)}</label><div class="saisie-u"><input data-regl="${k}" inputmode="decimal" value="${esc(formatSaisie(R[k]))}"><i>${esc(u)}</i></div></div>`).join("")}</div>`).join("")}
+    <p class="aide">Valeurs 2026 par défaut (loi de finances et loi de financement de la Sécurité sociale pour 2026). Elles valent pour toutes vos simulations, sur cet appareil.</p>
+    <button type="button" class="mini" data-reset style="justify-self:start">↺ Valeurs par défaut</button></div></div>`;
+  document.body.append(v);
+  v.addEventListener("click", (e) => {
+    if (e.target === v || e.target.closest("[data-ferme]")) v.remove();
+    if (e.target.closest("[data-reset]")) { R = { ...Moteur.REGLAGES_DEFAUT }; stock.ecrire("immo-reglages", {}); v.remove(); calculer(); toast("Réglages d'origine rétablis."); }
+  });
+  v.addEventListener("input", (e) => { const k = e.target.dataset.regl; if (!k) return; R[k] = lireNombre(e.target.value); const diff = {}; for (const x in R) if (R[x] !== Moteur.REGLAGES_DEFAUT[x]) diff[x] = R[x]; stock.ecrire("immo-reglages", diff); calculer(); });
+}
+$("bRegl").addEventListener("click", ouvrirReglages);
+addEventListener("keydown", (e) => { if (e.key === "Escape") { document.querySelectorAll(".voile, .menu-export").forEach((x) => x.remove()); } });
+
+// =====================================================================================
+//  6. LES EXPORTS : PDF (impression), Excel, PowerPoint
+// =====================================================================================
+function infosSimulation() {
+  let client = "", nom = "";
+  try { const s = JSON.parse(localStorage.getItem("immo-dossiers-v1")); const r = s.liste[s.courant]; client = r.client || ""; nom = r.nom || ""; } catch (e) {}
+  return { client, nom, date: new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) };
+}
+const HYPOTHESES = () => [
+  ["Prix d'achat", eur(h.prix)], ["Frais d'acquisition", eur(h.fraisAuto ? h.prix * (h.neuf ? 0.025 : 0.08) : h.frais)], ["Travaux", eur(h.travaux) + (h.travaux ? (h.natureTravaux === "entretien" ? " (entretien, amélioration)" : " (construction)") : "")],
+  ["Mobilier (meublé)", eur(h.mobilier)], ["Loyer nu", eur(h.loyerNu) + " /mois"], ["Loyer meublé", eur(h.loyerMeuble) + " /mois"], ["Vacance", String(h.vacance).replace(".", ",") + " mois/an"],
+  ["Charges non récupérables", eur(h.copro) + " /an"], ["Taxe foncière", eur(h.taxeFonciere) + " /an"], ["Apport", eur(h.apport)], ["Prêt", String(h.taux).replace(".", ",") + " % sur " + h.duree + " ans"],
+  ["Tranche marginale (direct)", h.tmi + " %"], ["Associés de la SCI", (h.associes || []).map((a) => `${a.nom} ${a.parts} % (TMI ${a.tmi} %)`).join(", ")],
+  ["Hausse loyers / charges", String(h.revalLoyer).replace(".", ",") + " % / " + String(h.revalCharges).replace(".", ",") + " % par an"], ["Revente", "dans " + h.horizon + " ans, bien valorisé de " + String(h.revalPrix).replace(".", ",") + " %/an"]
+];
+// --- PDF : un rapport imprimable, tous montages détaillés
+function exporterPDF() {
+  const ids = Object.keys(res), info = infosSimulation(), best = meilleurId();
+  const garde = detail;
+  $("impression").innerHTML = `<h1>Investissement immobilier — comparatif des montages</h1>
+    <p class="sous">${info.client ? "Pour " + esc(info.client) + " · " : ""}${esc(info.date)}${info.nom && info.nom !== info.client ? " · " + esc(info.nom) : ""}</p>
+    <h2>Hypothèses</h2><div class="hyp">${HYPOTHESES().map(([a, b]) => `<div><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join("")}</div>
+    <h2>Comparatif sur ${h.horizon} ans</h2>${tableauComparatif(ids, best)}
+    <div class="graphes" style="display:grid;grid-template-columns:1fr 1.3fr;gap:16px;margin-top:10px"><div class="graphe">${grapheBarres(ids)}</div><div class="graphe">${grapheCourbes(ids)}</div></div>
+    <h2>Points de vigilance</h2><div class="alertes">${vigilance(ids).map((a) => `<div class="alerte"><b>${esc(a[0])}</b> · ${esc(a[1])}</div>`).join("")}</div>
+    ${ids.map((id) => `<div class="page"><h2>${esc(nomM(id))}</h2>${detailMontage(id)}</div>`).join("")}
+    <p class="limites" style="margin-top:14px">${LIMITES}</p>`;
+  detail = garde;
+  setTimeout(() => window.print(), 50);
+}
+// --- chargement d'une bibliothèque à la demande
+function charger(src) {
+  return new Promise((ok, ko) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => ko(new Error("chargement impossible : " + src)); document.head.append(s); });
+}
+function nomFichier(ext) { const i = infosSimulation(); return ("Investissement immobilier" + (i.client ? " - " + i.client : "") + "." + ext).replace(/[\\/:*?"<>|]/g, "-"); }
+function telecharger(blob, nom) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+// --- Excel : une feuille de synthèse, puis une feuille par montage
+async function exporterExcel() {
+  toast("Préparation du fichier Excel…");
+  await charger("vendor/exceljs.min.js");
+  const ids = Object.keys(res), info = infosSimulation();
+  const wb = new ExcelJS.Workbook(); wb.creator = "Investissement immobilier";
+  const ws = wb.addWorksheet("Synthèse", { views: [{ state: "frozen", ySplit: 0 }] });
+  const fmtE = '# ##0 "€";[Red]-# ##0 "€"';
+  ws.addRow(["Investissement immobilier — comparatif des montages"]).font = { bold: true, size: 14, color: { argb: "FF0C2D39" } };
+  ws.addRow([(info.client ? "Pour " + info.client + " · " : "") + info.date]);
+  ws.addRow([]);
+  ws.addRow(["Hypothèses"]).font = { bold: true };
+  HYPOTHESES().forEach(([a, b]) => ws.addRow([a, b]));
+  ws.addRow([]);
+  const tete = ws.addRow(["Comparatif sur " + h.horizon + " ans", ...ids.map(courtM)]);
+  tete.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  tete.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0C2D39" } }; });
+  for (const [lib, f, , , , ] of LIGNES) {
+    const row = ws.addRow([lib, ...ids.map((id) => { const v = f(res[id]); return v == null ? null : (lib.includes("TRI") ? v : Math.round(v)); })]);
+    row.eachCell((c, i) => { if (i > 1) c.numFmt = lib.includes("TRI") ? "0.00 %" : fmtE; });
+  }
+  ws.addRow([]);
+  ws.addRow(["Points de vigilance"]).font = { bold: true };
+  vigilance(ids).forEach(([a, b]) => ws.addRow([a, b]));
+  ws.addRow([]); ws.addRow([LIMITES]).font = { italic: true, size: 9 };
+  ws.getColumn(1).width = 42; for (let i = 2; i <= ids.length + 1; i++) ws.getColumn(i).width = 16;
+  for (const id of ids) {
+    const r = res[id], f = wb.addWorksheet(courtM(id).slice(0, 31));
+    f.addRow([nomM(id)]).font = { bold: true, size: 13, color: { argb: "FF0C2D39" } };
+    f.addRow([]);
+    const cols = ["Année", "Loyers", "Charges", "Intérêts et assurance", "Amortissements", "Résultat", "Imposable", "Impôts", "Cash-flow après impôts", "Capital restant dû"];
+    const t = f.addRow(cols); t.font = { bold: true, color: { argb: "FFFFFFFF" } }; t.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + COUL_HEX[id] } }; });
+    r.lignes.forEach((l) => { const row = f.addRow([l.a, l.loyers, l.charges, l.interets, l.amort, l.resultat, l.imposable, l.impot, l.cashflow, l.crd].map((v, i) => i ? Math.round(v) : v)); row.eachCell((c, i) => { if (i > 1) c.numFmt = fmtE; }); });
+    const tot = f.addRow(["Total", ...["loyers", "charges", "interets", "amort", "resultat", "imposable", "impot", "cashflow"].map((k) => Math.round(r.lignes.reduce((s, l) => s + l[k], 0))), null]);
+    tot.font = { bold: true }; tot.eachCell((c, i) => { if (i > 1) c.numFmt = fmtE; });
+    f.addRow([]);
+    f.addRow(["Revente"]).font = { bold: true };
+    f.addRow(["Prix de revente estimé", Math.round(r.prixRevente)]).getCell(2).numFmt = fmtE;
+    f.addRow(["Impôts à la revente", Math.round(r.impotRevente)]).getCell(2).numFmt = fmtE;
+    f.addRow(["Capital restant dû remboursé", Math.round(r.crdFin)]).getCell(2).numFmt = fmtE;
+    f.addRow(["Net en poche", Math.round(r.netRevente)]).getCell(2).numFmt = fmtE;
+    f.addRow(["Enrichissement net", Math.round(r.enrichissement)]).getCell(2).numFmt = fmtE;
+    const tr = f.addRow(["TRI", r.tri]); tr.getCell(2).numFmt = "0.00 %";
+    f.columns.forEach((c, i) => { c.width = i ? 16 : 26; });
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  telecharger(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nomFichier("xlsx"));
+  toast("Fichier Excel prêt.");
+}
+// --- PowerPoint : titre, hypothèses, comparatif, graphique, une diapositive par montage
+async function exporterPowerPoint() {
+  toast("Préparation de la présentation…");
+  await charger("vendor/pptxgen.bundle.js");
+  const ids = Object.keys(res), info = infosSimulation(), best = meilleurId();
+  const p = new PptxGenJS(); p.layout = "LAYOUT_WIDE"; p.title = "Investissement immobilier";
+  const BLEU = "0C2D39", OR = "A77D2F", GRIS = "7C7466", POL = "Calibri";
+  const titre = (s, t, st) => { s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: BLEU } }); s.addText(t, { x: 0.5, y: 0.12, w: 12.3, h: 0.66, fontFace: "Georgia", fontSize: 24, color: "FFFFFF", bold: true }); if (st) s.addText(st, { x: 0.5, y: 0.95, w: 12.3, h: 0.4, fontFace: POL, fontSize: 12, color: GRIS }); };
+  // 1. couverture
+  let s = p.addSlide(); s.background = { color: BLEU };
+  s.addText("Investissement immobilier", { x: 0.8, y: 2.2, w: 11.7, h: 1, fontFace: "Georgia", fontSize: 40, color: "FFFFFF", bold: true });
+  s.addText("Comparatif des montages sur " + h.horizon + " ans", { x: 0.8, y: 3.2, w: 11.7, h: 0.6, fontFace: POL, fontSize: 20, color: "E3C27F" });
+  s.addText((info.client ? "Pour " + info.client + " · " : "") + info.date, { x: 0.8, y: 4.1, w: 11.7, h: 0.5, fontFace: POL, fontSize: 14, color: "FFFFFF" });
+  // 2. hypothèses
+  s = p.addSlide(); titre(s, "Le projet");
+  const hyp = HYPOTHESES();
+  const moitie = Math.ceil(hyp.length / 2);
+  [hyp.slice(0, moitie), hyp.slice(moitie)].forEach((bloc, i) => s.addTable(bloc.map(([a, b]) => [{ text: a, options: { color: GRIS } }, { text: b, options: { bold: true, color: BLEU } }]),
+    { x: 0.5 + i * 6.3, y: 1.3, w: 6, colW: [2.6, 3.4], fontFace: POL, fontSize: 11, border: { type: "solid", pt: 0.5, color: "E2DACB" }, rowH: 0.36 }));
+  // 3. comparatif
+  s = p.addSlide(); titre(s, "Comparatif des montages", best ? "Meilleur enrichissement : " + courtM(best) : "");
+  const lignesT = [[{ text: "", options: { fill: { color: BLEU } } }, ...ids.map((id) => ({ text: courtM(id), options: { bold: true, color: "FFFFFF", fill: { color: COUL_HEX[id] }, align: "center" } }))]];
+  for (const [lib, f, fmt, sens, , fort] of LIGNES) {
+    const vals = ids.map((id) => f(res[id])), ok = vals.filter((v) => v != null && isFinite(v));
+    const cible = sens > 0 ? Math.max(...ok) : sens < 0 ? Math.min(...ok) : null;
+    lignesT.push([{ text: lib, options: { bold: !!fort, color: BLEU } }, ...vals.map((v) => ({ text: fmt(v), options: { align: "right", bold: !!fort || (sens && v === cible), color: sens && v === cible ? "2F7D5B" : "1C2A30" } }))]);
+  }
+  s.addTable(lignesT, { x: 0.5, y: 1.45, w: 12.3, colW: [3.3, ...ids.map(() => 9 / ids.length)], fontFace: POL, fontSize: 11, border: { type: "solid", pt: 0.5, color: "E2DACB" }, rowH: 0.42 });
+  // 4. graphiques
+  s = p.addSlide(); titre(s, "Enrichissement net et trésorerie");
+  s.addChart(p.ChartType.bar, [{ name: "Enrichissement net", labels: ids.map(courtM), values: ids.map((id) => Math.round(res[id].enrichissement)) }],
+    { x: 0.4, y: 1.2, w: 5.6, h: 5.6, barDir: "bar", catAxisLabelPos: "low", chartColors: ids.map((id) => COUL_HEX[id]), showValue: true, dataLabelFormatCode: '# ##0 "€"', valAxisLabelFormatCode: '# ##0', catAxisLabelFontSize: 11, valAxisLabelFontSize: 9, dataLabelFontSize: 10, showLegend: false });
+  const labels = ["achat", ...res[ids[0]].lignes.map((l) => "an " + l.a)];
+  s.addChart(p.ChartType.line, ids.map((id) => ({ name: courtM(id), labels, values: [-res[id].apport, ...res[id].tresorerieCumulee].map(Math.round) })),
+    { x: 6.2, y: 1.2, w: 6.8, h: 5.6, chartColors: ids.map((id) => COUL_HEX[id]), lineSize: 2, lineDataSymbol: "none", showLegend: true, legendPos: "b", valAxisLabelFormatCode: '# ##0', catAxisLabelFontSize: 9, valAxisLabelFontSize: 9,
+      showTitle: true, title: "Trésorerie cumulée (avant revente)", titleFontSize: 12 });
+  // 5. une diapositive par montage
+  for (const id of ids) {
+    const r = res[id]; s = p.addSlide(); titre(s, nomM(id));
+    const k = [["Effort moyen", (r.effortMensuel > 0 ? eur(r.effortMensuel) : eur(0)) + " /mois"], ["Impôts pendant la détention", eur(r.impotsDetention)], ["Impôts à la revente", eur(r.impotRevente)], ["Enrichissement net", eurS(r.enrichissement)], ["TRI", pct(r.tri, 2)]];
+    k.forEach(([a, b], i) => { s.addShape(p.ShapeType.roundRect, { x: 0.5 + i * 2.48, y: 1.2, w: 2.3, h: 1.1, fill: { color: "EFE9DE" }, rectRadius: 0.08, line: { color: "EFE9DE" } });
+      s.addText([{ text: a + "\n", options: { fontSize: 10, color: GRIS } }, { text: b, options: { fontSize: 17, bold: true, color: BLEU, fontFace: "Georgia" } }], { x: 0.6 + i * 2.48, y: 1.25, w: 2.1, h: 1, fontFace: POL, valign: "middle" }); });
+    const choix = r.lignes.filter((l) => l.a === 1 || l.a === 5 || l.a === 10 || l.a === 15 || l.a === 20 || l.a === r.lignes.length).slice(0, 6);
+    const tab = [["Année", "Loyers", "Charges", "Intérêts", "Résultat", "Impôts", "Cash-flow"].map((t) => ({ text: t, options: { bold: true, color: "FFFFFF", fill: { color: COUL_HEX[id] }, align: "center" } })),
+      ...choix.map((l) => [String(l.a), eur(l.loyers), eur(l.charges), eur(l.interets), eurS(l.resultat), eurS(l.impot), eurS(l.cashflow)].map((t, i) => ({ text: t, options: { align: i ? "right" : "center" } })))];
+    s.addTable(tab, { x: 0.5, y: 2.6, w: 7.6, fontFace: POL, fontSize: 10.5, border: { type: "solid", pt: 0.5, color: "E2DACB" }, rowH: 0.36 });
+    const pv = r.pv;
+    const rev = id === "sciIS"
+      ? [["Prix de revente", eur(r.prixRevente)], ["IS sur la plus-value", eur(pv.is)], ["Compte courant rendu", eur(pv.rendCCA)], ["Boni de liquidation", eur(pv.boni)], ["Flat tax et droit de partage", eur(pv.pfu + pv.droitPartage)], ["Net en poche", eur(r.netRevente)]]
+      : [["Prix de revente", eur(r.prixRevente)], ["Plus-value brute", eur(Math.max(0, pv.brute))], ["Impôt et prélèvements", eur(pv.total)], ["Capital restant dû", eur(r.crdFin)], ["Net en poche", eur(r.netRevente)]];
+    s.addText("Revente dans " + h.horizon + " ans", { x: 8.5, y: 2.55, w: 4.4, h: 0.4, fontFace: "Georgia", fontSize: 15, bold: true, color: BLEU });
+    s.addTable(rev.map(([a, b], i) => [{ text: a, options: { color: GRIS, bold: i === rev.length - 1 } }, { text: b, options: { align: "right", bold: i === rev.length - 1, color: BLEU } }]),
+      { x: 8.5, y: 3.0, w: 4.4, colW: [2.6, 1.8], fontFace: POL, fontSize: 11, border: { type: "solid", pt: 0.5, color: "E2DACB" }, rowH: 0.36 });
+  }
+  // 6. vigilance
+  s = p.addSlide(); titre(s, "Points de vigilance");
+  s.addText(vigilance(ids).map(([a, b]) => ({ text: a + " : " + b, options: { bullet: true, breakLine: true } })), { x: 0.6, y: 1.2, w: 12.1, h: 5.4, fontFace: POL, fontSize: 13, color: "1C2A30", valign: "top", paraSpaceAfter: 6 });
+  s.addText(LIMITES, { x: 0.6, y: 6.7, w: 12.1, h: 0.6, fontFace: POL, fontSize: 9, color: GRIS, italic: true });
+  await p.writeFile({ fileName: nomFichier("pptx") });
+  toast("Présentation prête.");
+}
+$("bExport").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const deja = document.querySelector(".menu-export"); if (deja) { deja.remove(); return; }
+  const m = document.createElement("div"); m.className = "menu-export";
+  m.innerHTML = `<button type="button" data-x="pdf">🖨<span>PDF imprimable<small>Rapport complet, tous les montages</small></span></button>
+    <button type="button" data-x="xlsx">📊<span>Excel<small>Synthèse et tableaux année par année</small></span></button>
+    <button type="button" data-x="pptx">📽<span>PowerPoint<small>Diapositives pour le rendez-vous client</small></span></button>`;
+  document.body.append(m);
+  m.addEventListener("click", async (ev) => {
+    const b = ev.target.closest("button"); if (!b) return; m.remove();
+    try { if (b.dataset.x === "pdf") exporterPDF(); else if (b.dataset.x === "xlsx") await exporterExcel(); else await exporterPowerPoint(); }
+    catch (er) { toast("Export impossible : " + er.message); }
+  });
+});
+document.addEventListener("click", (e) => { if (!e.target.closest(".menu-export")) document.querySelectorAll(".menu-export").forEach((x) => x.remove()); });
+
+// =====================================================================================
+//  7. DÉMARRAGE
+// =====================================================================================
+if (!Array.isArray(h.montages)) h.montages = DEFAUT.montages.slice();
+if (!Array.isArray(h.associes) || !h.associes.length) h.associes = DEFAUT.associes.map((a) => ({ ...a }));
+dessinerSaisie();
+calculer();
+stock.ecrire("immo-etat", h);
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
