@@ -24,18 +24,6 @@ et sur vos autres appareils, et les montre dans la fiche du client et dans son o
 - `lien-suivi.source.js` : le module commun de la Succession, de la Plus-value et de l’Investissement immobilier (recopié dans leur page,
   entre les repères `lien-suivi : début` et `lien-suivi : fin`). Il n’est pas chargé par le site lui-même.
 
-## Identifiant et mot de passe
-
-Le site est public mais ne contient aucune donnée : le fichier de suivi est dans le dépôt privé `suivi`, lisible
-seulement avec une clé d'accès GitHub. Le compte permet de retrouver cette clé avec un identifiant et un mot de passe,
-depuis n'importe quel appareil :
-
-- `suivi/comptes/<empreinte>.json` : les réglages GitHub (dont la clé) chiffrés par le mot de passe
-  (AES-GCM 256 bits, PBKDF2-SHA-256 600 000 tours). Le nom du fichier est une empreinte de l'identifiant.
-- Le Suivi demande toujours la connexion ; les simulateurs, dès qu'un compte a servi sur l'appareil.
-- Après un temps sans utilisation, les données gardées par le navigateur sont chiffrées avec la même clé.
-- `verrou.source.js` : le module commun, recopié au début de chaque appli (repères `verrou : début` / `verrou : fin`).
-
 ## Fichiers à la racine
 
 - `index.html` : la page d’accueil « Mes applis ».
