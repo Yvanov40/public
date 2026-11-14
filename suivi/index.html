@@ -2083,6 +2083,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     font-size: 16px; text-align: center; padding: 20px; }
   html.telephone .redresser span { font-size: 40px; }
 }
+/* tuile visée à l'ouverture (ex. le rendez-vous d'un dossier) */
+.tuile.mise-en-avant { outline: 3px solid var(--or); outline-offset: 1px; }
 </style>
 </head>
 <body>
@@ -3916,7 +3918,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       ...(rdv.length ? rdv.slice(0, 12).map(([e, d, i]) => {
         const jour = versDate(d.rdv);
         const quand = (e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`) + (d.rdv_heure ? " " + d.rdv_heure : "");
-        return el("button", { class: "pastille-rdv rdv-p" + (e === 0 ? " jour" : e === 1 ? " demain" : ""), onclick: () => ouvrirDossier(i) },
+        return el("button", { class: "pastille-rdv rdv-p" + (e === 0 ? " jour" : e === 1 ? " demain" : ""), onclick: () => ouvrirDossier(i, null, "Rendez-vous") },
           el("b", null, quand), d.client + (d.tache ? " · " + d.tache : ""));
       }) : (taches.length ? [] : [el("em", null, "Aucun rendez-vous prévu dans les 30 prochains jours.")])));
   }
@@ -4040,7 +4042,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       const jour = versDate(d.rdv);
       const quand = [e === 0 ? "Aujourd’hui" : e === 1 ? "Demain" : `${JOURS[jour.getDay()]} ${jour.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}`,
         d.rdv_heure ? el("small", { style: "display:block;font-weight:500" }, d.rdv_heure) : null];
-      return el("button", { class: "m-rdv", type: "button", onclick: () => (d._rdvClient ? ouvrirRdv(d.client, d._rdvClient) : ouvrirDossier(i)) },
+      return el("button", { class: "m-rdv", type: "button", onclick: () => (d._rdvClient ? ouvrirRdv(d.client, d._rdvClient) : ouvrirDossier(i, null, "Rendez-vous")) },
         el("div", { class: "m-rdv-date vert" + (e === 0 ? " jour" : e === 1 ? " demain" : "") }, quand),
         el("div", null, el("b", null, d.client), el("span", null, d._rdvClient ? ["RDV client", d.tache].filter(Boolean).join(" · ") : [d.tache, sansNumero(d.type)].filter(Boolean).join(" · "))));
     }) : [el("p", { class: "m-vide" }, "Aucun rendez-vous dans les 30 prochains jours.")]));
@@ -4913,7 +4915,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
         if (retenus && !correspondRecherche(d)) return;
-        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.rdv_objet, d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i),
+        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.rdv_objet, d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i, null, "Rendez-vous"),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
@@ -7199,7 +7201,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const f = fiche(nom);
     ouvrirDossier(-1, { client: nom, notaire: f.notaire || "", partenaire: f.partenaire || "", millionnaire: f.millionnaire || "", a_vie: f.a_vie || "" });
   }
-  function ouvrirDossier(i, modele) {
+  //   aller : la tuile à ouvrir directement (ex. "Rendez-vous" quand on vient d'un rendez-vous de l'accueil ou de l'agenda)
+  function ouvrirDossier(i, modele, aller) {
     enCours = i;
     const d = i >= 0 ? donnees.dossiers[i] : { client: "", type: "2. Analyse", debut: enIso(aujourdhui()), exercice: String(new Date().getFullYear()), ...(modele || {}) };
     const f = fiche(d.client);
@@ -7298,7 +7301,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
                 for (const n of ["rdv", "rdv_heure", "rdv_objet", "rdv_note"]) { const c = rdv.querySelector(`[name=${n}]`); if (c) { c.value = ""; c.dispatchEvent(new Event("input", { bubbles: true })); } }
                 informer("Rendez-vous retiré : enregistrez (ou fermez) la fiche pour valider.");
               } }, "Supprimer le rendez-vous") : null,
-              d.client ? el("button", { type: "button", onclick: () => ouvrirClient(d.client) }, "Tous les rendez-vous du client ›") : null));
+              d.client ? el("button", { type: "button", onclick: () => ouvrirClient(d.client, "Rendez-vous") }, "Tous les rendez-vous du client ›") : null));
           const lireRdv = (n) => rdv.querySelector(`[name=${n}]`).value;
           const lot = [];
           if (i >= 0 && d.client) lot.push({ libelle: "Tâches du client", contenu: el("div", null,
@@ -7326,7 +7329,20 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
           el("b", null, `${new Date(h.le).toLocaleDateString("fr-FR")} ${new Date(h.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`),
           ` · ${h.par || ""} · `, h.changements.map(([lib, a, b]) => lib === "Création" ? `création (${sansNumero(b)})` : `${lib} : ${valeurLisible(a)} → ${valeurLisible(b)}`).join(" ; "))))) : "",
       i >= 0 ? el("button", { class: "bouton rouge large", type: "button", onclick: supprimerDossier }, "Supprimer ce dossier") : "");
-    ouvrirFeuille("feuilleDossier", () => ouvrirDossier(i, modele));
+    ouvrirFeuille("feuilleDossier", () => ouvrirDossier(i, modele, aller));
+    if (aller) allerATuile("feuilleDossier", aller);
+  }
+  // ouvre une tuile d'une feuille et l'amène à l'écran (sans ouvrir le clavier du téléphone)
+  function allerATuile(idFeuille, libelle) {
+    const t = [...document.querySelectorAll(`#${idFeuille} .tuile`)].find((x) => (x.querySelector("small")?.textContent || "").replace(/^◆ /, "") === libelle);
+    if (!t) return;
+    if (!t.classList.contains("ouverte")) t.click();
+    if (estTel() && document.activeElement && document.activeElement.matches("textarea, input")) document.activeElement.blur();
+    requestAnimationFrame(() => {
+      const page = t.closest(".bloc-tuiles")?.querySelector(".tuile-page:not([hidden])") || t;
+      page.scrollIntoView({ block: "center", behavior: "smooth" });
+      t.classList.add("mise-en-avant"); setTimeout(() => t.classList.remove("mise-en-avant"), 1400);
+    });
   }
 
   // ---- liens, téléphones, e-mails et chemins dans les textes : ils deviennent cliquables ----
@@ -7617,7 +7633,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const auj = enIso(aujourdhui());
     const tous = rendezVousDuClient(nom);
     const avenir = tous.filter((r) => !rdvPasse(r)), passes = tous.filter(rdvPasse).reverse();
-    const ouvrir = (r) => (r.source === "client" ? ouvrirRdv(nom, r.id) : ouvrirDossier(r.i));
+    const ouvrir = (r) => (r.source === "client" ? ouvrirRdv(nom, r.id) : ouvrirDossier(r.i, null, "Rendez-vous"));
     const ligne = (r, classe = "") => el("button", { type: "button", class: "rdv-ligne " + classe, onclick: () => ouvrir(r) },
       el("span", { class: "quand" }, versDate(r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: r.date.slice(0, 4) !== auj.slice(0, 4) ? "numeric" : undefined }),
         r.heure ? el("small", null, plage(r.heure, r.duree || DUREE_RDV)) : null),
@@ -8478,7 +8494,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   }
 
   // ---------------------------------------------------------------- fiche client
-  function ouvrirClient(nom) {
+  function ouvrirClient(nom, aller) {   // aller : tuile à ouvrir directement (ex. "Rendez-vous")
     clientEnCours = nom;
     if (typeof noterRecent === "function") noterRecent(nom);
     $("enregistrerClient").hidden = false;
@@ -8525,7 +8541,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
         const c = carteDossier(i);
         return c;
       })));
-    ouvrirFeuille("feuilleClient", () => ouvrirClient(nom));
+    ouvrirFeuille("feuilleClient", () => ouvrirClient(nom, aller));
+    if (aller) allerATuile("feuilleClient", aller);
   }
   function enregistrerClient() {
     const v = lireFormulaire($("corpsClient"));
