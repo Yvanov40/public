@@ -2085,6 +2085,23 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 }
 /* tuile visée à l'ouverture (ex. le rendez-vous d'un dossier) */
 .tuile.mise-en-avant { outline: 3px solid var(--or); outline-offset: 1px; }
+/* agenda sur téléphone : le mois replié (bouton « Mois »), deux journées côte à côte */
+.btn-mois { display: none; }
+@media (max-width: 900px) {
+  .btn-mois { display: inline-flex; }
+  .btn-mois[aria-pressed="true"] { background: var(--bleu) !important; color: var(--carte) !important; border-color: var(--bleu) !important; }
+  .cal.mois-cache #calGrille { display: none; }
+  .cal-entete h2.titre-deux { text-transform: none; font-size: 20px; flex-basis: 100%; white-space: nowrap; }
+  .semaine.deux-jours { border-top: 0; }
+  .semaine.deux-jours .semaine-tete { padding: 6px 2px; }
+  .semaine.deux-jours .semaine-tete span { font-size: 13px; }
+  .semaine.deux-jours .semaine-tete b { font-size: 16px; }
+  .semaine.deux-jours .semaine-sans-heure .ev { font-size: 11.5px; white-space: normal; }
+  .semaine.deux-jours .frise-bloc { padding: 2px 5px; }
+  .semaine.deux-jours .frise-bloc b { font-size: 11.5px; white-space: normal; line-height: 1.2; }
+  .semaine.deux-jours .frise-bloc small { font-size: 10px; }
+  .semaine.deux-jours .semaine-axe span { right: 4px; font-size: 10px; }
+}
 </style>
 </head>
 <body>
@@ -5582,8 +5599,12 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   function afficherSemaine(ev) {
     const lundi = lundiDe(jourCalendrier);
     const jours = [...Array(7).keys()].map((k) => { const d = new Date(lundi); d.setDate(d.getDate() + k); return d; });
+    $("calSemaine").replaceChildren(grilleJours(ev, jours));
+  }
+  // des colonnes de jours, heure par heure (7 jours sur ordinateur, 2 jours sur téléphone)
+  function grilleJours(ev, jours, tel = false) {
     const auj = enIso(aujourdhui());
-    const pxMin = 0.95;
+    const pxMin = tel ? 1.05 : 0.95;
     const axe = el("div", { class: "semaine-axe", style: `height:${(FIN_FRISE - DEBUT_FRISE) * pxMin}px` },
       ...[...Array((FIN_FRISE - DEBUT_FRISE) / 60 + 1).keys()].map((k) => el("span", { style: `top:${k * 60 * pxMin}px` }, `${DEBUT_FRISE / 60 + k} h`)));
     const colonnes = jours.map((d) => {
@@ -5605,16 +5626,36 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
         })),
         friseJour(avecHeure, iso, true));
     });
-    const gabarit = `46px ${jours.map((d) => (jourTravaille(enIso(d)) ? "minmax(0, 1fr)" : "minmax(0, .5fr)")).join(" ")}`;
-    $("calSemaine").replaceChildren(el("div", { class: "semaine", style: `grid-template-columns:${gabarit}` }, el("div", { class: "semaine-axe-col" }, el("div", { class: "semaine-tete vide" }), el("div", { class: "semaine-sans-heure vide" }), axe), ...colonnes));
+    const gabarit = tel ? `34px ${jours.map(() => "minmax(0, 1fr)").join(" ")}` : `46px ${jours.map((d) => (jourTravaille(enIso(d)) ? "minmax(0, 1fr)" : "minmax(0, .5fr)")).join(" ")}`;
+    const grille = el("div", { class: "semaine" + (tel ? " deux-jours" : ""), style: `grid-template-columns:${gabarit}` }, el("div", { class: "semaine-axe-col" }, el("div", { class: "semaine-tete vide" }), el("div", { class: "semaine-sans-heure vide" }), axe), ...colonnes);
     // les zones « sans heure » ont la même hauteur dans toutes les colonnes, pour aligner les heures
     requestAnimationFrame(() => {
-      const zones = [...document.querySelectorAll(".semaine .semaine-sans-heure")];
+      const zones = [...grille.querySelectorAll(".semaine-sans-heure")];
       zones.forEach((z) => (z.style.minHeight = ""));
       const h = Math.max(...zones.map((z) => z.offsetHeight));
       zones.forEach((z) => (z.style.minHeight = h + "px"));
     });
+    return grille;
   }
+  // téléphone : le jour suivant affiché à côté (on saute les jours non travaillés où rien n'est prévu)
+  function jourSuivantUtile(iso, ev, sens = 1) {
+    const d = versDate(iso);
+    for (let n = 0; n < 10; n++) {
+      d.setDate(d.getDate() + sens);
+      const x = enIso(d);
+      if (jourTravaille(x) || (ev[x] || []).length) return x;
+    }
+    return enIso(d);
+  }
+  // téléphone : avancer ou reculer de deux jours
+  function changerDeuxJours(sens) {
+    const ev = evenementsCalendrier();
+    let x = jourCalendrier;
+    for (let k = 0; k < 2; k++) x = jourSuivantUtile(x, ev, sens);
+    changerJourCalendrier(Math.round((versDate(x) - versDate(jourCalendrier)) / 86400000));
+  }
+  // téléphone : le calendrier du mois est replié par défaut (bouton « Mois »)
+  let moisTel = (() => { try { return localStorage.getItem("suivi-gp-cal-mois-tel") === "1"; } catch (e) { return false; } })();
 
   // ---- fenêtre des horaires et congés ----
   let brouillonAgenda = null;
@@ -5723,14 +5764,22 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const titreMois = moisCalendrier.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
     const changerMois = (n) => { moisCalendrier = new Date(moisCalendrier.getFullYear(), moisCalendrier.getMonth() + n, 1); afficherCalendrier(); };
     const semaine = modeCalendrier === "semaine" && !estTel();
+    const tel = estTel(), moisCache = tel && !moisTel;
+    const j2 = tel ? jourSuivantUtile(jourCalendrier, ev) : null;
+    const court = (iso) => versDate(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+    const titreDeux = tel ? `${court(jourCalendrier)} – ${court(j2)} ${versDate(j2).toLocaleDateString("fr-FR", { month: "short" })}` : "";
     const changerSemaine = (n) => { const d = versDate(jourCalendrier); d.setDate(d.getDate() + 7 * n); jourCalendrier = enIso(d); moisCalendrier = new Date(d.getFullYear(), d.getMonth(), 1); afficherCalendrier(); };
     const lundi = lundiDe(jourCalendrier), dimanche = new Date(lundi); dimanche.setDate(dimanche.getDate() + 6);
     const titreSemaine = `Semaine du ${lundi.getDate()}${lundi.getMonth() !== dimanche.getMonth() ? " " + lundi.toLocaleDateString("fr-FR", { month: "long" }) : ""} au ${dimanche.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`;
     $("calEntete").replaceChildren(
-      el("h2", { class: semaine ? "titre-semaine" : null }, semaine ? titreSemaine : titreMois),
-      el("button", { type: "button", "aria-label": semaine ? "Semaine précédente" : "Mois précédent", onclick: () => (semaine ? changerSemaine(-1) : changerMois(-1)) }, "‹"),
+      el("h2", { class: semaine ? "titre-semaine" : moisCache ? "titre-deux" : null }, semaine ? titreSemaine : moisCache ? titreDeux : titreMois),
+      el("button", { type: "button", "aria-label": semaine ? "Semaine précédente" : moisCache ? "Jours précédents" : "Mois précédent", onclick: () => (semaine ? changerSemaine(-1) : moisCache ? changerDeuxJours(-1) : changerMois(-1)) }, "‹"),
       el("button", { type: "button", onclick: () => { const d = aujourdhui(); d.setDate(1); moisCalendrier = d; jourCalendrier = auj; afficherCalendrier(); } }, "Aujourd’hui"),
-      el("button", { type: "button", "aria-label": semaine ? "Semaine suivante" : "Mois suivant", onclick: () => (semaine ? changerSemaine(1) : changerMois(1)) }, "›"),
+      el("button", { type: "button", "aria-label": semaine ? "Semaine suivante" : moisCache ? "Jours suivants" : "Mois suivant", onclick: () => (semaine ? changerSemaine(1) : moisCache ? changerDeuxJours(1) : changerMois(1)) }, "›"),
+      tel ? el("button", { type: "button", class: "btn-mois", "aria-pressed": String(moisTel), onclick: () => {
+        moisTel = !moisTel; try { localStorage.setItem("suivi-gp-cal-mois-tel", moisTel ? "1" : "0"); } catch (e) {}
+        afficherCalendrier();
+      } }, moisTel ? "Masquer le mois" : "📅 Mois") : null,
       el("button", { type: "button", class: "btn-horaires", title: "Horaires et congés", onclick: ouvrirReglagesAgenda }, "⚙ Horaires"),
       el("div", { class: "cal-modes ordi" }, [["mois", "Mois"], ["semaine", "Semaine"]].map(([m, lib]) =>
         el("button", { type: "button", "aria-pressed": String(modeCalendrier === m), onclick: () => { modeCalendrier = m; memoriserFiltres(); afficherCalendrier(); } }, lib))),
@@ -5772,6 +5821,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     $("calGrille").replaceChildren(...cellules);
     // vue Semaine : la grille du mois et le détail du jour laissent la place aux sept colonnes
     document.querySelector(".cal").classList.toggle("mode-semaine", semaine);
+    document.querySelector(".cal").classList.toggle("mois-cache", moisCache);
     if (semaine) { afficherSemaine(ev); return; }
 
     // panneau du jour choisi + ajout d'une tâche + jours suivants
@@ -5804,6 +5854,21 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     for (let k = 1; k <= 14; k++) {
       const iso = enIso(new Date(jourChoisi.getFullYear(), jourChoisi.getMonth(), jourChoisi.getDate() + k));
       if (ev[iso]) suite.push([iso, ev[iso]]);
+    }
+    if (tel) {
+      // téléphone : deux journées côte à côte, puis les jours qui suivent
+      const apres = [];
+      for (let k = 1; k <= 14; k++) {
+        const iso = enIso(new Date(versDate(j2).getFullYear(), versDate(j2).getMonth(), versDate(j2).getDate() + k));
+        if (ev[iso]) apres.push([iso, ev[iso]]);
+      }
+      $("calPanneau").replaceChildren(
+        grilleJours(ev, [versDate(jourCalendrier), versDate(j2)], true),
+        el("p", { class: "aide", style: "margin:10px 0 0" }, "Glissez de côté pour changer de jours ; bouton + pour ajouter."),
+        apres.length ? el("div", { class: "cal-avenir" }, ...apres.map(([iso, l]) => el("div", null,
+          el("h4", null, versDate(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }), el("small", null, ` · ${l.length}`)),
+          el("div", { class: "cal-tuiles" }, l.map(ligne))))) : "");
+      return;
     }
     $("calPanneau").replaceChildren(
       el("h3", null, jourChoisi.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })),
@@ -6327,7 +6392,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     if (glisse || document.querySelector(".feuille.ouverte") || document.body.classList.contains("filtres-ouverts")) return;
     if (vueCourante() === "accueil" && doigtCible && doigtCible.closest(".acc-journee")) { changerJourJournee(dx < 0 ? 1 : -1); return; }
     if (vueCourante() === "calendrier" && doigtCible) {
-      if (doigtCible.closest("#calPanneau")) { changerJourCalendrier(dx < 0 ? 1 : -1); return; }
+      if (doigtCible.closest("#calPanneau")) { if (estTel()) changerDeuxJours(dx < 0 ? 1 : -1); else changerJourCalendrier(dx < 0 ? 1 : -1); return; }
       if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
     }
     if (vueCourante() === "outils" || vueCourante() === "simulations") return;  // ces onglets ne sont pas dans l'ordre de balayage
