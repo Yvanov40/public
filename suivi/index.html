@@ -9030,7 +9030,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
             el("button", { type: "button", "aria-label": "Monter", disabled: i === 0, onclick: () => deplacerCarte(i, -1) }, "↑"),
             el("button", { type: "button", "aria-label": "Descendre", disabled: i === ordreCartes.length - 1, onclick: () => deplacerCarte(i, 1) }, "↓"))))),
         el("button", { type: "button", class: "lien-sous-champ", onclick: () => { garder({ page: { ...window.PAGE_DEFAUT } }); if (donnees) afficherTout(); } }, "↺ Mise en page d’origine"),
-        el("p", { class: "aide" }, "Tout s’applique tout de suite, sur cet appareil seulement. Le fond choisi vaut pour le thème clair ; en thème sombre, les couleurs sont éclaircies pour rester lisibles. Les polices autres que celles d’origine demandent une connexion la première fois."),
+        el("p", { class: "aide" }, "Tout s’applique tout de suite, sur cet appareil seulement. Le fond choisi vaut pour le thème clair ; en thème sombre, les couleurs sont éclaircies pour rester lisibles. Les polices autres que celles d’origine demandent une connexion la première fois. Les autres applis (Audit, Succession, Plus-value, Investissement, Révision) reprennent cette apparence, sauf si vous leur en donnez une propre (bouton Apparence de chacune)."),
         el("div", { class: "actions-fiche" }, el("button", { type: "button", onclick: () => { try { localStorage.removeItem("suivi-gp-apparence"); } catch (e) {} window.appliquerApparence(); dessiner(); if (donnees) afficherTout(); informer("Apparence d’origine rétablie."); } }, "↺ Rétablir l’apparence d’origine")));
     };
     dessiner();

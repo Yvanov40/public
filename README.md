@@ -24,6 +24,15 @@ et sur vos autres appareils, et les montre dans la fiche du client et dans son o
 - `lien-suivi.source.js` : le module commun de la Succession, de la Plus-value et de l’Investissement immobilier (recopié dans leur page,
   entre les repères `lien-suivi : début` et `lien-suivi : fin`). Il n’est pas chargé par le site lui-même.
 
+## Apparence commune
+
+Les applis (Audit, Succession, Plus-value, Investissement, Révision) reprennent par défaut l'apparence du Suivi
+(couleurs, fond, polices, thème, taille, coins, relief). Le bouton « Apparence » de chacune ouvre le même panneau,
+qui permet aussi une apparence propre aux applis, commune à toutes.
+
+- `habillage.source.js` : le module commun, recopié au début de chaque appli (repères `habillage : début` / `habillage : fin`),
+  avec les correspondances entre les couleurs communes et les variables CSS de l'appli.
+
 ## Fichiers à la racine
 
 - `index.html` : la page d’accueil « Mes applis ».
