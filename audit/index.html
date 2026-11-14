@@ -3549,7 +3549,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
     var apres = JSON.stringify(fusion);
     if (apres !== avant) {
       state = normaliser(JSON.parse(apres)); dernier = JSON.stringify(state);
-      try { localStorage.setItem(STORE_KEY, dernier); dossiers.liste[dossiers.courant] = { nom: nomDossier(state), maj: new Date().toISOString(), data: state }; localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers)); } catch (e) { }
+      try { localStorage.setItem(STORE_KEY, dernier); dossiers.liste[dossiers.courant] = { nom: nomDossier(state), maj: new Date().toISOString(), data: state }; ecrireDossiers(); } catch (e) { }
       calculer(); rendre();
       if (messageSiChange) toast(messageSiChange);
     }
@@ -3591,13 +3591,44 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   }
   var DOSS_KEY = 'audit-dossiers-v1';
   var dossiers = (function () { try { return JSON.parse(localStorage.getItem(DOSS_KEY)) || null; } catch (e) { return null; } })() || { courant: null, liste: {} };
+  // Le Suivi des dossiers range aussi des dossiers ici (reçus de GitHub, ou créés depuis la fiche d'un client) :
+  // en écrivant, on reprend donc ceux qui sont arrivés entre-temps au lieu de les écraser.
+  var effacesIci = {};
+  function ecrireDossiers() {
+    try {
+      var ailleurs = (JSON.parse(localStorage.getItem(DOSS_KEY)) || {}).liste || {};
+      for (var k in ailleurs) {
+        if (effacesIci[k]) continue;
+        var ici = dossiers.liste[k];
+        if (!ici || (k !== dossiers.courant && String(ailleurs[k].maj || '') > String(ici.maj || ''))) dossiers.liste[k] = ailleurs[k];
+      }
+    } catch (e) { }
+    localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers));
+  }
+  // Le Suivi peut demander un dossier précis : …/audit/?ouvrir=IDENTIFIANT
+  (function () {
+    try {
+      var demande = new URLSearchParams(location.search).get('ouvrir');
+      if (!demande) return;
+      if (dossiers.liste[demande]) { dossiers.courant = demande; ecrireDossiers(); }
+      history.replaceState(null, '', location.pathname + location.hash);
+    } catch (e) { }
+  })();
+  // un dossier ajouté ou mis à jour par le Suivi pendant que l'Audit est ouvert : on le prend en mémoire
+  window.addEventListener('storage', function (e) {
+    if (e.key !== DOSS_KEY) return;
+    try {
+      var ailleurs = (JSON.parse(e.newValue) || {}).liste || {};
+      for (var k in ailleurs) if (!effacesIci[k] && k !== dossiers.courant && (!dossiers.liste[k] || String(ailleurs[k].maj || '') > String(dossiers.liste[k].maj || ''))) dossiers.liste[k] = ailleurs[k];
+    } catch (er) { }
+  });
   function nomDossier(d) { var n = [d.c1 && d.c1.nom, (d.situation === 'marie' || d.situation === 'pacs') && d.c2 && d.c2.nom !== (d.c1 && d.c1.nom) ? d.c2.nom : ''].filter(Boolean).join(' – '); return n ? n.toUpperCase() + (d.c1.prenom ? ' (' + d.c1.prenom + ')' : '') : 'Dossier sans nom'; }
   function sauver() {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify(state));
       if (!dossiers.courant) dossiers.courant = uid('D');
       dossiers.liste[dossiers.courant] = { nom: nomDossier(state), maj: new Date().toISOString(), data: state };
-      localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers));
+      ecrireDossiers();
     } catch (e) { }
     pousserLocal();
   }
@@ -3617,7 +3648,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
   function annuler() {
     if (!pile.length) return;
     state = normaliser(JSON.parse(pile.pop())); dernier = JSON.stringify(state); editeur = null;
-    try { localStorage.setItem(STORE_KEY, dernier); dossiers.liste[dossiers.courant] = { nom: nomDossier(state), maj: new Date().toISOString(), data: state }; localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers)); } catch (e) { }
+    try { localStorage.setItem(STORE_KEY, dernier); dossiers.liste[dossiers.courant] = { nom: nomDossier(state), maj: new Date().toISOString(), data: state }; ecrireDossiers(); } catch (e) { }
     pousserLocal();
     calculer(); rendre(); var bt = $('#annuler'); if (bt) bt.hidden = !pile.length; toast('Dernière modification annulée.');
   }
@@ -4611,7 +4642,7 @@ if (typeof module !== 'undefined') module.exports = XLSXOUT;
       }
       sauver(); calculer(); rendre(); toast(a === 'dupliquer-dossier' ? 'Dossier dupliqué et ouvert.' : 'Dossier ouvert.'); return;
     }
-    if (a === 'suppr-dossier') { if (!confirm('Supprimer définitivement ce dossier de ce navigateur ?')) return; delete dossiers.liste[b.dataset.id]; try { localStorage.setItem(DOSS_KEY, JSON.stringify(dossiers)); } catch (e) { } if (LOCAL) api('DELETE', 'dossiers/' + b.dataset.id).catch(function () { }); rendre(); return; }
+    if (a === 'suppr-dossier') { if (!confirm('Supprimer définitivement ce dossier de ce navigateur ?')) return; effacesIci[b.dataset.id] = 1; delete dossiers.liste[b.dataset.id]; try { ecrireDossiers(); } catch (e) { } if (LOCAL) api('DELETE', 'dossiers/' + b.dataset.id).catch(function () { }); rendre(); return; }
     if (a === 'prereglage-cabinet') { state.params = Object.assign(state.params || {}, { forfaitMobilier: false, abattementRP: false, decoteExistante: 0, revalImmo: 0, revalFinancier: 0, revalSociete: 0, ageMinPremierDeces: 81 }); calculer(); sauver(); rendre(); toast('Hypothèses du modèle Excel appliquées.'); return; }
     if (a === 'filtre-leviers') { filtreLeviers = b.dataset.f; rendre(); return; }
     if (a === 'bascule-param') { state.params = state.params || {}; state.params[b.dataset.p] = !P()[b.dataset.p]; memoriser(); calculer(); sauver(); rendre(); toast(state.params[b.dataset.p] ? 'Ajouté à la stratégie.' : 'Retiré de la stratégie.'); return; }

@@ -158,6 +158,8 @@
       if (window.majCouleursAgenda) window.majCouleursAgenda(a.cal);
       // ---- mise en page
       const pg = a.page;
+      pg.masques = (pg.masques || []).map((v) => v === "audit" ? "simulations" : v);
+      if (pg.ouverture === "audit") pg.ouverture = "simulations";
       r.classList.toggle("barre-haut", pg.menu === "haut");
       r.classList.toggle("bas-icones", pg.bas === "icones");
       r.classList.toggle("coins-droits", pg.coins === "droits");
@@ -1997,19 +1999,23 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
   #vue-dutreil > #dIndicateurs { top: 12px; }
 }
 
-/* ---------- Audit intégré ---------- */
-body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important; }
-#vue-audit:not([hidden]) { display: flex; flex-direction: column; gap: 8px; }
-.audit-barre { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.audit-barre b { font: 600 19px var(--titre); color: var(--bleu); }
-.audit-barre .aide { margin: 0; flex: 1; }
-.audit-barre a { text-decoration: none; }
-#auditFrame { width: 100%; height: calc(calc(100 * var(--vh, 1vh)) - 92px); border: 1px solid var(--bordure); border-radius: 12px; background: #fff; display: block; }
-@media (max-width: 900px) {
-  .audit-barre .aide { display: none; }
-  #auditFrame { height: calc(calc(100 * var(--vh, 1vh)) - 210px - env(safe-area-inset-bottom, 0px)); border-radius: 10px; }
-  body.vue-audit .fab { display: none; }
-}
+/* ---------- onglet Simulations : les filtres des dossiers n'y servent pas ---------- */
+body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none !important; }
+
+/* ---------- simulations (Audit, Succession, Plus-value) ---------- */
+#vue-simulations:not([hidden]) { display: grid; gap: 12px; align-content: start; }
+#vue-simulations .m-h2 { margin: 4px 0 0; font: 600 22px var(--titre); color: var(--bleu); }
+#vue-simulations > .aide { margin: 0; }
+.simu-applis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.simu-appli { display: grid; gap: 3px; align-content: start; text-align: left; border: 1px solid var(--bordure); background: var(--carte); border-radius: 14px; padding: 12px 14px; cursor: pointer; color: var(--texte); }
+.simu-appli .ic { font-size: 24px; } .simu-appli b { color: var(--bleu); font-size: 15px; } .simu-appli span:not(.ic) { color: var(--discret); font-size: 12.5px; }
+.simu-appli i { font-style: normal; color: var(--or); font-size: 12.5px; font-weight: 600; margin-top: 4px; }
+.simu-appli:hover { border-color: var(--bleu); }
+.simu-filtres { display: grid; gap: 8px; }
+.simu-filtres input[type=search] { max-width: 420px; width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); color: var(--texte); font: inherit; }
+@media (max-width: 900px) { .simu-ligne { flex-direction: column; align-items: stretch; gap: 0; padding: 4px; } .simu-ligne .audit-actions { flex-wrap: wrap; justify-content: flex-end; padding: 0 6px 4px; } .simu-ligne .audit-ouvrir { width: 100%; justify-items: start; } }
+.simu-nouvelles { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 900px) { .simu-applis { grid-template-columns: 1fr; } .simu-appli { grid-template-columns: auto 1fr; column-gap: 12px; } .simu-appli .ic { grid-row: span 3; align-self: center; } }
 
 /* ---------- audits dans la fiche client ---------- */
 .bloc-audits { display: grid; gap: 8px; }
@@ -2030,19 +2036,6 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 .jr-fleche:hover { border-color: var(--or); }
 .jr-auj { border: 1px solid var(--or); background: var(--or-doux); color: var(--bleu); border-radius: 14px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; }
 @media (max-width: 900px) { .jr-fleche { display: none; } }   /* téléphone : on glisse le doigt sur la carte */
-
-/* ---------- Audit dans le Suivi : sur téléphone, une seule barre en haut et une seule en bas (celle de l'Audit) ---------- */
-.audit-retour { display: none; }
-@media (max-width: 900px) {
-  body.vue-audit .entete, body.vue-audit nav.bas, body.vue-audit .fab, body.vue-audit .tirer-eclair { display: none !important; }
-  body.vue-audit main, body.vue-audit .contenu { padding: 0 !important; margin: 0 !important; }
-  #vue-audit:not([hidden]) { position: fixed; inset: 0; z-index: 25; gap: 0; background: var(--fond); padding-top: env(safe-area-inset-top, 0px); }
-  #vue-audit .audit-barre { flex-wrap: nowrap; gap: 8px; padding: 8px 10px; background: var(--barre); color: #fff; }
-  #vue-audit .audit-barre b { color: #fff; font-size: 16px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #vue-audit .audit-barre .aide, #vue-audit .audit-barre a { display: none; }
-  .audit-retour { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff; border-radius: 16px; padding: 5px 12px; font-size: 14px; cursor: pointer; white-space: nowrap; }
-  #auditFrame { flex: 1; height: auto !important; min-height: 0; border: 0 !important; border-radius: 0 !important; }
-}
 
 /* ---------- commentaires et notes : police plus petite et zone plus haute, pour tout lire d'un coup d'œil ---------- */
 .tuile-page textarea, .feuille textarea { font-size: 13.5px !important; line-height: 1.45 !important; padding: 10px 12px !important; }
@@ -2107,7 +2100,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       <a href="#calendrier" data-vue="calendrier">📅 Calendrier</a>
       <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
       <a href="#activite" data-vue="activite">📊 Activité</a>
-      <a href="#audit" data-vue="audit">🧭 Audit</a>
+      <a href="#simulations" data-vue="simulations">🧮 Simulations</a>
     </nav>
     <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
     <button class="icone" id="btnActualiserTel" aria-label="Actualiser" title="Actualiser">↻</button>
@@ -2220,15 +2213,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       </div>
     </section>
 
-    <section class="vue" id="vue-audit" hidden>
-      <div class="audit-barre">
-        <button type="button" class="audit-retour" id="auditRetour" aria-label="Revenir au suivi">‹ Suivi</button>
-        <b>Audit civil et fiscal</b>
-        <span class="aide" id="auditLien">Enregistrés dans votre fichier de suivi, et synchronisés.</span>
-        <a class="bouton-discret" href="../audit/" target="appli-audit" rel="opener">Ouvrir dans sa fenêtre ↗</a>
-      </div>
-      <iframe id="auditFrame" title="Audit civil et fiscal" allow="clipboard-write" onload="window.habillerAudit && window.habillerAudit()"></iframe>
-    </section>
+    <section class="vue" id="vue-simulations" hidden></section>
 
     <section class="vue" id="vue-outils" hidden>
       <div class="outils-liste" id="outilsListe"></div>
@@ -2486,7 +2471,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     <div class="menu-grille">
       <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Tarifs</button>
       <button class="menu-tuile" id="btnPersoEmol"><span>✎</span>Personnaliser les prestations</button>
-      <button class="menu-tuile" id="btnAudit"><span>🧭</span>Audit civil et fiscal</button>
+      <button class="menu-tuile" id="btnAudit"><span>🧮</span>Simulations : Audit, Succession, Plus-value</button>
     </div>
     <h4>Réglages</h4>
     <div class="menu-grille">
@@ -3035,11 +3020,18 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   // audits (appli Audit civil et fiscal) : { liste: { id: { nom, maj, data } }, liens: { id: client }, supprimes: { id: date } }
   // (seul le Suivi efface un audit partout : « effaces ». Une suppression ou une remise à zéro faite dans l'Audit reste locale.)
   var auditsSuivi = (() => { try { const a = JSON.parse(localStorage.getItem("suivi-gp-donnees-audits")) || {}; return { liste: a.liste || {}, liens: a.liens || {}, effaces: a.effaces || {} }; } catch (e) { return { liste: {}, liens: {}, effaces: {} }; } })();
+  // simulations des autres applis (Succession, Plus-value) : même forme que les audits, une partie par appli
+  //   { succession: { liste, liens, effaces }, pvi: { liste, liens, effaces } }
+  var simulationsSuivi = (() => {
+    let a = {}; try { a = JSON.parse(localStorage.getItem("suivi-gp-donnees-simulations")) || {}; } catch (e) {}
+    const r = {}; for (const k of ["succession", "pvi"]) { const x = a[k] || {}; r[k] = { liste: x.liste || {}, liens: x.liens || {}, effaces: x.effaces || {} }; }
+    return r;
+  })();
   let emolPerso = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-emoluments")) || {}; } catch (e) { return {}; } })();
   let modelesTaches = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-modeles")) || {}; } catch (e) { return {}; } })();
   function sectionsAnnexes() {
     const { sha: _s, ...agenda } = reglagesAgenda || {};
-    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso, audits: auditsSuivi };
+    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso, audits: auditsSuivi, simulations: simulationsSuivi };
   }
   function contenuComplet() {
     return JSON.stringify({ version: 3, dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }, null, 1);
@@ -3051,7 +3043,12 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     if (contenu.agenda) { reglagesAgenda = { ...AGENDA_DEFAUT, ...contenu.agenda }; localStorage.setItem(CLE_AGENDA, JSON.stringify(reglagesAgenda)); }
     if (contenu.societes) { societes = contenu.societes; INDEX_ETUDES = null; localStorage.setItem(CLE_SOCIETES, JSON.stringify(societes)); }
     if (contenu.modeles) { modelesTaches = contenu.modeles; localStorage.setItem("suivi-gp-donnees-modeles", JSON.stringify(modelesTaches)); }
-    if (contenu.audits) { auditsSuivi = { liste: contenu.audits.liste || {}, liens: contenu.audits.liens || {}, effaces: contenu.audits.effaces || {} }; localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); if (typeof versAudit === "function") versAudit(); }
+    if (contenu.audits) { auditsSuivi = { liste: contenu.audits.liste || {}, liens: contenu.audits.liens || {}, effaces: contenu.audits.effaces || {} }; localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); if (typeof appsPretes !== "undefined" && appsPretes) versApp("audit"); }
+    if (contenu.simulations) {
+      for (const k of ["succession", "pvi"]) { const x = contenu.simulations[k] || {}; simulationsSuivi[k] = { liste: x.liste || {}, liens: x.liens || {}, effaces: x.effaces || {} }; }
+      localStorage.setItem("suivi-gp-donnees-simulations", JSON.stringify(simulationsSuivi));
+      if (typeof appsPretes !== "undefined" && appsPretes) { versApp("succession"); versApp("pvi"); }
+    }
     if (contenu.emoluments) { emolPerso = contenu.emoluments; localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso)); if (typeof reconstruireBaremes === "function") reconstruireBaremes(); }
   }
   // ancien format (dutreil.json, agenda.json, societes.json à part) : on les reprend une fois dans le fichier principal
@@ -3378,10 +3375,13 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     donnees.dossiers = resultat.dossiers;
     donnees.clients = resultat.clients;
     // Dutreil, agenda, sociétés : on garde la version de cet appareil s'il l'a changée, sinon celle de GitHub
+    if (typeof appsPretes !== "undefined" && appsPretes) depuisToutesApps();   // d'abord ce que les simulateurs ont changé ici
     const ici = sectionsAnnexes();
     const pris = {};
     for (const k of ["dutreil", "agenda", "societes", "modeles", "emoluments"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
     pris.audits = fusionnerAudits(base.audits, ici.audits, contenu.audits);
+    pris.simulations = {};
+    for (const k of ["succession", "pvi"]) pris.simulations[k] = fusionnerAudits((base.simulations || {})[k], ici.simulations[k], (contenu.simulations || {})[k]);
     appliquerAnnexes(pris);
     setTimeout(() => { if (reparerAgenda()) afficherTout(); }, 300);   // après une fusion : doublons et chevauchements
     shaDistant = sha;
@@ -5881,7 +5881,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     return ids.length;
   }
   function afficherTout() {
-    if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { depuisAudit(); const r = reparerAgenda(); const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b || r) afficherTout(); }, 400); }
+    if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { depuisToutesApps(); const r = reparerAgenda(); const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b || r) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     const vide = !donnees;
@@ -6293,8 +6293,8 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   // ---------------------------------------------------------------- navigation
   function vueCourante() {
     const v = location.hash.replace("#", "");
-    if (estTel()) return ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "audit"].includes(v) ? v : "accueil";
-    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite", "outils", "audit"].includes(v) ? v : "accueil";
+    if (v === "audit") return "simulations";   // ancienne adresse de l'onglet
+    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite", "outils", "simulations"].includes(v) ? v : "accueil";
   }
   // ---- téléphone : glisser le doigt vers la gauche ou la droite pour changer de vue ----
   const ORDRE_VUES = ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"];
@@ -6328,7 +6328,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
       if (doigtCible.closest("#calPanneau")) { changerJourCalendrier(dx < 0 ? 1 : -1); return; }
       if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
     }
-    if (vueCourante() === "outils" || vueCourante() === "audit") return;  // ces onglets ne sont pas dans l'ordre de balayage
+    if (vueCourante() === "outils" || vueCourante() === "simulations") return;  // ces onglets ne sont pas dans l'ordre de balayage
     const masques = window.lireApparence().page.masques;
     const ordre = ORDRE_VUES.filter((v) => !masques.includes(v) || v === vueCourante());
     const i = ordre.indexOf(vueCourante()) + (dx < 0 ? 1 : -1);
@@ -6339,8 +6339,6 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
 
   // ---- les autres applis du dépôt, ouvertes dans l'appli (même adresse : elles gardent leurs données) ----
   const OUTILS = [
-    { id: "audit", ic: "⚖", nom: "Audit civil et fiscal", adresse: "../audit/",
-      desc: "Audit de transmission : successions, démembrement, assurance-vie, levier société." },
     { id: "revision", ic: "📚", nom: "Révision de la base", adresse: "../revision/",
       desc: "Réviser les fiches de la base en QCM, vrai ou faux et restitution, avec répétition espacée." },
     { id: "emoluments", ic: "🧮", nom: "Tarifs", interne: () => ouvrirEmoluments(),
@@ -6368,144 +6366,212 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     if ($("outilFrame").dataset.id !== id) { $("outilFrame").src = o.adresse; $("outilFrame").dataset.id = id; }
     if (vueCourante() !== "outils") location.hash = "#outils"; else afficherOutils();
   }
-  // ================================================================ audits : pont entre l'Audit et le fichier de suivi
-  // L'Audit range ses dossiers dans la mémoire du navigateur (clé « audit-dossiers-v1 »). Le Suivi la lit et l'écrit :
-  // ce que l'Audit modifie part dans suivi_gp.json (et GitHub) ; ce qui arrive de GitHub est rendu à l'Audit.
-  var CLE_AUDIT = "audit-dossiers-v1";
-  var lireAudit = () => { try { return JSON.parse(localStorage.getItem(CLE_AUDIT)) || { courant: null, liste: {} }; } catch (e) { return { courant: null, liste: {} }; } };
-  var garderAuditsSuivi = () => { try { localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi)); } catch (e) {} };
-  var auditVu = JSON.stringify(Object.keys(lireAudit().liste || {}).sort());
-  var rechargerAuditEnAttente = false;
-  // GitHub → Audit
-  function versAudit() {
-    const a = lireAudit();
-    if (!a.liste) a.liste = {};
-    let change = false;
-    for (const [id, d] of Object.entries(auditsSuivi.liste || {})) {
-      const ici = a.liste[id];
-      if (!ici || String(d.maj || "") > String(ici.maj || "")) { a.liste[id] = d; change = true; }
-    }
-    for (const id of Object.keys(auditsSuivi.effaces || {})) if (a.liste[id]) { delete a.liste[id]; change = true; if (a.courant === id) a.courant = null; }
-    if (!change) return;
-    try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
-    auditVu = JSON.stringify(Object.keys(a.liste).sort());
-    // l'Audit affiché se recharge pour montrer la nouvelle version (plus tard s'il est à l'écran)
-    if ($("auditFrame").src) { if (vueCourante() === "audit") rechargerAuditEnAttente = true; else $("auditFrame").src = "../audit/"; }
-  }
-  // Audit → fichier de suivi
-  function depuisAudit() {
-    if (!donnees) return;
-    const a = lireAudit();
-    const ids = Object.keys(a.liste || {});
-    let change = false;
-    for (const id of ids) {
-      const d = a.liste[id], ici = (auditsSuivi.liste || {})[id];
-      if (!ici || String(d.maj || "") > String(ici.maj || "")) { auditsSuivi.liste[id] = { nom: d.nom, maj: d.maj, data: d.data }; change = true; }
-    }
-    // disparu de l'Audit (supprimé « de ce navigateur », ou remise à zéro) : on n'efface RIEN du fichier de suivi
-    const avant = JSON.parse(auditVu);
-    const partis = avant.filter((id) => !a.liste[id] && auditsSuivi.liste[id]);
-    auditVu = JSON.stringify(ids.sort());
-    if (partis.length && partis.length === avant.length && avant.length > 1)
-      informer("L’Audit a été remis à zéro dans ce navigateur. Vos audits restent dans votre fichier de suivi : ils reviendront à la prochaine actualisation.");
-    else if (partis.length) {
-      const noms = partis.map((id) => auditsSuivi.liste[id].nom || "Audit sans nom").join(", ");
-      informer(`« ${noms} » retiré de ce navigateur seulement : il reste dans votre fichier.`, { texte: "Effacer partout", faire: () => effacerAudits(partis) });
-    }
-    if (change) { garderAuditsSuivi(); annexeModifiee(); }
-  }
-  window.addEventListener("storage", (e) => { if (e.key === CLE_AUDIT) depuisAudit(); });   // l'Audit (dans son cadre ou sa fenêtre) a écrit
-  setInterval(() => { if (vueCourante() === "audit") depuisAudit(); }, 4000);              // (par sécurité)
-  // ouvrir un audit précis dans l'onglet Audit
-  function ouvrirAudit(id) {
-    const a = lireAudit();
-    if (id && !a.liste[id] && auditsSuivi.liste[id]) a.liste[id] = auditsSuivi.liste[id];
-    if (id) a.courant = id;
-    try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
-    $("auditFrame").src = "../audit/";   // l'Audit s'ouvre sur ce dossier
-    const ouvertes = !!document.querySelector(".feuille.ouverte");
-    fermerToutesFeuilles();
-    // (on laisse le retour en arrière des fiches se faire, puis on va sur l'onglet Audit)
-    setTimeout(() => { location.hash = "#audit"; }, ouvertes ? 150 : 0);
-  }
-  // nouvel audit pour un client : l'Audit le complète (situation, régime…) à l'ouverture
-  function nouvelAuditPour(nom) {
-    const id = "D" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const morceaux = String(nom).trim().split(/\s+/);
-    const d = { nom, maj: new Date().toISOString(), data: { dateEtude: enIso(aujourdhui()), c1: { nom: morceaux[0] || nom, prenom: morceaux.slice(1).join(" ") } } };
-    auditsSuivi.liste[id] = d; auditsSuivi.liens[id] = nom;
-    garderAuditsSuivi(); annexeModifiee();
-    const a = lireAudit(); a.liste[id] = d; try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
-    auditVu = JSON.stringify(Object.keys(a.liste).sort());
-    ouvrirAudit(id);
-    informer(`Nouvel audit pour ${nom}, rattaché à sa fiche.`);
-  }
-  // dans le Suivi, l'Audit n'a pas besoin de son grand titre (le bandeau du Suivi le porte déjà) : on l'allège
-  window.habillerAudit = () => {
-    try {
-      const doc = $("auditFrame").contentDocument;
-      if (!doc || doc.getElementById("dans-suivi")) return;
-      const st = doc.createElement("style"); st.id = "dans-suivi";
-      st.textContent = `.brand { display: none !important; }
-        header.top .top-in { min-height: 0 !important; padding-top: 6px !important; padding-bottom: 6px !important; }
-        #installer { display: none !important; }`;
-      doc.head.appendChild(st);
-    } catch (e) {}
+  // ================================================================ simulations : pont entre les simulateurs et le fichier de suivi
+  // L'Audit, la Succession et la Plus-value restent des applis autonomes, chacune dans sa fenêtre.
+  // Elles rangent leurs simulations dans la mémoire du navigateur (même site, donc lisible ici) :
+  //   localStorage[cle] = { courant, liste: { id: { nom, maj, data, client } }, effaces }
+  // Le Suivi les lit et les écrit : ce qu'une appli modifie part dans suivi_gp.json (et GitHub) ;
+  // ce qui arrive de GitHub est rendu à l'appli ; le client rattaché se choisit d'un côté ou de l'autre.
+  var APPS_SIMU = {
+    audit:      { nom: "Audit civil et fiscal", court: "Audit", ic: "🧭", cle: "audit-dossiers-v1", dossier: "audit", desc: "Transmission : successions, démembrement, assurance-vie, levier société." },
+    succession: { nom: "Simulateur de succession", court: "Succession", ic: "🕊", cle: "succession-dossiers-v1", dossier: "succession", desc: "Options du conjoint survivant : usufruit, ¼ PP, ¼ PP + ¾ US, quotité disponible." },
+    pvi:        { nom: "Plus-value immobilière", court: "Plus-value", ic: "🏠", cle: "pvi-dossiers-v1", dossier: "pvi", desc: "Abattements, exonérations, surtaxe, démembrement, non-résidents." }
   };
-  // téléphone : « ‹ Suivi » revient à l'onglet d'avant
-  let vueAvantAudit = "accueil";
-  window.addEventListener("hashchange", (e) => { try { const avant = new URL(e.oldURL).hash.slice(1); if (avant && avant !== "audit") vueAvantAudit = avant; } catch (er) {} });
-  $("auditRetour").addEventListener("click", () => { depuisAudit(); location.hash = "#" + (vueAvantAudit || "accueil"); });
-  function majBandeauAudit() {
-    const a = lireAudit(), id = a.courant;
-    const z = $("auditLien");
-    if (!z) return;
-    if (!id || !a.liste[id]) { z.replaceChildren("Enregistrés dans votre fichier de suivi, et synchronisés."); return; }
-    const client = auditsSuivi.liens[id];
-    const titre = document.querySelector("#vue-audit .audit-barre b");
-    if (titre) titre.textContent = client ? `Audit · ${client}` : "Audit civil et fiscal";
-    z.replaceChildren(client ? el("span", null, "Rattaché à ", el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirClient(client) }, "👤 " + client)) : "Pas rattaché à un client · ",
-      el("button", { type: "button", class: "lien-sous-champ", onclick: () => {
-        const nom = (prompt("Rattacher cet audit à quel client ?", client || (a.liste[id].nom || "")) || "").trim();
-        if (!nom) return;
-        const existant = nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom;
-        depuisAudit(); lierAudit(id, existant); majBandeauAudit(); informer("Audit rattaché à " + existant + ".");
-      } }, client ? "changer" : "rattacher à un client"));
+  var IDS_APPS = Object.keys(APPS_SIMU);
+  // la partie du fichier de suivi qui correspond à chaque appli
+  var magasin = (app) => app === "audit" ? auditsSuivi : simulationsSuivi[app];
+  function garderMagasin(app) {
+    try {
+      if (app === "audit") localStorage.setItem("suivi-gp-donnees-audits", JSON.stringify(auditsSuivi));
+      else localStorage.setItem("suivi-gp-donnees-simulations", JSON.stringify(simulationsSuivi));
+    } catch (e) {}
+    if (vueCourante() === "simulations") setTimeout(afficherSimulations, 0);   // l'onglet ouvert suit
   }
-  setInterval(() => { if (vueCourante() === "audit") majBandeauAudit(); }, 2500);
-  // effacer un audit de partout (fichier, GitHub, tous les appareils)
-  function effacerAudits(ids) {
-    const a = lireAudit();
-    for (const id of ids) { delete auditsSuivi.liste[id]; delete auditsSuivi.liens[id]; auditsSuivi.effaces[id] = new Date().toISOString(); delete a.liste[id]; if (a.courant === id) a.courant = null; }
-    try { localStorage.setItem(CLE_AUDIT, JSON.stringify(a)); } catch (e) {}
-    auditVu = JSON.stringify(Object.keys(a.liste).sort());
-    garderAuditsSuivi(); annexeModifiee();
-    if ($("auditFrame").src) $("auditFrame").src = "../audit/";
-    informer(ids.length > 1 ? `${ids.length} audits effacés de partout.` : "Audit effacé de partout.");
+  // la mémoire de l'appli elle-même
+  var lireApp = (app) => { try { const a = JSON.parse(localStorage.getItem(APPS_SIMU[app].cle)) || {}; return { courant: a.courant || null, liste: a.liste || {}, effaces: a.effaces || {} }; } catch (e) { return { courant: null, liste: {}, effaces: {} }; } };
+  var brutApps = {}, vusApps = {};
+  for (const app of IDS_APPS) vusApps[app] = Object.keys(lireApp(app).liste).sort();
+  function ecrireApp(app, a) {
+    try { localStorage.setItem(APPS_SIMU[app].cle, JSON.stringify(a)); } catch (e) {}
+    brutApps[app] = localStorage.getItem(APPS_SIMU[app].cle);
+    vusApps[app] = Object.keys(a.liste).sort();
   }
-  function lierAudit(id, nom) {
-    if (nom) auditsSuivi.liens[id] = nom; else delete auditsSuivi.liens[id];
-    garderAuditsSuivi(); annexeModifiee();
+  // le nom du client tel qu'il est écrit dans le Suivi (majuscules, espaces), s'il existe
+  var nomClientConnu = (nom) => nomsClients().find((n) => cleClient(n) === cleClient(nom)) || String(nom || "").trim();
+
+  // GitHub (ou le Suivi) → appli
+  function versApp(app) {
+    const a = lireApp(app), m = magasin(app);
+    let change = false;
+    for (const [id, d] of Object.entries(m.liste)) {
+      const ici = a.liste[id];
+      if (!ici || String(d.maj || "") > String(ici.maj || "")) { a.liste[id] = { ...(ici || {}), nom: d.nom, maj: d.maj, data: d.data }; change = true; }
+    }
+    for (const id of Object.keys(m.effaces)) if (a.liste[id]) { delete a.liste[id]; change = true; if (a.courant === id) a.courant = null; }
+    // le client rattaché, pour que l'appli l'affiche (l'Audit ne s'en sert pas)
+    if (app !== "audit") for (const [id, d] of Object.entries(a.liste)) {
+      const c = m.liens[id] || "";
+      if (m.liste[id] && (d.client || "") !== c) { d.client = c; change = true; }
+    }
+    if (change) ecrireApp(app, a);
   }
-  const auditsDuClient = (nom) => Object.entries(auditsSuivi.liste || {}).filter(([id]) => cleClient(auditsSuivi.liens[id] || "") === cleClient(nom))
-    .sort((x, y) => String(y[1].maj || "").localeCompare(String(x[1].maj || "")));
-  // bloc « Audits » de la fiche client : ses audits, et ceux qui portent son nom sans être encore rattachés
-  function blocAuditsClient(nom) {
-    const siens = auditsDuClient(nom);
+  // appli → fichier de suivi
+  function depuisApp(app) {
+    if (!donnees) return;
+    const a = lireApp(app), m = magasin(app), A = APPS_SIMU[app];
+    brutApps[app] = localStorage.getItem(A.cle);
+    let change = false;
+    for (const [id, d] of Object.entries(a.liste)) {
+      if (m.effaces[id]) continue;
+      const ici = m.liste[id];
+      if (!ici || String(d.maj || "") > String(ici.maj || "")) { m.liste[id] = { nom: d.nom, maj: d.maj, data: d.data }; change = true; }
+      // client choisi dans l'appli
+      if (app !== "audit" && d.client !== undefined && cleClient(d.client) !== cleClient(m.liens[id] || "")) {
+        if (d.client) m.liens[id] = nomClientConnu(d.client); else delete m.liens[id];
+        change = true;
+      }
+    }
+    // supprimée volontairement dans l'appli (bouton 🗑) : effacée partout
+    for (const [id, quand] of Object.entries(a.effaces)) if (!m.effaces[id] && m.liste[id]) {
+      delete m.liste[id]; delete m.liens[id]; m.effaces[id] = quand; change = true;
+    }
+    // disparue de l'appli sans y avoir été supprimée (« de ce navigateur », remise à zéro) : on n'efface RIEN du fichier
+    const avant = vusApps[app] || [], ids = Object.keys(a.liste);
+    const partis = avant.filter((id) => !a.liste[id] && m.liste[id] && !m.effaces[id]);
+    vusApps[app] = ids.sort();
+    if (partis.length && partis.length === avant.length && avant.length > 1)
+      informer(`${A.court} a été remis à zéro dans ce navigateur. Vos simulations restent dans votre fichier de suivi : elles reviendront à la prochaine actualisation.`);
+    else if (partis.length) {
+      const noms = partis.map((id) => m.liste[id].nom || "Sans nom").join(", ");
+      informer(`« ${noms} » retiré de ${A.court} sur ce navigateur seulement : il reste dans votre fichier.`, { texte: "Effacer partout", faire: () => effacerSimulations(app, partis) });
+    }
+    if (change) { garderMagasin(app); annexeModifiee(); if (vueCourante() === "simulations") afficherSimulations(); }
+  }
+  function depuisToutesApps() { for (const app of IDS_APPS) depuisApp(app); }
+  // une appli (dans sa fenêtre) a écrit : on le voit tout de suite, et toutes les 3 secondes par sécurité
+  window.addEventListener("storage", (e) => { const app = IDS_APPS.find((k) => APPS_SIMU[k].cle === e.key); if (app) depuisApp(app); });
+  setInterval(() => { for (const app of IDS_APPS) if (localStorage.getItem(APPS_SIMU[app].cle) !== brutApps[app]) depuisApp(app); }, 3000);
+
+  // ouvrir une simulation dans son appli (sa propre fenêtre : la même à chaque fois, rechargée sur la simulation demandée)
+  function ouvrirSimulation(app, id) {
+    depuisApp(app);
+    const a = lireApp(app), m = magasin(app);
+    if (id && !a.liste[id] && m.liste[id]) { a.liste[id] = { ...m.liste[id], client: m.liens[id] || "" }; ecrireApp(app, a); }
+    const A = APPS_SIMU[app];
+    window.open(`../${A.dossier}/` + (id ? "?ouvrir=" + encodeURIComponent(id) : ""), "appli-" + A.dossier);
+  }
+  // nouvelle simulation pour un client : rattachée tout de suite, l'appli la complète à l'ouverture
+  function nouvelleSimulation(app, nom) {
+    const id = (app === "audit" ? "D" : "S") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const morceaux = String(nom).trim().split(/\s+/);
+    const d = app === "audit"
+      ? { nom, maj: new Date().toISOString(), data: { dateEtude: enIso(aujourdhui()), c1: { nom: morceaux[0] || nom, prenom: morceaux.slice(1).join(" ") } } }
+      : { nom, maj: new Date().toISOString(), data: null };
+    const m = magasin(app);
+    m.liste[id] = d; m.liens[id] = nom;
+    garderMagasin(app); annexeModifiee();
+    const a = lireApp(app); a.liste[id] = { ...d, client: nom }; ecrireApp(app, a);
+    ouvrirSimulation(app, id);
+    informer(`${APPS_SIMU[app].court} : nouvelle simulation pour ${nom}, rattachée à sa fiche.`);
+  }
+  // effacer de partout (fichier, GitHub, tous les appareils)
+  function effacerSimulations(app, ids) {
+    const a = lireApp(app), m = magasin(app);
+    for (const id of ids) { delete m.liste[id]; delete m.liens[id]; m.effaces[id] = new Date().toISOString(); delete a.liste[id]; if (a.courant === id) a.courant = null; }
+    ecrireApp(app, a);
+    garderMagasin(app); annexeModifiee();
+    informer(ids.length > 1 ? `${ids.length} simulations effacées de partout.` : "Simulation effacée de partout.");
+  }
+  function lierSimulation(app, id, nom) {
+    const m = magasin(app);
+    if (nom) m.liens[id] = nomClientConnu(nom); else delete m.liens[id];
+    garderMagasin(app); annexeModifiee(); versApp(app);
+  }
+  // toutes les simulations, des trois applis : [{ app, id, d, client }]
+  var toutesSimulations = () => IDS_APPS.flatMap((app) => Object.entries(magasin(app).liste).map(([id, d]) => ({ app, id, d, client: magasin(app).liens[id] || "" })))
+    .sort((x, y) => String(y.d.maj || "").localeCompare(String(x.d.maj || "")));
+  var simulationsDuClient = (nom) => toutesSimulations().filter((x) => x.client && cleClient(x.client) === cleClient(nom));
+  var dateSimu = (d) => d.maj ? new Date(d.maj).toLocaleDateString("fr-FR") : "";
+  function demanderClient(app, id, actuel, nomSimu) {
+    const nom = (prompt("Rattacher cette simulation à quel client ?", actuel || nomSimu || "") || "").trim();
+    if (!nom) return;
+    lierSimulation(app, id, nom);
+    informer("Simulation rattachée à " + nomClientConnu(nom) + ".");
+    if (vueCourante() === "simulations") afficherSimulations();
+  }
+  // une ligne de simulation (fiche client et onglet Simulations)
+  function ligneSimulation(x, options = {}) {
+    const A = APPS_SIMU[x.app];
+    const ligne = el("div", { class: "audit-ligne simu-ligne" },
+      el("button", { type: "button", class: "audit-ouvrir", title: "Ouvrir dans " + A.nom, onclick: () => ouvrirSimulation(x.app, x.id) },
+        el("b", null, A.ic + " ", x.d.nom || "Sans nom"),
+        el("small", null, A.court, x.d.maj ? " · modifiée le " + dateSimu(x.d) : "", options.avecClient ? (x.client ? " · 👤 " + x.client : " · pas rattachée") : "")),
+      el("span", { class: "audit-actions" },
+        options.rattacher ? el("button", { type: "button", class: "lien-sous-champ", onclick: () => { lierSimulation(x.app, x.id, options.rattacher); informer("Simulation rattachée à " + options.rattacher + "."); ouvrirClient(options.rattacher); } }, "rattacher") : null,
+        options.avecClient && x.client ? el("button", { type: "button", class: "lien-sous-champ", onclick: () => ouvrirClient(x.client) }, "fiche") : null,
+        options.avecClient ? el("button", { type: "button", class: "lien-sous-champ", onclick: () => demanderClient(x.app, x.id, x.client, x.d.nom) }, x.client ? "changer" : "rattacher") : null,
+        !options.rattacher && x.client ? el("button", { type: "button", class: "lien-sous-champ", title: "Ne plus rattacher cette simulation à ce client",
+          onclick: (e) => { lierSimulation(x.app, x.id, ""); if (options.avecClient) afficherSimulations(); else e.target.closest(".simu-ligne").remove(); } }, "détacher") : null,
+        !options.rattacher ? el("button", { type: "button", class: "lien-sous-champ", style: "color:var(--rouge)", title: "Effacer cette simulation du fichier et de tous les appareils",
+          onclick: (e) => { if (!confirm(`Effacer « ${x.d.nom || "sans nom"} » (${A.court}) de partout : fichier, GitHub, tous les appareils ?`)) return; effacerSimulations(x.app, [x.id]); if (options.avecClient) afficherSimulations(); else e.target.closest(".simu-ligne").remove(); } }, "effacer") : null));
+    return ligne;
+  }
+  // boutons « nouvelle simulation » (une par appli)
+  var boutonsNouvelles = (nom) => el("div", { class: "simu-nouvelles" }, IDS_APPS.map((app) =>
+    el("button", { type: "button", class: "bouton-discret", onclick: () => nouvelleSimulation(app, nom) }, "＋ ", APPS_SIMU[app].ic, " ", APPS_SIMU[app].court)));
+  // bloc « Simulations » de la fiche client : les siennes, et celles qui portent son nom sans être rattachées
+  function blocSimulationsClient(nom) {
+    depuisToutesApps();
+    const siennes = simulationsDuClient(nom);
     const n = sansAccents(nom).split(/[\s/,-]+/).filter((x) => x.length > 2);
-    const proches = Object.entries(auditsSuivi.liste || {}).filter(([id, d]) => !auditsSuivi.liens[id] && n.length && n.every((m) => sansAccents(d.nom || "").includes(m)));
-    const ligne = ([id, d], lie) => el("div", { class: "audit-ligne" },
-      el("button", { type: "button", class: "audit-ouvrir", onclick: () => ouvrirAudit(id) }, el("b", null, "🧭 ", d.nom || "Audit sans nom"),
-        el("small", null, d.maj ? "modifié le " + new Date(d.maj).toLocaleDateString("fr-FR") : "")),
-      lie ? el("span", { class: "audit-actions" },
-          el("button", { type: "button", class: "lien-sous-champ", title: "Ne plus rattacher cet audit à ce client", onclick: (e) => { lierAudit(id, ""); e.target.closest(".audit-ligne").remove(); } }, "détacher"),
-          el("button", { type: "button", class: "lien-sous-champ", style: "color:var(--rouge)", title: "Effacer cet audit du fichier et de tous les appareils",
-            onclick: (e) => { if (!confirm(`Effacer l’audit « ${d.nom || "sans nom"} » de partout (fichier, GitHub, tous les appareils) ?`)) return; effacerAudits([id]); e.target.closest(".audit-ligne").remove(); } }, "effacer"))
-        : el("button", { type: "button", class: "lien-sous-champ", onclick: () => { lierAudit(id, nom); informer("Audit rattaché à " + nom + "."); ouvrirClient(nom); } }, "rattacher"));
+    const proches = toutesSimulations().filter((x) => !x.client && n.length && n.every((m) => sansAccents(x.d.nom || "").includes(m)));
     return el("div", { class: "bloc-audits" },
-      siens.length ? el("div", { class: "audit-liste" }, siens.map((x) => ligne(x, true))) : el("p", { class: "m-vide" }, "Aucun audit pour ce client."),
-      proches.length ? el("div", null, el("p", { class: "aide" }, "Audits qui portent son nom, pas encore rattachés :"), el("div", { class: "audit-liste" }, proches.map((x) => ligne(x, false)))) : null,
-      el("button", { type: "button", class: "bouton-discret", onclick: () => nouvelAuditPour(nom) }, "＋ Nouvel audit pour ce client"));
+      siennes.length ? el("div", { class: "audit-liste" }, siennes.map((x) => ligneSimulation(x))) : el("p", { class: "m-vide" }, "Aucune simulation pour ce client."),
+      proches.length ? el("div", null, el("p", { class: "aide" }, "Simulations qui portent son nom, pas encore rattachées :"),
+        el("div", { class: "audit-liste" }, proches.map((x) => ligneSimulation(x, { rattacher: nom })))) : null,
+      el("p", { class: "aide" }, "Nouvelle simulation pour ce client (elle s’ouvre dans l’appli, déjà rattachée) :"),
+      boutonsNouvelles(nom));
+  }
+  var resumeSimulations = (nom) => {
+    const l = simulationsDuClient(nom);
+    if (!l.length) return "";
+    const parApp = IDS_APPS.map((app) => [app, l.filter((x) => x.app === app).length]).filter(([, k]) => k).map(([app, k]) => `${k} ${APPS_SIMU[app].court.toLowerCase()}`);
+    return parApp.join(" · ") + " · " + dateSimu(l[0].d);
+  };
+
+  // le pont est prêt : ce que le fichier de suivi connaît (copie de cet appareil) est rendu aux applis
+  var appsPretes = true;
+  for (const app of IDS_APPS) versApp(app);
+  // (accès pour la console du navigateur, utile pour vérifier le pont)
+  window.pontSimulations = { nouvelle: (app, nom) => nouvelleSimulation(app, nom), ouvrir: (app, id) => ouvrirSimulation(app, id), duClient: (nom) => simulationsDuClient(nom),
+    effaces: (app) => magasin(app).effaces, client: (nom) => ouvrirClient(nom), fermer: () => fermerToutesFeuilles() };
+
+  // ---- l'onglet « Simulations » : tout ce qui a été fait dans les trois applis ----
+  var filtreSimu = { app: "", lien: "", texte: "" };
+  function afficherSimulations() {
+    const z = $("vue-simulations");
+    if (!z || z.hidden) return;
+    const tout = toutesSimulations();
+    const t = sansAccents(filtreSimu.texte);
+    const liste = tout.filter((x) => (!filtreSimu.app || x.app === filtreSimu.app)
+      && (!filtreSimu.lien || (filtreSimu.lien === "oui") === !!x.client)
+      && (!t || sansAccents(x.d.nom + " " + x.client + " " + APPS_SIMU[x.app].court).includes(t)));
+    const puce = (cle, v, lib) => el("button", { type: "button", class: "collab" + (filtreSimu[cle] === v ? " choisi" : ""), onclick: () => { filtreSimu[cle] = v; afficherSimulations(); } }, lib);
+    const recherche = el("input", { type: "search", placeholder: "Rechercher une simulation, un client…", value: filtreSimu.texte });
+    recherche.addEventListener("input", () => { filtreSimu.texte = recherche.value; clearTimeout(afficherSimulations.t); afficherSimulations.t = setTimeout(() => { afficherSimulations(); const r = document.querySelector("#vue-simulations input[type=search]"); if (r) { r.focus(); r.setSelectionRange(r.value.length, r.value.length); } }, 250); });
+    z.replaceChildren(
+      el("h2", { class: "m-h2" }, "Simulations"),
+      el("p", { class: "aide" }, "Chaque simulateur reste une appli à part, dans sa fenêtre. Ce que vous y faites est enregistré ici, dans votre fichier de suivi, et peut être rattaché à un client."),
+      el("div", { class: "simu-applis" }, IDS_APPS.map((app) => {
+        const A = APPS_SIMU[app], nb = tout.filter((x) => x.app === app).length;
+        return el("button", { type: "button", class: "simu-appli", onclick: () => ouvrirSimulation(app) },
+          el("span", { class: "ic" }, A.ic), el("b", null, A.nom), el("span", null, A.desc), el("i", null, nb ? `${nb} simulation${nb > 1 ? "s" : ""} · ouvrir ↗` : "Ouvrir ↗"));
+      })),
+      el("div", { class: "simu-filtres" }, recherche,
+        el("div", { class: "collabs" }, puce("app", "", "Toutes"), IDS_APPS.map((app) => puce("app", app, APPS_SIMU[app].ic + " " + APPS_SIMU[app].court))),
+        el("div", { class: "collabs" }, puce("lien", "", "Rattachées ou non"), puce("lien", "oui", "Rattachées"), puce("lien", "non", "Pas rattachées"))),
+      liste.length ? el("div", { class: "audit-liste" }, liste.map((x) => ligneSimulation(x, { avecClient: true })))
+        : el("p", { class: "m-vide" }, tout.length ? "Aucune simulation ne correspond." : "Aucune simulation pour l’instant : ouvrez un simulateur, ou partez de la fiche d’un client."));
   }
 
   // ================================================================ émoluments du notaire (tarif réglementé)
@@ -7090,12 +7156,9 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     document.querySelectorAll(".vue").forEach((s) => { s.hidden = s.id !== "vue-" + v; });
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "audit"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "simulations"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
     if (v === "outils") afficherOutils();
-    // l'Audit ne se charge qu'à la première visite de l'onglet, puis reste en mémoire (son travail en cours est gardé)
-    if (v === "audit") versAudit();
-    if (v === "audit" && (!$("auditFrame").src || rechargerAuditEnAttente)) { rechargerAuditEnAttente = false; $("auditFrame").src = "../audit/"; }
-    if (v !== "audit" && typeof depuisAudit === "function") depuisAudit();
+    if (v === "simulations") { depuisToutesApps(); afficherSimulations(); }
     // la recherche dit ce qu'elle cherche selon l'onglet
     $("recherche").placeholder = v === "dutreil" ? "Rechercher un pacte, une société, un client…" : v === "calendrier" ? "Rechercher un client, une tâche…" : "Filtrer les dossiers… (« / »)";
     if (donnees) majPortee();
@@ -8435,7 +8498,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
         return tuiles([
           { libelle: "Tâches", contenu: blocTaches(nom), resume: () => resumeTaches(nom) },
           { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
-          { libelle: "Audits", contenu: blocAuditsClient(nom), resume: () => { const l = auditsDuClient(nom); return l.length ? `${l.length} audit${l.length > 1 ? "s" : ""} · ${new Date(l[0][1].maj).toLocaleDateString("fr-FR")}` : ""; } },
+          { libelle: "Simulations", contenu: blocSimulationsClient(nom), resume: () => resumeSimulations(nom) },
           { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
           { libelle: "Notes", contenu: blocJournal({ lire: () => journalClient(nom), ecrire: (l) => ecrireJournalClient(nom, l), aide: "Nouvelle note sur ce client… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalClient(nom)) },
           { libelle: "Coordonnées", contenu: vueCoordonnees(zoneCoord), resume: () => premiereLigne(zoneCoord.value) }]);
@@ -8447,8 +8510,6 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
         { libelle: "Millionnaire", choix: choixMillionnaire(f.millionnaire) }]),
       el("div", { class: "actions-fiche" },
         el("button", { type: "button", onclick: () => nouveauDossierPour(nom) }, "＋ Nouveau dossier pour ce client"),
-        el("button", { type: "button", title: "Ouvre le dernier audit de ce client, ou en crée un",
-          onclick: () => { const l = auditsDuClient(nom); if (l.length) ouvrirAudit(l[0][0]); else nouvelAuditPour(nom); } }, "🧭 Audit"),
         el("button", { type: "button", onclick: () => renommerClient(clientEnCours) }, "✎ Renommer"),
         el("button", { type: "button", onclick: () => imprimerClient(nom) }, "🖨 Imprimer / PDF"),
         !liste.length ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => supprimerClientSeul(nom) }, "Supprimer ce client") : null),
@@ -8858,7 +8919,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
   $("btnPersoEmol").addEventListener("click", () => { fermerMenu(); ouvrirPersoEmol(); });
-  $("btnAudit").addEventListener("click", () => { fermerMenu(); location.hash = "#audit"; });
+  $("btnAudit").addEventListener("click", () => { fermerMenu(); location.hash = "#simulations"; });
   $("outilRetour").addEventListener("click", fermerOutil);
   $("btnEmoluments").addEventListener("click", () => { fermerMenu(); ouvrirEmoluments(); });
   $("btnModeles").addEventListener("click", () => ouvrirModeles());
@@ -8883,7 +8944,7 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
   ];
   const NOMS_POLICES = { plex: "IBM Plex Sans", inter: "Inter", nunito: "Nunito", systeme: "Celle de l’appareil", lora: "Lora", garamond: "EB Garamond", playfair: "Playfair Display", georgia: "Georgia" };
   const NOMS_CARTES = { journee: "Ma journée", honoraires: "Honoraires", taches: "Tâches", rdv: "Prochains rendez-vous", etapes: "Étapes", relancer: "À relancer", dutreil: "Échéances Dutreil" };
-  const ONGLETS_PAGE = [["accueil", "Accueil"], ["kanban", "Kanban"], ["clients", "Clients"], ["calendrier", "Agenda"], ["dutreil", "Dutreil"], ["activite", "Activité"], ["audit", "Audit"]];
+  const ONGLETS_PAGE = [["accueil", "Accueil"], ["kanban", "Kanban"], ["clients", "Clients"], ["calendrier", "Agenda"], ["dutreil", "Dutreil"], ["activite", "Activité"], ["simulations", "Simulations"]];
   // styles prêts : quelques réglages de mise en page d'un coup (les couleurs ne changent pas)
   const STYLES_PAGE = [
     ["Classique", "Réglages d’origine", { taille: 100, tuiles: 3, accCols: 3, coins: "arrondis", relief: "normal", largeur: "pleine", bas: "complet" }],
@@ -9128,7 +9189,10 @@ body.vue-audit .filtres, body.vue-audit #alerteModif { display: none !important;
     ["＋", "Nouveau client", "créer ajouter prospect", () => nouveauClient()],
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
     ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", () => { const nom = (prompt("Pour quel client ?") || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
-    ["🧭", "Audit civil et fiscal", "audit transmission succession démembrement assurance-vie", () => { location.hash = "#audit"; }],
+    ["🧮", "Simulations", "audit succession plus-value pvi simulateur transmission démembrement assurance-vie", () => { location.hash = "#simulations"; }],
+    ["🧭", "Ouvrir l’Audit civil et fiscal", "audit transmission", () => ouvrirSimulation("audit")],
+    ["🕊", "Ouvrir le simulateur de succession", "succession conjoint survivant usufruit", () => ouvrirSimulation("succession")],
+    ["🏠", "Ouvrir le simulateur de plus-value", "plus-value pvi immobilière cession", () => ouvrirSimulation("pvi")],
     ["🧮", "Tarifs", "calculatrice tarif prestation émoluments frais notaire vente donation apport", () => ouvrirEmoluments()],
     ["◉", "Aller à l’accueil", "tableau de bord", () => { location.hash = "#accueil"; }],
     ["▦", "Aller au Kanban", "étapes", () => { location.hash = "#kanban"; }],
