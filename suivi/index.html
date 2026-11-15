@@ -1217,6 +1217,12 @@ input[type="date"] { cursor: pointer; }
 body.vue-calendrier .filtres .filtre:not(.recherche), body.vue-calendrier .filtres .option-archives,
 body.vue-calendrier .filtres .plus-filtres, body.vue-calendrier .filtres #reinitialiser, body.vue-calendrier .filtres .nb-affiches { display: none !important; }
 @media (min-width: 901px) { body.vue-calendrier .filtres .filtre.recherche { flex: 0 1 380px; } }
+/* ordinateur : l'agenda sans la barre de recherche ni les aides (la recherche éclair 🔍 reste à gauche) ;
+   la barre revient seulement si une recherche est en cours, pour qu'on voie ce qui restreint l'agenda */
+@media (min-width: 901px) {
+  body.vue-calendrier .filtres:not(:has(#recherche:not(:placeholder-shown))) { display: none !important; }
+  body.vue-calendrier #vue-calendrier .outils.ordi { display: none !important; }
+}
 @media (max-width: 900px) { body.vue-calendrier #btnFiltres { display: none; } }
 
 /* ---------- demandeurs et sociétés ---------- */
