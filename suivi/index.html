@@ -2019,32 +2019,19 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
   #vue-dutreil > #dIndicateurs { top: 12px; }
 }
 
-/* ---------- onglet Notes : des post-it, rattachés ou non à un client ---------- */
+/* ---------- onglet Notes : les notes au format du journal, rattachées ou non ---------- */
 body.vue-notes .filtres, body.vue-notes #alerteModif, body.vue-notes #rdv { display: none !important; }
-#vue-notes:not([hidden]) { display: grid; gap: 12px; align-content: start; }
+#vue-notes:not([hidden]) { display: grid; gap: 12px; align-content: start; max-width: 900px; }
 #vue-notes .m-h2 { margin: 4px 0 0; font: 600 22px var(--titre); color: var(--bleu); }
-.pi-barre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.pi-barre input[type=search] { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); color: var(--texte); font: inherit; }
-.pi-nouveau { border: 0; background: var(--bleu); color: var(--carte); border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
-.pi-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; align-items: start; }
-.pi-grille.petite { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-.postit { --pi: #fff3b0; --pi-b: #e6d27a; background: var(--pi); border: 1px solid var(--pi-b); border-radius: 4px 4px 14px 4px; box-shadow: 0 6px 14px -8px rgba(40,30,0,.45); padding: 10px 10px 8px; display: grid; gap: 6px; color: #3b3320; min-width: 0; }
-.postit.c-rose { --pi: #fbd9e2; --pi-b: #e6a9b8; } .postit.c-bleu { --pi: #d6ebf7; --pi-b: #9ec6de; } .postit.c-vert { --pi: #dcf0d5; --pi-b: #a8d098; } .postit.c-orange { --pi: #fde2c4; --pi-b: #eab27a; }
-.postit textarea { all: unset; box-sizing: border-box; display: block; width: 100%; min-height: 84px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; color: inherit; field-sizing: content; cursor: text; }
-.postit textarea::placeholder { color: rgba(59,51,32,.45); }
-.pi-pied { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
-.pi-client { border: 0; background: rgba(255,255,255,.55); border-radius: 999px; padding: 3px 9px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pi-rattacher { flex: 1 1 120px; min-width: 0; border: 1px solid var(--pi-b); background: rgba(255,255,255,.6); border-radius: 8px; padding: 4px 8px; font: inherit; color: inherit; }
-.pi-couleurs { display: flex; gap: 4px; margin-left: auto; }
-.pi-couleurs button { width: 15px; height: 15px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); padding: 0; cursor: pointer; }
-.pi-couleurs button.on { outline: 2px solid #3b3320; outline-offset: 1px; }
-.pi-suppr, .pi-detacher { border: 0; background: none; cursor: pointer; font-size: 13px; padding: 2px 4px; color: inherit; opacity: .7; }
-.pi-date { font-size: 11px; opacity: .6; }
-.pi-vide { color: var(--discret); margin: 0; }
-@media (max-width: 900px) { .pi-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .postit { padding: 8px 8px 6px; } .postit textarea { font-size: 13.5px; min-height: 70px; } }
-.pi-rattacher { width: 100%; flex-basis: 100%; }
-.pi-couleurs { flex-wrap: wrap; }
-:root[data-theme="dark"] .postit { filter: brightness(.92); }
+.nr-barre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nr-recherche { flex: 1 1 220px; min-width: 0; padding: 8px 12px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); color: var(--texte); font: inherit; }
+.journal-note.nr-libre { border-left-color: var(--discret); border-left-style: dashed; }
+.nr-pied { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.nr-place { border: 0; background: var(--section); color: var(--bleu); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nr-place.libre { background: none; border: 1px dashed var(--bordure); color: var(--discret); font-weight: 500; cursor: default; }
+.nr-ranger { font-size: 12.5px !important; }
+.nr-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; }
+.nr-form input, .nr-form select { flex: 1 1 180px; min-width: 0; padding: 7px 10px; border: 1px solid var(--bordure); border-radius: 9px; background: var(--carte); color: var(--texte); font: inherit; font-size: 13.5px; }
 
 /* ---------- onglet Simulations : les filtres des dossiers n'y servent pas ---------- */
 body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none !important; }
@@ -3120,10 +3107,13 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   let emolPerso = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-emoluments")) || {}; } catch (e) { return {}; } })();
   let modelesTaches = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-modeles")) || {}; } catch (e) { return {}; } })();
   // ---- post-it : notes rapides, rattachées ou non à un client ----
-  var postits = (() => { try { const x = JSON.parse(localStorage.getItem("suivi-gp-donnees-postits")); return Array.isArray(x) ? x : []; } catch (e) { return []; } })();
+  // ---- notes non rattachées (onglet Notes) ; on les rattache ensuite à un client ou à un dossier ----
+  var notesLibres = (() => { try { const x = JSON.parse(localStorage.getItem("suivi-gp-donnees-notes")); return Array.isArray(x) ? x : []; } catch (e) { return []; } })();
+  // (les post-it d'un premier essai deviennent des notes : libres, ou dans le journal de leur client — voir reprendrePostits)
+  var postitsAReprendre = (() => { try { const x = JSON.parse(localStorage.getItem("suivi-gp-donnees-postits")); return Array.isArray(x) ? x : []; } catch (e) { return []; } })();
   function sectionsAnnexes() {
     const { sha: _s, ...agenda } = reglagesAgenda || {};
-    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso, audits: auditsSuivi, simulations: simulationsSuivi, postits };
+    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso, audits: auditsSuivi, simulations: simulationsSuivi, notes: notesLibres };
   }
   function contenuComplet() {
     return JSON.stringify({ version: 3, dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }, null, 1);
@@ -3141,7 +3131,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       localStorage.setItem("suivi-gp-donnees-simulations", JSON.stringify(simulationsSuivi));
       if (typeof appsPretes !== "undefined" && appsPretes) { versApp("succession"); versApp("pvi"); versApp("immo"); }
     }
-    if (Array.isArray(contenu.postits)) { postits = contenu.postits; localStorage.setItem("suivi-gp-donnees-postits", JSON.stringify(postits)); if (typeof vueCourante === "function" && vueCourante() === "notes") setTimeout(afficherNotes, 0); }
+    if (Array.isArray(contenu.notes)) { notesLibres = contenu.notes; localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); if (typeof vueCourante === "function" && vueCourante() === "notes") setTimeout(afficherNotes, 0); }
+    if (Array.isArray(contenu.postits) && contenu.postits.length) postitsAReprendre = postitsAReprendre.concat(contenu.postits.filter((x) => !postitsAReprendre.some((y) => y.id === x.id)));
     if (contenu.emoluments) { emolPerso = contenu.emoluments; localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso)); if (typeof reconstruireBaremes === "function") reconstruireBaremes(); }
   }
   // ancien format (dutreil.json, agenda.json, societes.json à part) : on les reprend une fois dans le fichier principal
@@ -6760,86 +6751,144 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   window.pontSimulations = { nouvelle: (app, nom) => nouvelleSimulation(app, nom), ouvrir: (app, id) => ouvrirSimulation(app, id), duClient: (nom) => simulationsDuClient(nom),
     effaces: (app) => magasin(app).effaces, client: (nom) => ouvrirClient(nom), fermer: () => fermerToutesFeuilles() };
 
-  // ---- l'onglet « Notes » : des post-it, rattachés ou non à un client ----
-  const COULEURS_PI = [["jaune", "#fff3b0"], ["rose", "#fbd9e2"], ["bleu", "#d6ebf7"], ["vert", "#dcf0d5"], ["orange", "#fde2c4"]];
+  // ---- l'onglet « Notes » : toutes les notes au même format (date, heure, texte) ----
+  //   on les prend ici, puis on les rattache à un client (son journal) ou à un dossier du client (le journal du dossier).
+  //   Les notes non rattachées sont dans « notesLibres » (fichier de suivi, section notes).
   var filtreNotes = { aff: "", texte: "" };
-  let minuteurPostits = null;
-  function garderPostits(tout = true) {
-    localStorage.setItem("suivi-gp-donnees-postits", JSON.stringify(postits));
-    clearTimeout(minuteurPostits);
-    if (tout) minuteurPostits = setTimeout(() => sauver(), 700);   // dans le fichier de suivi (et dans « Annuler »), une fois la frappe finie
-  }
-  const postitsDe = (nom) => postits.filter((n) => n.client && cleClient(n.client) === cleClient(nom));
-  const resumePostits = (nom) => { const l = postitsDe(nom); return l.length ? `${l.length} post-it · ${premiereLigne(l[0].texte) || "(vide)"}` : "Aucun post-it"; };
-  function nouveauPostit(client, apres) {
-    const n = { id: nouvelId(), texte: "", couleur: "jaune", client: client || "", cree: new Date().toISOString(), modifie: new Date().toISOString() };
-    postits.unshift(n); garderPostits(false);
-    apres();
-    const t = document.querySelector(`.postit[data-id="${n.id}"] textarea`); if (t) t.focus();
-  }
-  function cartePostit(n, rafraichir, dansFiche) {
-    const zone = el("textarea", { placeholder: "Note rapide…", "aria-label": "Note" }, n.texte || "");
-    zone.addEventListener("input", () => { n.texte = zone.value; n.modifie = new Date().toISOString(); garderPostits(); });
-    // une note laissée vide, sans client, disparaît
-    zone.addEventListener("blur", () => { setTimeout(() => { if (!(n.texte || "").trim() && !n.client && postits.includes(n) && !document.querySelector(`.postit[data-id="${n.id}"]:focus-within`)) { postits = postits.filter((x) => x !== n); garderPostits(); rafraichir(); } }, 200); });
-    const changer = (ch) => { Object.assign(n, ch, { modifie: new Date().toISOString() }); garderPostits(); rafraichir(); };
-    let client = [];
-    if (n.client && !dansFiche) {
-      client = [el("button", { type: "button", class: "pi-client", title: "Ouvrir la fiche du client", onclick: () => ouvrirClient(n.client) }, "👤 " + n.client),
-        el("button", { type: "button", class: "pi-detacher", title: "Détacher du client", "aria-label": "Détacher du client", onclick: () => changer({ client: "" }) }, "✕")];
-    } else if (!n.client) {
-      const choix = el("input", { class: "pi-rattacher", type: "text", list: "liste-clients-pi", placeholder: "Rattacher à un client…", autocomplete: "off", "aria-label": "Rattacher à un client" });
-      choix.addEventListener("change", () => {
-        const v = choix.value.trim(); if (!v) return;
-        const f = donnees && donnees.clients[cleClient(v)];
-        if (!f) { informer(`« ${v} » n’est pas un client du suivi.`); return; }
-        changer({ client: f.nom || v }); informer(`Note rattachée à ${f.nom || v}.`);
-      });
-      client = [choix];
+  function garderNotesLibres() { localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); sauver(); }
+  const libelleDossier = (d) => [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") || "Dossier";
+  // toutes les notes, avec leur place : { n, ou: "libre" | "client" | "dossier", nom, d }
+  function toutesNotes() {
+    const l = notesLibres.map((n) => ({ n, ou: "libre" }));
+    if (donnees) {
+      for (const f of Object.values(donnees.clients)) for (const n of (Array.isArray(f.journal) ? f.journal : [])) l.push({ n, ou: "client", nom: f.nom });
+      for (const d of donnees.dossiers) for (const n of (Array.isArray(d.journal) ? d.journal : [])) l.push({ n, ou: "dossier", nom: d.client, d });
     }
-    return el("div", { class: "postit c-" + (n.couleur || "jaune"), "data-id": n.id }, zone,
-      el("div", { class: "pi-pied" }, ...client,
-        el("span", { class: "pi-couleurs" }, ...COULEURS_PI.map(([c, h]) => el("button", { type: "button", class: (n.couleur || "jaune") === c ? "on" : "", style: `background:${h}`, title: c, "aria-label": "Couleur " + c, onclick: () => changer({ couleur: c }) })))),
-      el("div", { class: "pi-pied" }, el("span", { class: "pi-date" }, new Date(n.modifie || n.cree).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })),
-        el("button", { type: "button", class: "pi-suppr", style: "margin-left:auto", title: "Supprimer la note", "aria-label": "Supprimer la note", onclick: () => {
-          if ((n.texte || "").trim() && !confirm("Supprimer cette note ?\n\n" + n.texte.slice(0, 200))) return;
-          postits = postits.filter((x) => x !== n); garderPostits(); rafraichir(); informer("Note supprimée (Annuler : menu ⋯ ou Ctrl + Z).");
-        } }, "🗑")));
+    return l.sort((a, b) => String(b.n.le || "").localeCompare(String(a.n.le || "")));
   }
-  const listeClientsPi = () => el("datalist", { id: "liste-clients-pi" }, nomsClients().map((v) => el("option", { value: v })));
-  const triPostits = (a, b) => (b.modifie || b.cree || "").localeCompare(a.modifie || a.cree || "");
-  // dans la fiche d'un client : ses notes
-  function blocPostits(nom) {
-    const z = el("div");
-    const dessiner = () => {
-      const l = postitsDe(nom).sort(triPostits);
-      z.replaceChildren(
-        el("button", { type: "button", class: "bouton-discret", style: "margin-bottom:8px", onclick: () => nouveauPostit(nom, dessiner) }, "＋ Nouvelle note"),
-        l.length ? el("div", { class: "pi-grille petite" }, ...l.map((n) => cartePostit(n, dessiner, true))) : el("p", { class: "pi-vide" }, "Aucune note rapide pour ce client."));
+  // retire une note de sa place actuelle
+  function retirerNote(x) {
+    if (x.ou === "libre") { notesLibres = notesLibres.filter((n) => n.id !== x.n.id); localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); }
+    else if (x.ou === "client") { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: (f.journal || []).filter((n) => n.id !== x.n.id) }; }
+    else if (x.ou === "dossier") x.d.journal = (x.d.journal || []).filter((n) => n.id !== x.n.id);
+  }
+  function corrigerNote(x, texte) {
+    const maj = (l) => l.map((n) => (n.id === x.n.id ? { ...n, texte } : n)).filter((n) => n.texte);
+    if (x.ou === "libre") { notesLibres = maj(notesLibres); localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); }
+    else if (x.ou === "client") { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: maj(f.journal || []) }; }
+    else x.d.journal = maj(x.d.journal || []);
+    sauver();
+  }
+  // range une note : cible = null (non rattachée), { nom } (le client) ou { nom, d } (un dossier du client)
+  function rangerNote(x, cible) {
+    const note = { id: x.n.id, le: x.n.le, texte: x.n.texte };
+    retirerNote(x);
+    if (!cible) notesLibres = [note, ...notesLibres];
+    else if (cible.d) cible.d.journal = [note, ...(cible.d.journal || [])];
+    else { const f = fiche(cible.nom); donnees.clients[cleClient(cible.nom)] = { ...f, nom: f.nom || cible.nom, journal: [note, ...journalClient(cible.nom)], notes: "" }; }
+    localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres));
+    sauver();
+  }
+  // le petit formulaire « rattacher à… » : un client, puis sa fiche ou l'un de ses dossiers
+  function formulaireRattacher(x, fermer) {
+    const choixClient = el("input", { type: "text", class: "nr-client", list: "liste-clients-notes", placeholder: "Client…", autocomplete: "off", value: x.nom || "", "aria-label": "Client" });
+    const choixOu = el("select", { class: "nr-ou", "aria-label": "Fiche ou dossier" });
+    let pour = null;   // le client dont les dossiers sont listés (on ne refait pas la liste, et le choix reste, s'il ne change pas)
+    const remplir = () => {
+      const f = donnees.clients[cleClient(choixClient.value)];
+      if ((f ? f.nom : null) === pour && choixOu.options.length) return;
+      pour = f ? f.nom : null;
+      const ds = f ? dossiersDe(f.nom).filter((d) => !d.archives || d === x.d) : [];
+      choixOu.replaceChildren(el("option", { value: "" }, f ? "La fiche du client" : "—"), ...ds.map((d) => el("option", { value: String(donnees.dossiers.indexOf(d)) }, "Dossier : " + libelleDossier(d))));
+      if (x.d && f && cleClient(x.nom) === cleClient(f.nom)) choixOu.value = String(donnees.dossiers.indexOf(x.d));
+      choixOu.disabled = !f;
     };
-    dessiner();
-    return z;
+    choixClient.addEventListener("input", remplir); choixClient.addEventListener("change", remplir);
+    remplir();
+    const valider = () => {
+      const f = donnees.clients[cleClient(choixClient.value)];
+      if (!f) { informer(choixClient.value.trim() ? `« ${choixClient.value.trim()} » n’est pas un client du suivi.` : "Choisissez un client."); return; }
+      const d = choixOu.value !== "" ? donnees.dossiers[+choixOu.value] : null;
+      rangerNote(x, d ? { nom: f.nom, d } : { nom: f.nom });
+      informer(d ? `Note rattachée au dossier « ${libelleDossier(d)} » de ${f.nom}.` : `Note rattachée à la fiche de ${f.nom}.`);
+      fermer(true);
+    };
+    setTimeout(() => choixClient.focus(), 0);
+    return el("div", { class: "nr-form" }, choixClient, choixOu,
+      el("button", { type: "button", class: "bouton", onclick: valider }, "Rattacher"),
+      x.ou !== "libre" ? el("button", { type: "button", class: "bouton-discret", onclick: () => { rangerNote(x, null); informer("Note détachée : elle est dans les notes non affectées."); fermer(true); } }, "Détacher") : null,
+      el("button", { type: "button", class: "bouton-discret", onclick: () => fermer(false) }, "Annuler"));
+  }
+  function carteNote(x, redessiner) {
+    const corps = el("div", { class: "journal-texte" }, ...texteAvecLiens(x.n.texte));
+    const place = x.ou === "libre" ? el("span", { class: "nr-place libre" }, "Non affectée")
+      : el("button", { type: "button", class: "nr-place", title: "Ouvrir", onclick: () => { if (x.ou === "dossier") { const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, "Notes du dossier"); } else ouvrirClient(x.nom, "Notes"); } },
+          x.ou === "dossier" ? `📁 ${x.nom} · ${libelleDossier(x.d)}` : `👤 ${x.nom}`);
+    const pied = el("div", { class: "nr-pied" }, place,
+      el("button", { type: "button", class: "bouton-discret nr-ranger", onclick: () => { pied.replaceChildren(formulaireRattacher(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner).querySelector(".nr-pied")); })); } },
+        x.ou === "libre" ? "↪ Rattacher à un client ou un dossier" : "↪ Déplacer"));
+    return el("div", { class: "journal-note" + (x.ou === "libre" ? " nr-libre" : "") },
+      el("div", { class: "journal-tete" }, el("span", null, dateNote(x.n.le)),
+        el("button", { type: "button", title: "Corriger", "aria-label": "Corriger la note", onclick: () => {
+          const edit = el("textarea", { class: "journal-saisie" }, x.n.texte);
+          corps.replaceChildren(edit, el("div", { class: "journal-actions" },
+            el("button", { type: "button", class: "bouton", onclick: () => { corrigerNote(x, edit.value.trim()); redessiner(); } }, "Enregistrer"),
+            el("button", { type: "button", class: "bouton-discret", onclick: redessiner }, "Annuler")));
+          edit.focus();
+        } }, "✎"),
+        el("button", { type: "button", title: "Effacer", "aria-label": "Effacer la note", onclick: () => {
+          if (!confirm("Effacer cette note ?")) return;
+          retirerNote(x); sauver(); redessiner(); informer("Note effacée (Annuler : menu ⋯ ou Ctrl + Z).");
+        } }, "✕")),
+      corps, pied);
+  }
+  // les post-it du premier essai deviennent des notes (une seule fois)
+  function reprendrePostits() {
+    if (!donnees || !postitsAReprendre.length) return;
+    for (const p of postitsAReprendre) {
+      if (!String(p.texte || "").trim() || toutesNotes().some((x) => x.n.id === p.id)) continue;
+      const note = { id: p.id || nouvelId(), le: p.cree || p.modifie || new Date().toISOString(), texte: String(p.texte).trim() };
+      const f = p.client && donnees.clients[cleClient(p.client)];
+      if (f) donnees.clients[cleClient(p.client)] = { ...f, journal: [note, ...journalClient(f.nom)], notes: "" };
+      else notesLibres = [note, ...notesLibres];
+    }
+    postitsAReprendre = [];
+    localStorage.removeItem("suivi-gp-donnees-postits");
+    localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres));
+    sauver();
   }
   function afficherNotes() {
     const z = $("vue-notes");
     if (!z || z.hidden) return;
+    reprendrePostits();
     const t = sansAccents(filtreNotes.texte);
-    const tous = postits.slice().sort(triPostits);
-    const liste = tous.filter((n) => (!filtreNotes.aff || (filtreNotes.aff === "oui") === !!n.client)
-      && (!t || sansAccents((n.texte || "") + " " + (n.client || "")).includes(t)));
-    const nb = (f) => tous.filter(f).length;
+    const tous = toutesNotes();
+    const liste = tous.filter((x) => (!filtreNotes.aff || (filtreNotes.aff === "oui") === (x.ou !== "libre"))
+      && (!t || sansAccents(x.n.texte + " " + (x.nom || "") + " " + (x.d ? libelleDossier(x.d) : "")).includes(t)));
+    const nbLibres = tous.filter((x) => x.ou === "libre").length;
     const puce = (v, lib) => el("button", { type: "button", class: "collab" + (filtreNotes.aff === v ? " choisi" : ""), onclick: () => { filtreNotes.aff = v; afficherNotes(); } }, lib);
-    const recherche = el("input", { type: "search", placeholder: "Rechercher dans les notes, un client…", value: filtreNotes.texte });
-    recherche.addEventListener("input", () => { filtreNotes.texte = recherche.value; clearTimeout(afficherNotes.t); afficherNotes.t = setTimeout(() => { afficherNotes(); const r = document.querySelector("#vue-notes input[type=search]"); if (r) { r.focus(); r.setSelectionRange(r.value.length, r.value.length); } }, 250); });
+    const recherche = el("input", { type: "search", class: "nr-recherche", placeholder: "Rechercher dans les notes, un client…", value: filtreNotes.texte });
+    recherche.addEventListener("input", () => { filtreNotes.texte = recherche.value; clearTimeout(afficherNotes.t); afficherNotes.t = setTimeout(() => { afficherNotes(); const r = document.querySelector("#vue-notes .nr-recherche"); if (r) { r.focus(); r.setSelectionRange(r.value.length, r.value.length); } }, 250); });
+    // la saisie : une note non rattachée (on la range ensuite)
+    const saisieNote = el("textarea", { class: "journal-saisie", placeholder: "Nouvelle note… (Ctrl + Entrée pour l’ajouter ; vous la rattacherez ensuite)" });
+    const ajouter = () => {
+      const tx = saisieNote.value.trim(); if (!tx) return;
+      saisieNote.value = "";
+      notesLibres = [{ id: nouvelId(), le: new Date().toISOString(), texte: tx }, ...notesLibres];
+      garderNotesLibres();
+      if (filtreNotes.aff === "oui") filtreNotes.aff = "";
+      afficherNotes();
+      const s = document.querySelector("#vue-notes .journal-saisie"); if (s) s.focus();
+    };
+    saisieNote.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ajouter(); } });
     z.replaceChildren(
       el("h2", { class: "m-h2" }, "Notes"),
-      el("div", { class: "pi-barre" },
-        el("button", { type: "button", class: "pi-nouveau", onclick: () => nouveauPostit(filtreNotes.aff === "oui" ? "" : "", afficherNotes) }, "＋ Nouvelle note"),
-        recherche),
-      el("div", { class: "pi-barre" }, puce("", `Toutes (${tous.length})`), puce("oui", `Affectées (${nb((n) => n.client)})`), puce("non", `Non affectées (${nb((n) => !n.client)})`)),
-      listeClientsPi(),
-      liste.length ? el("div", { class: "pi-grille" }, ...liste.map((n) => cartePostit(n, afficherNotes)))
-        : el("p", { class: "pi-vide" }, tous.length ? "Aucune note ne correspond." : "Aucune note pour l’instant. « ＋ Nouvelle note » pour en prendre une, rattachée ou non à un client."));
+      el("div", { class: "journal-ajout" }, saisieNote, el("button", { type: "button", class: "bouton", onclick: ajouter }, "＋ Ajouter")),
+      el("div", { class: "nr-barre" }, puce("", `Toutes (${tous.length})`), puce("non", `Non affectées (${nbLibres})`), puce("oui", `Affectées (${tous.length - nbLibres})`), recherche),
+      el("datalist", { id: "liste-clients-notes" }, nomsClients().map((v) => el("option", { value: v }))),
+      liste.length ? el("div", { class: "journal-liste nr-liste" }, ...liste.slice(0, 300).map((x) => carteNote(x, afficherNotes)))
+        : el("p", { class: "m-vide" }, tous.length ? "Aucune note ne correspond." : "Aucune note pour l’instant."),
+      liste.length > 300 ? el("p", { class: "aide" }, `300 notes affichées sur ${liste.length} : précisez la recherche.`) : null);
   }
 
   // ---- l'onglet « Simulations » : tout ce qui a été fait dans les trois applis ----
@@ -8833,7 +8882,6 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
           { libelle: "Tâches", contenu: blocTaches(nom), resume: () => resumeTaches(nom) },
           { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
           { libelle: "Simulations", contenu: blocSimulationsClient(nom), resume: () => resumeSimulations(nom) },
-          { libelle: "Post-it", contenu: blocPostits(nom), resume: () => resumePostits(nom) },
           { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
           { libelle: "Notes", contenu: blocJournal({ lire: () => journalClient(nom), ecrire: (l) => ecrireJournalClient(nom, l), aide: "Nouvelle note sur ce client… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalClient(nom)) },
           { libelle: "Coordonnées", contenu: vueCoordonnees(zoneCoord), resume: () => premiereLigne(zoneCoord.value) }]);
