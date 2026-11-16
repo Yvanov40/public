@@ -2125,8 +2125,13 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   .semaine.deux-jours .semaine-sans-heure { padding: 3px 2px; }
   .semaine.deux-jours .semaine-sans-heure .ev { font-size: 10.5px; white-space: normal; padding: 2px 4px; }
   .semaine.deux-jours .frise-bloc { padding: 2px 4px; }
-  .semaine.deux-jours .frise-bloc b { font-size: 10.5px; white-space: normal; line-height: 1.2; }
+  /* téléphone : le titre d'abord, sur autant de lignes que le bloc en contient ; l'heure et le client ensuite s'il reste de la place */
+  .semaine.deux-jours .frise-bloc b { font-size: 10.5px; white-space: normal; line-height: 1.25; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lignes, 2); overflow: hidden; overflow-wrap: break-word; hyphens: auto; }
   .semaine.deux-jours .frise-bloc small { font-size: 9.5px; white-space: normal; line-height: 1.2; }
+  .semaine.deux-jours .frise-bloc.fixe { border-width: 2px; border-left-width: 4px; }
+  .semaine.deux-jours .frise-bloc.court { padding: 0 4px; display: flex; align-items: center; }
+  .semaine.deux-jours .frise-bloc.court b { display: block; white-space: nowrap; text-overflow: ellipsis; -webkit-line-clamp: unset; line-height: 1.15; margin: 0; }
+  .semaine.deux-jours .frise-bloc.court small { display: none; }
   .semaine.deux-jours .semaine-axe span { right: 3px; font-size: 9.5px; }
 }
 }
@@ -5394,8 +5399,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const places = elements.map((e) => ({ e, a: enMinutes(e.heure), b: enMinutes(e.heure) + (Number(e.duree) || (e.type === "rdv" ? DUREE_RDV : DUREE_TACHE)) }))
       .sort((x, y) => x.a - y.a);
     // côte à côte seulement là où ça se chevauche : on travaille par groupe d'éléments qui se recouvrent
-    let groupe = [], finGroupe = -1, colonnes = [];
-    const fermerGroupe = () => { for (const q of groupe) q.nbCol = colonnes.length; groupe = []; colonnes = []; };
+    let groupe = [], finGroupe = -1, colonnes = [], nGroupe = 0;
+    const fermerGroupe = () => { nGroupe++; for (const q of groupe) { q.nbCol = colonnes.length; q.g = nGroupe; } groupe = []; colonnes = []; };
     for (const p of places) {
       if (p.a >= finGroupe) fermerGroupe();
       let c = colonnes.findIndex((fin) => fin <= p.a);
@@ -5405,14 +5410,25 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       finGroupe = Math.max(finGroupe, p.b);
     }
     fermerGroupe();
+    // hauteur minimale lisible (une ligne de texte) ; un bloc agrandi pousse le suivant de sa colonne vers le bas
+    const tel = !!pxImpose && estTel(), hMin = tel ? 19 : 16, bas = {};
+    for (const p of places) {
+      const cle = p.g + ":" + p.col, h0 = (p.b - p.a) * pxMin - 2;
+      p.haut = Math.max((p.a - DEBUT_FRISE) * pxMin, cle in bas ? bas[cle] + 1 : -1);
+      p.h = Math.max(hMin, h0 - (p.haut - (p.a - DEBUT_FRISE) * pxMin));
+      bas[cle] = p.haut + p.h;
+      // la ligne suivante du même groupe ne doit pas remonter sous ce bloc
+      const n = p.h >= 34 ? Math.max(1, Math.floor((p.h - 6) / 13.5)) : 1;
+      p.lignes = n >= 4 ? n - 1 : n;   // une ligne gardée pour l'heure et le client
+    }
     for (const p of places) {
       const largeur = 100 / Math.max(1, p.nbCol);
       const bloc = el("div", { class: `frise-bloc f-${p.e.type}${p.e.fait ? " faite" : ""}${p.e.retard ? " retard" : ""}${p.e.fixe ? " fixe" : ""}${p.e.perso ? " perso" : ""}`,
-        style: `top:${(p.a - DEBUT_FRISE) * pxMin}px;height:${Math.max(16, (p.b - p.a) * pxMin - 2)}px;left:calc(${marge}px + (100% - ${marge + 4}px) * ${p.col * largeur / 100});width:calc((100% - ${marge + 4}px) * ${largeur / 100} - 3px)` },
-        el("b", null, `${p.e.fixe ? "📌 " : ""}${p.e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "")}`),
+        style: `top:${p.haut}px;height:${p.h}px;--lignes:${p.lignes};left:calc(${marge}px + (100% - ${marge + 4}px) * ${p.col * largeur / 100});width:calc((100% - ${marge + 4}px) * ${largeur / 100} - 3px)` },
+        el("b", null, `${p.e.fixe && !tel ? "📌 " : ""}${p.e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "")}`),
         el("small", null, `${plage(p.e.heure, p.b - p.a)} · ${p.e.type === "tache" ? p.e.client || "" : p.e.sous}`),
         el("i", { class: "poignee", title: "Tirer pour changer la durée" }));
-      if ((p.b - p.a) < 40) bloc.classList.add("court");  // bloc court : tout sur une ligne
+      if ((p.b - p.a) < 40 || p.h < 34) bloc.classList.add("court");  // bloc court : tout sur une ligne
       activerFrise(bloc, p, pxMin);
       frise.append(bloc);
     }
