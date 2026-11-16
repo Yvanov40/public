@@ -33,6 +33,19 @@ qui permet aussi une apparence propre aux applis, commune à toutes.
 - `habillage.source.js` : le module commun, recopié au début de chaque appli (repères `habillage : début` / `habillage : fin`),
   avec les correspondances entre les couleurs communes et les variables CSS de l'appli.
 
+## Personnaliser et exports (les quatre simulateurs)
+
+Audit, Succession, Plus-value et Investissement ont le même bouton « Personnaliser », à deux onglets :
+*Apparence* (module habillage) et *Mise en page* : côte à côte, inversée, une colonne, résultats d'abord,
+pas à pas ; largeur de la colonne de saisie (gardée par appli), largeur de la page, navigation (barre, menu
+latéral, masquée), densité ; nom du cabinet et logo des exports. Puis trois boutons : PowerPoint, PDF, Excel.
+
+- `disposition.source.js` : le module commun, recopié à la fin de chaque simulateur (repères `disposition : début` /
+  `disposition : fin`) ; chaque appli décrit sa mise en page et ses exports dans `window.DISPOSITION`.
+- Excel en formules vivantes : `immo/excel.js` et `pvi/excel.js` (hypothèses en haut de chaque onglet, en jaune ;
+  formules du même onglet ; aucun nom défini). `xlcalc.js` calcule les valeurs avant l'enregistrement, pour les aperçus.
+- Les bibliothèques d'export sont dans le dossier `vendor/` de chaque appli (exports possibles hors connexion).
+
 ## Fichiers à la racine
 
 - `index.html` : la page d’accueil « Mes applis ».
