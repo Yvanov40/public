@@ -6910,10 +6910,10 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const t = sansAccents(filtreNotes.texte);
     const tous = toutesNotes();
     const liste = tous.filter((x) => (!filtreNotes.aff || (filtreNotes.aff === "oui") === (x.ou !== "libre"))
-      && (!t || sansAccents(x.n.texte + " " + (x.nom || "") + " " + (x.objet || "") + " " + (x.d ? libelleDossier(x.d) : "")).includes(t)));
+      && (!t || sansAccents(x.nom || "").includes(t)));   // la recherche ne porte que sur le client
     const nbLibres = tous.filter((x) => x.ou === "libre").length;
     const puce = (v, lib) => el("button", { type: "button", class: "collab" + (filtreNotes.aff === v ? " choisi" : ""), onclick: () => { filtreNotes.aff = v; afficherNotes(); } }, lib);
-    const recherche = el("input", { type: "search", class: "nr-recherche", placeholder: "Rechercher dans les notes, un client…", value: filtreNotes.texte });
+    const recherche = el("input", { type: "search", class: "nr-recherche", list: "liste-clients-notes", autocomplete: "off", placeholder: "Filtrer par client…", value: filtreNotes.texte, "aria-label": "Filtrer par client" });
     recherche.addEventListener("input", () => { filtreNotes.texte = recherche.value; clearTimeout(afficherNotes.t); afficherNotes.t = setTimeout(() => { afficherNotes(); const r = document.querySelector("#vue-notes .nr-recherche"); if (r) { r.focus(); r.setSelectionRange(r.value.length, r.value.length); } }, 250); });
     // la saisie : une note non rattachée (on la range ensuite)
     const saisieNote = el("textarea", { class: "journal-saisie", placeholder: "Nouvelle note… (Ctrl + Entrée pour l’ajouter ; vous la rattacherez ensuite)" });
