@@ -7215,9 +7215,11 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   const premiereLigne = (t) => { const l = String(t || "").split("\n").map((x) => x.trim()).find(Boolean) || ""; return l.length > 60 ? l.slice(0, 58) + "…" : l; };
   function resumeTaches(nom) {
     const l = tachesOuvertes(nom).slice().sort(triTaches);
-    if (!l.length) return "";
+    const faites = tachesDe(nom).filter((t) => t.fait).length;
+    const txtFaites = faites ? `${faites} terminée${faites > 1 ? "s" : ""}` : "";
+    if (!l.length) return txtFaites ? `${txtFaites} · rien à faire` : "Aucune tâche";
     const p = l.find((t) => t.pour);
-    return `${l.length} à faire${p ? " · " + etatEcheance(p)[0] : ""}`;
+    return `${l.length} à faire${p ? " · " + etatEcheance(p)[0] : ""}${txtFaites ? " · " + txtFaites : ""}`;
   }
   function resumeRdv(nom) {
     const auj = enIso(aujourdhui());
