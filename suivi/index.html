@@ -792,6 +792,17 @@ input[type="time"] { cursor: pointer; }
 .filtre-portee { grid-column: 1 / -1; font-size: 12px; color: var(--discret); margin: -2px 0 0; }
 
 /* ---------- accueil : tableau de bord ---------- */
+/* encart : des tâches d'un client sont prévues après son prochain rendez-vous */
+.acc-avant-rdv { border: 1px solid #d9c48f; border-left: 4px solid var(--or); background: var(--or-doux); border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; display: grid; gap: 8px; }
+.acc-avant-rdv h2 { margin: 0; font: 600 17px var(--titre); color: var(--bleu); }
+.acc-avant-rdv .ar-aide { margin: -4px 0 2px; font-size: 12.5px; color: var(--discret); }
+.ar-client { display: grid; gap: 4px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,.08); }
+.ar-client > b { font-size: 14px; } .ar-client > b button { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(0,0,0,.2); }
+.ar-rdv { font-size: 12.5px; color: #4d6b4c; font-weight: 600; }
+.ar-tache { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
+.ar-tache .ar-t { flex: 1 1 200px; min-width: 0; } .ar-tache .ar-t small { color: var(--discret); margin-left: 6px; }
+.ar-tache button { border: 1px solid var(--bordure); background: var(--carte); color: var(--texte); border-radius: 8px; padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+.ar-tache button.ar-avancer { background: var(--bleu); color: var(--carte); border-color: var(--bleu); }
 .acc-bonjour { margin: 4px 2px 14px; font: italic 500 18px var(--titre); color: var(--discret); }
 @media (min-width: 901px) {
   body.vue-accueil #indicateurs, body.vue-accueil #rdv { display: none !important; }
@@ -2026,6 +2037,8 @@ body.vue-notes .filtres, body.vue-notes #alerteModif, body.vue-notes #rdv { disp
 .nr-barre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .nr-recherche { flex: 1 1 220px; min-width: 0; padding: 8px 12px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); color: var(--texte); font: inherit; }
 .journal-note.nr-libre { border-left-color: var(--discret); border-left-style: dashed; }
+.journal-note.nr-rdv { border-left-color: #7d9c7c; }
+.nr-objet { font-weight: 600; color: var(--bleu); }
 .nr-pied { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
 .nr-place { border: 0; background: var(--section); color: var(--bleu); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nr-place.libre { background: none; border: 1px dashed var(--bordure); color: var(--discret); font-weight: 500; cursor: default; }
@@ -2249,6 +2262,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     <!-- téléphone : accueil -->
     <section class="vue" id="vue-accueil">
       <p class="acc-bonjour ordi" id="accBonjour"></p>
+      <div class="acc-avant-rdv" id="mAvantRdv" hidden></div>
       <div class="acc-grille">
         <div class="acc-carte acc-journee"><h2 class="m-h2">Ma journée</h2><div class="m-bloc" id="mJournee"></div></div>
         <div class="acc-carte"><h2 class="m-h2">Honoraires</h2><div class="m-bloc m-releve" id="mReleve"></div></div>
@@ -6122,6 +6136,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       const taches = tachesAVenir(7, true);
       const toutes = Object.values(donnees.clients).reduce((n, f) => n + (f.taches || []).filter((t) => !t.fait).length, 0);
       afficherMaJournee();
+      afficherAvantRdv();
       // tuiles : la tâche, le client, l'échéance ; un toucher ouvre la fiche, le ✓ la marque faite
       $("mTaches").replaceChildren(...(taches.length ? [
         ...taches.slice(0, 9).map(([t, nom]) => {
@@ -6763,17 +6778,27 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     if (donnees) {
       for (const f of Object.values(donnees.clients)) for (const n of (Array.isArray(f.journal) ? f.journal : [])) l.push({ n, ou: "client", nom: f.nom });
       for (const d of donnees.dossiers) for (const n of (Array.isArray(d.journal) ? d.journal : [])) l.push({ n, ou: "dossier", nom: d.client, d });
+      // les notes prises dans les rendez-vous (fiche rendez-vous du client, ou rendez-vous d'un dossier)
+      const leRdv = (date, heure) => date + "T" + (heure || "00:00");
+      for (const f of Object.values(donnees.clients)) for (const r of f.rdvs || []) if (String(r.note || "").trim())
+        l.push({ n: { id: "rdv-" + r.id, le: leRdv(r.date, r.heure), texte: String(r.note).trim() }, ou: "rdv", nom: f.nom, r, objet: r.objet || "Rendez-vous" });
+      for (const d of donnees.dossiers) if (estIso(d.rdv || "") && String(d.rdv_note || "").trim())
+        l.push({ n: { id: "rdvd-" + (d.id || d.client), le: leRdv(d.rdv, d.rdv_heure), texte: String(d.rdv_note).trim() }, ou: "rdvd", nom: d.client, d, objet: d.rdv_objet || "Rendez-vous" });
     }
     return l.sort((a, b) => String(b.n.le || "").localeCompare(String(a.n.le || "")));
   }
   // retire une note de sa place actuelle
   function retirerNote(x) {
+    if (x.ou === "rdv") { majRdvs(x.nom, (l) => l.map((r) => (r.id === x.r.id ? { ...r, note: "" } : r))); return; }
+    if (x.ou === "rdvd") { x.d.rdv_note = ""; return; }
     if (x.ou === "libre") { notesLibres = notesLibres.filter((n) => n.id !== x.n.id); localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); }
     else if (x.ou === "client") { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: (f.journal || []).filter((n) => n.id !== x.n.id) }; }
     else if (x.ou === "dossier") x.d.journal = (x.d.journal || []).filter((n) => n.id !== x.n.id);
   }
   function corrigerNote(x, texte) {
     const maj = (l) => l.map((n) => (n.id === x.n.id ? { ...n, texte } : n)).filter((n) => n.texte);
+    if (x.ou === "rdv") { majRdvs(x.nom, (l) => l.map((r) => (r.id === x.r.id ? { ...r, note: texte } : r))); sauver(); return; }
+    if (x.ou === "rdvd") { x.d.rdv_note = texte; sauver(); return; }
     if (x.ou === "libre") { notesLibres = maj(notesLibres); localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); }
     else if (x.ou === "client") { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: maj(f.journal || []) }; }
     else x.d.journal = maj(x.d.journal || []);
@@ -6820,7 +6845,28 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       el("button", { type: "button", class: "bouton-discret", onclick: () => fermer(false) }, "Annuler"));
   }
   function carteNote(x, redessiner) {
-    const corps = el("div", { class: "journal-texte" }, ...texteAvecLiens(x.n.texte));
+    const estRdv = x.ou === "rdv" || x.ou === "rdvd";
+    const corps = el("div", { class: "journal-texte" }, ...(estRdv ? [el("b", { class: "nr-objet" }, "📅 " + x.objet), "\n"] : []), ...texteAvecLiens(x.n.texte));
+    if (estRdv) {
+      const ouvrir = () => { if (x.ou === "rdv") ouvrirRdv(x.nom, x.r.id); else { const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, "Rendez-vous"); } };
+      const quand = fmtDate(x.ou === "rdv" ? x.r.date : x.d.rdv) + ((x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) ? " " + (x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) : "");
+      return el("div", { class: "journal-note nr-rdv" },
+        el("div", { class: "journal-tete" }, el("span", null, "Rendez-vous du " + quand),
+          el("button", { type: "button", title: "Corriger", "aria-label": "Corriger la note", onclick: () => {
+            const edit = el("textarea", { class: "journal-saisie" }, x.n.texte);
+            corps.replaceChildren(edit, el("div", { class: "journal-actions" },
+              el("button", { type: "button", class: "bouton", onclick: () => { corrigerNote(x, edit.value.trim()); redessiner(); } }, "Enregistrer"),
+              el("button", { type: "button", class: "bouton-discret", onclick: redessiner }, "Annuler")));
+            edit.focus();
+          } }, "✎"),
+          el("button", { type: "button", title: "Effacer la note (le rendez-vous reste)", "aria-label": "Effacer la note", onclick: () => {
+            if (!confirm("Effacer la note de ce rendez-vous ?\n\nLe rendez-vous, lui, reste dans l’agenda.")) return;
+            retirerNote(x); sauver(); redessiner(); informer("Note du rendez-vous effacée (Annuler : menu ⋯ ou Ctrl + Z).");
+          } }, "✕")),
+        corps,
+        el("div", { class: "nr-pied" }, el("button", { type: "button", class: "nr-place", title: "Ouvrir le rendez-vous", onclick: ouvrir },
+          (x.ou === "rdvd" ? `📁 ${x.nom} · ${libelleDossier(x.d)}` : `👤 ${x.nom}`) + " · rendez-vous")));
+    }
     const place = x.ou === "libre" ? el("span", { class: "nr-place libre" }, "Non affectée")
       : el("button", { type: "button", class: "nr-place", title: "Ouvrir", onclick: () => { if (x.ou === "dossier") { const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, "Notes du dossier"); } else ouvrirClient(x.nom, "Notes"); } },
           x.ou === "dossier" ? `📁 ${x.nom} · ${libelleDossier(x.d)}` : `👤 ${x.nom}`);
@@ -6864,7 +6910,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const t = sansAccents(filtreNotes.texte);
     const tous = toutesNotes();
     const liste = tous.filter((x) => (!filtreNotes.aff || (filtreNotes.aff === "oui") === (x.ou !== "libre"))
-      && (!t || sansAccents(x.n.texte + " " + (x.nom || "") + " " + (x.d ? libelleDossier(x.d) : "")).includes(t)));
+      && (!t || sansAccents(x.n.texte + " " + (x.nom || "") + " " + (x.objet || "") + " " + (x.d ? libelleDossier(x.d) : "")).includes(t)));
     const nbLibres = tous.filter((x) => x.ou === "libre").length;
     const puce = (v, lib) => el("button", { type: "button", class: "collab" + (filtreNotes.aff === v ? " choisi" : ""), onclick: () => { filtreNotes.aff = v; afficherNotes(); } }, lib);
     const recherche = el("input", { type: "search", class: "nr-recherche", placeholder: "Rechercher dans les notes, un client…", value: filtreNotes.texte });
@@ -8507,6 +8553,51 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     if (sens === 0) jourJournee = null;
     else { const d = versDate(base); d.setDate(d.getDate() + sens); jourJournee = enIso(d) === enIso(aujourdhui()) ? null : enIso(d); }
     afficherMaJournee();
+  }
+  // ---- accueil : tâches d'un client prévues dans l'agenda après son prochain rendez-vous (à faire avant ?) ----
+  function tachesApresRdv() {
+    const res = [];
+    if (!donnees) return res;
+    const cle = (date, heure, fin) => date + " " + (heure || fin);
+    for (const f of Object.values(donnees.clients)) {
+      if (!f.nom || estPerso(f.nom)) continue;
+      const ouvertes = (f.taches || []).filter((t) => !t.fait && t.pour);
+      if (!ouvertes.length) continue;
+      const r = rendezVousDuClient(f.nom).find((x) => !rdvPasse(x));
+      if (!r) continue;
+      const debutRdv = cle(r.date, r.heure, "00:00"), idRdv = r.date + (r.heure || "") + (r.objet || "");
+      const apres = ouvertes.filter((t) => t.ignoreApresRdv !== idRdv && (t.pour > r.date || (t.pour === r.date && t.heure && r.heure && cle(t.pour, t.heure) > debutRdv)))
+        .sort((a, b) => cle(a.pour, a.heure, "99").localeCompare(cle(b.pour, b.heure, "99")));
+      if (apres.length) res.push({ nom: f.nom, r, idRdv, apres });
+    }
+    return res.sort((a, b) => cle(a.r.date, a.r.heure, "99").localeCompare(cle(b.r.date, b.r.heure, "99")));
+  }
+  function afficherAvantRdv() {
+    const z = $("mAvantRdv"); if (!z) return;
+    const l = tachesApresRdv();
+    z.hidden = !l.length;
+    if (!l.length) { z.replaceChildren(); return; }
+    const nb = l.reduce((n, x) => n + x.apres.length, 0);
+    z.replaceChildren(
+      el("h2", null, `${nb} tâche${nb > 1 ? "s" : ""} prévue${nb > 1 ? "s" : ""} après le prochain rendez-vous du client`),
+      el("p", { class: "ar-aide" }, "À faire avant le rendez-vous ? « Avancer » la place le jour ouvré d’avant ; « C’est voulu » la retire de cet encart."),
+      ...l.slice(0, 8).map((x) => el("div", { class: "ar-client" },
+        el("b", null, el("button", { type: "button", onclick: () => ouvrirClient(x.nom, "Rendez-vous") }, x.nom)),
+        el("span", { class: "ar-rdv" }, `📅 Rendez-vous ${fmtDate(x.r.date)}${x.r.heure ? " à " + x.r.heure : ""}${x.r.objet ? " · " + x.r.objet : ""}`),
+        ...x.apres.map((t) => el("div", { class: "ar-tache" },
+          el("span", { class: "ar-t" }, (t.fixe ? "📌 " : "") + t.texte, el("small", null, fmtDate(t.pour) + (t.heure ? " " + t.heure : ""))),
+          el("button", { type: "button", class: "ar-avancer", title: "La placer le jour ouvré avant le rendez-vous", onclick: () => {
+            const jour = jourOuvrePrecedent(x.r.date) < enIso(aujourdhui()) ? enIso(aujourdhui()) : jourOuvrePrecedent(x.r.date);
+            const ancien = t.pour;
+            majTaches(x.nom, (ts) => ts.map((y) => (y.id === t.id ? { ...y, pour: jour, heure: y.fixe ? y.heure : "" } : y)));
+            const resume = apresAgenda([jour, ancien]);
+            afficherTout(); informer(`« ${t.texte} » avancée au ${fmtDate(jour)}, avant le rendez-vous.` + resume);
+          } }, "Avancer"),
+          el("button", { type: "button", onclick: () => ouvrirTache(x.nom, t.id) }, "Ouvrir"),
+          el("button", { type: "button", title: "Laisser cette tâche après le rendez-vous", onclick: () => {
+            majTaches(x.nom, (ts) => ts.map((y) => (y.id === t.id ? { ...y, ignoreApresRdv: x.idRdv } : y))); afficherTout();
+          } }, "C’est voulu"))))),
+      l.length > 8 ? el("p", { class: "ar-aide" }, `… et ${l.length - 8} autre${l.length - 8 > 1 ? "s" : ""} client${l.length - 8 > 1 ? "s" : ""}.`) : null);
   }
   function afficherMaJournee() {
     const zone = $("mJournee");
