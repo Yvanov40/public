@@ -588,7 +588,7 @@ body.vue-activite #rdv { display: none !important; }
   .a-grille { grid-template-columns: 1fr; }
   .a-chiffres { grid-template-columns: 1fr; }
   .a-ligne { grid-template-columns: minmax(80px, 110px) 1fr auto; }
-  nav.bas { grid-template-columns: repeat(6, 1fr) !important; }
+  nav.bas { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
   nav.bas a { font-size: 11.5px; }
 }
 
@@ -711,7 +711,7 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv { display: none !impo
   .cal-jour .ev, .cal-jour .ev.tache { display: none; }
   .points { display: flex; justify-content: center; }
   .cal-jsem { font-size: 11px; }
-  nav.bas { grid-template-columns: repeat(6, 1fr) !important; }
+  nav.bas { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
   nav.bas a { font-size: 10.5px !important; }
 }
 
@@ -876,7 +876,7 @@ body.vue-dutreil #indicateurs, body.vue-dutreil #rdv { display: none !important;
 @media (max-width: 900px) {
   .d-indic { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; }
   .d-indic .indic { flex: 0 0 auto; min-width: 46%; }
-  nav.bas { grid-template-columns: repeat(6, 1fr) !important; }
+  nav.bas { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 }
 
 /* ---------- disposition téléphone (première version) ---------- */
@@ -2019,6 +2019,33 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
   #vue-dutreil > #dIndicateurs { top: 12px; }
 }
 
+/* ---------- onglet Notes : des post-it, rattachés ou non à un client ---------- */
+body.vue-notes .filtres, body.vue-notes #alerteModif, body.vue-notes #rdv { display: none !important; }
+#vue-notes:not([hidden]) { display: grid; gap: 12px; align-content: start; }
+#vue-notes .m-h2 { margin: 4px 0 0; font: 600 22px var(--titre); color: var(--bleu); }
+.pi-barre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pi-barre input[type=search] { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); color: var(--texte); font: inherit; }
+.pi-nouveau { border: 0; background: var(--bleu); color: var(--carte); border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+.pi-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; align-items: start; }
+.pi-grille.petite { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.postit { --pi: #fff3b0; --pi-b: #e6d27a; background: var(--pi); border: 1px solid var(--pi-b); border-radius: 4px 4px 14px 4px; box-shadow: 0 6px 14px -8px rgba(40,30,0,.45); padding: 10px 10px 8px; display: grid; gap: 6px; color: #3b3320; min-width: 0; }
+.postit.c-rose { --pi: #fbd9e2; --pi-b: #e6a9b8; } .postit.c-bleu { --pi: #d6ebf7; --pi-b: #9ec6de; } .postit.c-vert { --pi: #dcf0d5; --pi-b: #a8d098; } .postit.c-orange { --pi: #fde2c4; --pi-b: #eab27a; }
+.postit textarea { all: unset; box-sizing: border-box; display: block; width: 100%; min-height: 84px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; color: inherit; field-sizing: content; cursor: text; }
+.postit textarea::placeholder { color: rgba(59,51,32,.45); }
+.pi-pied { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+.pi-client { border: 0; background: rgba(255,255,255,.55); border-radius: 999px; padding: 3px 9px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pi-rattacher { flex: 1 1 120px; min-width: 0; border: 1px solid var(--pi-b); background: rgba(255,255,255,.6); border-radius: 8px; padding: 4px 8px; font: inherit; color: inherit; }
+.pi-couleurs { display: flex; gap: 4px; margin-left: auto; }
+.pi-couleurs button { width: 15px; height: 15px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); padding: 0; cursor: pointer; }
+.pi-couleurs button.on { outline: 2px solid #3b3320; outline-offset: 1px; }
+.pi-suppr, .pi-detacher { border: 0; background: none; cursor: pointer; font-size: 13px; padding: 2px 4px; color: inherit; opacity: .7; }
+.pi-date { font-size: 11px; opacity: .6; }
+.pi-vide { color: var(--discret); margin: 0; }
+@media (max-width: 900px) { .pi-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .postit { padding: 8px 8px 6px; } .postit textarea { font-size: 13.5px; min-height: 70px; } }
+.pi-rattacher { width: 100%; flex-basis: 100%; }
+.pi-couleurs { flex-wrap: wrap; }
+:root[data-theme="dark"] .postit { filter: brightness(.92); }
+
 /* ---------- onglet Simulations : les filtres des dossiers n'y servent pas ---------- */
 body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none !important; }
 
@@ -2161,6 +2188,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
       <a href="#activite" data-vue="activite">📊 Activité</a>
       <a href="#simulations" data-vue="simulations">🧮 Simulations</a>
+      <a href="#notes" data-vue="notes">🗒 Notes</a>
     </nav>
     <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
     <button class="icone" id="btnActualiserTel" aria-label="Actualiser" title="Actualiser">↻</button>
@@ -2274,6 +2302,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     </section>
 
     <section class="vue" id="vue-simulations" hidden></section>
+    <section class="vue" id="vue-notes" hidden></section>
 
     <section class="vue" id="vue-outils" hidden>
       <div class="outils-liste" id="outilsListe"></div>
@@ -2335,6 +2364,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   <a href="#calendrier" data-vue="calendrier"><span>📅</span>Agenda</a>
   <a href="#dutreil" data-vue="dutreil"><span>⚖</span>Dutreil</a>
   <a href="#activite" data-vue="activite"><span>📊</span>Activité</a>
+  <a href="#notes" data-vue="notes"><span>🗒</span>Notes</a>
 </nav>
 
 <div class="barre-selection" id="barreSelection" hidden><span id="barreSelectionTexte"></span>
@@ -3089,9 +3119,11 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   })();
   let emolPerso = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-emoluments")) || {}; } catch (e) { return {}; } })();
   let modelesTaches = (() => { try { return JSON.parse(localStorage.getItem("suivi-gp-donnees-modeles")) || {}; } catch (e) { return {}; } })();
+  // ---- post-it : notes rapides, rattachées ou non à un client ----
+  var postits = (() => { try { const x = JSON.parse(localStorage.getItem("suivi-gp-donnees-postits")); return Array.isArray(x) ? x : []; } catch (e) { return []; } })();
   function sectionsAnnexes() {
     const { sha: _s, ...agenda } = reglagesAgenda || {};
-    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso, audits: auditsSuivi, simulations: simulationsSuivi };
+    return { dutreil: { pactes: dutreil.pactes || [] }, agenda, societes, modeles: modelesTaches, emoluments: emolPerso, audits: auditsSuivi, simulations: simulationsSuivi, postits };
   }
   function contenuComplet() {
     return JSON.stringify({ version: 3, dossiers: donnees.dossiers, clients: donnees.clients, ...sectionsAnnexes() }, null, 1);
@@ -3109,6 +3141,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       localStorage.setItem("suivi-gp-donnees-simulations", JSON.stringify(simulationsSuivi));
       if (typeof appsPretes !== "undefined" && appsPretes) { versApp("succession"); versApp("pvi"); versApp("immo"); }
     }
+    if (Array.isArray(contenu.postits)) { postits = contenu.postits; localStorage.setItem("suivi-gp-donnees-postits", JSON.stringify(postits)); if (typeof vueCourante === "function" && vueCourante() === "notes") setTimeout(afficherNotes, 0); }
     if (contenu.emoluments) { emolPerso = contenu.emoluments; localStorage.setItem("suivi-gp-donnees-emoluments", JSON.stringify(emolPerso)); if (typeof reconstruireBaremes === "function") reconstruireBaremes(); }
   }
   // ancien format (dutreil.json, agenda.json, societes.json à part) : on les reprend une fois dans le fichier principal
@@ -6474,7 +6507,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   function vueCourante() {
     const v = location.hash.replace("#", "");
     if (v === "audit") return "simulations";   // ancienne adresse de l'onglet
-    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite", "outils", "simulations"].includes(v) ? v : "accueil";
+    return ["accueil", "kanban", "clients", "dutreil", "calendrier", "activite", "outils", "simulations", "notes"].includes(v) ? v : "accueil";
   }
   // ---- téléphone : glisser le doigt vers la gauche ou la droite pour changer de vue ----
   const ORDRE_VUES = ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite"];
@@ -6508,7 +6541,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       if (doigtCible.closest("#calPanneau")) { if (estTel()) changerDeuxJours(dx < 0 ? 1 : -1); else changerJourCalendrier(dx < 0 ? 1 : -1); return; }
       if (doigtCible.closest("#calGrille")) { changerMoisCalendrier(dx < 0 ? 1 : -1); return; }
     }
-    if (vueCourante() === "outils" || vueCourante() === "simulations") return;  // ces onglets ne sont pas dans l'ordre de balayage
+    if (vueCourante() === "outils" || vueCourante() === "simulations" || vueCourante() === "notes") return;  // ces onglets ne sont pas dans l'ordre de balayage
     const masques = window.lireApparence().page.masques;
     const ordre = ORDRE_VUES.filter((v) => !masques.includes(v) || v === vueCourante());
     const i = ordre.indexOf(vueCourante()) + (dx < 0 ? 1 : -1);
@@ -6726,6 +6759,88 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   // (accès pour la console du navigateur, utile pour vérifier le pont)
   window.pontSimulations = { nouvelle: (app, nom) => nouvelleSimulation(app, nom), ouvrir: (app, id) => ouvrirSimulation(app, id), duClient: (nom) => simulationsDuClient(nom),
     effaces: (app) => magasin(app).effaces, client: (nom) => ouvrirClient(nom), fermer: () => fermerToutesFeuilles() };
+
+  // ---- l'onglet « Notes » : des post-it, rattachés ou non à un client ----
+  const COULEURS_PI = [["jaune", "#fff3b0"], ["rose", "#fbd9e2"], ["bleu", "#d6ebf7"], ["vert", "#dcf0d5"], ["orange", "#fde2c4"]];
+  var filtreNotes = { aff: "", texte: "" };
+  let minuteurPostits = null;
+  function garderPostits(tout = true) {
+    localStorage.setItem("suivi-gp-donnees-postits", JSON.stringify(postits));
+    clearTimeout(minuteurPostits);
+    if (tout) minuteurPostits = setTimeout(() => sauver(), 700);   // dans le fichier de suivi (et dans « Annuler »), une fois la frappe finie
+  }
+  const postitsDe = (nom) => postits.filter((n) => n.client && cleClient(n.client) === cleClient(nom));
+  const resumePostits = (nom) => { const l = postitsDe(nom); return l.length ? `${l.length} post-it · ${premiereLigne(l[0].texte) || "(vide)"}` : "Aucun post-it"; };
+  function nouveauPostit(client, apres) {
+    const n = { id: nouvelId(), texte: "", couleur: "jaune", client: client || "", cree: new Date().toISOString(), modifie: new Date().toISOString() };
+    postits.unshift(n); garderPostits(false);
+    apres();
+    const t = document.querySelector(`.postit[data-id="${n.id}"] textarea`); if (t) t.focus();
+  }
+  function cartePostit(n, rafraichir, dansFiche) {
+    const zone = el("textarea", { placeholder: "Note rapide…", "aria-label": "Note" }, n.texte || "");
+    zone.addEventListener("input", () => { n.texte = zone.value; n.modifie = new Date().toISOString(); garderPostits(); });
+    // une note laissée vide, sans client, disparaît
+    zone.addEventListener("blur", () => { setTimeout(() => { if (!(n.texte || "").trim() && !n.client && postits.includes(n) && !document.querySelector(`.postit[data-id="${n.id}"]:focus-within`)) { postits = postits.filter((x) => x !== n); garderPostits(); rafraichir(); } }, 200); });
+    const changer = (ch) => { Object.assign(n, ch, { modifie: new Date().toISOString() }); garderPostits(); rafraichir(); };
+    let client = [];
+    if (n.client && !dansFiche) {
+      client = [el("button", { type: "button", class: "pi-client", title: "Ouvrir la fiche du client", onclick: () => ouvrirClient(n.client) }, "👤 " + n.client),
+        el("button", { type: "button", class: "pi-detacher", title: "Détacher du client", "aria-label": "Détacher du client", onclick: () => changer({ client: "" }) }, "✕")];
+    } else if (!n.client) {
+      const choix = el("input", { class: "pi-rattacher", type: "text", list: "liste-clients-pi", placeholder: "Rattacher à un client…", autocomplete: "off", "aria-label": "Rattacher à un client" });
+      choix.addEventListener("change", () => {
+        const v = choix.value.trim(); if (!v) return;
+        const f = donnees && donnees.clients[cleClient(v)];
+        if (!f) { informer(`« ${v} » n’est pas un client du suivi.`); return; }
+        changer({ client: f.nom || v }); informer(`Note rattachée à ${f.nom || v}.`);
+      });
+      client = [choix];
+    }
+    return el("div", { class: "postit c-" + (n.couleur || "jaune"), "data-id": n.id }, zone,
+      el("div", { class: "pi-pied" }, ...client,
+        el("span", { class: "pi-couleurs" }, ...COULEURS_PI.map(([c, h]) => el("button", { type: "button", class: (n.couleur || "jaune") === c ? "on" : "", style: `background:${h}`, title: c, "aria-label": "Couleur " + c, onclick: () => changer({ couleur: c }) })))),
+      el("div", { class: "pi-pied" }, el("span", { class: "pi-date" }, new Date(n.modifie || n.cree).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })),
+        el("button", { type: "button", class: "pi-suppr", style: "margin-left:auto", title: "Supprimer la note", "aria-label": "Supprimer la note", onclick: () => {
+          if ((n.texte || "").trim() && !confirm("Supprimer cette note ?\n\n" + n.texte.slice(0, 200))) return;
+          postits = postits.filter((x) => x !== n); garderPostits(); rafraichir(); informer("Note supprimée (Annuler : menu ⋯ ou Ctrl + Z).");
+        } }, "🗑")));
+  }
+  const listeClientsPi = () => el("datalist", { id: "liste-clients-pi" }, nomsClients().map((v) => el("option", { value: v })));
+  const triPostits = (a, b) => (b.modifie || b.cree || "").localeCompare(a.modifie || a.cree || "");
+  // dans la fiche d'un client : ses notes
+  function blocPostits(nom) {
+    const z = el("div");
+    const dessiner = () => {
+      const l = postitsDe(nom).sort(triPostits);
+      z.replaceChildren(
+        el("button", { type: "button", class: "bouton-discret", style: "margin-bottom:8px", onclick: () => nouveauPostit(nom, dessiner) }, "＋ Nouvelle note"),
+        l.length ? el("div", { class: "pi-grille petite" }, ...l.map((n) => cartePostit(n, dessiner, true))) : el("p", { class: "pi-vide" }, "Aucune note rapide pour ce client."));
+    };
+    dessiner();
+    return z;
+  }
+  function afficherNotes() {
+    const z = $("vue-notes");
+    if (!z || z.hidden) return;
+    const t = sansAccents(filtreNotes.texte);
+    const tous = postits.slice().sort(triPostits);
+    const liste = tous.filter((n) => (!filtreNotes.aff || (filtreNotes.aff === "oui") === !!n.client)
+      && (!t || sansAccents((n.texte || "") + " " + (n.client || "")).includes(t)));
+    const nb = (f) => tous.filter(f).length;
+    const puce = (v, lib) => el("button", { type: "button", class: "collab" + (filtreNotes.aff === v ? " choisi" : ""), onclick: () => { filtreNotes.aff = v; afficherNotes(); } }, lib);
+    const recherche = el("input", { type: "search", placeholder: "Rechercher dans les notes, un client…", value: filtreNotes.texte });
+    recherche.addEventListener("input", () => { filtreNotes.texte = recherche.value; clearTimeout(afficherNotes.t); afficherNotes.t = setTimeout(() => { afficherNotes(); const r = document.querySelector("#vue-notes input[type=search]"); if (r) { r.focus(); r.setSelectionRange(r.value.length, r.value.length); } }, 250); });
+    z.replaceChildren(
+      el("h2", { class: "m-h2" }, "Notes"),
+      el("div", { class: "pi-barre" },
+        el("button", { type: "button", class: "pi-nouveau", onclick: () => nouveauPostit(filtreNotes.aff === "oui" ? "" : "", afficherNotes) }, "＋ Nouvelle note"),
+        recherche),
+      el("div", { class: "pi-barre" }, puce("", `Toutes (${tous.length})`), puce("oui", `Affectées (${nb((n) => n.client)})`), puce("non", `Non affectées (${nb((n) => !n.client)})`)),
+      listeClientsPi(),
+      liste.length ? el("div", { class: "pi-grille" }, ...liste.map((n) => cartePostit(n, afficherNotes)))
+        : el("p", { class: "pi-vide" }, tous.length ? "Aucune note ne correspond." : "Aucune note pour l’instant. « ＋ Nouvelle note » pour en prendre une, rattachée ou non à un client."));
+  }
 
   // ---- l'onglet « Simulations » : tout ce qui a été fait dans les trois applis ----
   var filtreSimu = { app: "", lien: "", texte: "" };
@@ -7337,7 +7452,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     document.querySelectorAll(".vue").forEach((s) => { s.hidden = s.id !== "vue-" + v; });
     if (estTel()) window.scrollTo(0, 0);
     document.querySelectorAll("[data-vue]").forEach((a) => a.dataset.vue === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "simulations"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    ["accueil", "kanban", "clients", "calendrier", "dutreil", "activite", "outils", "simulations", "notes"].forEach((n) => document.body.classList.toggle("vue-" + n, n === v));
+    if (v === "notes") afficherNotes();
     if (v === "outils") afficherOutils();
     if (v === "simulations") { depuisToutesApps(); afficherSimulations(); }
     if (v === "calendrier" && estTel()) requestAnimationFrame(ajusterHauteurTel);
@@ -7400,7 +7516,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const listePrecisions = el("datalist", { id: "liste-precisions" }, PRECISIONS.map((x) => el("option", { value: x })));
     const champPrecision = el("input", { name: "precision", type: "text", value: d.precision || "", list: "liste-precisions",
       placeholder: "facultatif : notaire, pièces, reporté…", autocomplete: "off" });
-    const zoneComm = el("textarea", { name: "commentaire_client", placeholder: "Commentaire commun à tous les dossiers de ce client…" }, f.commentaire || "");
+    const zoneComm = el("textarea", { name: "commentaire_client", "data-depart": f.commentaire || "", placeholder: "Commentaire commun à tous les dossiers de ce client…" }, f.commentaire || "");
     const zoneNotes = el("textarea");   // (plus dans la fiche : les notes du client sont un journal)
     const titreEncart = el("p", null, encartTitre(d.client, i));
     const entreeClient = saisie("client", d.client, "text", { autocomplete: "off", list: "liste-client" });
@@ -7415,6 +7531,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       const nf = fiche(entreeClient.value);
       prefixe = (nf.commentaire || "").trim(); prefixeNotes = (nf.notes || "").trim();
       zoneComm.value = [prefixe, ecrit].filter(Boolean).join("\n");
+      zoneComm.dataset.depart = nf.commentaire || "";
+      const zc = $("corpsDossier").querySelector("[name=coordonnees_client]"); if (zc) { zc.value = nf.coordonnees || ""; zc.dataset.depart = nf.coordonnees || ""; zc.dispatchEvent(new Event("maj")); }
       zoneNotes.value = [prefixeNotes, ecritNotes].filter(Boolean).join("\n");
       zoneComm._majLiens && zoneComm._majLiens(); zoneNotes._majLiens && zoneNotes._majLiens();
       cleAffichee = cle;
@@ -7492,7 +7610,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
             resume: () => resumeTaches(d.client) });
           lot.push({ libelle: "◆ Commentaire client", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
             ...(d.client && i >= 0 ? [{ libelle: "◆ Notes client", contenu: blocJournal({ lire: () => journalClient(d.client), ecrire: (l) => ecrireJournalClient(d.client, l) }), resume: () => resumeJournal(journalClient(d.client)) }] : []),
-            { libelle: "◆ Coordonnées client", contenu: vueCoordonnees(el("textarea", { name: "coordonnees_client", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "")),
+            { libelle: "◆ Coordonnées client", contenu: vueCoordonnees(el("textarea", { name: "coordonnees_client", "data-depart": f.coordonnees || "", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "")),
               resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees_client]") || {}).value) },
             { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) },
             ...(i >= 0 ? [{ libelle: "Notes du dossier", contenu: blocJournal({ lire: () => journalDossier(i), ecrire: (l) => ecrireJournalDossier(i, l), aide: "Nouvelle note sur ce dossier… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalDossier(i)) }] : []),
@@ -7800,6 +7918,12 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     if (!ouvertes.length) return "";
     const retard = ouvertes.some((t) => etatEcheance(t)[1] === "retard");
     return el("span", { class: "badge-taches" + (retard ? " retard" : ""), title: `${ouvertes.length} tâche(s) à faire` }, `☐ ${ouvertes.length}`);
+  }
+  // un champ du client (commentaire, coordonnées) a-t-il été modifié dans cette fenêtre ?
+  function champPartageModifie(zone, nom) {
+    const z = $(zone) && $(zone).querySelector(`[name="${nom}"]`);
+    if (!z || z.dataset.depart == null) return true;
+    return z.value.trim() !== z.dataset.depart.trim();
   }
   function cocherTache(nom, id, fait) {
     const dejaFaite = !!(trouverTache(id) || {}).fait;
@@ -8629,6 +8753,11 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     delete v.societe;
     if (!v.client) { informer("Indiquez le nom du client."); return; }
     if (!String(v.nature || "").trim()) { informer("Indiquez la nature du dossier (Analyse, Acte… ou une nouvelle)."); return; }
+    // vider depuis un dossier ce qui appartient au client (◆) : on prévient, c'est effacé de sa fiche aussi
+    const vides = [["commentaire_client", "le commentaire"], ["coordonnees_client", "les coordonnées"]].filter(([n]) => {
+      const z = $("corpsDossier").querySelector(`[name="${n}"]`); return z && (z.dataset.depart || "").trim() && !z.value.trim();
+    }).map(([, lib]) => lib);
+    if (vides.length && !confirm(`Vous videz ${vides.join(" et ")} du client ${v.client}.\n\nCes rubriques (◆) sont celles de sa fiche : elles seront effacées de la fiche et de tous ses dossiers.\n\nContinuer ?`)) return;
     const avant = enCours >= 0 ? { ...donnees.dossiers[enCours] } : null;
     const d = avant ? { ...avant } : { coche: false, repere: "", heures: 0, reglementaire: "", societe: "", suivi_j: "", notes: "" };
     if ("coordonnees" in v) d.coordonnees = v.coordonnees;
@@ -8652,8 +8781,10 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       if ((d[c] || "") !== vieux) for (const autre of dossiersDe(d.client)) if (autre !== d && (!autre[c] || autre[c] === vieux)) autre[c] = d[c];
       f[c] = d[c] || f[c] || "";
     }
-    f.commentaire = v.commentaire_client;
-    if ("coordonnees_client" in v) f.coordonnees = v.coordonnees_client;
+    // commentaire et coordonnées du client : écrits seulement s'ils ont été modifiés dans ce dossier,
+    // pour ne pas écraser ce qui a été changé entre-temps dans la fiche du client
+    if (champPartageModifie("corpsDossier", "commentaire_client")) f.commentaire = v.commentaire_client;
+    if ("coordonnees_client" in v && champPartageModifie("corpsDossier", "coordonnees_client")) f.coordonnees = v.coordonnees_client;
     donnees.clients[cle] = f;
     sauver();
     const resumeAgenda = rdvChange && d.rdv_heure ? apresAgenda([avant && avant.rdv, d.rdv]) : "";
@@ -8694,12 +8825,13 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
         el("div", null, el("span", null, "Encaissé"), el("b", { class: "or" }, euros(ca))),
         el("div", null, el("span", null, "Reste à encaisser"), el("b", null, euros(p - ca)))),
       (() => {
-        const zoneComm = el("textarea", { name: "commentaire", placeholder: "Commentaire sur ce client : situation, famille, objectifs…" }, f.commentaire || "");
-        const zoneCoord = el("textarea", { name: "coordonnees", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "");
+        const zoneComm = el("textarea", { name: "commentaire", "data-depart": f.commentaire || "", placeholder: "Commentaire sur ce client : situation, famille, objectifs…" }, f.commentaire || "");
+        const zoneCoord = el("textarea", { name: "coordonnees", "data-depart": f.coordonnees || "", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "");
         return tuiles([
           { libelle: "Tâches", contenu: blocTaches(nom), resume: () => resumeTaches(nom) },
           { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
           { libelle: "Simulations", contenu: blocSimulationsClient(nom), resume: () => resumeSimulations(nom) },
+          { libelle: "Post-it", contenu: blocPostits(nom), resume: () => resumePostits(nom) },
           { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
           { libelle: "Notes", contenu: blocJournal({ lire: () => journalClient(nom), ecrire: (l) => ecrireJournalClient(nom, l), aide: "Nouvelle note sur ce client… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalClient(nom)) },
           { libelle: "Coordonnées", contenu: vueCoordonnees(zoneCoord), resume: () => premiereLigne(zoneCoord.value) }]);
@@ -8753,7 +8885,9 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       if ((v[c] || "") !== vieux) for (const d of dossiersDe(clientEnCours)) if (!d[c] || d[c] === vieux) d[c] = v[c];
       f[c] = v[c];
     }
-    f.commentaire = v.commentaire; if ("coordonnees" in v) f.coordonnees = v.coordonnees; f.nom = f.nom || clientEnCours;
+    if (champPartageModifie("corpsClient", "commentaire")) f.commentaire = v.commentaire;
+    if ("coordonnees" in v && champPartageModifie("corpsClient", "coordonnees")) f.coordonnees = v.coordonnees;
+    f.nom = f.nom || clientEnCours;
     donnees.clients[cle] = f;
     sauver(); terminerFeuille(); afficherTout(); informer("Fiche client enregistrée.");
   }
@@ -9146,7 +9280,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   ];
   const NOMS_POLICES = { plex: "IBM Plex Sans", inter: "Inter", nunito: "Nunito", systeme: "Celle de l’appareil", lora: "Lora", garamond: "EB Garamond", playfair: "Playfair Display", georgia: "Georgia" };
   const NOMS_CARTES = { journee: "Ma journée", honoraires: "Honoraires", taches: "Tâches", rdv: "Prochains rendez-vous", etapes: "Étapes", relancer: "À relancer", dutreil: "Échéances Dutreil" };
-  const ONGLETS_PAGE = [["accueil", "Accueil"], ["kanban", "Kanban"], ["clients", "Clients"], ["calendrier", "Agenda"], ["dutreil", "Dutreil"], ["activite", "Activité"], ["simulations", "Simulations"]];
+  const ONGLETS_PAGE = [["accueil", "Accueil"], ["kanban", "Kanban"], ["clients", "Clients"], ["calendrier", "Agenda"], ["dutreil", "Dutreil"], ["activite", "Activité"], ["simulations", "Simulations"], ["notes", "Notes"]];
   // styles prêts : quelques réglages de mise en page d'un coup (les couleurs ne changent pas)
   const STYLES_PAGE = [
     ["Classique", "Réglages d’origine", { taille: 100, tuiles: 3, accCols: 3, coins: "arrondis", relief: "normal", largeur: "pleine", bas: "complet" }],
