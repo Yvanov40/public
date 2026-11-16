@@ -2128,6 +2128,22 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 .journal-tete button { border: 0; background: none; color: var(--discret); cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 6px; }
 .journal-tete button:hover { background: var(--section); color: var(--bleu); }
 .journal-texte { font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* notes repliées : deux lignes ; un clic sur la note la déplie (et la replie) */
+.journal-note { cursor: pointer; }
+.journal-note:not(.ouverte) { padding: 5px 10px 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "pied tete" "texte texte"; column-gap: 8px; align-items: center; }
+.journal-note:not(.ouverte) > .journal-tete { grid-area: tete; } .journal-note:not(.ouverte) > .journal-texte { grid-area: texte; } .journal-note:not(.ouverte) > .nr-pied { grid-area: pied; margin-top: 0 !important; min-width: 0; flex-wrap: nowrap; }
+.journal-note:not(.ouverte) > .journal-tete > span { flex: none; }
+.journal-note:not(.ouverte) .nr-place { max-width: 100%; }
+.journal-note:not(.ouverte) .journal-texte { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.journal-note:not(.ouverte) .journal-tete { margin-bottom: 0; }
+.journal-note:not(.ouverte) .journal-tete button { padding: 0 5px; font-size: 12px; opacity: .55; }
+.journal-note:not(.ouverte) .nr-pied { margin-top: 3px; gap: 6px; }
+.journal-note:not(.ouverte) .nr-ranger, .journal-note:not(.ouverte) .nr-astuce { display: none; }
+.journal-note:not(.ouverte) .nr-place { font-size: 11px; padding: 1px 8px; font-weight: 600; }
+.journal-note.longue:not(.ouverte) .journal-tete > span::after { content: "  ▾ lire"; font-weight: 500; color: var(--or); }
+.journal-note.ouverte.longue .journal-tete > span::after { content: "  ▴ replier"; font-weight: 500; color: var(--discret); }
+.journal-note.ouverte { cursor: default; }
+.journal-note.ouverte .journal-tete { cursor: pointer; }
 .journal-actions { display: flex; gap: 8px; margin-top: 6px; }
 .tuile-page textarea.zone-coordonnees { min-height: 110px !important; }
 #impression .note-impr { margin-bottom: 6px; } #impression .note-impr b { font-size: 10px; color: #666; } #impression .note-impr pre { margin: 2px 0 0; }
@@ -6790,6 +6806,23 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   // (accès pour la console du navigateur, utile pour vérifier le pont)
   window.pontSimulations = { nouvelle: (app, nom) => nouvelleSimulation(app, nom), ouvrir: (app, id) => ouvrirSimulation(app, id), duClient: (nom) => simulationsDuClient(nom),
     effaces: (app) => magasin(app).effaces, client: (nom) => ouvrirClient(nom), fermer: () => fermerToutesFeuilles() };
+
+  // ---- notes repliées : un clic sur une note la déplie ; « longue » quand elle ne tient pas sur deux lignes ----
+  (function notesRepliables() {
+    document.addEventListener("click", (e) => {
+      const n = e.target.closest(".journal-note");
+      if (!n || e.target.closest("button, a, textarea, input, select, label, .nr-form") || n.querySelector("textarea")) return;
+      if (n.classList.contains("ouverte") && !e.target.closest(".journal-tete") && getSelection().toString()) return;   // on sélectionne du texte
+      if (n.classList.contains("ouverte") && !e.target.closest(".journal-tete")) return;   // ouverte : on replie par l'en-tête
+      n.classList.toggle("ouverte");
+    });
+    const marquer = () => document.querySelectorAll(".journal-note:not(.ouverte) .journal-texte").forEach((t) => {
+      const n = t.closest(".journal-note"); if (t.clientHeight) n.classList.toggle("longue", t.scrollHeight > t.clientHeight + 2);
+    });
+    let attente = 0;
+    new MutationObserver(() => { cancelAnimationFrame(attente); attente = requestAnimationFrame(marquer); }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    addEventListener("resize", () => requestAnimationFrame(marquer));
+  })();
 
   // ---- suggestions : remplace les listes déroulantes du navigateur (champs avec une liste : client, demandeur, partenaire…) ----
   //   une petite fenêtre sous le champ, qui filtre pendant la frappe (sans tenir compte des accents ni des majuscules),
