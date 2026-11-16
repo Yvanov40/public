@@ -15,11 +15,8 @@ window.HABILLAGE = {
       + "body{background:var(--bg)!important;color:var(--ink)!important}input,select,textarea{background:var(--hb-champ,#0f1b20)!important;color:var(--ink)!important}";
     return t;
   },
-  bouton: function () {
-    var b = document.createElement("button"); b.type = "button"; b.className = "btn btn-ghost";
-    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex:none"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-1 1.2-1.9-.6-1.1.2-2.3 1.5-2.3H17a4 4 0 0 0 4-4c0-5.5-4-9.8-9-9.8z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10.5" cy="7" r="1.1"/><circle cx="15.2" cy="7.6" r="1.1"/></svg><span class="lbl-txt">Apparence</span>';
-    var r = document.querySelector('[data-act="settings"]'); if (!r) return null; r.before(b); return b;
-  }
+  // pas de bouton « Apparence » : c'est un onglet du bouton « Personnaliser » (module disposition)
+  bouton: function () { return null; }
 };
 // =====================================================================================
 //  Habillage commun — la même apparence et le même panneau « Apparence » dans toutes les applis
@@ -242,6 +239,9 @@ window.HABILLAGE = {
 
 
 
+
+
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Simulateur de succession — options du conjoint survivant</title>
 <meta name="theme-color" content="#0c2d39">
@@ -289,7 +289,25 @@ input{font-family:inherit;font-size:inherit;color:inherit}
 .icon-btn svg{width:16px;height:16px}
 
 /* Layout */
-.wrap{max-width:1320px;margin:0 auto;padding:24px;display:grid;grid-template-columns:200px minmax(0,1fr) 300px;gap:24px;align-items:start}
+.wrap{max-width:var(--lp,1320px);margin:0 auto;padding:24px;display:grid;grid-template-columns:var(--cols,200px minmax(0,1fr) 300px);grid-template-areas:var(--zones,"nav main aside");gap:24px;align-items:start}
+.wrap>.nav{grid-area:nav}.wrap>main{grid-area:main;min-width:0}.wrap>.aside{grid-area:aside;min-width:0}
+:root[data-largeur="etroite"]{--lp:1100px}:root[data-largeur="standard"]{--lp:1320px}:root[data-largeur="large"]{--lp:1700px}:root[data-largeur="ecran"]{--lp:100%}
+body.nav-cachee .nav{display:none}
+body.une-col .aside{position:static;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+body.une-col .mobile-bar{display:none}
+body.nav-barre .steps-bar{display:flex;gap:6px;overflow-x:auto;padding:4px;background:#fff;border:1px solid var(--line);border-radius:var(--r);scrollbar-width:none;position:sticky;top:76px;z-index:5}
+body.airy{font-size:15px}body.airy .card{padding:32px 34px}body.airy main{gap:30px}body.airy .grid{gap:20px}body.airy .row{padding:16px;gap:14px}body.airy .wrap{gap:32px}
+.print-tete{display:none}
+@media print{
+  @page{size:A4;margin:14mm 12mm}
+  body{background:#fff}
+  header.top,.nav,.steps-bar,.steps-nav,.mobile-bar,.scrim,.drawer,.toast,.hb-voile,.ls-voile,main>.card:not(#sec-res){display:none!important}
+  .wrap{display:block;padding:0;max-width:none}
+  main>.card#sec-res{display:block!important;break-inside:auto;box-shadow:none}
+  .aside{position:static!important;display:grid!important;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  .print-tete{display:flex!important;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+  .print-tete h1{margin:0;font-size:20px;color:var(--blue)}.print-tete small{color:#666}.print-tete img{max-height:48px;max-width:180px}
+}
 .nav{position:sticky;top:86px;display:flex;flex-direction:column;gap:2px}
 .nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-weight:500;font-size:13px}
 .nav a span{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
@@ -445,16 +463,19 @@ table.t{width:100%;border-collapse:collapse;font-size:12.5px}
 .mobile-bar{display:none}
 
 @media (max-width:1180px){
-  .wrap{grid-template-columns:minmax(0,1fr) 280px}
+  .wrap{grid-template-columns:minmax(0,1fr) 280px;grid-template-areas:"main aside"}
+  body.une-col .wrap{grid-template-columns:minmax(0,1fr);grid-template-areas:"aside" "main"}
   .nav{display:none}
 }
 @media (max-width:860px){
-  .wrap{grid-template-columns:1fr;padding:14px;gap:14px}
+  .wrap,body.une-col .wrap{grid-template-columns:1fr;grid-template-areas:"main" "aside";padding:14px;gap:14px}
+  body.nav-barre:not(.l-steps) .steps-bar{display:none}
   .aside{display:none}
   .top{position:relative}
   .top-in{padding:12px 14px;flex-wrap:wrap}
   .actions{width:100%}
-  .actions .btn-gold{flex:1;justify-content:center}
+  .actions{gap:6px;flex-wrap:nowrap;justify-content:flex-end}
+  .actions .btn{flex:none;justify-content:center;padding-left:10px;padding-right:10px}
   .brand h1{font-size:14px}
   .actions .lbl-txt{display:none}
   .card{padding:18px 16px}
@@ -477,7 +498,6 @@ table.t{width:100%;border-collapse:collapse;font-size:12.5px}
 .steps-bar{display:none}
 .steps-nav{display:none}
 body.l-steps .nav{display:none}
-body.l-steps .wrap{grid-template-columns:minmax(0,1fr) 300px}
 body.l-steps main .card{display:none}
 body.l-steps main .card.active{display:block}
 body.l-steps .steps-bar{display:flex;gap:6px;overflow-x:auto;padding:4px;background:#fff;border:1px solid var(--line);border-radius:var(--r);scrollbar-width:none}
@@ -526,7 +546,6 @@ body.bg-white{--bg:#ffffff}
 body.bg-white .card{border-color:#ece8df}
 body.bg-cool{--bg:color-mix(in srgb,var(--blue) 6%,#f4f6f7)}
 @media (max-width:860px){
-  body.l-steps .wrap,body.l-wide .wrap{grid-template-columns:1fr}
   body.l-wide .aside{display:grid;grid-template-columns:1fr}
   .layouts{grid-template-columns:1fr}
 }
@@ -536,9 +555,6 @@ body.bg-cool{--bg:color-mix(in srgb,var(--blue) 6%,#f4f6f7)}
  <div class="actions">
   <button class="btn btn-ghost" data-act="open" title="Ouvrir un dossier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lbl-txt">Ouvrir</span></button>
   <button class="btn btn-ghost" data-act="save" title="Enregistrer le dossier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/></svg><span class="lbl-txt">Enregistrer</span></button>
-  <button class="btn btn-ghost" data-act="settings" title="Personnaliser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="lbl-txt">Personnaliser</span></button>
-  <button class="btn btn-gold" data-act="pptx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>PowerPoint</button>
-  <button class="btn btn-gold" data-act="xlsx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>Excel</button>
  </div></div></header>
 <div class="wrap">
  <nav class="nav">
@@ -548,6 +564,7 @@ body.bg-cool{--bg:color-mix(in srgb,var(--blue) 6%,#f4f6f7)}
    <button class="btn btn-line btn-sm" data-act="new">Nouveau dossier</button><button class="btn btn-line btn-sm" data-act="demo">Charger l'exemple</button></div>
  </nav>
  <main>
+  <div class="print-tete" id="printTete"></div>
   <div class="steps-bar"><button data-go="sec-famille"><span>1</span>Famille</button><button data-go="sec-biens"><span>2</span>Patrimoine</button><button data-go="sec-passifs"><span>3</span>Passif</button><button data-go="sec-av"><span>4</span>Assurance-vie</button><button data-go="sec-hyp"><span>5</span>Hypothèses</button><button data-go="sec-res"><span>6</span>Résultats</button></div>
   <section class="card" id="sec-famille"></section><section class="card" id="sec-biens"></section><section class="card" id="sec-passifs"></section>
   <section class="card" id="sec-av"></section><section class="card" id="sec-hyp"></section><section class="card" id="sec-res"></section>
@@ -1547,8 +1564,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const b = $('#brandLogo');
     if (b) b.innerHTML = theme.logo ? '<img src="' + theme.logo + '" alt="">' : '<div class="brand-mark">S</div>';
     const bc = document.body.classList;
-    ['classic', 'steps', 'wide'].forEach(l => bc.toggle('l-' + l, (theme.layout || 'classic') === l));
-    bc.toggle('dense', theme.density === 'compact');
+    if (!window.DISPOSITION) { ['classic', 'steps', 'wide'].forEach(l => bc.toggle('l-' + l, (theme.layout || 'classic') === l)); bc.toggle('dense', theme.density === 'compact'); }
     bc.toggle('sq', theme.corners === 'square');
     bc.toggle('pill', theme.corners === 'pill');
     ['warm', 'white', 'cool'].forEach(x => bc.toggle('bg-' + x, (theme.bg || 'warm') === x));
@@ -1975,6 +1991,52 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     $$('a[href="#sec-res"]').forEach(x => x.addEventListener('click', () => showStep('sec-res')));
   }
 
+  // ---------- Mise en page et exports communs (bouton « Personnaliser », module disposition en bas de page) ----------
+  // cabinet et logo : ceux de Personnaliser › Mise en page (les anciens réglages de l'appli y sont repris une fois)
+  function exportTheme() {
+    const D = window.Disposition, T = { ...theme };
+    if (D) { T.cabinet = D.cabinet() || theme.cabinet || ''; T.logo = D.logo() || theme.logo || ''; }
+    return T;
+  }
+  function ratioLogo(src) { return new Promise(ok => { if (!src) return ok(2); const i = new Image(); i.onload = () => ok(i.naturalWidth / (i.naturalHeight || 1)); i.onerror = () => ok(2); i.src = src; }); }
+  async function themePourExport() { const T = exportTheme(); if (T.logo) T.logoRatio = await ratioLogo(T.logo); return T; }
+  function exportPDF() {
+    const T = exportTheme(), titre = (S.dossier && S.dossier.titre) || 'Simulation de succession';
+    $('#printTete').innerHTML = '<div><h1>' + esc(titre) + '</h1><small>Options du conjoint survivant · ' + new Date().toLocaleDateString('fr-FR') + (T.cabinet ? ' · ' + esc(T.cabinet) : '') + '</small></div>' + (T.logo ? '<img src="' + T.logo + '" alt="">' : '');
+    setTimeout(() => print(), 60);
+  }
+  function miseEnPage(e) {
+    const bc = document.body.classList, nav = e.nav === 'laterale' && e.mise !== 'pas', part = Math.max(50, Math.min(85, +e.part || 72));
+    const m = 'minmax(0,' + part + 'fr)', a = 'minmax(250px,' + (100 - part) + 'fr)';
+    let cols, zones;
+    if (e.mise === 'inverse') { cols = [a, m]; zones = [['aside', 'main']]; }
+    else if (e.mise === 'colonne') { cols = ['minmax(0,1fr)']; zones = [['main'], ['aside']]; }
+    else if (e.mise === 'resultats') { cols = ['minmax(0,1fr)']; zones = [['aside'], ['main']]; }
+    else { cols = [m, a]; zones = [['main', 'aside']]; }
+    if (nav) { cols = ['200px', ...cols]; zones = zones.map(z => ['nav', ...z]); }
+    const w = $('.wrap');
+    w.style.setProperty('--cols', cols.join(' ')); w.style.setProperty('--zones', zones.map(z => '"' + z.join(' ') + '"').join(' '));
+    theme.layout = e.mise === 'pas' ? 'steps' : 'classic';
+    bc.toggle('l-steps', e.mise === 'pas'); bc.remove('l-wide');
+    bc.toggle('une-col', e.mise === 'colonne' || e.mise === 'resultats');
+    bc.toggle('nav-cachee', !nav); bc.toggle('nav-barre', e.nav === 'barre' && e.mise !== 'pas');
+    bc.toggle('dense', e.densite === 'compacte'); bc.toggle('airy', e.densite === 'aeree');
+    showStep(curStep);
+  }
+  window.DISPOSITION = {
+    app: 'succession',
+    defaut: { part: 72, nav: 'laterale' },
+    appliquer: miseEnPage,
+    barre: () => ({ conteneur: $('header.top .actions'), classe: 'btn btn-ghost', classeExport: 'btn btn-gold', classeTexte: 'lbl-txt' }),
+    exports: {
+      pptx: async () => { const r = await window.SuccExport.pptx(S, R, await themePourExport()); if (r) toast(r); },
+      pdf: exportPDF,
+      xlsx: async () => { const r = await window.SuccExport.xlsx(S, R, await themePourExport()); if (r) toast(r); }
+    }
+  };
+  // reprise, une fois, du nom du cabinet et du logo réglés dans l'appli
+  try { const k = 'applis-disposition', d = JSON.parse(localStorage.getItem(k) || '{}'); if ((theme.cabinet && !d.cabinet) || (theme.logo && !d.logo)) { if (!d.cabinet && theme.cabinet) d.cabinet = theme.cabinet; if (!d.logo && theme.logo) d.logo = theme.logo; localStorage.setItem(k, JSON.stringify(d)); } } catch (e) { }
+
   window.SuccApp = { get state() { return S; }, get result() { return R; }, toast };
   renderAll(); applyTheme(); bindFiles(); bindNav();
   try { history.scrollRestoration = 'manual'; } catch (e) { }
@@ -1982,4 +2044,201 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 })();
 </script>
 <script>if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});</script>
+<!-- disposition : début (mise en page et exports communs ; module commun, voir disposition.source.js à la racine du dépôt) -->
+<script>
+// =====================================================================================
+//  Disposition commune — le même bouton « Personnaliser » et la même barre d'exports dans les simulateurs
+//  (module commun, recopié tel quel dans audit/, pvi/, succession/ et immo/, entre les repères
+//   « disposition : début » et « disposition : fin ». Modifier ici, puis recopier.)
+// -------------------------------------------------------------------------------------
+//  • Un bouton « Personnaliser » ouvre une fenêtre à deux onglets :
+//      Apparence   (couleurs, polices, thème, taille, coins : module « habillage ») ;
+//      Mise en page (côte à côte, inversée, une colonne, résultats d'abord, pas à pas ; part de la
+//                    colonne de saisie, largeur, navigation, densité ; nom du cabinet et logo des exports).
+//  • Puis trois boutons : PowerPoint, PDF, Excel — un clic, un fichier.
+//  • Les réglages valent pour toutes les applis : localStorage « applis-disposition ».
+//  • Chaque appli dit (window.DISPOSITION, posé avant ce bloc) :
+//      appliquer(etat)  : comment elle se met en page avec ces réglages ;
+//      barre()          : { conteneur, avant, classe, classeExport, classeTexte } — où poser les boutons ;
+//      exports          : { pptx, pdf, xlsx } — les fonctions qui produisent chaque fichier ;
+//      titreExcel (bulle du bouton Excel), app (identifiant : la largeur de saisie est gardée par appli), defaut, sansNavigation,
+//      mises (la liste des mises en page proposées), plus() (réglages en plus).
+//  • Sur <html> : data-mise, data-largeur, data-nav, data-densite et la variable --part (en %).
+// =====================================================================================
+(function () {
+  "use strict";
+  var C = window.DISPOSITION;
+  if (!C) return;
+  var CLE = "applis-disposition";
+  var DEFAUT = { mise: "cote", part: 40, largeur: "standard", nav: "barre", densite: "confortable", cabinet: "", logo: "" };
+  function brut() { try { return JSON.parse(localStorage.getItem(CLE)) || {}; } catch (e) { return {}; } }
+  function lire() {
+    var p = brut(), r = {};
+    for (var k in DEFAUT) r[k] = p[k] != null ? p[k] : (C.defaut && C.defaut[k] != null ? C.defaut[k] : DEFAUT[k]);
+    // la largeur de la colonne de saisie est propre à chaque appli (les formulaires n'ont pas la même largeur)
+    if (C.app) r.part = p["part-" + C.app] != null ? p["part-" + C.app] : (C.defaut && C.defaut.part) || DEFAUT.part;
+    if (C.mises && C.mises.indexOf(r.mise) < 0) r.mise = C.mises[0];
+    return r;
+  }
+  var etat = lire();
+  function garder(changes) {
+    var p = brut();
+    for (var k in changes) p[k === "part" && C.app ? "part-" + C.app : k] = changes[k];
+    try { localStorage.setItem(CLE, JSON.stringify(p)); } catch (e) { if (changes.logo) alert("Image trop lourde pour être gardée : choisissez un logo plus léger."); }
+    appliquer();
+  }
+  function appliquer() {
+    etat = lire();
+    var r = document.documentElement;
+    r.setAttribute("data-mise", etat.mise); r.setAttribute("data-largeur", etat.largeur); r.setAttribute("data-nav", etat.nav); r.setAttribute("data-densite", etat.densite);
+    r.style.setProperty("--part", Math.max(25, Math.min(70, +etat.part || 40)) + "%");
+    if (typeof C.appliquer === "function") try { C.appliquer(etat); } catch (e) { console.error(e); }
+  }
+
+  // ---------------------------------------------------------------- icônes
+  var I = {
+    reglages: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+    pptx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M8 13V9M12 13V7M16 13v-2"/></svg>',
+    pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+    xlsx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>'
+  };
+
+  // ---------------------------------------------------------------- la fenêtre (même cadre que « Apparence » : classes hb-*)
+  var CSS = [
+    ".dp-schemas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}",
+    ".dp-schema{border:1px solid var(--hb-bordure,#e2dacb);background:var(--hb-carte,#fff);border-radius:12px;padding:9px;cursor:pointer;text-align:left;display:grid;gap:5px;color:inherit;font:inherit}",
+    ".dp-schema.on{outline:2px solid var(--hb-principale,#0c2d39);outline-offset:-2px}",
+    ".dp-schema b{font-size:13px}.dp-schema small{font-size:11px;color:var(--hb-discret,#7c7466);line-height:1.3}",
+    ".dp-mini{display:flex;gap:3px;height:30px}.dp-mini i{display:block;border-radius:3px;background:var(--hb-bordure,#d9d2c4)}.dp-mini i.r{background:var(--hb-accent,#a77d2f);opacity:.75}",
+    ".dp-curseur{display:flex;align-items:center;gap:12px}.dp-curseur input{flex:1;accent-color:var(--hb-accent,#a77d2f)}.dp-curseur b{min-width:44px;text-align:right}",
+    ".dp-champ{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--hb-bordure,#e2dacb);border-radius:10px;background:var(--hb-carte,#fff);font:inherit;color:inherit}",
+    ".dp-logo{border:1.5px dashed var(--hb-bordure,#cfc6b4);border-radius:12px;padding:12px;text-align:center;cursor:pointer;background:none;font:inherit;color:inherit;display:grid;gap:6px;justify-items:center}",
+    ".dp-logo img{max-height:56px;max-width:100%}",
+    ".dp-bouton svg{width:18px;height:18px;flex:none}",
+    "@media (max-width:700px){.dp-schemas{grid-template-columns:repeat(2,minmax(0,1fr))}}"
+  ].join("");
+  function h(tag, attrs, enfants) {
+    var e = document.createElement(tag);
+    for (var k in (attrs || {})) { if (k.slice(0, 2) === "on") e[k] = attrs[k]; else if (attrs[k] != null && attrs[k] !== false) e.setAttribute(k, attrs[k]); }
+    [].concat(enfants || []).forEach(function (x) { if (x != null && x !== false) e.append(x); });
+    return e;
+  }
+  var MISES = {
+    cote: ["Côte à côte", "Saisie à gauche, résultats à droite", [[3, ""], [2, "r"]]],
+    inverse: ["Inversée", "Résultats à gauche", [[2, "r"], [3, ""]]],
+    colonne: ["Une colonne", "Résultats sous la saisie", "col"],
+    resultats: ["Résultats d'abord", "Une colonne, résultats en haut", "colr"],
+    pas: ["Pas à pas", "Une étape à la fois", "pas"]
+  };
+  function mini(m) {
+    var b = h("span", { class: "dp-mini" });
+    var bloc = function (cls, flex, parent) { var i = h("i", { class: cls }); i.style.flex = String(flex); (parent || b).append(i); return i; };
+    if (m === "col" || m === "colr") { b.style.flexDirection = "column"; b.style.gap = "2px"; bloc(m === "colr" ? "r" : "", 1); bloc(m === "colr" ? "" : "r", 1); }
+    else if (m === "pas") { b.style.flexDirection = "column"; b.style.gap = "2px"; var t = h("span"); t.style.cssText = "display:flex;gap:2px;height:7px"; bloc("r", 1, t); bloc("", 1, t); bloc("", 1, t); b.append(t); bloc("", 1); }
+    else m.forEach(function (x) { bloc(x[1], x[0]); });
+    return b;
+  }
+  var voile = null;
+  function panneau(onglet) {
+    if (!onglet) { try { onglet = sessionStorage.getItem("applis-onglet"); } catch (e) {} }
+    if (onglet === "apparence" && window.Habillage) { window.Habillage.ouvrir(); return; }
+    if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
+    voile = voile || h("div", { class: "hb-voile", onclick: function (e) { if (e.target === voile) voile.remove(); } });
+    var c = window.Habillage && window.Habillage.etat() && window.Habillage.etat().couleurs;
+    if (c) ["fond", "carte", "texte", "bordure", "section", "discret"].forEach(function (k) { if (c[k]) voile.style.setProperty("--hb-" + k, c[k]); });
+    document.body.append(voile);
+    dessiner();
+  }
+  function dessiner() {
+    var e = etat;
+    var choix = function (titre, cle, options) {
+      return [h("p", { class: "hb-titre" }, titre), h("div", { class: "hb-choix" }, options.map(function (o) {
+        return h("button", { type: "button", class: "hb-bt" + (String(e[cle]) === String(o[0]) ? " on" : ""), onclick: function () { var x = {}; x[cle] = o[0]; garder(x); dessiner(); } }, o[1]);
+      }))];
+    };
+    var curseur = h("input", { type: "range", min: 25, max: 70, step: 1, value: e.part, "aria-label": "Part de la colonne de saisie" });
+    var valeur = h("b", null, e.part + " %");
+    curseur.oninput = function () { valeur.textContent = curseur.value + " %"; garder({ part: +curseur.value }); };
+    var fichier = h("input", { type: "file", accept: "image/png,image/jpeg", style: "display:none" });
+    fichier.onchange = function () {
+      var f = fichier.files[0]; if (!f) return;
+      // le logo est réduit (largeur 480 px au plus) pour rester léger
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function () {
+        var k = Math.min(1, 480 / img.width), cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        garder({ logo: cv.toDataURL("image/png") }); dessiner();
+      };
+      img.src = url;
+    };
+    var nomCab = h("input", { type: "text", class: "dp-champ", placeholder: "Nom du cabinet", value: e.cabinet || "" });
+    nomCab.onchange = function () { garder({ cabinet: nomCab.value.trim() }); };
+    var mises = C.mises || Object.keys(MISES);
+    var cote = e.mise === "cote" || e.mise === "inverse" || e.mise === "pas";
+    var corps = [].concat(
+      [h("p", { class: "hb-titre" }, "Disposition"),
+       h("div", { class: "dp-schemas" }, mises.map(function (k) {
+         var m = MISES[k];
+         return h("button", { type: "button", class: "dp-schema" + (e.mise === k ? " on" : ""), onclick: function () { garder({ mise: k }); dessiner(); } }, [mini(m[2]), h("b", null, m[0]), h("small", null, m[1])]);
+       }))],
+      cote ? [h("p", { class: "hb-titre" }, "Largeur de la colonne de saisie"), h("div", { class: "dp-curseur" }, [curseur, valeur])] : [],
+      choix("Largeur de la page", "largeur", [["etroite", "Étroite"], ["standard", "Standard"], ["large", "Large"], ["ecran", "Tout l'écran"]]),
+      C.sansNavigation ? [] : choix("Navigation entre les étapes", "nav", [["barre", "Barre en haut"], ["laterale", "Menu latéral"], ["masquee", "Masquée"]]),
+      choix("Densité", "densite", [["compacte", "Compacte"], ["confortable", "Confortable"], ["aeree", "Aérée"]]),
+      [h("p", { class: "hb-titre" }, "Exports : nom du cabinet"), nomCab,
+       h("p", { class: "hb-titre" }, "Exports : logo"),
+       h("button", { type: "button", class: "dp-logo", onclick: function () { fichier.click(); } }, e.logo ? [h("img", { src: e.logo, alt: "" }), h("span", null, "Changer d'image")] : h("span", null, "Choisir une image (PNG ou JPG)")),
+       e.logo ? h("button", { type: "button", class: "hb-lien", onclick: function () { garder({ logo: "" }); dessiner(); } }, "Retirer le logo") : null,
+       fichier]);
+    if (typeof C.plus === "function") { var x = C.plus(); if (x) corps.push(x); }
+    corps.push(h("p", { class: "hb-aide" }, "Ces réglages valent pour tous les simulateurs, sur cet appareil."),
+      h("button", { type: "button", class: "hb-lien", onclick: function () { var p = brut(); try { localStorage.setItem(CLE, JSON.stringify({ cabinet: p.cabinet || "", logo: p.logo || "" })); } catch (er) {} appliquer(); dessiner(); } }, "↺ Mise en page par défaut"));
+    voile.replaceChildren(h("div", { class: "hb-fen", role: "dialog", "aria-modal": "true", "aria-label": "Personnaliser" }, [
+      h("div", { class: "hb-tete" }, [
+        window.Habillage ? h("div", { class: "hb-onglets", role: "tablist" }, [
+          h("button", { type: "button", role: "tab", onclick: function () { voile.remove(); try { sessionStorage.setItem("applis-onglet", "apparence"); } catch (er) {} window.Habillage.ouvrir(); } }, "Apparence"),
+          h("button", { type: "button", class: "on", role: "tab", "aria-selected": "true" }, "Mise en page")]) : h("b", null, "Mise en page"),
+        h("button", { type: "button", class: "hb-x", "aria-label": "Fermer", onclick: function () { voile.remove(); } }, "×")]),
+      h("div", { class: "hb-corps" }, corps)]));
+  }
+
+  // ---------------------------------------------------------------- la barre : Personnaliser, PowerPoint, PDF, Excel
+  function installerBarre() {
+    var B = C.barre && C.barre();
+    if (!B || !B.conteneur) return;
+    if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
+    var bouton = function (id, icone, texte, titre, faire) {
+      var b = h("button", { type: "button", class: (B.classe || "") + " dp-bouton", "data-dpb": id, title: titre, "aria-label": titre });
+      b.innerHTML = icone + "<span" + (B.classeTexte ? ' class="' + B.classeTexte + '"' : "") + ">" + texte + "</span>";
+      b.onclick = function (ev) { ev.preventDefault(); ev.stopPropagation(); faire(b); };
+      return b;
+    };
+    var lancer = function (type) {
+      return function (b) {
+        var f = C.exports && C.exports[type]; if (!f || b.disabled) return;
+        b.disabled = true; b.style.opacity = ".6";
+        Promise.resolve().then(f).catch(function (er) { console.error(er); alert("Export impossible : " + (er && er.message || er)); })
+          .then(function () { b.disabled = false; b.style.opacity = ""; });
+      };
+    };
+    var liste = [bouton("reglages", I.reglages, "Personnaliser", "Personnaliser : apparence et mise en page", function () { panneau(); })];
+    var ex = function (id, icone, texte, titre) { var b = bouton(id, icone, texte, titre, lancer(id)); if (B.classeExport) b.className = B.classeExport + " dp-bouton"; return b; };
+    if (C.exports && C.exports.pptx) liste.push(ex("pptx", I.pptx, "PowerPoint", "Télécharger la présentation PowerPoint"));
+    if (C.exports && C.exports.pdf) liste.push(ex("pdf", I.pdf, "PDF", "Imprimer ou enregistrer en PDF"));
+    if (C.exports && C.exports.xlsx) liste.push(ex("xlsx", I.xlsx, "Excel", C.titreExcel || "Télécharger le classeur Excel"));
+    liste.forEach(function (b) { if (B.avant && B.avant.parentNode === B.conteneur) B.conteneur.insertBefore(b, B.avant); else B.conteneur.append(b); });
+  }
+
+  appliquer();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { installerBarre(); appliquer(); });
+  else { installerBarre(); appliquer(); }
+  addEventListener("storage", function (e) { if (e.key === CLE) { appliquer(); if (voile && voile.parentNode) dessiner(); } });
+  addEventListener("keydown", function (e) { if (e.key === "Escape" && voile && voile.parentNode) voile.remove(); });
+  // pour les exports : le nom du cabinet et le logo
+  window.Disposition = { etat: function () { return etat; }, ouvrir: panneau, appliquer: appliquer, cabinet: function () { return etat.cabinet || ""; }, logo: function () { return etat.logo || ""; } };
+})();
+</script>
+<!-- disposition : fin -->
 </body></html>

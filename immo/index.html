@@ -243,6 +243,9 @@ window.HABILLAGE = {
 
 
 
+
+
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Investissement immobilier</title>
 <meta name="description" content="Comparateur de montages d'investissement immobilier : nu, LMNP, SCI à l'IR, SCI à l'IS.">
@@ -295,7 +298,7 @@ header.haut { position: sticky; top: 0; z-index: 20; background: #0c2d39; color:
 .bt-h { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); color: #fff; border-radius: 10px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
 .bt-h:hover { background: rgba(255,255,255,.14); }
 .bt-h svg { width: 18px; height: 18px; flex: none; }
-@media (max-width: 1500px) { .actions .bt-h[data-dp="pptx"] span, .actions .bt-h[data-dp="pdf"] span, .actions .bt-h[data-dp="xlsx"] span, #bRegl span { display: none; } .actions .bt-h[data-dp] , #bRegl { padding: 8px 10px; } }
+@media (max-width: 1500px) { .actions .bt-h[data-dpb="pptx"] span, .actions .bt-h[data-dpb="pdf"] span, .actions .bt-h[data-dpb="xlsx"] span, #bRegl span { display: none; } .actions .bt-h[data-dpb] , #bRegl { padding: 8px 10px; } }
 @media (max-width: 560px) { .marque div { display: none; } }
 @media (max-width: 1180px) { .actions .bt-h span { display: none; } .actions .bt-h { padding: 8px 9px; } .actions { gap: 6px; } }
 
@@ -1300,9 +1303,11 @@ async function exporterPowerPoint() {
 //  7. MISE EN PAGE ET EXPORTS COMMUNS (module « disposition », en bas de la page)
 // =====================================================================================
 window.DISPOSITION = {
+  app: "immo",
   defaut: { part: 34 },
   appliquer: miseEnPage,
   barre: () => ({ conteneur: document.querySelector(".actions"), avant: $("bRegl"), classe: "bt-h" }),
+  titreExcel: "Télécharger le classeur Excel (formules vivantes : modifiez les hypothèses, tout se recalcule)",
   exports: { pptx: exporterPowerPoint, pdf: exporterPDF, xlsx: exporterExcel }
 };
 
@@ -1331,9 +1336,10 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
 //  • Les réglages valent pour toutes les applis : localStorage « applis-disposition ».
 //  • Chaque appli dit (window.DISPOSITION, posé avant ce bloc) :
 //      appliquer(etat)  : comment elle se met en page avec ces réglages ;
-//      barre()          : { conteneur, avant, classe, classeTexte } — où poser les boutons ;
+//      barre()          : { conteneur, avant, classe, classeExport, classeTexte } — où poser les boutons ;
 //      exports          : { pptx, pdf, xlsx } — les fonctions qui produisent chaque fichier ;
-//      defaut, sansNavigation, mises (la liste des mises en page proposées), plus() (réglages en plus).
+//      titreExcel (bulle du bouton Excel), app (identifiant : la largeur de saisie est gardée par appli), defaut, sansNavigation,
+//      mises (la liste des mises en page proposées), plus() (réglages en plus).
 //  • Sur <html> : data-mise, data-largeur, data-nav, data-densite et la variable --part (en %).
 // =====================================================================================
 (function () {
@@ -1346,13 +1352,15 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
   function lire() {
     var p = brut(), r = {};
     for (var k in DEFAUT) r[k] = p[k] != null ? p[k] : (C.defaut && C.defaut[k] != null ? C.defaut[k] : DEFAUT[k]);
+    // la largeur de la colonne de saisie est propre à chaque appli (les formulaires n'ont pas la même largeur)
+    if (C.app) r.part = p["part-" + C.app] != null ? p["part-" + C.app] : (C.defaut && C.defaut.part) || DEFAUT.part;
     if (C.mises && C.mises.indexOf(r.mise) < 0) r.mise = C.mises[0];
     return r;
   }
   var etat = lire();
   function garder(changes) {
     var p = brut();
-    for (var k in changes) p[k] = changes[k];
+    for (var k in changes) p[k === "part" && C.app ? "part-" + C.app : k] = changes[k];
     try { localStorage.setItem(CLE, JSON.stringify(p)); } catch (e) { if (changes.logo) alert("Image trop lourde pour être gardée : choisissez un logo plus léger."); }
     appliquer();
   }
@@ -1479,7 +1487,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
     if (!B || !B.conteneur) return;
     if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
     var bouton = function (id, icone, texte, titre, faire) {
-      var b = h("button", { type: "button", class: (B.classe || "") + " dp-bouton", "data-dp": id, title: titre, "aria-label": titre });
+      var b = h("button", { type: "button", class: (B.classe || "") + " dp-bouton", "data-dpb": id, title: titre, "aria-label": titre });
       b.innerHTML = icone + "<span" + (B.classeTexte ? ' class="' + B.classeTexte + '"' : "") + ">" + texte + "</span>";
       b.onclick = function (ev) { ev.preventDefault(); ev.stopPropagation(); faire(b); };
       return b;
@@ -1493,9 +1501,10 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
       };
     };
     var liste = [bouton("reglages", I.reglages, "Personnaliser", "Personnaliser : apparence et mise en page", function () { panneau(); })];
-    if (C.exports && C.exports.pptx) liste.push(bouton("pptx", I.pptx, "PowerPoint", "Télécharger la présentation PowerPoint", lancer("pptx")));
-    if (C.exports && C.exports.pdf) liste.push(bouton("pdf", I.pdf, "PDF", "Imprimer ou enregistrer en PDF", lancer("pdf")));
-    if (C.exports && C.exports.xlsx) liste.push(bouton("xlsx", I.xlsx, "Excel", "Télécharger le classeur Excel (formules vivantes)", lancer("xlsx")));
+    var ex = function (id, icone, texte, titre) { var b = bouton(id, icone, texte, titre, lancer(id)); if (B.classeExport) b.className = B.classeExport + " dp-bouton"; return b; };
+    if (C.exports && C.exports.pptx) liste.push(ex("pptx", I.pptx, "PowerPoint", "Télécharger la présentation PowerPoint"));
+    if (C.exports && C.exports.pdf) liste.push(ex("pdf", I.pdf, "PDF", "Imprimer ou enregistrer en PDF"));
+    if (C.exports && C.exports.xlsx) liste.push(ex("xlsx", I.xlsx, "Excel", C.titreExcel || "Télécharger le classeur Excel"));
     liste.forEach(function (b) { if (B.avant && B.avant.parentNode === B.conteneur) B.conteneur.insertBefore(b, B.avant); else B.conteneur.append(b); });
   }
 

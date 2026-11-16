@@ -11,9 +11,10 @@
 //  • Les réglages valent pour toutes les applis : localStorage « applis-disposition ».
 //  • Chaque appli dit (window.DISPOSITION, posé avant ce bloc) :
 //      appliquer(etat)  : comment elle se met en page avec ces réglages ;
-//      barre()          : { conteneur, avant, classe, classeTexte } — où poser les boutons ;
+//      barre()          : { conteneur, avant, classe, classeExport, classeTexte } — où poser les boutons ;
 //      exports          : { pptx, pdf, xlsx } — les fonctions qui produisent chaque fichier ;
-//      defaut, sansNavigation, mises (la liste des mises en page proposées), plus() (réglages en plus).
+//      titreExcel (bulle du bouton Excel), app (identifiant : la largeur de saisie est gardée par appli), defaut, sansNavigation,
+//      mises (la liste des mises en page proposées), plus() (réglages en plus).
 //  • Sur <html> : data-mise, data-largeur, data-nav, data-densite et la variable --part (en %).
 // =====================================================================================
 (function () {
@@ -26,13 +27,15 @@
   function lire() {
     var p = brut(), r = {};
     for (var k in DEFAUT) r[k] = p[k] != null ? p[k] : (C.defaut && C.defaut[k] != null ? C.defaut[k] : DEFAUT[k]);
+    // la largeur de la colonne de saisie est propre à chaque appli (les formulaires n'ont pas la même largeur)
+    if (C.app) r.part = p["part-" + C.app] != null ? p["part-" + C.app] : (C.defaut && C.defaut.part) || DEFAUT.part;
     if (C.mises && C.mises.indexOf(r.mise) < 0) r.mise = C.mises[0];
     return r;
   }
   var etat = lire();
   function garder(changes) {
     var p = brut();
-    for (var k in changes) p[k] = changes[k];
+    for (var k in changes) p[k === "part" && C.app ? "part-" + C.app : k] = changes[k];
     try { localStorage.setItem(CLE, JSON.stringify(p)); } catch (e) { if (changes.logo) alert("Image trop lourde pour être gardée : choisissez un logo plus léger."); }
     appliquer();
   }
@@ -159,7 +162,7 @@
     if (!B || !B.conteneur) return;
     if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
     var bouton = function (id, icone, texte, titre, faire) {
-      var b = h("button", { type: "button", class: (B.classe || "") + " dp-bouton", "data-dp": id, title: titre, "aria-label": titre });
+      var b = h("button", { type: "button", class: (B.classe || "") + " dp-bouton", "data-dpb": id, title: titre, "aria-label": titre });
       b.innerHTML = icone + "<span" + (B.classeTexte ? ' class="' + B.classeTexte + '"' : "") + ">" + texte + "</span>";
       b.onclick = function (ev) { ev.preventDefault(); ev.stopPropagation(); faire(b); };
       return b;
@@ -173,9 +176,10 @@
       };
     };
     var liste = [bouton("reglages", I.reglages, "Personnaliser", "Personnaliser : apparence et mise en page", function () { panneau(); })];
-    if (C.exports && C.exports.pptx) liste.push(bouton("pptx", I.pptx, "PowerPoint", "Télécharger la présentation PowerPoint", lancer("pptx")));
-    if (C.exports && C.exports.pdf) liste.push(bouton("pdf", I.pdf, "PDF", "Imprimer ou enregistrer en PDF", lancer("pdf")));
-    if (C.exports && C.exports.xlsx) liste.push(bouton("xlsx", I.xlsx, "Excel", "Télécharger le classeur Excel (formules vivantes)", lancer("xlsx")));
+    var ex = function (id, icone, texte, titre) { var b = bouton(id, icone, texte, titre, lancer(id)); if (B.classeExport) b.className = B.classeExport + " dp-bouton"; return b; };
+    if (C.exports && C.exports.pptx) liste.push(ex("pptx", I.pptx, "PowerPoint", "Télécharger la présentation PowerPoint"));
+    if (C.exports && C.exports.pdf) liste.push(ex("pdf", I.pdf, "PDF", "Imprimer ou enregistrer en PDF"));
+    if (C.exports && C.exports.xlsx) liste.push(ex("xlsx", I.xlsx, "Excel", C.titreExcel || "Télécharger le classeur Excel"));
     liste.forEach(function (b) { if (B.avant && B.avant.parentNode === B.conteneur) B.conteneur.insertBefore(b, B.avant); else B.conteneur.append(b); });
   }
 

@@ -16,11 +16,8 @@ window.HABILLAGE = {
   theme: { attr: "data-theme", sombre: "sombre", clair: "clair" },
   cartes: ".carte,.kpi,.tuiles button,.fen",
   css: "header.haut{background:var(--hb-barre)!important}",
-  bouton: function () {
-    var b = document.createElement("button"); b.type = "button"; b.className = "bt-h";
-    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex:none"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-1 1.2-1.9-.6-1.1.2-2.3 1.5-2.3H17a4 4 0 0 0 4-4c0-5.5-4-9.8-9-9.8z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10.5" cy="7" r="1.1"/><circle cx="15.2" cy="7.6" r="1.1"/></svg><span>Apparence</span>';
-    var r = document.getElementById("bRegl"); if (!r) return null; r.before(b); return b;
-  }
+  // pas de bouton « Apparence » : c'est un onglet du bouton « Personnaliser » (module disposition)
+  bouton: function () { return null; }
 };
 // =====================================================================================
 //  Habillage commun — la même apparence et le même panneau « Apparence » dans toutes les applis
@@ -244,6 +241,9 @@ window.HABILLAGE = {
 
 
 
+
+
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Plus-value immobilière – simulateur</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -308,6 +308,8 @@ header.haut{position:sticky;top:0;z-index:20;background:var(--bleu);color:#fff;p
 .bt-h{background:transparent;border:1px solid color-mix(in srgb,#fff 25%,var(--bleu));color:#fff;border-radius:8px;padding:7px 12px;display:inline-flex;align-items:center;gap:6px;font-size:14px}
 .bt-h:hover{border-color:var(--or);background:color-mix(in srgb,#fff 6%,var(--bleu))}
 .bt-h svg{width:17px;height:17px}
+@media(max-width:1560px){.actions .bt-h[data-dpb="pptx"] span,.actions .bt-h[data-dpb="pdf"] span,.actions .bt-h[data-dpb="xlsx"] span,#bRegl span{display:none}}
+@media(max-width:1250px){.actions .bt-h span{display:none}.actions .bt-h{padding:7px 9px}}
 @media(max-width:900px){.kpis{display:none}.haut-in{padding:10px 14px;flex-wrap:nowrap;gap:10px}.actions{margin-left:auto}.bt-h{padding:7px 9px}.bt-h span{display:none}.marque{min-width:0}.marque b{font-size:17px;white-space:nowrap}.marque small{display:none}}
 
 /* ---------- Navigation des sections ---------- */
@@ -687,8 +689,10 @@ footer.pied{max-width:var(--maxw);margin:0 auto;padding:0 24px 30px;color:var(--
   .carte{break-inside:avoid;box-shadow:none}
   details.recap{display:block}details.recap>*{display:block}
   .print-titre{display:block!important}
+  .hb-voile,.ls-voile{display:none!important}
 }
-.print-titre{display:none;font:600 20px var(--serif);margin:0 0 10px}
+.print-titre{display:none;margin:0 0 10px}.print-titre h1{font:600 20px var(--serif);margin:0}
+.print-titre .pt{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.print-titre img{max-height:46px;max-width:170px}.print-titre small{color:#666}
 </style>
 </head>
 <body>
@@ -703,8 +707,7 @@ footer.pied{max-width:var(--maxw);margin:0 auto;padding:0 24px 30px;color:var(--
     </div>
     <div class="actions">
       <button class="bt-h" id="bScen" title="Scénarios enregistrés"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span>Scénarios</span></button>
-      <button class="bt-h" id="bExport" title="Exporter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg><span>Exporter</span></button>
-      <button class="bt-h" id="bRegl" title="Réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span>Réglages</span></button>
+      <button class="bt-h" id="bRegl" title="Réglages : affichage, résultats, données"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span>Réglages</span></button>
     </div>
   </div>
 </header>
@@ -714,7 +717,7 @@ footer.pied{max-width:var(--maxw);margin:0 auto;padding:0 24px 30px;color:var(--
   <div class="col-saisie" id="saisie"></div>
 
   <div class="col-res" id="res">
-    <h1 class="print-titre">Simulation de plus-value immobilière</h1>
+    <div class="print-titre" id="printTitre"><h1>Simulation de plus-value immobilière</h1></div>
     <div class="res-k" data-bloc="chiffres">
       <div class="rk"><div class="k">Plus-value brute</div><div class="v" id="rPVB">–</div><div class="s" id="rDet">–</div></div>
       <div class="rk"><div class="k">Impôt total</div><div class="v" id="rTot">–</div><div class="s" id="rTaux">–</div></div>
@@ -732,13 +735,6 @@ footer.pied{max-width:var(--maxw);margin:0 auto;padding:0 24px 30px;color:var(--
 <div class="bas"><div><small>Impôt total</small><b id="bTot">–</b></div><div><small>Net vendeur</small><b id="bNet">–</b></div><button id="bVoir">Voir le détail</button></div>
 
 <!-- Menus, fenêtres, bulles -->
-<div class="menu" id="mExport">
-  <button data-x="xlsx"><span>📊</span><div>Excel<small>Hypothèses, calcul et projection</small></div></button>
-  <button data-x="print"><span>🖨️</span><div>Imprimer / PDF<small>Résultats et hypothèses</small></div></button>
-  <button data-x="copy"><span>📋</span><div>Copier la synthèse<small>Texte à coller dans un mail</small></div></button>
-  <button data-x="json"><span>💾</span><div>Enregistrer le fichier (.json)<small>Pour le rouvrir plus tard</small></div></button>
-  <button data-x="import"><span>📂</span><div>Ouvrir un fichier (.json)</div></button>
-</div>
 <input type="file" id="fImport" accept=".json,application/json" class="cache">
 
 <div class="voile" id="vRegl"><div class="fen large"><header><h3>Réglages</h3><span class="sous-t">Les changements s'appliquent tout de suite</span><button data-ferme>×</button></header>
@@ -1896,8 +1892,9 @@ function changerRegl(k, v) { regl[k] = v; appliquerReglages(); }
 
 /* --- Panneau de réglages à onglets, construit avec les mêmes modules que le formulaire --- */
 // (couleurs, polices, thème et taille : panneau commun « Apparence », module habillage en tête de page)
-const ONGLETS_R = [["dispo", "Disposition"], ["affichage", "Affichage"], ["resultats", "Résultats"], ["donnees", "Données"]];
-let ongletR = "dispo";
+// (disposition, largeur, navigation et densité : bouton « Personnaliser › Mise en page », module disposition)
+const ONGLETS_R = [["affichage", "Affichage"], ["resultats", "Résultats"], ["donnees", "Données"]];
+let ongletR = "affichage";
 const R_ = (spec) => MODULES[spec.type](spec, () => regl[spec.k], (v) => changerRegl(spec.k, v), null);
 const SCHEMAS = { // petits schémas des dispositions (gris = saisie, or = résultats)
   cote: '<rect x="2" y="4" width="11" height="16" rx="1.5"/><rect x="15" y="4" width="7" height="16" rx="1.5" class="r"/>',
@@ -1981,6 +1978,12 @@ function construireReglages() {
     g.append(R_({ k: "graphe", type: "segment", l: "Graphique « Et si je vendais plus tard ? »", plein: true, opts: [["barres", "Barres empilées"], ["courbe", "Courbe"]] }));
   }
   if (ongletR === "donnees") {
+    titre("La simulation");
+    g.append(el("div", { class: "ch plein" }, el("div", { class: "actions-r" },
+      el("button", { type: "button", class: "bt", onclick: async () => { try { await navigator.clipboard.writeText(texteSynthese()); toast("Synthèse copiée"); } catch (er) { toast("Copie refusée par le navigateur"); } } }, "📋 Copier la synthèse (texte pour un mail)"),
+      el("button", { type: "button", class: "bt", onclick: () => telecharger(`plus-value-${etat.dateCession || "simulation"}.json`, new Blob([JSON.stringify({ app: "pvi", version: 1, f: lireTout() }, null, 2)], { type: "application/json" })) }, "💾 Enregistrer le fichier (.json)"),
+      el("button", { type: "button", class: "bt", onclick: () => $("fImport").click() }, "📂 Ouvrir un fichier (.json)"))));
+    titre("Les réglages");
     g.append(el("div", { class: "ch plein" }, el("div", { class: "actions-r" },
       el("button", { type: "button", class: "bt", onclick: () => { regl = { ...REGL_DEF, blocs: REGL_DEF.blocs.map((b) => ({ ...b })) }; appliquerReglages(); construireReglages(); toast("Apparence par défaut rétablie"); } }, "Rétablir toute l'apparence par défaut"),
       el("button", { type: "button", class: "bt", onclick: async () => { try { await navigator.clipboard.writeText(JSON.stringify(regl)); toast("Réglages copiés"); } catch (e) { toast("Copie refusée par le navigateur"); } } }, "Copier mes réglages"),
@@ -2037,7 +2040,7 @@ function texteSynthese() {
 function telecharger(nom, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 function chargerScript(src) { return new Promise((ok, ko) => { if (window.ExcelJS) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = ko; document.head.appendChild(s); }); }
 async function exportExcel() {
-  try { await chargerScript("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"); } catch (e) { return toast("Excel indisponible hors connexion"); }
+  try { await chargerScript("vendor/exceljs.min.js"); } catch (e) { return toast("Excel indisponible hors connexion"); }
   const f = lireTout(), R = calculer(f), { bleu, or } = COUL();
   const argb = (h) => "FF" + h.replace("#", "").toUpperCase();
   const wb = new ExcelJS.Workbook(); wb.creator = "Simulateur PVI";
@@ -2066,16 +2069,81 @@ async function exportExcel() {
   telecharger(`plus-value-${f.dateCession || "simulation"}.xlsx`, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
   toast("Fichier Excel créé");
 }
-$("mExport").onclick = async (e) => {
-  const b = e.target.closest("button"); if (!b) return; fermer();
-  const x = b.dataset.x;
-  if (x === "xlsx") exportExcel();
-  if (x === "print") { $("recap").open = true; setTimeout(() => window.print(), 50); }
-  if (x === "copy") { try { await navigator.clipboard.writeText(texteSynthese()); toast("Synthèse copiée"); } catch (er) { toast("Copie refusée par le navigateur"); } }
-  if (x === "json") telecharger(`plus-value-${etat.dateCession || "simulation"}.json`, new Blob([JSON.stringify({ app: "pvi", version: 1, f: lireTout() }, null, 2)], { type: "application/json" }));
-  if (x === "import") $("fImport").click();
-};
 $("fImport").onchange = async () => { const fi = $("fImport").files[0]; if (!fi) return; try { const o = JSON.parse(await fi.text()); charger(o.f || o); toast("Simulation ouverte"); } catch (e) { toast("Fichier illisible"); } $("fImport").value = ""; };
+
+// --- un clic : PDF (impression), PowerPoint, Excel (boutons du module « disposition »)
+const cabinet = () => (window.Disposition && window.Disposition.cabinet()) || "";
+const logoExport = () => (window.Disposition && window.Disposition.logo()) || "";
+function exportPDF() {
+  const f = lireTout(), cab = cabinet(), logo = logoExport();
+  $("printTitre").innerHTML = `<div class="pt"><div><h1>Simulation de plus-value immobilière</h1><small>Cession du ${esc(dfr(f.dateCession))} · édition du ${new Date().toLocaleDateString("fr-FR")}${cab ? " · " + esc(cab) : ""}</small></div>${logo ? `<img src="${logo}" alt="">` : ""}</div>`;
+  $("recap").open = true; setTimeout(() => window.print(), 60);
+}
+function chargerLib(src) { return new Promise((ok, ko) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => ko(new Error("chargement impossible : " + src)); document.head.appendChild(s); }); }
+function tailleImage(src) { return new Promise((ok) => { const i = new Image(); i.onload = () => ok({ l: i.naturalWidth, h: i.naturalHeight }); i.onerror = () => ok({ l: 3, h: 1 }); i.src = src; }); }
+async function exportPPT() {
+  toast("Préparation de la présentation…");
+  await chargerLib("vendor/pptxgen.bundle.js");
+  const f = lireTout(), R = calculer(f), { bleu, or } = COUL(), cab = cabinet(), logo = logoExport();
+  const hx = (c) => (c || "").replace("#", "").toUpperCase().slice(0, 6) || "0C2D39";
+  const BLEU = hx(bleu), OR = hx(or), GRIS = "6F6B63", POL = "Calibri", TXT = "1C2A30";
+  const p = new PptxGenJS(); p.layout = "LAYOUT_WIDE"; p.title = "Plus-value immobilière";
+  const titre = (s, t, st) => { s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: BLEU } }); s.addText(t, { x: 0.5, y: 0.12, w: 12.3, h: 0.66, fontFace: "Georgia", fontSize: 24, color: "FFFFFF", bold: true }); if (st) s.addText(st, { x: 0.5, y: 0.95, w: 12.3, h: 0.4, fontFace: POL, fontSize: 12, color: GRIS }); if (cab) s.addText(cab, { x: 0.5, y: 7.1, w: 9, h: 0.3, fontFace: POL, fontSize: 9, color: GRIS }); };
+  const tab = (lignes, o) => ({ fontFace: POL, fontSize: 11, border: { type: "solid", pt: 0.5, color: "E2DACB" }, rowH: 0.32, ...o });
+  const E = (v) => typeof v === "number" ? eur(v) : String(v ?? "");
+  // 1. couverture
+  let s = p.addSlide(); s.background = { color: BLEU };
+  s.addText("Plus-value immobilière", { x: 0.8, y: 2.2, w: 11.7, h: 1, fontFace: "Georgia", fontSize: 40, color: "FFFFFF", bold: true });
+  s.addText("Cession du " + dfr(f.dateCession) + " · prix " + eur(R.prix), { x: 0.8, y: 3.2, w: 11.7, h: 0.6, fontFace: POL, fontSize: 20, color: "E3C27F" });
+  s.addText("Édition du " + new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }), { x: 0.8, y: 4.1, w: 11.7, h: 0.5, fontFace: POL, fontSize: 14, color: "FFFFFF" });
+  if (cab) s.addText(cab, { x: 0.8, y: 6.5, w: 8, h: 0.4, fontFace: POL, fontSize: 12, color: "E3C27F" });
+  if (logo) { const t = await tailleImage(logo), hL = 0.9, wL = Math.min(3, hL * t.l / (t.h || 1)); s.addShape(p.ShapeType.roundRect, { x: 12.53 - wL - 0.2, y: 0.4, w: wL + 0.4, h: hL + 0.3, fill: { color: "FFFFFF" }, rectRadius: 0.08, line: { color: "FFFFFF" } }); s.addImage({ data: logo, x: 12.53 - wL, y: 0.55, w: wL, h: hL }); }
+  // 2. chiffres clés
+  s = p.addSlide(); titre(s, "L'essentiel");
+  [["Plus-value brute", eur(R.PVB)], ["Détention", R.yT + " ans"], ["Impôt total", eur(R.T.total)], ["Net vendeur", eur(R.net)]].forEach(([a, b], i) => {
+    s.addShape(p.ShapeType.roundRect, { x: 0.5 + i * 3.1, y: 1.3, w: 2.9, h: 1.3, fill: { color: "EFE9DE" }, rectRadius: 0.08, line: { color: "EFE9DE" } });
+    s.addText([{ text: a + "\n", options: { fontSize: 11, color: GRIS } }, { text: b, options: { fontSize: 22, bold: true, color: i === 3 ? OR : BLEU, fontFace: "Georgia" } }], { x: 0.6 + i * 3.1, y: 1.35, w: 2.7, h: 1.2, fontFace: POL, valign: "middle" });
+  });
+  s.addTable([[{ text: "Impôt", options: { bold: true, color: "FFFFFF", fill: { color: BLEU } } }, { text: "Montant", options: { bold: true, color: "FFFFFF", fill: { color: BLEU }, align: "right" } }],
+    ...[["Impôt sur le revenu", R.T.IR], ["Prélèvements sociaux", R.T.PS], ["Surtaxe sur les plus-values élevées", R.T.sur], ["Taxes sur les terrains devenus constructibles", R.T.tCom + R.T.tNat], ["Impôt total", R.T.total], ["Net vendeur (prix − frais − impôts)", R.net]]
+      .filter(([, v], i) => i >= 4 || v).map(([a, v], i, t) => [{ text: a, options: { bold: i >= t.length - 2, color: TXT } }, { text: eur(v), options: { align: "right", bold: i >= t.length - 2, color: BLEU } }])],
+    tab(null, { x: 0.5, y: 3.0, w: 7.5, colW: [5.2, 2.3], fontSize: 12, rowH: 0.4 }));
+  s.addText("Abattements pour durée de détention : " + pc(R.aIR) + " pour l'impôt sur le revenu, " + pc(R.aPS) + " pour les prélèvements sociaux.", { x: 8.4, y: 3.0, w: 4.4, h: 1.2, fontFace: POL, fontSize: 12, color: GRIS, valign: "top" });
+  // 3. hypothèses
+  const hyp = lignesRecap(f);
+  for (let k = 0; k < hyp.length; k += 30) {
+    s = p.addSlide(); titre(s, "Les hypothèses" + (k ? " (suite)" : ""));
+    const bloc = hyp.slice(k, k + 30), m = Math.ceil(bloc.length / 2);
+    [bloc.slice(0, m), bloc.slice(m)].forEach((b, i) => b.length && s.addTable(b.map(([a, v]) => [{ text: String(a), options: { color: GRIS } }, { text: E(v), options: { bold: true, color: BLEU } }]),
+      tab(null, { x: 0.5 + i * 6.3, y: 1.2, w: 6, colW: [3.3, 2.7], fontSize: 10 })));
+  }
+  // 4. détermination de la plus-value
+  s = p.addSlide(); titre(s, "La plus-value");
+  const L = R.L.slice(0, 22);
+  s.addTable(L.map(([l, v, c]) => [{ text: String(l), options: { bold: !!c, color: TXT } }, { text: E(v), options: { align: "right", bold: !!c, color: c === "tot" ? OR : BLEU } }]), tab(null, { x: 0.5, y: 1.2, w: 9.5, colW: [7.2, 2.3], fontSize: L.length > 14 ? 9.5 : 11 }));
+  // 5. un cédant par diapositive
+  for (const r of R.res) {
+    s = p.addSlide(); titre(s, r.nom, "Quote-part " + pc(r.part, 2));
+    const t = [[{ text: "", options: { fill: { color: BLEU } } }, { text: "Impôt sur le revenu", options: { bold: true, color: "FFFFFF", fill: { color: BLEU }, align: "right" } }, { text: "Prélèvements sociaux", options: { bold: true, color: "FFFFFF", fill: { color: BLEU }, align: "right" } }]];
+    for (const x of r.exos) t.push([{ text: "Exonération : " + x, options: { color: "2F7D5B" } }, "", ""]);
+    for (const [l, a, b] of r.lignes) t.push([String(l), { text: E(a), options: { align: "right" } }, { text: E(b), options: { align: "right" } }]);
+    t.push([{ text: "Plus-value nette imposable", options: { bold: true } }, { text: eur(r.pvIR), options: { align: "right", bold: true } }, { text: eur(r.pvPS), options: { align: "right", bold: true } }],
+      ["Impôt", { text: eur(r.IR), options: { align: "right" } }, { text: eur(r.PS), options: { align: "right" } }]);
+    if (r.sur) t.push(["Surtaxe sur les plus-values élevées", { text: eur(r.sur), options: { align: "right" } }, ""]);
+    if (r.tCom || r.tNat) t.push(["Taxes terrains devenus constructibles", { text: eur(r.tCom + r.tNat), options: { align: "right" } }, ""]);
+    t.push([{ text: "Total dû", options: { bold: true, color: BLEU } }, { text: eur(r.total), options: { align: "right", bold: true, color: OR } }, ""]);
+    s.addTable(t, tab(null, { x: 0.5, y: 1.4, w: 12.3, colW: [7.3, 2.5, 2.5], fontSize: t.length > 16 ? 9.5 : 11 }));
+  }
+  // 6. projection
+  const pts = projection(f);
+  if (pts.length && R.PVB > 0) {
+    s = p.addSlide(); titre(s, "Et si je vendais plus tard ?", "Même prix, mêmes hypothèses");
+    s.addChart(p.ChartType.bar, [["Impôt sur le revenu", "IR"], ["Prélèvements sociaux", "PS"], ["Surtaxe", "sur"]].map(([n, k]) => ({ name: n, labels: pts.map((x) => x.k ? String(x.an) : "Date saisie"), values: pts.map((x) => Math.round(x[k])) })),
+      { x: 0.5, y: 1.4, w: 12.3, h: 5.5, barGrouping: "stacked", chartColors: [BLEU, OR, "4F7F8F"], showLegend: true, legendPos: "b", valAxisLabelFormatCode: "# ##0", catAxisLabelFontSize: 10, valAxisLabelFontSize: 9 });
+  }
+  await p.writeFile({ fileName: `plus-value-${f.dateCession || "simulation"}.pptx` });
+  toast("Présentation prête");
+}
 
 /* =====================================================================================
    11. FENÊTRES, MENUS, BULLES D'AIDE
@@ -2083,7 +2151,6 @@ $("fImport").onchange = async () => { const fi = $("fImport").files[0]; if (!fi)
 function fermer() { document.querySelectorAll(".voile.on,.menu.on,#cal.on,#bulle.on,#pop.on").forEach((x) => x.classList.remove("on")); }
 $("bRegl").onclick = () => { fermer(); construireReglages(); $("vRegl").classList.add("on"); };
 $("bScen").onclick = () => { fermer(); dessinerScenarios(); $("vScen").classList.add("on"); setTimeout(() => $("scNom").focus(), 50); };
-$("bExport").onclick = (e) => { e.stopPropagation(); const m = $("mExport"), on = m.classList.contains("on"); fermer(); if (on) return; const r = e.currentTarget.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 250, r.right - 240)) + "px"; m.classList.add("on"); };
 document.querySelectorAll(".voile").forEach((v) => v.addEventListener("click", (e) => { if (e.target === v || e.target.closest("[data-ferme]")) fermer(); }));
 $("bVoir").onclick = () => $("res").scrollIntoView({ behavior: "smooth" });
 document.addEventListener("click", (e) => {
@@ -2102,6 +2169,21 @@ addEventListener("scroll", () => {
 // Étape active dans la barre de navigation, selon la section visible
 const obs = new IntersectionObserver((ents) => { if (regl.dispo === "pas") return; for (const en of ents) if (en.isIntersecting) document.querySelectorAll("#etapes a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id)); }, { rootMargin: "-140px 0px -60% 0px" });
 
+// --- mise en page commune (bouton « Personnaliser », module disposition en bas de la page)
+const MISE_PVI = { cote: "cote", inverse: "inverse", colonne: "empile", resultats: "haut", pas: "pas" };
+window.DISPOSITION = {
+  app: "pvi",
+  defaut: { part: 52 },
+  appliquer: (e) => {
+    Object.assign(regl, { dispo: MISE_PVI[e.mise] || "cote", ratio: Math.max(35, Math.min(70, +e.part || 52)),
+      largeur: { etroite: "1100", standard: "1440", large: "1800", ecran: "plein" }[e.largeur] || "1440", nav: e.nav,
+      densite: { compacte: "compact", confortable: "confort", aeree: "aere" }[e.densite] || "confort" });
+    if (typeof etat !== "undefined" && etat) appliquerReglages();
+  },
+  barre: () => ({ conteneur: document.querySelector("header.haut .actions"), avant: $("bRegl"), classe: "bt-h" }),
+  exports: { pptx: exportPPT, pdf: exportPDF, xlsx: exportExcel }
+};
+
 /* =====================================================================================
    12. DÉMARRAGE
    ===================================================================================== */
@@ -2114,5 +2196,202 @@ maj();
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => regl.theme === "auto" && appliquerReglages());
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
+<!-- disposition : début (mise en page et exports communs ; module commun, voir disposition.source.js à la racine du dépôt) -->
+<script>
+// =====================================================================================
+//  Disposition commune — le même bouton « Personnaliser » et la même barre d'exports dans les simulateurs
+//  (module commun, recopié tel quel dans audit/, pvi/, succession/ et immo/, entre les repères
+//   « disposition : début » et « disposition : fin ». Modifier ici, puis recopier.)
+// -------------------------------------------------------------------------------------
+//  • Un bouton « Personnaliser » ouvre une fenêtre à deux onglets :
+//      Apparence   (couleurs, polices, thème, taille, coins : module « habillage ») ;
+//      Mise en page (côte à côte, inversée, une colonne, résultats d'abord, pas à pas ; part de la
+//                    colonne de saisie, largeur, navigation, densité ; nom du cabinet et logo des exports).
+//  • Puis trois boutons : PowerPoint, PDF, Excel — un clic, un fichier.
+//  • Les réglages valent pour toutes les applis : localStorage « applis-disposition ».
+//  • Chaque appli dit (window.DISPOSITION, posé avant ce bloc) :
+//      appliquer(etat)  : comment elle se met en page avec ces réglages ;
+//      barre()          : { conteneur, avant, classe, classeExport, classeTexte } — où poser les boutons ;
+//      exports          : { pptx, pdf, xlsx } — les fonctions qui produisent chaque fichier ;
+//      titreExcel (bulle du bouton Excel), app (identifiant : la largeur de saisie est gardée par appli), defaut, sansNavigation,
+//      mises (la liste des mises en page proposées), plus() (réglages en plus).
+//  • Sur <html> : data-mise, data-largeur, data-nav, data-densite et la variable --part (en %).
+// =====================================================================================
+(function () {
+  "use strict";
+  var C = window.DISPOSITION;
+  if (!C) return;
+  var CLE = "applis-disposition";
+  var DEFAUT = { mise: "cote", part: 40, largeur: "standard", nav: "barre", densite: "confortable", cabinet: "", logo: "" };
+  function brut() { try { return JSON.parse(localStorage.getItem(CLE)) || {}; } catch (e) { return {}; } }
+  function lire() {
+    var p = brut(), r = {};
+    for (var k in DEFAUT) r[k] = p[k] != null ? p[k] : (C.defaut && C.defaut[k] != null ? C.defaut[k] : DEFAUT[k]);
+    // la largeur de la colonne de saisie est propre à chaque appli (les formulaires n'ont pas la même largeur)
+    if (C.app) r.part = p["part-" + C.app] != null ? p["part-" + C.app] : (C.defaut && C.defaut.part) || DEFAUT.part;
+    if (C.mises && C.mises.indexOf(r.mise) < 0) r.mise = C.mises[0];
+    return r;
+  }
+  var etat = lire();
+  function garder(changes) {
+    var p = brut();
+    for (var k in changes) p[k === "part" && C.app ? "part-" + C.app : k] = changes[k];
+    try { localStorage.setItem(CLE, JSON.stringify(p)); } catch (e) { if (changes.logo) alert("Image trop lourde pour être gardée : choisissez un logo plus léger."); }
+    appliquer();
+  }
+  function appliquer() {
+    etat = lire();
+    var r = document.documentElement;
+    r.setAttribute("data-mise", etat.mise); r.setAttribute("data-largeur", etat.largeur); r.setAttribute("data-nav", etat.nav); r.setAttribute("data-densite", etat.densite);
+    r.style.setProperty("--part", Math.max(25, Math.min(70, +etat.part || 40)) + "%");
+    if (typeof C.appliquer === "function") try { C.appliquer(etat); } catch (e) { console.error(e); }
+  }
+
+  // ---------------------------------------------------------------- icônes
+  var I = {
+    reglages: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+    pptx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M8 13V9M12 13V7M16 13v-2"/></svg>',
+    pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+    xlsx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>'
+  };
+
+  // ---------------------------------------------------------------- la fenêtre (même cadre que « Apparence » : classes hb-*)
+  var CSS = [
+    ".dp-schemas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}",
+    ".dp-schema{border:1px solid var(--hb-bordure,#e2dacb);background:var(--hb-carte,#fff);border-radius:12px;padding:9px;cursor:pointer;text-align:left;display:grid;gap:5px;color:inherit;font:inherit}",
+    ".dp-schema.on{outline:2px solid var(--hb-principale,#0c2d39);outline-offset:-2px}",
+    ".dp-schema b{font-size:13px}.dp-schema small{font-size:11px;color:var(--hb-discret,#7c7466);line-height:1.3}",
+    ".dp-mini{display:flex;gap:3px;height:30px}.dp-mini i{display:block;border-radius:3px;background:var(--hb-bordure,#d9d2c4)}.dp-mini i.r{background:var(--hb-accent,#a77d2f);opacity:.75}",
+    ".dp-curseur{display:flex;align-items:center;gap:12px}.dp-curseur input{flex:1;accent-color:var(--hb-accent,#a77d2f)}.dp-curseur b{min-width:44px;text-align:right}",
+    ".dp-champ{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--hb-bordure,#e2dacb);border-radius:10px;background:var(--hb-carte,#fff);font:inherit;color:inherit}",
+    ".dp-logo{border:1.5px dashed var(--hb-bordure,#cfc6b4);border-radius:12px;padding:12px;text-align:center;cursor:pointer;background:none;font:inherit;color:inherit;display:grid;gap:6px;justify-items:center}",
+    ".dp-logo img{max-height:56px;max-width:100%}",
+    ".dp-bouton svg{width:18px;height:18px;flex:none}",
+    "@media (max-width:700px){.dp-schemas{grid-template-columns:repeat(2,minmax(0,1fr))}}"
+  ].join("");
+  function h(tag, attrs, enfants) {
+    var e = document.createElement(tag);
+    for (var k in (attrs || {})) { if (k.slice(0, 2) === "on") e[k] = attrs[k]; else if (attrs[k] != null && attrs[k] !== false) e.setAttribute(k, attrs[k]); }
+    [].concat(enfants || []).forEach(function (x) { if (x != null && x !== false) e.append(x); });
+    return e;
+  }
+  var MISES = {
+    cote: ["Côte à côte", "Saisie à gauche, résultats à droite", [[3, ""], [2, "r"]]],
+    inverse: ["Inversée", "Résultats à gauche", [[2, "r"], [3, ""]]],
+    colonne: ["Une colonne", "Résultats sous la saisie", "col"],
+    resultats: ["Résultats d'abord", "Une colonne, résultats en haut", "colr"],
+    pas: ["Pas à pas", "Une étape à la fois", "pas"]
+  };
+  function mini(m) {
+    var b = h("span", { class: "dp-mini" });
+    var bloc = function (cls, flex, parent) { var i = h("i", { class: cls }); i.style.flex = String(flex); (parent || b).append(i); return i; };
+    if (m === "col" || m === "colr") { b.style.flexDirection = "column"; b.style.gap = "2px"; bloc(m === "colr" ? "r" : "", 1); bloc(m === "colr" ? "" : "r", 1); }
+    else if (m === "pas") { b.style.flexDirection = "column"; b.style.gap = "2px"; var t = h("span"); t.style.cssText = "display:flex;gap:2px;height:7px"; bloc("r", 1, t); bloc("", 1, t); bloc("", 1, t); b.append(t); bloc("", 1); }
+    else m.forEach(function (x) { bloc(x[1], x[0]); });
+    return b;
+  }
+  var voile = null;
+  function panneau(onglet) {
+    if (!onglet) { try { onglet = sessionStorage.getItem("applis-onglet"); } catch (e) {} }
+    if (onglet === "apparence" && window.Habillage) { window.Habillage.ouvrir(); return; }
+    if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
+    voile = voile || h("div", { class: "hb-voile", onclick: function (e) { if (e.target === voile) voile.remove(); } });
+    var c = window.Habillage && window.Habillage.etat() && window.Habillage.etat().couleurs;
+    if (c) ["fond", "carte", "texte", "bordure", "section", "discret"].forEach(function (k) { if (c[k]) voile.style.setProperty("--hb-" + k, c[k]); });
+    document.body.append(voile);
+    dessiner();
+  }
+  function dessiner() {
+    var e = etat;
+    var choix = function (titre, cle, options) {
+      return [h("p", { class: "hb-titre" }, titre), h("div", { class: "hb-choix" }, options.map(function (o) {
+        return h("button", { type: "button", class: "hb-bt" + (String(e[cle]) === String(o[0]) ? " on" : ""), onclick: function () { var x = {}; x[cle] = o[0]; garder(x); dessiner(); } }, o[1]);
+      }))];
+    };
+    var curseur = h("input", { type: "range", min: 25, max: 70, step: 1, value: e.part, "aria-label": "Part de la colonne de saisie" });
+    var valeur = h("b", null, e.part + " %");
+    curseur.oninput = function () { valeur.textContent = curseur.value + " %"; garder({ part: +curseur.value }); };
+    var fichier = h("input", { type: "file", accept: "image/png,image/jpeg", style: "display:none" });
+    fichier.onchange = function () {
+      var f = fichier.files[0]; if (!f) return;
+      // le logo est réduit (largeur 480 px au plus) pour rester léger
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function () {
+        var k = Math.min(1, 480 / img.width), cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        garder({ logo: cv.toDataURL("image/png") }); dessiner();
+      };
+      img.src = url;
+    };
+    var nomCab = h("input", { type: "text", class: "dp-champ", placeholder: "Nom du cabinet", value: e.cabinet || "" });
+    nomCab.onchange = function () { garder({ cabinet: nomCab.value.trim() }); };
+    var mises = C.mises || Object.keys(MISES);
+    var cote = e.mise === "cote" || e.mise === "inverse" || e.mise === "pas";
+    var corps = [].concat(
+      [h("p", { class: "hb-titre" }, "Disposition"),
+       h("div", { class: "dp-schemas" }, mises.map(function (k) {
+         var m = MISES[k];
+         return h("button", { type: "button", class: "dp-schema" + (e.mise === k ? " on" : ""), onclick: function () { garder({ mise: k }); dessiner(); } }, [mini(m[2]), h("b", null, m[0]), h("small", null, m[1])]);
+       }))],
+      cote ? [h("p", { class: "hb-titre" }, "Largeur de la colonne de saisie"), h("div", { class: "dp-curseur" }, [curseur, valeur])] : [],
+      choix("Largeur de la page", "largeur", [["etroite", "Étroite"], ["standard", "Standard"], ["large", "Large"], ["ecran", "Tout l'écran"]]),
+      C.sansNavigation ? [] : choix("Navigation entre les étapes", "nav", [["barre", "Barre en haut"], ["laterale", "Menu latéral"], ["masquee", "Masquée"]]),
+      choix("Densité", "densite", [["compacte", "Compacte"], ["confortable", "Confortable"], ["aeree", "Aérée"]]),
+      [h("p", { class: "hb-titre" }, "Exports : nom du cabinet"), nomCab,
+       h("p", { class: "hb-titre" }, "Exports : logo"),
+       h("button", { type: "button", class: "dp-logo", onclick: function () { fichier.click(); } }, e.logo ? [h("img", { src: e.logo, alt: "" }), h("span", null, "Changer d'image")] : h("span", null, "Choisir une image (PNG ou JPG)")),
+       e.logo ? h("button", { type: "button", class: "hb-lien", onclick: function () { garder({ logo: "" }); dessiner(); } }, "Retirer le logo") : null,
+       fichier]);
+    if (typeof C.plus === "function") { var x = C.plus(); if (x) corps.push(x); }
+    corps.push(h("p", { class: "hb-aide" }, "Ces réglages valent pour tous les simulateurs, sur cet appareil."),
+      h("button", { type: "button", class: "hb-lien", onclick: function () { var p = brut(); try { localStorage.setItem(CLE, JSON.stringify({ cabinet: p.cabinet || "", logo: p.logo || "" })); } catch (er) {} appliquer(); dessiner(); } }, "↺ Mise en page par défaut"));
+    voile.replaceChildren(h("div", { class: "hb-fen", role: "dialog", "aria-modal": "true", "aria-label": "Personnaliser" }, [
+      h("div", { class: "hb-tete" }, [
+        window.Habillage ? h("div", { class: "hb-onglets", role: "tablist" }, [
+          h("button", { type: "button", role: "tab", onclick: function () { voile.remove(); try { sessionStorage.setItem("applis-onglet", "apparence"); } catch (er) {} window.Habillage.ouvrir(); } }, "Apparence"),
+          h("button", { type: "button", class: "on", role: "tab", "aria-selected": "true" }, "Mise en page")]) : h("b", null, "Mise en page"),
+        h("button", { type: "button", class: "hb-x", "aria-label": "Fermer", onclick: function () { voile.remove(); } }, "×")]),
+      h("div", { class: "hb-corps" }, corps)]));
+  }
+
+  // ---------------------------------------------------------------- la barre : Personnaliser, PowerPoint, PDF, Excel
+  function installerBarre() {
+    var B = C.barre && C.barre();
+    if (!B || !B.conteneur) return;
+    if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
+    var bouton = function (id, icone, texte, titre, faire) {
+      var b = h("button", { type: "button", class: (B.classe || "") + " dp-bouton", "data-dpb": id, title: titre, "aria-label": titre });
+      b.innerHTML = icone + "<span" + (B.classeTexte ? ' class="' + B.classeTexte + '"' : "") + ">" + texte + "</span>";
+      b.onclick = function (ev) { ev.preventDefault(); ev.stopPropagation(); faire(b); };
+      return b;
+    };
+    var lancer = function (type) {
+      return function (b) {
+        var f = C.exports && C.exports[type]; if (!f || b.disabled) return;
+        b.disabled = true; b.style.opacity = ".6";
+        Promise.resolve().then(f).catch(function (er) { console.error(er); alert("Export impossible : " + (er && er.message || er)); })
+          .then(function () { b.disabled = false; b.style.opacity = ""; });
+      };
+    };
+    var liste = [bouton("reglages", I.reglages, "Personnaliser", "Personnaliser : apparence et mise en page", function () { panneau(); })];
+    var ex = function (id, icone, texte, titre) { var b = bouton(id, icone, texte, titre, lancer(id)); if (B.classeExport) b.className = B.classeExport + " dp-bouton"; return b; };
+    if (C.exports && C.exports.pptx) liste.push(ex("pptx", I.pptx, "PowerPoint", "Télécharger la présentation PowerPoint"));
+    if (C.exports && C.exports.pdf) liste.push(ex("pdf", I.pdf, "PDF", "Imprimer ou enregistrer en PDF"));
+    if (C.exports && C.exports.xlsx) liste.push(ex("xlsx", I.xlsx, "Excel", C.titreExcel || "Télécharger le classeur Excel"));
+    liste.forEach(function (b) { if (B.avant && B.avant.parentNode === B.conteneur) B.conteneur.insertBefore(b, B.avant); else B.conteneur.append(b); });
+  }
+
+  appliquer();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { installerBarre(); appliquer(); });
+  else { installerBarre(); appliquer(); }
+  addEventListener("storage", function (e) { if (e.key === CLE) { appliquer(); if (voile && voile.parentNode) dessiner(); } });
+  addEventListener("keydown", function (e) { if (e.key === "Escape" && voile && voile.parentNode) voile.remove(); });
+  // pour les exports : le nom du cabinet et le logo
+  window.Disposition = { etat: function () { return etat; }, ouvrir: panneau, appliquer: appliquer, cabinet: function () { return etat.cabinet || ""; }, logo: function () { return etat.logo || ""; } };
+})();
+</script>
+<!-- disposition : fin -->
 </body>
 </html>
