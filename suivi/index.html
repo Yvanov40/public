@@ -4253,8 +4253,9 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     $("corpsClient").replaceChildren(
       el("p", { class: "aide" }, "Un client peut exister sans dossier : prospect, contact à rappeler… Vous lui créerez un dossier plus tard depuis sa fiche."),
       champ("Nom du client", nom),
-      el("div", { class: "deux" }, champ("Demandeur", avecListe("notaire", "", "notaire"), true), champ("Partenaire", avecListe("partenaire", "", "partenaire"), true)),
-      champ("Millionnaire", avecListe("millionnaire", "", "millionnaire"), true),
+      // mêmes tuiles que dans un dossier : on touche un demandeur, un partenaire… ou « ＋ Ajouter »
+      tuiles([{ libelle: "Demandeur", commun: true, choix: choixDemandeur("") }, { libelle: "Partenaire", commun: true, choix: choixPartenaire("") },
+        { libelle: "Millionnaire", commun: true, choix: choixMillionnaire("") }]),
       champ("Commentaire client", el("textarea", { name: "commentaire", style: "min-height:120px" }, "")),
       champ("Notes client", el("textarea", { name: "notes", style: "min-height:70px" }, "")));
     ouvrirFeuille("feuilleClient", nouveauClient);
