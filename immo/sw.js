@@ -3,8 +3,8 @@
    Il garde une copie de l'appli sur l'appareil : elle s'ouvre même sans Internet.
    Le réseau d'abord (on a toujours la dernière version), la copie seulement hors connexion.
    ===================================================================================== */
-const VERSION = "immo-v2";
-const LOCAL = ["./", "./index.html", "./moteur.js", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png", "./apple-touch-icon.png"];
+const VERSION = "immo-v3";
+const LOCAL = ["./", "./index.html", "./moteur.js", "./excel.js", "./xlcalc.js", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil((async () => {

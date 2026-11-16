@@ -18,11 +18,8 @@ window.HABILLAGE = {
   theme: { attr: "data-theme", sombre: "dark", clair: "light" },
   cartes: ".carte,.chiffre,.puce,.mini,.onglets button",
   css: "header.haut,.fen header{background:var(--hb-barre)!important}",
-  bouton: function () {
-    var b = document.createElement("button"); b.type = "button"; b.className = "bt-h";
-    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex:none"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-1 1.2-1.9-.6-1.1.2-2.3 1.5-2.3H17a4 4 0 0 0 4-4c0-5.5-4-9.8-9-9.8z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10.5" cy="7" r="1.1"/><circle cx="15.2" cy="7.6" r="1.1"/></svg><span>Apparence</span>';
-    var r = document.getElementById("bRegl"); if (!r) return null; r.before(b); return b;
-  }
+  // pas de bouton « Apparence » : c'est un onglet du bouton « Personnaliser » (module disposition)
+  bouton: function () { return null; }
 };
 // =====================================================================================
 //  Habillage commun — la même apparence et le même panneau « Apparence » dans toutes les applis
@@ -143,6 +140,7 @@ window.HABILLAGE = {
     ".hb-fen{background:var(--hb-fond,#f7f4ee);color:var(--hb-texte,#1c2a30);width:min(560px,100%);max-height:90vh;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3);font:14px/1.45 var(--hb-sans)}",
     ".hb-tete{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--hb-barre);color:#fff}.hb-tete b{flex:1;font:600 19px var(--hb-serif)}",
     ".hb-x{border:0;background:none;color:#fff;font-size:24px;line-height:1;cursor:pointer}",
+    ".hb-onglets{display:flex;gap:4px;flex:1;min-width:0}.hb-onglets button{border:0;background:none;color:rgba(255,255,255,.66);font:600 18px var(--hb-serif);padding:3px 10px;border-radius:9px;cursor:pointer;white-space:nowrap}.hb-onglets button.on{color:#fff;background:rgba(255,255,255,.15)}",
     ".hb-corps{padding:14px 16px 18px;overflow-y:auto;display:grid;gap:12px}",
     ".hb-titre{margin:4px 0 -4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--hb-discret,#7c7466);font-weight:600}",
     ".hb-choix{display:flex;flex-wrap:wrap;gap:6px}",
@@ -210,7 +208,12 @@ window.HABILLAGE = {
     if (C.note) corps.push(h("p", { class: "hb-aide" }, C.note));
     if (lib) corps.push(h("button", { type: "button", class: "hb-lien", onclick: function () { try { localStorage.removeItem(CLE); } catch (e) {} garder({ suivre: true }); dessiner(); } }, "↺ Revenir à l'apparence du Suivi"));
     voile.replaceChildren(h("div", { class: "hb-fen", role: "dialog", "aria-modal": "true", "aria-label": "Apparence" }, [
-      h("div", { class: "hb-tete" }, [h("b", null, "Apparence"), h("button", { type: "button", class: "hb-x", "aria-label": "Fermer", onclick: function () { voile.remove(); } }, "×")]),
+      h("div", { class: "hb-tete" }, [
+        // avec le module « disposition » : deux onglets, Apparence et Mise en page, dans la même fenêtre
+        window.Disposition ? h("div", { class: "hb-onglets", role: "tablist" }, [
+          h("button", { type: "button", class: "on", role: "tab", "aria-selected": "true" }, "Apparence"),
+          h("button", { type: "button", role: "tab", onclick: function () { voile.remove(); try { sessionStorage.setItem("applis-onglet", "mise"); } catch (e) {} window.Disposition.ouvrir("mise"); } }, "Mise en page")]) : h("b", null, "Apparence"),
+        h("button", { type: "button", class: "hb-x", "aria-label": "Fermer", onclick: function () { voile.remove(); } }, "×")]),
       h("div", { class: "hb-corps" }, corps)]));
   }
 
@@ -236,6 +239,7 @@ window.HABILLAGE = {
 })();
 </script>
 <!-- habillage : fin -->
+
 
 
 
@@ -291,19 +295,48 @@ header.haut { position: sticky; top: 0; z-index: 20; background: #0c2d39; color:
 .bt-h { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); color: #fff; border-radius: 10px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
 .bt-h:hover { background: rgba(255,255,255,.14); }
 .bt-h svg { width: 18px; height: 18px; flex: none; }
-.menu-export { position: absolute; right: 18px; top: 58px; background: var(--carte); color: var(--texte); border: 1px solid var(--bordure); border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.18); padding: 6px; display: grid; min-width: 220px; z-index: 30; }
-.menu-export button { text-align: left; border: 0; background: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; gap: 10px; align-items: center; }
-.menu-export button:hover { background: var(--section); }
-.menu-export small { display: block; color: var(--discret); font-size: 11.5px; }
+@media (max-width: 1500px) { .actions .bt-h[data-dp="pptx"] span, .actions .bt-h[data-dp="pdf"] span, .actions .bt-h[data-dp="xlsx"] span, #bRegl span { display: none; } .actions .bt-h[data-dp] , #bRegl { padding: 8px 10px; } }
+@media (max-width: 560px) { .marque div { display: none; } }
+@media (max-width: 1180px) { .actions .bt-h span { display: none; } .actions .bt-h { padding: 8px 9px; } .actions { gap: 6px; } }
 
-/* ---------- mise en page : saisie à gauche, résultats à droite ---------- */
-main { max-width: 1600px; margin: 0 auto; padding: 16px 18px 40px; display: grid; grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); gap: 18px; align-items: start; }
-.seg.bascule { display: none; }
-.saisie { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.resultats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+/* ---------- mise en page (bouton Personnaliser › Mise en page) ----------
+   html[data-mise] : cote, inverse, colonne, resultats, pas ; [data-largeur], [data-nav], [data-densite] ; --part.
+   Les colonnes et les zones de la grille sont calculées par miseEnPage() (variables --cols et --zones). */
+:root { --lp: 1440px; --ecart: 18px; --pad: 16px; --gchamps: 10px 12px; --pchamp: 9px; }
+:root[data-largeur="etroite"] { --lp: 1100px; } :root[data-largeur="large"] { --lp: 1800px; } :root[data-largeur="ecran"] { --lp: 100vw; }
+:root[data-densite="compacte"] { --ecart: 10px; --pad: 11px; --gchamps: 6px 10px; --pchamp: 6px; }
+:root[data-densite="aeree"] { --ecart: 26px; --pad: 22px; --gchamps: 14px 16px; --pchamp: 11px; }
+main { max-width: var(--lp); margin: 0 auto; padding: 16px 18px 40px; display: grid; grid-template-columns: var(--cols, minmax(0, 34%) minmax(0, 1fr)); grid-template-areas: var(--zones, "saisie resultats"); gap: var(--ecart); align-items: start; }
+.haut-in { max-width: var(--lp) !important; }
+.seg.bascule { display: none; grid-area: bascule; }
+.saisie { grid-area: saisie; display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--ecart) * .67); align-content: start; min-width: 0; }
+.resultats { grid-area: resultats; display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--ecart) * .78); min-width: 0; }
+/* une colonne : les cartes de saisie se rangent côte à côte quand il y a la place */
+:root[data-mise="colonne"] .saisie, :root[data-mise="resultats"] .saisie { grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); align-items: start; }
+:root[data-mise="colonne"] .saisie > .aide, :root[data-mise="resultats"] .saisie > .aide { grid-column: 1 / -1; }
+/* pas à pas : une carte de saisie à la fois */
+:root[data-mise="pas"] .saisie details.carte:not(.actif) { display: none; }
+:root[data-mise="pas"] .saisie details.carte > summary { pointer-events: none; }
+:root[data-mise="pas"] .saisie details.carte > summary::after { display: none; }
+.pas-nav { display: none; align-items: center; gap: 8px; }
+:root[data-mise="pas"] .pas-nav { display: flex; }
+.pas-nav span { flex: 1; text-align: center; font-size: 12.5px; color: var(--discret); }
+.pas-nav button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+.pas-nav button.suite { background: var(--bleu); border-color: var(--bleu); color: var(--carte); font-weight: 600; }
+.pas-nav button:disabled { opacity: .4; cursor: default; }
+/* navigation entre les étapes */
+.etapes { grid-area: nav; display: flex; gap: 6px; flex-wrap: wrap; position: sticky; top: 66px; z-index: 12; background: color-mix(in srgb, var(--fond) 92%, transparent); backdrop-filter: blur(6px); padding: 4px 0; }
+.etapes button { border: 1px solid var(--bordure); background: var(--carte); border-radius: 999px; padding: 6px 12px 6px 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--texte); }
+.etapes button .num { width: 21px; height: 21px; font-size: 11.5px; }
+.etapes button.on { border-color: var(--bleu); background: var(--bleu-doux); font-weight: 600; }
+.etapes button.res { padding-left: 12px; }
+:root[data-nav="masquee"] .etapes { display: none; }
+:root[data-nav="laterale"] .etapes { flex-direction: column; flex-wrap: nowrap; align-self: start; top: 78px; padding: 0; background: none; backdrop-filter: none; }
+:root[data-nav="laterale"] .etapes button { border-radius: 10px; justify-content: flex-start; text-align: left; }
+.dp-bouton.bt-h { gap: 6px; }
 .carte { background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px; }
 .carte > h2 { font-size: 19px; padding: 12px 16px 0; }
-.carte .corps { padding: 10px 16px 16px; }
+.carte .corps { padding: calc(var(--pad) * .62) var(--pad) var(--pad); }
 details.carte > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
 details.carte > summary::-webkit-details-marker { display: none; }
 details.carte > summary h2 { font-size: 18px; flex: 1; }
@@ -314,15 +347,15 @@ details.carte > .corps { padding-top: 0; }
 .num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 12px; background: var(--bleu); color: var(--carte); font: 600 12.5px var(--ui); flex: none; }
 
 /* ---------- champs ---------- */
-.grille { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; align-items: start; }
+.grille { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gchamps); align-items: start; }
 .grille .plein { grid-column: 1 / -1; }
 .champ { display: grid; gap: 4px; min-width: 0; }
 .champ > label, .champ > .lib { font-size: 12.5px; color: var(--discret); }
 .saisie-u { position: relative; }
-.saisie-u input { width: 100%; padding: 9px 38px 9px 11px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); font-variant-numeric: tabular-nums; }
+.saisie-u input { width: 100%; padding: var(--pchamp) 38px var(--pchamp) 11px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); font-variant-numeric: tabular-nums; }
 .saisie-u input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--or) 60%, transparent); outline-offset: 0; border-color: var(--or); }
 .saisie-u i { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--discret); font-size: 12.5px; pointer-events: none; }
-select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); }
+select { width: 100%; padding: var(--pchamp) 11px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--fond); }
 .aide { font-size: 12px; color: var(--discret); margin: 0; }
 .seg { display: flex; background: var(--section); border-radius: 10px; padding: 3px; gap: 3px; }
 .seg button { flex: 1; border: 0; background: none; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--discret); }
@@ -396,7 +429,12 @@ select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); borde
 
 /* ---------- téléphone : un onglet Saisie / Résultats ---------- */
 @media (max-width: 980px) {
-  main { grid-template-columns: minmax(0, 1fr); padding: 10px 12px calc(30px + env(safe-area-inset-bottom, 0px)); }
+  :root:not([data-mise="pas"]) main { grid-template-areas: "bascule" "saisie" "resultats"; }
+  main { gap: 12px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "bascule" "nav" "saisie" "resultats"; padding: 10px 12px calc(30px + env(safe-area-inset-bottom, 0px)); }
+  .saisie { grid-template-columns: minmax(0, 1fr) !important; }
+  .etapes { display: none !important; }
+  :root[data-mise="pas"] .etapes:not(.cache) { display: flex !important; flex-wrap: nowrap; overflow-x: auto; position: static; flex-direction: row; scrollbar-width: none; }
+  :root[data-mise="pas"] .etapes button { flex: none; }
   .seg.bascule { display: flex; position: sticky; top: 58px; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,.06); }
   body:not(.voir-resultats) .resultats, body.voir-resultats .saisie { display: none; }
   .graphes { grid-template-columns: 1fr; }
@@ -405,6 +443,7 @@ select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); borde
 @media (max-width: 700px) {
   .haut-in { padding: 8px 12px; gap: 10px; }
   .marque small, .meilleur, .bt-h span { display: none; }
+  .actions { gap: 5px; } .actions .bt-h { padding: 7px 8px; }
   .actions { margin-left: auto; }
   .bt-h { padding: 8px 9px; }
   .grille { grid-template-columns: 1fr 1fr; gap: 8px 10px; }
@@ -412,8 +451,7 @@ select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); borde
   .associe { grid-template-columns: 1fr 1fr 1fr 38px; padding-bottom: 8px; border-bottom: 1px dashed var(--bordure); }
   .associe > .champ:first-child { grid-column: 1 / 4; grid-row: 1; }
   .associe > button.x { grid-column: 4; grid-row: 1; }
-  .menu-export { right: 10px; top: 54px; }
-  .tableau th, .tableau td { padding: 7px 8px; }
+    .tableau th, .tableau td { padding: 7px 8px; }
   /* le comparatif défile de côté ; la colonne des libellés reste en place */
   .tableau td small { display: none; }
   .tableau th:first-child, .tableau td:first-child { position: sticky; left: 0; z-index: 1; background: var(--carte); min-width: 128px; box-shadow: 1px 0 0 var(--bordure); }
@@ -425,7 +463,10 @@ select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); borde
 @media print {
   @page { size: A4; margin: 14mm 12mm; }
   body { background: #fff; color: #111; font-size: 11px; }
-  header.haut, main, .bascule, #toast, .voile, .menu-export, .ls-voile { display: none !important; }
+  header.haut, main, .bascule, #toast, .voile, .ls-voile, .hb-voile { display: none !important; }
+  #impression .entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+  #impression .entete img { max-height: 48px; max-width: 180px; }
+  #impression .pied { margin-top: 18px; font-size: 9.5px; color: #777; border-top: 1px solid #ddd; padding-top: 6px; }
   #impression { display: block; }
   #impression h1 { font-size: 24px; color: #0c2d39; margin-bottom: 2px; }
   #impression h2 { font-size: 16px; color: #0c2d39; margin: 16px 0 6px; break-after: avoid; }
@@ -447,13 +488,13 @@ select { width: 100%; padding: 9px 11px; border: 1px solid var(--bordure); borde
     <a class="marque" href="../" title="Retour à Mes applis"><img src="icone-192.png" alt=""><div><b>Investissement immobilier</b><small>Comparateur de montages · règles 2026</small></div></a>
     <div class="meilleur" id="meilleur"></div>
     <div class="actions">
-      <button class="bt-h" id="bExport" type="button" title="Exporter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg><span>Exporter</span></button>
-      <button class="bt-h" id="bRegl" type="button" title="Réglages fiscaux"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>Réglages</span></button>
+      <button class="bt-h" id="bRegl" type="button" title="Réglages fiscaux (taux et barèmes)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>Réglages</span></button>
     </div>
   </div>
 </header>
 
 <main>
+  <nav class="etapes" id="etapes" aria-label="Étapes"></nav>
   <div class="seg bascule" role="tablist">
     <button type="button" class="on" data-voir="saisie">Saisie</button>
     <button type="button" data-voir="resultats">Résultats</button>
@@ -825,13 +866,59 @@ function champHTML(c) {
     ${c.auto ? `<label class="case" style="font-size:12px"><input type="checkbox" data-case="${c.auto}" ${auto ? "checked" : ""}> calcul automatique</label>` : ""}
     ${c.aide && !c.auto ? `<p class="aide">${esc(c.aide)}</p>` : c.aide ? `<p class="aide">${esc(c.aide)}</p>` : ""}</div>`;
 }
+// pas à pas : l'étape affichée
+let pasIdx = Math.min(SECTIONS.length - 1, Math.max(0, +stock.lire("immo-pas", 0) || 0));
+const enPas = () => document.documentElement.getAttribute("data-mise") === "pas";
 function dessinerSaisie() {
-  const ouverts = h.ouverts || ["bien", "loyers", "pret"];
-  $("saisie").innerHTML = SECTIONS.map((s, i) => `<details class="carte" data-section="${s.id}" ${ouverts.includes(s.id) ? "open" : ""}>
+  const ouverts = h.ouverts || ["bien", "loyers", "pret"], pas = enPas();
+  $("saisie").innerHTML = SECTIONS.map((s, i) => `<details class="carte ${i === pasIdx ? "actif" : ""}" id="sec-${s.id}" data-section="${s.id}" ${pas || ouverts.includes(s.id) ? "open" : ""}>
       <summary><span class="num">${i + 1}</span><h2>${esc(s.titre)}</h2><span class="resume" data-resume="${s.id}">${esc(s.resume())}</span></summary>
       <div class="corps"><div class="grille">${s.champs.map(champHTML).join("")}</div></div></details>`).join("")
+    + `<div class="pas-nav"><button type="button" data-pas="-1" ${pasIdx === 0 ? "disabled" : ""}>‹ Précédent</button><span>Étape ${pasIdx + 1} sur ${SECTIONS.length}</span>`
+    + `<button type="button" class="suite" data-pas="1">${pasIdx === SECTIONS.length - 1 ? "Voir les résultats ›" : "Suivant ›"}</button></div>`
     + `<p class="aide" style="padding:0 4px">Astuce : tapez « 250k » ou « 1,2M » dans les montants.</p>`;
   dessinerAssocies();
+  dessinerEtapes();
+}
+// la barre des étapes (en haut ou sur le côté)
+function dessinerEtapes() {
+  const z = $("etapes"); if (!z) return;
+  const pas = enPas();
+  z.innerHTML = SECTIONS.map((s, i) => `<button type="button" data-etape="${i}" class="${pas && i === pasIdx ? "on" : ""}"><span class="num">${i + 1}</span>${esc(s.titre)}</button>`).join("")
+    + `<button type="button" class="res" data-etape="res">Résultats ›</button>`;
+}
+function voirResultats() {
+  if (matchMedia("(max-width: 980px)").matches) document.querySelector('.bascule [data-voir="resultats"]').click();
+  else $("resultats").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function allerEtape(i) {
+  if (i === "res") return voirResultats();
+  i = Math.max(0, Math.min(SECTIONS.length - 1, +i));
+  if (enPas()) {
+    pasIdx = i; stock.ecrire("immo-pas", i); dessinerSaisie();
+    const top = $("saisie").getBoundingClientRect().top + scrollY - 130; if (scrollY > top) scrollTo({ top, behavior: "smooth" });
+    return;
+  }
+  const d = $("sec-" + SECTIONS[i].id); if (!d) return;
+  d.open = true;
+  d.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("etapes").addEventListener("click", (e) => { const b = e.target.closest("[data-etape]"); if (b) allerEtape(b.dataset.etape); });
+// la mise en page choisie (module commun « disposition ») : colonnes et zones de la grille
+function miseEnPage(e) {
+  const nav = e.nav !== "masquee", lat = e.nav === "laterale";
+  let cols, zones;
+  if (["cote", "inverse", "pas"].includes(e.mise)) {
+    const sz = "minmax(0, var(--part))", rz = "minmax(0, 1fr)";
+    cols = e.mise === "inverse" ? [rz, sz] : [sz, rz];
+    zones = [e.mise === "inverse" ? ["resultats", "saisie"] : ["saisie", "resultats"]];
+  } else { cols = ["minmax(0, 1fr)"]; zones = e.mise === "resultats" ? [["resultats"], ["saisie"]] : [["saisie"], ["resultats"]]; }
+  if (nav && lat) { cols = ["minmax(150px, 190px)", ...cols]; zones = zones.map((z) => ["nav", ...z]); }
+  else if (nav) zones = [zones[0].map(() => "nav"), ...zones];
+  const m = document.querySelector("main");
+  m.style.setProperty("--cols", cols.join(" "));
+  m.style.setProperty("--zones", zones.map((z) => `"${z.join(" ")}"`).join(" "));
+  if ($("saisie").children.length) dessinerSaisie();
 }
 function dessinerAssocies() {
   const z = $("associes"); if (!z) return;
@@ -875,6 +962,7 @@ $("saisie").addEventListener("change", (e) => {
 });
 $("saisie").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.pas) { const i = pasIdx + +b.dataset.pas; if (i >= SECTIONS.length) voirResultats(); else allerEtape(i); return; }
   if (b.dataset.seg) { h[b.dataset.seg] = JSON.parse(b.dataset.val); dessinerSaisie(); changer(); }
   if (b.id === "ajoutAssocie") { h.associes.push({ nom: "Associé " + (h.associes.length + 1), parts: 0, tmi: h.tmi }); dessinerAssocies(); changer(); }
   if (b.dataset.supprAsso != null) { h.associes.splice(+b.dataset.supprAsso, 1); dessinerAssocies(); changer(); }
@@ -1082,8 +1170,7 @@ function ouvrirReglages() {
   v.addEventListener("input", (e) => { const k = e.target.dataset.regl; if (!k) return; R[k] = lireNombre(e.target.value); const diff = {}; for (const x in R) if (R[x] !== Moteur.REGLAGES_DEFAUT[x]) diff[x] = R[x]; stock.ecrire("immo-reglages", diff); calculer(); });
 }
 $("bRegl").addEventListener("click", ouvrirReglages);
-addEventListener("keydown", (e) => { if (e.key === "Escape") { document.querySelectorAll(".voile, .menu-export").forEach((x) => x.remove()); } });
-
+addEventListener("keydown", (e) => { if (e.key === "Escape") { document.querySelectorAll(".voile").forEach((x) => x.remove()); } });
 // =====================================================================================
 //  6. LES EXPORTS : PDF (impression), Excel, PowerPoint
 // =====================================================================================
@@ -1103,14 +1190,15 @@ const HYPOTHESES = () => [
 function exporterPDF() {
   const ids = Object.keys(res), info = infosSimulation(), best = meilleurId();
   const garde = detail;
-  $("impression").innerHTML = `<h1>Investissement immobilier — comparatif des montages</h1>
-    <p class="sous">${info.client ? "Pour " + esc(info.client) + " · " : ""}${esc(info.date)}${info.nom && info.nom !== info.client ? " · " + esc(info.nom) : ""}</p>
+  const cab = cabinet(), logo = logoExport();
+  $("impression").innerHTML = `<div class="entete"><div><h1>Investissement immobilier — comparatif des montages</h1>
+    <p class="sous">${info.client ? "Pour " + esc(info.client) + " · " : ""}${esc(info.date)}${info.nom && info.nom !== info.client ? " · " + esc(info.nom) : ""}${cab ? " · " + esc(cab) : ""}</p></div>${logo ? `<img src="${logo}" alt="">` : ""}</div>
     <h2>Hypothèses</h2><div class="hyp">${HYPOTHESES().map(([a, b]) => `<div><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join("")}</div>
     <h2>Comparatif sur ${h.horizon} ans</h2>${tableauComparatif(ids, best)}
     <div class="graphes" style="display:grid;grid-template-columns:1fr 1.3fr;gap:16px;margin-top:10px"><div class="graphe">${grapheBarres(ids)}</div><div class="graphe">${grapheCourbes(ids)}</div></div>
     <h2>Points de vigilance</h2><div class="alertes">${vigilance(ids).map((a) => `<div class="alerte"><b>${esc(a[0])}</b> · ${esc(a[1])}</div>`).join("")}</div>
     ${ids.map((id) => `<div class="page"><h2>${esc(nomM(id))}</h2>${detailMontage(id)}</div>`).join("")}
-    <p class="limites" style="margin-top:14px">${LIMITES}</p>`;
+    <p class="limites" style="margin-top:14px">${LIMITES}</p>${cab ? `<p class="pied">${esc(cab)}</p>` : ""}`;
   detail = garde;
   setTimeout(() => window.print(), 50);
 }
@@ -1118,81 +1206,45 @@ function exporterPDF() {
 function charger(src) {
   return new Promise((ok, ko) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => ko(new Error("chargement impossible : " + src)); document.head.append(s); });
 }
+// nom du cabinet et logo (Personnaliser › Mise en page)
+const cabinet = () => (window.Disposition && window.Disposition.cabinet()) || "";
+const logoExport = () => (window.Disposition && window.Disposition.logo()) || "";
 function nomFichier(ext) { const i = infosSimulation(); return ("Investissement immobilier" + (i.client ? " - " + i.client : "") + "." + ext).replace(/[\\/:*?"<>|]/g, "-"); }
 function telecharger(blob, nom) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
-// --- Excel : une feuille de synthèse, puis une feuille par montage
+// --- Excel : formules vivantes (excel.js) ; les valeurs sont calculées avant l'enregistrement (xlcalc.js)
+//     pour s'afficher aussi dans les aperçus (téléphone, messagerie)
 async function exporterExcel() {
   toast("Préparation du fichier Excel…");
-  await charger("vendor/exceljs.min.js");
-  const ids = Object.keys(res), info = infosSimulation();
-  const wb = new ExcelJS.Workbook(); wb.creator = "Investissement immobilier";
-  const ws = wb.addWorksheet("Synthèse", { views: [{ state: "frozen", ySplit: 0 }] });
-  const fmtE = '# ##0 "€";[Red]-# ##0 "€"';
-  ws.addRow(["Investissement immobilier — comparatif des montages"]).font = { bold: true, size: 14, color: { argb: "FF0C2D39" } };
-  ws.addRow([(info.client ? "Pour " + info.client + " · " : "") + info.date]);
-  ws.addRow([]);
-  ws.addRow(["Hypothèses"]).font = { bold: true };
-  HYPOTHESES().forEach(([a, b]) => ws.addRow([a, b]));
-  ws.addRow([]);
-  const tete = ws.addRow(["Comparatif sur " + h.horizon + " ans", ...ids.map(courtM)]);
-  tete.font = { bold: true, color: { argb: "FFFFFFFF" } };
-  tete.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0C2D39" } }; });
-  const avecSociete = ids.some((id) => res[id].extra.societe);
-  for (const [lib, f, , , , , soc] of LIGNES) {
-    if (soc && !avecSociete) continue;
-    const row = ws.addRow([lib, ...ids.map((id) => { const v = f(res[id]); return v == null ? null : (lib.includes("TRI") ? v : Math.round(v)); })]);
-    row.eachCell((c, i) => { if (i > 1) c.numFmt = lib.includes("TRI") ? "0.00 %" : fmtE; });
-  }
-  ws.addRow([]);
-  ws.addRow(["Points de vigilance"]).font = { bold: true };
-  vigilance(ids).forEach(([a, b]) => ws.addRow([a, b]));
-  ws.addRow([]); ws.addRow([LIMITES]).font = { italic: true, size: 9 };
-  ws.getColumn(1).width = 42; for (let i = 2; i <= ids.length + 1; i++) ws.getColumn(i).width = 16;
-  for (const id of ids) {
-    const r = res[id], f = wb.addWorksheet(courtM(id).slice(0, 31));
-    f.addRow([nomM(id)]).font = { bold: true, size: 13, color: { argb: "FF0C2D39" } };
-    f.addRow([]);
-    const cols = ["Année", "Loyers", "Charges", "Intérêts et assurance", "Amortissements", "Résultat", "Imposable", "Impôts", "Cash-flow après impôts", "Capital restant dû"];
-    const t = f.addRow(cols); t.font = { bold: true, color: { argb: "FFFFFFFF" } }; t.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + COUL_HEX[id] } }; });
-    r.lignes.forEach((l) => { const row = f.addRow([l.a, l.loyers, l.charges, l.interets, l.amort, l.resultat, l.imposable, l.impot, l.cashflow, l.crd].map((v, i) => i ? Math.round(v) : v)); row.eachCell((c, i) => { if (i > 1) c.numFmt = fmtE; }); });
-    const tot = f.addRow(["Total", ...["loyers", "charges", "interets", "amort", "resultat", "imposable", "impot", "cashflow"].map((k) => Math.round(r.lignes.reduce((s, l) => s + l[k], 0))), null]);
-    tot.font = { bold: true }; tot.eachCell((c, i) => { if (i > 1) c.numFmt = fmtE; });
-    f.addRow([]);
-    f.addRow(["Revente"]).font = { bold: true };
-    f.addRow(["Prix de revente estimé", Math.round(r.prixRevente)]).getCell(2).numFmt = fmtE;
-    f.addRow(["Impôts à la revente", Math.round(r.impotRevente)]).getCell(2).numFmt = fmtE;
-    f.addRow(["Capital restant dû remboursé", Math.round(r.crdFin)]).getCell(2).numFmt = fmtE;
-    f.addRow(["Net en poche", Math.round(r.netRevente)]).getCell(2).numFmt = fmtE;
-    f.addRow(["Enrichissement net", Math.round(r.enrichissement)]).getCell(2).numFmt = fmtE;
-    const tr = f.addRow(["TRI", r.tri]); tr.getCell(2).numFmt = "0.00 %";
-    if (r.extra.societe) {
-      const S = r.extra.societe;
-      f.addRow([]); f.addRow(["Votre société (" + S.nom + ")"]).font = { bold: true };
-      f.addRow(["Mise de fonds", Math.round(S.montant)]).getCell(2).numFmt = fmtE;
-      const ts = f.addRow(["Année", "Recettes", "IS", "Trésorerie"]); ts.font = { bold: true };
-      S.lignes.forEach((l) => { const row = f.addRow([l.a, Math.round(l.recettes), Math.round(l.is), Math.round(l.cash)]); row.eachCell((c, i) => { if (i > 1) c.numFmt = fmtE; }); });
-      f.addRow(["Gain de la société (après IS)", Math.round(S.gain)]).getCell(2).numFmt = fmtE;
-      f.addRow(["Enrichissement du foyer", Math.round(r.enrichissementFoyer)]).getCell(2).numFmt = fmtE;
-    }
-    f.columns.forEach((c, i) => { c.width = i ? 16 : 26; });
-  }
+  await Promise.all([charger("vendor/exceljs.min.js"), charger("excel.js"), charger("xlcalc.js")]);
+  const ids = MONTAGES.map((m) => m.id).filter((id) => res[id]), info = infosSimulation();
+  const noms = {}, couleurs = {}, tri = {};
+  MONTAGES.forEach((m) => { noms[m.id] = { nom: m.nom, court: m.court }; couleurs[m.id] = COUL_HEX[m.id]; });
+  ids.forEach((id) => { tri[id] = res[id].tri; });
+  const wb = ExcelImmo.construire(ExcelJS, { h, R, ids, Moteur, noms, couleurs, tri, info, cabinet: cabinet(), logo: logoExport(),
+    hypotheses: HYPOTHESES(), vigilance: vigilance(ids), limites: LIMITES });
+  XlCalc.calculer(wb);
   const buf = await wb.xlsx.writeBuffer();
   telecharger(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nomFichier("xlsx"));
-  toast("Fichier Excel prêt.");
+  toast("Fichier Excel prêt : modifiez les cellules jaunes, tout se recalcule.");
 }
 // --- PowerPoint : titre, hypothèses, comparatif, graphique, une diapositive par montage
+function tailleImage(src) { return new Promise((ok) => { const i = new Image(); i.onload = () => ok({ l: i.naturalWidth, h: i.naturalHeight }); i.onerror = () => ok({ l: 3, h: 1 }); i.src = src; }); }
 async function exporterPowerPoint() {
   toast("Préparation de la présentation…");
   await charger("vendor/pptxgen.bundle.js");
   const ids = Object.keys(res), info = infosSimulation(), best = meilleurId();
   const p = new PptxGenJS(); p.layout = "LAYOUT_WIDE"; p.title = "Investissement immobilier";
   const BLEU = "0C2D39", OR = "A77D2F", GRIS = "7C7466", POL = "Calibri";
-  const titre = (s, t, st) => { s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: BLEU } }); s.addText(t, { x: 0.5, y: 0.12, w: 12.3, h: 0.66, fontFace: "Georgia", fontSize: 24, color: "FFFFFF", bold: true }); if (st) s.addText(st, { x: 0.5, y: 0.95, w: 12.3, h: 0.4, fontFace: POL, fontSize: 12, color: GRIS }); };
+  const titre = (s, t, st) => { s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: BLEU } }); s.addText(t, { x: 0.5, y: 0.12, w: 12.3, h: 0.66, fontFace: "Georgia", fontSize: 24, color: "FFFFFF", bold: true }); if (st) s.addText(st, { x: 0.5, y: 0.95, w: 12.3, h: 0.4, fontFace: POL, fontSize: 12, color: GRIS });
+    if (cabinet()) s.addText(cabinet(), { x: 0.5, y: 7.1, w: 9, h: 0.3, fontFace: POL, fontSize: 9, color: GRIS }); };
   // 1. couverture
   let s = p.addSlide(); s.background = { color: BLEU };
   s.addText("Investissement immobilier", { x: 0.8, y: 2.2, w: 11.7, h: 1, fontFace: "Georgia", fontSize: 40, color: "FFFFFF", bold: true });
   s.addText("Comparatif des montages sur " + h.horizon + " ans", { x: 0.8, y: 3.2, w: 11.7, h: 0.6, fontFace: POL, fontSize: 20, color: "E3C27F" });
   s.addText((info.client ? "Pour " + info.client + " · " : "") + info.date, { x: 0.8, y: 4.1, w: 11.7, h: 0.5, fontFace: POL, fontSize: 14, color: "FFFFFF" });
+  const cab = cabinet(), logo = logoExport();
+  if (cab) s.addText(cab, { x: 0.8, y: 6.5, w: 8, h: 0.4, fontFace: POL, fontSize: 12, color: "E3C27F" });
+  if (logo) { const t = await tailleImage(logo), hL = 0.9, wL = Math.min(3, hL * t.l / (t.h || 1)); s.addShape(p.ShapeType.roundRect, { x: 12.53 - wL - 0.2, y: 0.4, w: wL + 0.4, h: hL + 0.3, fill: { color: "FFFFFF" }, rectRadius: 0.08, line: { color: "FFFFFF" } }); s.addImage({ data: logo, x: 12.53 - wL, y: 0.55, w: wL, h: hL }); }
   // 2. hypothèses
   s = p.addSlide(); titre(s, "Le projet");
   const hyp = HYPOTHESES();
@@ -1243,24 +1295,19 @@ async function exporterPowerPoint() {
   await p.writeFile({ fileName: nomFichier("pptx") });
   toast("Présentation prête.");
 }
-$("bExport").addEventListener("click", (e) => {
-  e.stopPropagation();
-  const deja = document.querySelector(".menu-export"); if (deja) { deja.remove(); return; }
-  const m = document.createElement("div"); m.className = "menu-export";
-  m.innerHTML = `<button type="button" data-x="pdf">🖨<span>PDF imprimable<small>Rapport complet, tous les montages</small></span></button>
-    <button type="button" data-x="xlsx">📊<span>Excel<small>Synthèse et tableaux année par année</small></span></button>
-    <button type="button" data-x="pptx">📽<span>PowerPoint<small>Diapositives pour le rendez-vous client</small></span></button>`;
-  document.body.append(m);
-  m.addEventListener("click", async (ev) => {
-    const b = ev.target.closest("button"); if (!b) return; m.remove();
-    try { if (b.dataset.x === "pdf") exporterPDF(); else if (b.dataset.x === "xlsx") await exporterExcel(); else await exporterPowerPoint(); }
-    catch (er) { toast("Export impossible : " + er.message); }
-  });
-});
-document.addEventListener("click", (e) => { if (!e.target.closest(".menu-export")) document.querySelectorAll(".menu-export").forEach((x) => x.remove()); });
 
 // =====================================================================================
-//  7. DÉMARRAGE
+//  7. MISE EN PAGE ET EXPORTS COMMUNS (module « disposition », en bas de la page)
+// =====================================================================================
+window.DISPOSITION = {
+  defaut: { part: 34 },
+  appliquer: miseEnPage,
+  barre: () => ({ conteneur: document.querySelector(".actions"), avant: $("bRegl"), classe: "bt-h" }),
+  exports: { pptx: exporterPowerPoint, pdf: exporterPDF, xlsx: exporterExcel }
+};
+
+// =====================================================================================
+//  8. DÉMARRAGE
 // =====================================================================================
 if (!Array.isArray(h.montages)) h.montages = DEFAUT.montages.slice();
 if (!Array.isArray(h.associes) || !h.associes.length) h.associes = DEFAUT.associes.map((a) => ({ ...a }));
@@ -1269,5 +1316,198 @@ calculer();
 stock.ecrire("immo-etat", h);
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
+<!-- disposition : début (mise en page et exports communs ; module commun, voir disposition.source.js à la racine du dépôt) -->
+<script>
+// =====================================================================================
+//  Disposition commune — le même bouton « Personnaliser » et la même barre d'exports dans les simulateurs
+//  (module commun, recopié tel quel dans audit/, pvi/, succession/ et immo/, entre les repères
+//   « disposition : début » et « disposition : fin ». Modifier ici, puis recopier.)
+// -------------------------------------------------------------------------------------
+//  • Un bouton « Personnaliser » ouvre une fenêtre à deux onglets :
+//      Apparence   (couleurs, polices, thème, taille, coins : module « habillage ») ;
+//      Mise en page (côte à côte, inversée, une colonne, résultats d'abord, pas à pas ; part de la
+//                    colonne de saisie, largeur, navigation, densité ; nom du cabinet et logo des exports).
+//  • Puis trois boutons : PowerPoint, PDF, Excel — un clic, un fichier.
+//  • Les réglages valent pour toutes les applis : localStorage « applis-disposition ».
+//  • Chaque appli dit (window.DISPOSITION, posé avant ce bloc) :
+//      appliquer(etat)  : comment elle se met en page avec ces réglages ;
+//      barre()          : { conteneur, avant, classe, classeTexte } — où poser les boutons ;
+//      exports          : { pptx, pdf, xlsx } — les fonctions qui produisent chaque fichier ;
+//      defaut, sansNavigation, mises (la liste des mises en page proposées), plus() (réglages en plus).
+//  • Sur <html> : data-mise, data-largeur, data-nav, data-densite et la variable --part (en %).
+// =====================================================================================
+(function () {
+  "use strict";
+  var C = window.DISPOSITION;
+  if (!C) return;
+  var CLE = "applis-disposition";
+  var DEFAUT = { mise: "cote", part: 40, largeur: "standard", nav: "barre", densite: "confortable", cabinet: "", logo: "" };
+  function brut() { try { return JSON.parse(localStorage.getItem(CLE)) || {}; } catch (e) { return {}; } }
+  function lire() {
+    var p = brut(), r = {};
+    for (var k in DEFAUT) r[k] = p[k] != null ? p[k] : (C.defaut && C.defaut[k] != null ? C.defaut[k] : DEFAUT[k]);
+    if (C.mises && C.mises.indexOf(r.mise) < 0) r.mise = C.mises[0];
+    return r;
+  }
+  var etat = lire();
+  function garder(changes) {
+    var p = brut();
+    for (var k in changes) p[k] = changes[k];
+    try { localStorage.setItem(CLE, JSON.stringify(p)); } catch (e) { if (changes.logo) alert("Image trop lourde pour être gardée : choisissez un logo plus léger."); }
+    appliquer();
+  }
+  function appliquer() {
+    etat = lire();
+    var r = document.documentElement;
+    r.setAttribute("data-mise", etat.mise); r.setAttribute("data-largeur", etat.largeur); r.setAttribute("data-nav", etat.nav); r.setAttribute("data-densite", etat.densite);
+    r.style.setProperty("--part", Math.max(25, Math.min(70, +etat.part || 40)) + "%");
+    if (typeof C.appliquer === "function") try { C.appliquer(etat); } catch (e) { console.error(e); }
+  }
+
+  // ---------------------------------------------------------------- icônes
+  var I = {
+    reglages: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+    pptx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M8 13V9M12 13V7M16 13v-2"/></svg>',
+    pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+    xlsx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>'
+  };
+
+  // ---------------------------------------------------------------- la fenêtre (même cadre que « Apparence » : classes hb-*)
+  var CSS = [
+    ".dp-schemas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}",
+    ".dp-schema{border:1px solid var(--hb-bordure,#e2dacb);background:var(--hb-carte,#fff);border-radius:12px;padding:9px;cursor:pointer;text-align:left;display:grid;gap:5px;color:inherit;font:inherit}",
+    ".dp-schema.on{outline:2px solid var(--hb-principale,#0c2d39);outline-offset:-2px}",
+    ".dp-schema b{font-size:13px}.dp-schema small{font-size:11px;color:var(--hb-discret,#7c7466);line-height:1.3}",
+    ".dp-mini{display:flex;gap:3px;height:30px}.dp-mini i{display:block;border-radius:3px;background:var(--hb-bordure,#d9d2c4)}.dp-mini i.r{background:var(--hb-accent,#a77d2f);opacity:.75}",
+    ".dp-curseur{display:flex;align-items:center;gap:12px}.dp-curseur input{flex:1;accent-color:var(--hb-accent,#a77d2f)}.dp-curseur b{min-width:44px;text-align:right}",
+    ".dp-champ{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--hb-bordure,#e2dacb);border-radius:10px;background:var(--hb-carte,#fff);font:inherit;color:inherit}",
+    ".dp-logo{border:1.5px dashed var(--hb-bordure,#cfc6b4);border-radius:12px;padding:12px;text-align:center;cursor:pointer;background:none;font:inherit;color:inherit;display:grid;gap:6px;justify-items:center}",
+    ".dp-logo img{max-height:56px;max-width:100%}",
+    ".dp-bouton svg{width:18px;height:18px;flex:none}",
+    "@media (max-width:700px){.dp-schemas{grid-template-columns:repeat(2,minmax(0,1fr))}}"
+  ].join("");
+  function h(tag, attrs, enfants) {
+    var e = document.createElement(tag);
+    for (var k in (attrs || {})) { if (k.slice(0, 2) === "on") e[k] = attrs[k]; else if (attrs[k] != null && attrs[k] !== false) e.setAttribute(k, attrs[k]); }
+    [].concat(enfants || []).forEach(function (x) { if (x != null && x !== false) e.append(x); });
+    return e;
+  }
+  var MISES = {
+    cote: ["Côte à côte", "Saisie à gauche, résultats à droite", [[3, ""], [2, "r"]]],
+    inverse: ["Inversée", "Résultats à gauche", [[2, "r"], [3, ""]]],
+    colonne: ["Une colonne", "Résultats sous la saisie", "col"],
+    resultats: ["Résultats d'abord", "Une colonne, résultats en haut", "colr"],
+    pas: ["Pas à pas", "Une étape à la fois", "pas"]
+  };
+  function mini(m) {
+    var b = h("span", { class: "dp-mini" });
+    var bloc = function (cls, flex, parent) { var i = h("i", { class: cls }); i.style.flex = String(flex); (parent || b).append(i); return i; };
+    if (m === "col" || m === "colr") { b.style.flexDirection = "column"; b.style.gap = "2px"; bloc(m === "colr" ? "r" : "", 1); bloc(m === "colr" ? "" : "r", 1); }
+    else if (m === "pas") { b.style.flexDirection = "column"; b.style.gap = "2px"; var t = h("span"); t.style.cssText = "display:flex;gap:2px;height:7px"; bloc("r", 1, t); bloc("", 1, t); bloc("", 1, t); b.append(t); bloc("", 1); }
+    else m.forEach(function (x) { bloc(x[1], x[0]); });
+    return b;
+  }
+  var voile = null;
+  function panneau(onglet) {
+    if (!onglet) { try { onglet = sessionStorage.getItem("applis-onglet"); } catch (e) {} }
+    if (onglet === "apparence" && window.Habillage) { window.Habillage.ouvrir(); return; }
+    if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
+    voile = voile || h("div", { class: "hb-voile", onclick: function (e) { if (e.target === voile) voile.remove(); } });
+    var c = window.Habillage && window.Habillage.etat() && window.Habillage.etat().couleurs;
+    if (c) ["fond", "carte", "texte", "bordure", "section", "discret"].forEach(function (k) { if (c[k]) voile.style.setProperty("--hb-" + k, c[k]); });
+    document.body.append(voile);
+    dessiner();
+  }
+  function dessiner() {
+    var e = etat;
+    var choix = function (titre, cle, options) {
+      return [h("p", { class: "hb-titre" }, titre), h("div", { class: "hb-choix" }, options.map(function (o) {
+        return h("button", { type: "button", class: "hb-bt" + (String(e[cle]) === String(o[0]) ? " on" : ""), onclick: function () { var x = {}; x[cle] = o[0]; garder(x); dessiner(); } }, o[1]);
+      }))];
+    };
+    var curseur = h("input", { type: "range", min: 25, max: 70, step: 1, value: e.part, "aria-label": "Part de la colonne de saisie" });
+    var valeur = h("b", null, e.part + " %");
+    curseur.oninput = function () { valeur.textContent = curseur.value + " %"; garder({ part: +curseur.value }); };
+    var fichier = h("input", { type: "file", accept: "image/png,image/jpeg", style: "display:none" });
+    fichier.onchange = function () {
+      var f = fichier.files[0]; if (!f) return;
+      // le logo est réduit (largeur 480 px au plus) pour rester léger
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function () {
+        var k = Math.min(1, 480 / img.width), cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        garder({ logo: cv.toDataURL("image/png") }); dessiner();
+      };
+      img.src = url;
+    };
+    var nomCab = h("input", { type: "text", class: "dp-champ", placeholder: "Nom du cabinet", value: e.cabinet || "" });
+    nomCab.onchange = function () { garder({ cabinet: nomCab.value.trim() }); };
+    var mises = C.mises || Object.keys(MISES);
+    var cote = e.mise === "cote" || e.mise === "inverse" || e.mise === "pas";
+    var corps = [].concat(
+      [h("p", { class: "hb-titre" }, "Disposition"),
+       h("div", { class: "dp-schemas" }, mises.map(function (k) {
+         var m = MISES[k];
+         return h("button", { type: "button", class: "dp-schema" + (e.mise === k ? " on" : ""), onclick: function () { garder({ mise: k }); dessiner(); } }, [mini(m[2]), h("b", null, m[0]), h("small", null, m[1])]);
+       }))],
+      cote ? [h("p", { class: "hb-titre" }, "Largeur de la colonne de saisie"), h("div", { class: "dp-curseur" }, [curseur, valeur])] : [],
+      choix("Largeur de la page", "largeur", [["etroite", "Étroite"], ["standard", "Standard"], ["large", "Large"], ["ecran", "Tout l'écran"]]),
+      C.sansNavigation ? [] : choix("Navigation entre les étapes", "nav", [["barre", "Barre en haut"], ["laterale", "Menu latéral"], ["masquee", "Masquée"]]),
+      choix("Densité", "densite", [["compacte", "Compacte"], ["confortable", "Confortable"], ["aeree", "Aérée"]]),
+      [h("p", { class: "hb-titre" }, "Exports : nom du cabinet"), nomCab,
+       h("p", { class: "hb-titre" }, "Exports : logo"),
+       h("button", { type: "button", class: "dp-logo", onclick: function () { fichier.click(); } }, e.logo ? [h("img", { src: e.logo, alt: "" }), h("span", null, "Changer d'image")] : h("span", null, "Choisir une image (PNG ou JPG)")),
+       e.logo ? h("button", { type: "button", class: "hb-lien", onclick: function () { garder({ logo: "" }); dessiner(); } }, "Retirer le logo") : null,
+       fichier]);
+    if (typeof C.plus === "function") { var x = C.plus(); if (x) corps.push(x); }
+    corps.push(h("p", { class: "hb-aide" }, "Ces réglages valent pour tous les simulateurs, sur cet appareil."),
+      h("button", { type: "button", class: "hb-lien", onclick: function () { var p = brut(); try { localStorage.setItem(CLE, JSON.stringify({ cabinet: p.cabinet || "", logo: p.logo || "" })); } catch (er) {} appliquer(); dessiner(); } }, "↺ Mise en page par défaut"));
+    voile.replaceChildren(h("div", { class: "hb-fen", role: "dialog", "aria-modal": "true", "aria-label": "Personnaliser" }, [
+      h("div", { class: "hb-tete" }, [
+        window.Habillage ? h("div", { class: "hb-onglets", role: "tablist" }, [
+          h("button", { type: "button", role: "tab", onclick: function () { voile.remove(); try { sessionStorage.setItem("applis-onglet", "apparence"); } catch (er) {} window.Habillage.ouvrir(); } }, "Apparence"),
+          h("button", { type: "button", class: "on", role: "tab", "aria-selected": "true" }, "Mise en page")]) : h("b", null, "Mise en page"),
+        h("button", { type: "button", class: "hb-x", "aria-label": "Fermer", onclick: function () { voile.remove(); } }, "×")]),
+      h("div", { class: "hb-corps" }, corps)]));
+  }
+
+  // ---------------------------------------------------------------- la barre : Personnaliser, PowerPoint, PDF, Excel
+  function installerBarre() {
+    var B = C.barre && C.barre();
+    if (!B || !B.conteneur) return;
+    if (!document.getElementById("dp-style")) { var s = document.createElement("style"); s.id = "dp-style"; s.textContent = CSS; document.head.appendChild(s); }
+    var bouton = function (id, icone, texte, titre, faire) {
+      var b = h("button", { type: "button", class: (B.classe || "") + " dp-bouton", "data-dp": id, title: titre, "aria-label": titre });
+      b.innerHTML = icone + "<span" + (B.classeTexte ? ' class="' + B.classeTexte + '"' : "") + ">" + texte + "</span>";
+      b.onclick = function (ev) { ev.preventDefault(); ev.stopPropagation(); faire(b); };
+      return b;
+    };
+    var lancer = function (type) {
+      return function (b) {
+        var f = C.exports && C.exports[type]; if (!f || b.disabled) return;
+        b.disabled = true; b.style.opacity = ".6";
+        Promise.resolve().then(f).catch(function (er) { console.error(er); alert("Export impossible : " + (er && er.message || er)); })
+          .then(function () { b.disabled = false; b.style.opacity = ""; });
+      };
+    };
+    var liste = [bouton("reglages", I.reglages, "Personnaliser", "Personnaliser : apparence et mise en page", function () { panneau(); })];
+    if (C.exports && C.exports.pptx) liste.push(bouton("pptx", I.pptx, "PowerPoint", "Télécharger la présentation PowerPoint", lancer("pptx")));
+    if (C.exports && C.exports.pdf) liste.push(bouton("pdf", I.pdf, "PDF", "Imprimer ou enregistrer en PDF", lancer("pdf")));
+    if (C.exports && C.exports.xlsx) liste.push(bouton("xlsx", I.xlsx, "Excel", "Télécharger le classeur Excel (formules vivantes)", lancer("xlsx")));
+    liste.forEach(function (b) { if (B.avant && B.avant.parentNode === B.conteneur) B.conteneur.insertBefore(b, B.avant); else B.conteneur.append(b); });
+  }
+
+  appliquer();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { installerBarre(); appliquer(); });
+  else { installerBarre(); appliquer(); }
+  addEventListener("storage", function (e) { if (e.key === CLE) { appliquer(); if (voile && voile.parentNode) dessiner(); } });
+  addEventListener("keydown", function (e) { if (e.key === "Escape" && voile && voile.parentNode) voile.remove(); });
+  // pour les exports : le nom du cabinet et le logo
+  window.Disposition = { etat: function () { return etat; }, ouvrir: panneau, appliquer: appliquer, cabinet: function () { return etat.cabinet || ""; }, logo: function () { return etat.logo || ""; } };
+})();
+</script>
+<!-- disposition : fin -->
 </body>
 </html>

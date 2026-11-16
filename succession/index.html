@@ -140,6 +140,7 @@ window.HABILLAGE = {
     ".hb-fen{background:var(--hb-fond,#f7f4ee);color:var(--hb-texte,#1c2a30);width:min(560px,100%);max-height:90vh;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3);font:14px/1.45 var(--hb-sans)}",
     ".hb-tete{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--hb-barre);color:#fff}.hb-tete b{flex:1;font:600 19px var(--hb-serif)}",
     ".hb-x{border:0;background:none;color:#fff;font-size:24px;line-height:1;cursor:pointer}",
+    ".hb-onglets{display:flex;gap:4px;flex:1;min-width:0}.hb-onglets button{border:0;background:none;color:rgba(255,255,255,.66);font:600 18px var(--hb-serif);padding:3px 10px;border-radius:9px;cursor:pointer;white-space:nowrap}.hb-onglets button.on{color:#fff;background:rgba(255,255,255,.15)}",
     ".hb-corps{padding:14px 16px 18px;overflow-y:auto;display:grid;gap:12px}",
     ".hb-titre{margin:4px 0 -4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--hb-discret,#7c7466);font-weight:600}",
     ".hb-choix{display:flex;flex-wrap:wrap;gap:6px}",
@@ -207,7 +208,12 @@ window.HABILLAGE = {
     if (C.note) corps.push(h("p", { class: "hb-aide" }, C.note));
     if (lib) corps.push(h("button", { type: "button", class: "hb-lien", onclick: function () { try { localStorage.removeItem(CLE); } catch (e) {} garder({ suivre: true }); dessiner(); } }, "↺ Revenir à l'apparence du Suivi"));
     voile.replaceChildren(h("div", { class: "hb-fen", role: "dialog", "aria-modal": "true", "aria-label": "Apparence" }, [
-      h("div", { class: "hb-tete" }, [h("b", null, "Apparence"), h("button", { type: "button", class: "hb-x", "aria-label": "Fermer", onclick: function () { voile.remove(); } }, "×")]),
+      h("div", { class: "hb-tete" }, [
+        // avec le module « disposition » : deux onglets, Apparence et Mise en page, dans la même fenêtre
+        window.Disposition ? h("div", { class: "hb-onglets", role: "tablist" }, [
+          h("button", { type: "button", class: "on", role: "tab", "aria-selected": "true" }, "Apparence"),
+          h("button", { type: "button", role: "tab", onclick: function () { voile.remove(); try { sessionStorage.setItem("applis-onglet", "mise"); } catch (e) {} window.Disposition.ouvrir("mise"); } }, "Mise en page")]) : h("b", null, "Apparence"),
+        h("button", { type: "button", class: "hb-x", "aria-label": "Fermer", onclick: function () { voile.remove(); } }, "×")]),
       h("div", { class: "hb-corps" }, corps)]));
   }
 
@@ -233,6 +239,7 @@ window.HABILLAGE = {
 })();
 </script>
 <!-- habillage : fin -->
+
 
 
 <meta name="viewport" content="width=device-width,initial-scale=1">
