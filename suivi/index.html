@@ -2057,7 +2057,8 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
 .nc-filtres .collab { font-size: 12px; padding: 3px 10px; }
 /* ---------- onglet Notes : les notes au format du journal, rattachées ou non ---------- */
 body.vue-notes .filtres, body.vue-notes #alerteModif, body.vue-notes #rdv { display: none !important; }
-#vue-notes:not([hidden]) { display: grid; gap: 12px; align-content: start; max-width: 900px; }
+#vue-notes:not([hidden]) { display: grid; gap: 12px; align-content: start; }
+#vue-notes > .journal-ajout, #vue-notes > .nr-barre { max-width: 980px; }
 #vue-notes .m-h2 { margin: 4px 0 0; font: 600 22px var(--titre); color: var(--bleu); }
 .nr-barre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .nr-recherche { flex: 1 1 220px; min-width: 0; padding: 8px 12px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); color: var(--texte); font: inherit; }
@@ -2121,7 +2122,20 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 .journal-ajout { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
 .journal-saisie { width: 100%; min-height: 64px !important; resize: vertical; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); padding: 8px 10px !important; font: inherit; font-size: 13.5px !important; line-height: 1.45; box-sizing: border-box; }
 .journal-saisie:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 3px var(--or-doux); }
-.journal-liste { display: grid; gap: 6px; }
+.journal-liste { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); align-items: start; grid-auto-flow: dense; }
+.journal-liste > .m-vide { grid-column: 1 / -1; }
+/* une note ouverte prend toute la largeur */
+.journal-liste > .journal-note.ouverte, .journal-liste > .journal-note:has(textarea) { grid-column: 1 / -1; }
+@media (max-width: 700px) {
+  .journal-liste { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  /* téléphone, note repliée : date, puis client ou dossier, puis le texte ; ✎ et ✕ une fois ouverte */
+  .journal-liste > .journal-note:not(.ouverte) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "tete" "pied" "texte"; padding: 5px 8px 6px; row-gap: 2px; }
+  .journal-liste > .journal-note:not(.ouverte) .journal-tete button { display: none; }
+  .journal-liste > .journal-note:not(.ouverte) .journal-tete > span { font-size: 10.5px; }
+  .journal-liste > .journal-note:not(.ouverte) .journal-texte { font-size: 12.5px; -webkit-line-clamp: 3; }
+  .journal-liste > .journal-note:not(.ouverte) .nr-place { font-size: 10.5px; padding: 1px 7px; overflow: hidden; text-overflow: ellipsis; }
+  .journal-liste > .journal-note:not(.ouverte) .nr-pied { flex-wrap: wrap; }
+}
 .journal-note { border: 1px solid var(--bordure); border-left: 3px solid var(--or); background: var(--carte); border-radius: 10px; padding: 7px 10px 8px; }
 .journal-tete { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 .journal-tete span { flex: 1; font-size: 11.5px; color: var(--discret); font-weight: 600; font-variant-numeric: tabular-nums; }
