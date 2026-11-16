@@ -1197,6 +1197,7 @@ function calculer(f) {
   if (lm && !lmOK) note("info", "Amortissements LMNP non réintégrés (" + (f.lmnpExcept ? "résidence de services exclue" : "cession antérieure au 15/02/2025") + ").");
   const amort = (lmOK ? lm : 0) + jb;
   let PR, PVB, NIR, NPS, aIR, aPS, yT, yC, yMax, yMin, FR = null;
+  const X = { A, C, def, lm: lmOK ? lm : 0, jb, constr, frac, rT: 1, frais: 0, fraisLib: "", trav: 0, travLib: "" };   // éléments repris par l'export Excel
   if (!frac) {
     L.push([grat ? "Valeur retenue (donation / succession)" : constr ? "Prix d'acquisition du terrain" : "Prix d'acquisition stipulé", A]);
     if (constr) L.push(["+ Coût de la construction", C]);
@@ -1208,11 +1209,12 @@ function calculer(f) {
     if (lmOK) L.push(["− Amortissements LMNP réintégrés", -lm]);
     if (jb) L.push(["− Amortissements Jeanbrun réintégrés", -jb]);
     PR = A + C + frais + trav + def - amort;
+    Object.assign(X, { frais, fraisLib, trav, travLib });
     L.push(["Prix de revient", PR, "inter"]);
     PVB = P - PR;
     L.push(["Plus-value brute (bien entier)", PVB, "tot"]);
     yT = anneesDetention(da, dc); yC = constr ? anneesDetention(D(f.dateDebutTrav), dc) : yT;
-    const rT = constr && A + C > 0 ? A / (A + C) : 1;
+    const rT = constr && A + C > 0 ? A / (A + C) : 1; X.rT = rT;
     aIR = rT * abatIR(yT) + (1 - rT) * abatIR(yC); aPS = rT * abatPS(yT) + (1 - rT) * abatPS(yC);
     NIR = PVB * (1 - aIR); NPS = PVB * (1 - aPS);
     yMax = Math.max(yT, yC); yMin = constr ? Math.min(yT, yC) : yT;
@@ -1314,7 +1316,7 @@ function calculer(f) {
       if (ve > 0) { r.lignes.push(["− Abattement exceptionnel art. 150 VE (" + pc(ve, 0) + ")", -ir * ve, -ps * ve]); ir *= 1 - ve; ps *= 1 - ve; }
       if (c.resid !== "FR" && c.nr150 && !(c.rp244 && e > 0)) {
         if (sci || parts || type !== "bati") note("att", r.nom + " : exonération non-résident de 150 000 € réservée aux logements détenus en direct.");
-        else { const xi = Math.min(150000, ir), xp = Math.min(150000, ps); r.lignes.push(["− Exonération non-résident (plafond 150 000 €)", -xi, -xp]); ir -= xi; ps -= xp; r.exos.push("Exonération non-résident dans la limite de 150 000 € (CGI art. 150 U II 2°)"); }
+        else { r.nr150 = true; const xi = Math.min(150000, ir), xp = Math.min(150000, ps); r.lignes.push(["− Exonération non-résident (plafond 150 000 €)", -xi, -xp]); ir -= xi; ps -= xp; r.exos.push("Exonération non-résident dans la limite de 150 000 € (CGI art. 150 U II 2°)"); }
       }
       r.pvIR = Math.max(0, ir); r.pvPS = Math.max(0, ps);
     }
@@ -1357,7 +1359,8 @@ function calculer(f) {
   if (f.demembre && f.demMethode === "669") note("info", "Ventilation selon l'art. 669 : usufruit " + pc(fu, 0) + ", nue-propriété " + pc(1 - fu, 0) + ".");
   if (T.sur > 0) note("info", "Surtaxe sur les plus-values de plus de 50 000 € (CGI art. 1609 nonies G) : " + eur(T.sur) + ".");
   if (gExo) note("ok", gExo + ".");
-  return { L, P, PR, PVB, NIR, NPS, FR, yMin, yMax, yT, yC, constr, aIR, aPS, res, T, tInfo, W, prix, frais: num(f.fraisCession), net: prix - num(f.fraisCession) - T.total, fu };
+  Object.assign(X, { fLS, ve, mult, tCom, tNat, type, sci, gExo, tIR, hectares: type === "foret" ? num(f.hectares) : 0 });
+  return { L, P, PR, PVB, NIR, NPS, FR, yMin, yMax, yT, yC, constr, aIR, aPS, res, T, tInfo, W, prix, frais: num(f.fraisCession), net: prix - num(f.fraisCession) - T.total, fu, X };
 }
 
 /* =====================================================================================
@@ -2039,35 +2042,21 @@ function texteSynthese() {
 }
 function telecharger(nom, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 function chargerScript(src) { return new Promise((ok, ko) => { if (window.ExcelJS) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = ko; document.head.appendChild(s); }); }
+// Excel en formules vivantes (excel.js) ; les valeurs sont calculées avant l'enregistrement (xlcalc.js),
+// pour s'afficher aussi dans les aperçus (téléphone, messagerie)
+async function construireExcel(f) {
+  await Promise.all([chargerLib("vendor/exceljs.min.js"), chargerLib("excel.js"), chargerLib("xlcalc.js")]);
+  const R = calculer(f), { bleu } = COUL();
+  const out = ExcelPVI.construire(ExcelJS, { f, R, couleur: bleu && bleu[0] === "#" ? bleu : "#0c2d39", cabinet: cabinet(), dateCession: dfr(f.dateCession),
+    recap: lignesRecap(f), projection: R.PVB > 0 ? projection(f) : [], notes: R.W });
+  XlCalc.calculer(out.wb);
+  return { ...out, R };
+}
 async function exportExcel() {
-  try { await chargerScript("vendor/exceljs.min.js"); } catch (e) { return toast("Excel indisponible hors connexion"); }
-  const f = lireTout(), R = calculer(f), { bleu, or } = COUL();
-  const argb = (h) => "FF" + h.replace("#", "").toUpperCase();
-  const wb = new ExcelJS.Workbook(); wb.creator = "Simulateur PVI";
-  const ws = wb.addWorksheet("Simulation", { views: [{ showGridLines: false }], pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
-  ws.columns = [{ width: 52 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
-  const EUR = '#,##0 "€";-#,##0 "€"';
-  const titre = (t) => { const r = ws.addRow([t]); r.getCell(1).font = { name: "Grandview", size: 11, bold: true, color: { argb: argb(bleu) } }; r.height = 18; };
-  const entete = (cells) => { const r = ws.addRow(cells); r.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(bleu) } }; c.font = { name: "Grandview", size: 8, bold: true, color: { argb: "FFFFFFFF" } }; c.alignment = { horizontal: c.col === 1 ? "left" : "right" }; }); };
-  const ligne = (cells, style) => { const r = ws.addRow(cells); r.eachCell((c) => { if (typeof c.value === "number") c.numFmt = EUR; c.border = { bottom: { style: "hair", color: { argb: "FFD9D4C8" } } }; }); if (style === "tot") r.eachCell((c) => { c.font = { name: "Grandview", size: 8, bold: true }; c.border = { top: { style: "medium", color: { argb: argb(or) } } }; }); if (style === "inter") r.eachCell((c) => { c.font = { name: "Grandview", size: 8, bold: true }; }); return r; };
-  titre("Simulation de plus-value immobilière"); ws.addRow([`Cession du ${dfr(f.dateCession)} — édition du ${new Date().toLocaleDateString("fr-FR")}`]); ws.addRow([]);
-  titre("Hypothèses"); entete(["Paramètre", "Valeur"]); for (const [a, b] of lignesRecap(f)) ligne([a, b]); ws.addRow([]);
-  titre("Détermination de la plus-value"); entete(["", "Montant"]); for (const [l, v, c] of R.L) ligne([l, v], c === "tot" ? "tot" : c ? "inter" : ""); if (R.FR) { ws.addRow([]); entete(["Vente en bloc · fraction", "Détention (ans)", "PV / MV brute", "Base IR", "Base PS"]); for (const x of R.FR) ligne([`${x.nom} (${pc(x.q, 1)})`, x.y, x.pvb, x.nir, x.nps]).getCell(2).numFmt = "0"; ligne(["Après imputation des moins-values", "", R.PVB, Math.max(0, R.NIR), Math.max(0, R.NPS)], "tot"); } else ligne(["Abattements pour durée (IR / PS)", `${pc(R.aIR)} / ${pc(R.aPS)}`]); ws.addRow([]);
-  for (const r of R.res) {
-    titre(`${r.nom} — quote-part ${pc(r.part, 2)}`); entete(["", "Impôt sur le revenu", "Prélèvements sociaux"]);
-    for (const x of r.exos) ligne(["Exonération : " + x]);
-    for (const [l, a, b] of r.lignes) ligne([l, a, b]);
-    ligne(["Plus-value nette imposable", r.pvIR, r.pvPS], "inter"); ligne(["Impôt", r.IR, r.PS]); ligne(["Surtaxe sur les plus-values élevées", r.sur]);
-    if (r.tCom || r.tNat) ligne(["Taxes terrains devenus constructibles", r.tCom + r.tNat]);
-    ligne(["Total dû", r.total], "tot"); ws.addRow([]);
-  }
-  titre("Synthèse"); entete(["", "Montant"]); ligne(["Impôt sur le revenu", R.T.IR]); ligne(["Prélèvements sociaux", R.T.PS]); ligne(["Surtaxe et taxes", R.T.sur + R.T.tCom + R.T.tNat]); ligne(["Impôt total", R.T.total], "tot"); ligne(["Net vendeur (prix − frais de cession − impôts)", R.net], "tot"); ws.addRow([]);
-  const pts = projection(f);
-  if (pts.length && R.PVB > 0) { titre("Projection : même prix, vente plus tardive"); entete(["Année de vente", "Détention (ans)", "IR", "PS", "Surtaxe", "Total"]); for (const p of pts) ligne([p.k ? String(p.an) : "Date saisie (" + p.an + ")", p.y, p.IR, p.PS, p.sur, p.tot]).getCell(2).numFmt = "0"; }
-  ws.eachRow((row) => row.eachCell({ includeEmpty: true }, (c) => { c.font = { name: "Grandview", size: 8, ...(c.font || {}), name: "Grandview", size: c.font && c.font.size === 11 ? 11 : 8 }; }));
-  const buf = await wb.xlsx.writeBuffer();
-  telecharger(`plus-value-${f.dateCession || "simulation"}.xlsx`, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-  toast("Fichier Excel créé");
+  let x; try { x = await construireExcel(lireTout()); } catch (e) { console.error(e); return toast("Excel indisponible : " + (e.message || e)); }
+  const buf = await x.wb.xlsx.writeBuffer();
+  telecharger(`plus-value-${etat.dateCession || "simulation"}.xlsx`, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  toast("Fichier Excel créé : modifiez les cellules jaunes, tout se recalcule");
 }
 $("fImport").onchange = async () => { const fi = $("fImport").files[0]; if (!fi) return; try { const o = JSON.parse(await fi.text()); charger(o.f || o); toast("Simulation ouverte"); } catch (e) { toast("Fichier illisible"); } $("fImport").value = ""; };
 
@@ -2181,7 +2170,8 @@ window.DISPOSITION = {
     if (typeof etat !== "undefined" && etat) appliquerReglages();
   },
   barre: () => ({ conteneur: document.querySelector("header.haut .actions"), avant: $("bRegl"), classe: "bt-h" }),
-  exports: { pptx: exportPPT, pdf: exportPDF, xlsx: exportExcel }
+  exports: { pptx: exportPPT, pdf: exportPDF, xlsx: exportExcel },
+  titreExcel: "Télécharger le classeur Excel (formules vivantes : modifiez les hypothèses, tout se recalcule)"
 };
 
 /* =====================================================================================
