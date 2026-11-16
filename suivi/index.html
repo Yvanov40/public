@@ -2131,9 +2131,13 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   /* téléphone, note repliée : date, puis client ou dossier, puis le texte ; ✎ et ✕ une fois ouverte */
   .journal-liste > .journal-note:not(.ouverte) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "tete" "pied" "texte"; padding: 5px 8px 6px; row-gap: 2px; }
   .journal-liste > .journal-note:not(.ouverte) .journal-tete button { display: none; }
-  .journal-liste > .journal-note:not(.ouverte) .journal-tete > span { font-size: 10.5px; }
-  .journal-liste > .journal-note:not(.ouverte) .journal-texte { font-size: 12.5px; -webkit-line-clamp: 3; }
-  .journal-liste > .journal-note:not(.ouverte) .nr-place { font-size: 10.5px; padding: 1px 7px; overflow: hidden; text-overflow: ellipsis; }
+  .journal-liste > .journal-note:not(.ouverte) .journal-tete > span { font-size: 9.5px; }
+  .journal-liste > .journal-note:not(.ouverte) .journal-texte { font-size: 11.5px; line-height: 1.35; -webkit-line-clamp: 4; }
+  .journal-liste > .journal-note:not(.ouverte) .nr-place { font-size: 9.5px; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; }
+  /* note ouverte, sur téléphone : un peu plus petit aussi */
+  .journal-note.ouverte .journal-texte { font-size: 12.5px; line-height: 1.4; }
+  .journal-note.ouverte .journal-tete > span { font-size: 10.5px; }
+  .journal-note.ouverte .nr-place { font-size: 11px; }
   .journal-liste > .journal-note:not(.ouverte) .nr-pied { flex-wrap: wrap; }
 }
 .journal-note { border: 1px solid var(--bordure); border-left: 3px solid var(--or); background: var(--carte); border-radius: 10px; padding: 7px 10px 8px; }
@@ -2162,7 +2166,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 .journal-actions { display: flex; gap: 8px; margin-top: 6px; }
 .tuile-page textarea.zone-coordonnees { min-height: 110px !important; }
 #impression .note-impr { margin-bottom: 6px; } #impression .note-impr b { font-size: 10px; color: #666; } #impression .note-impr pre { margin: 2px 0 0; }
-@media (max-width: 900px) { .journal-saisie, .journal-texte { font-size: 14px !important; } }
+@media (max-width: 900px) { .journal-saisie { font-size: 14px !important; } }
 
 .tuile-page textarea.journal-saisie, .feuille textarea.journal-saisie { min-height: 58px !important; height: 58px; }
 .tuile-page textarea.journal-saisie:focus { height: 96px; }
