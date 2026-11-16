@@ -2030,6 +2030,31 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
   #vue-dutreil > #dIndicateurs { top: 12px; }
 }
 
+
+/* ---------- suggestions (client, demandeur, partenaire…) ---------- */
+.sugg { position: fixed; z-index: 2147480000; background: var(--carte); color: var(--texte); border: 1px solid var(--bordure); border-radius: 12px; box-shadow: 0 14px 34px -12px rgba(10,25,30,.35); padding: 5px; display: grid; gap: 1px; max-height: 320px; overflow-y: auto; }
+.sugg[hidden] { display: none; }
+.sugg-item { all: unset; box-sizing: border-box; display: block; padding: 8px 11px; border-radius: 8px; font-size: 14px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sugg-item b { font-weight: 700; color: var(--bleu); }
+.sugg-item:hover, .sugg-item.on { background: var(--bleu-doux); }
+.sugg-plus { padding: 5px 11px 3px; font-size: 12px; color: var(--discret); }
+/* rattacher une note */
+.nr-form { display: grid; gap: 8px; width: 100%; }
+.nr-ligne { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.nr-ligne input { flex: 1 1 220px; min-width: 0; padding: 8px 11px; border: 1px solid var(--bordure); border-radius: 10px; background: var(--carte); color: var(--texte); font: inherit; }
+.nr-cibles { display: flex; flex-wrap: wrap; gap: 6px; }
+.nr-cible { display: grid; gap: 1px; text-align: left; border: 1px solid var(--bordure); background: var(--carte); color: var(--texte); border-radius: 10px; padding: 7px 11px; cursor: pointer; font: inherit; max-width: 100%; }
+.nr-cible b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nr-cible small { font-size: 11px; color: var(--discret); }
+.nr-cible:hover { border-color: var(--bleu); background: var(--bleu-doux); } .nr-cible.on { border-color: var(--or); }
+.nr-astuce { font-size: 12px; color: var(--discret); }
+.nr-place.rdv { background: #e6efe5; color: #4d6b4c; } .nr-place.cl { background: var(--bleu-doux); }
+.journal-note.nr-cl { border-left-color: var(--bleu); }
+/* notes du client, regroupées */
+.nc-ou { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: var(--discret); margin: -2px 0 4px; }
+.nc-choix { border: 1px solid var(--bordure); background: var(--carte); color: var(--texte); border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.nc-choix.on { background: var(--bleu); border-color: var(--bleu); color: var(--carte); font-weight: 600; }
+.nc-filtres { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; } .nc-filtres:empty { display: none; }
+.nc-filtres .collab { font-size: 12px; padding: 3px 10px; }
 /* ---------- onglet Notes : les notes au format du journal, rattachées ou non ---------- */
 body.vue-notes .filtres, body.vue-notes #alerteModif, body.vue-notes #rdv { display: none !important; }
 #vue-notes:not([hidden]) { display: grid; gap: 12px; align-content: start; max-width: 900px; }
@@ -2043,8 +2068,7 @@ body.vue-notes .filtres, body.vue-notes #alerteModif, body.vue-notes #rdv { disp
 .nr-place { border: 0; background: var(--section); color: var(--bleu); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nr-place.libre { background: none; border: 1px dashed var(--bordure); color: var(--discret); font-weight: 500; cursor: default; }
 .nr-ranger { font-size: 12.5px !important; }
-.nr-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; }
-.nr-form input, .nr-form select { flex: 1 1 180px; min-width: 0; padding: 7px 10px; border: 1px solid var(--bordure); border-radius: 9px; background: var(--carte); color: var(--texte); font: inherit; font-size: 13.5px; }
+
 
 /* ---------- onglet Simulations : les filtres des dossiers n'y servent pas ---------- */
 body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none !important; }
@@ -6766,6 +6790,84 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   window.pontSimulations = { nouvelle: (app, nom) => nouvelleSimulation(app, nom), ouvrir: (app, id) => ouvrirSimulation(app, id), duClient: (nom) => simulationsDuClient(nom),
     effaces: (app) => magasin(app).effaces, client: (nom) => ouvrirClient(nom), fermer: () => fermerToutesFeuilles() };
 
+  // ---- suggestions : remplace les listes déroulantes du navigateur (champs avec une liste : client, demandeur, partenaire…) ----
+  //   une petite fenêtre sous le champ, qui filtre pendant la frappe (sans tenir compte des accents ni des majuscules),
+  //   8 propositions au plus, la partie trouvée en gras ; flèches, Entrée, Échap ; un clic ou un toucher pour choisir.
+  (function suggestions() {
+    const sa = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    let champ = null, actif = -1, items = [];
+    const boite = document.createElement("div");
+    boite.className = "sugg"; boite.setAttribute("role", "listbox"); boite.hidden = true;
+    document.addEventListener("DOMContentLoaded", () => document.body.append(boite));
+    if (document.body) document.body.append(boite);
+    const valeurs = (c) => {
+      const l = document.getElementById(c.dataset.liste);
+      if (!l) return [];
+      const vu = new Set(), out = [];
+      for (const o of l.querySelectorAll("option")) { const v = o.value; if (v && !vu.has(v)) { vu.add(v); out.push(v); } }
+      return out;
+    };
+    const placer = () => {
+      if (!champ || boite.hidden) return;
+      const r = champ.getBoundingClientRect(), bas = innerHeight - r.bottom;
+      boite.style.left = Math.max(6, Math.min(r.left, innerWidth - Math.max(r.width, 240) - 6)) + "px";
+      boite.style.width = Math.max(r.width, 240) + "px";
+      if (bas < 260 && r.top > bas) { boite.style.top = ""; boite.style.bottom = innerHeight - r.top + 4 + "px"; }
+      else { boite.style.bottom = ""; boite.style.top = r.bottom + 4 + "px"; }
+    };
+    const fermer = () => { boite.hidden = true; actif = -1; items = []; };
+    const choisir = (v) => {
+      if (!champ) return;
+      champ.value = v;
+      champ.dispatchEvent(new Event("input", { bubbles: true }));
+      champ.dispatchEvent(new Event("change", { bubbles: true }));
+      fermer();
+    };
+    const marquer = (v, q) => {
+      const i = q ? sa(v).indexOf(q) : -1, s = document.createElement("span");
+      if (i < 0) { s.textContent = v; return s; }
+      s.append(v.slice(0, i)); const b = document.createElement("b"); b.textContent = v.slice(i, i + q.length); s.append(b, v.slice(i + q.length));
+      return s;
+    };
+    const montrer = () => {
+      if (!champ) return;
+      const q = sa(champ.value.trim()), tout = valeurs(champ);
+      let l = q ? tout.filter((v) => sa(v).includes(q)) : tout.slice();
+      if (q) l.sort((a, b) => (sa(a).startsWith(q) ? 0 : 1) - (sa(b).startsWith(q) ? 0 : 1) || a.localeCompare(b, "fr"));
+      const total = l.length;
+      l = l.slice(0, 8);
+      if (!l.length || (l.length === 1 && sa(l[0]) === q)) { fermer(); return; }
+      items = l; actif = q ? 0 : -1;
+      boite.replaceChildren(...l.map((v, i) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "sugg-item" + (i === actif ? " on" : ""); b.setAttribute("role", "option"); b.tabIndex = -1;
+        b.append(marquer(v, q));
+        b.addEventListener("mousedown", (e) => e.preventDefault());   // le champ garde la main
+        b.addEventListener("click", () => choisir(v));
+        return b;
+      }), ...(total > l.length ? [Object.assign(document.createElement("div"), { className: "sugg-plus", textContent: `${total - l.length} autre${total - l.length > 1 ? "s" : ""} : précisez…` })] : []));
+      boite.hidden = false; placer();
+    };
+    const surligner = () => [...boite.querySelectorAll(".sugg-item")].forEach((b, i) => { b.classList.toggle("on", i === actif); if (i === actif) b.scrollIntoView({ block: "nearest" }); });
+    document.addEventListener("focusin", (e) => {
+      const c = e.target;
+      if (!(c instanceof HTMLInputElement)) return;
+      if (c.hasAttribute("list")) { c.dataset.liste = c.getAttribute("list"); c.removeAttribute("list"); c.setAttribute("autocomplete", "off"); }
+      if (!c.dataset.liste) return;
+      champ = c; montrer();
+    });
+    document.addEventListener("input", (e) => { if (e.target === champ && e.isTrusted) montrer(); });
+    document.addEventListener("focusout", (e) => { if (e.target === champ) setTimeout(() => { if (document.activeElement !== champ) { fermer(); champ = null; } }, 120); });
+    document.addEventListener("keydown", (e) => {
+      if (e.target !== champ || boite.hidden) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); actif = Math.min(items.length - 1, actif + 1); surligner(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); actif = Math.max(0, actif - 1); surligner(); }
+      else if (e.key === "Enter" && actif >= 0 && !e.ctrlKey && !e.metaKey) { e.preventDefault(); e.stopPropagation(); choisir(items[actif]); }
+      else if (e.key === "Escape") { e.stopPropagation(); fermer(); }
+    }, true);
+    addEventListener("scroll", placer, true); addEventListener("resize", placer);
+  })();
+
   // ---- l'onglet « Notes » : toutes les notes au même format (date, heure, texte) ----
   //   on les prend ici, puis on les rattache à un client (son journal) ou à un dossier du client (le journal du dossier).
   //   Les notes non rattachées sont dans « notesLibres » (fichier de suivi, section notes).
@@ -6814,80 +6916,125 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres));
     sauver();
   }
-  // le petit formulaire « rattacher à… » : un client, puis sa fiche ou l'un de ses dossiers
+  // le petit formulaire « rattacher à… » : on tape le client (suggestions), puis on touche sa fiche ou l'un de ses dossiers
   function formulaireRattacher(x, fermer) {
-    const choixClient = el("input", { type: "text", class: "nr-client", list: "liste-clients-notes", placeholder: "Client…", autocomplete: "off", value: x.nom || "", "aria-label": "Client" });
-    const choixOu = el("select", { class: "nr-ou", "aria-label": "Fiche ou dossier" });
-    let pour = null;   // le client dont les dossiers sont listés (on ne refait pas la liste, et le choix reste, s'il ne change pas)
-    const remplir = () => {
-      const f = donnees.clients[cleClient(choixClient.value)];
-      if ((f ? f.nom : null) === pour && choixOu.options.length) return;
-      pour = f ? f.nom : null;
-      const ds = f ? dossiersDe(f.nom).filter((d) => !d.archives || d === x.d) : [];
-      choixOu.replaceChildren(el("option", { value: "" }, f ? "La fiche du client" : "—"), ...ds.map((d) => el("option", { value: String(donnees.dossiers.indexOf(d)) }, "Dossier : " + libelleDossier(d))));
-      if (x.d && f && cleClient(x.nom) === cleClient(f.nom)) choixOu.value = String(donnees.dossiers.indexOf(x.d));
-      choixOu.disabled = !f;
-    };
-    choixClient.addEventListener("input", remplir); choixClient.addEventListener("change", remplir);
-    remplir();
-    const valider = () => {
-      const f = donnees.clients[cleClient(choixClient.value)];
-      if (!f) { informer(choixClient.value.trim() ? `« ${choixClient.value.trim()} » n’est pas un client du suivi.` : "Choisissez un client."); return; }
-      const d = choixOu.value !== "" ? donnees.dossiers[+choixOu.value] : null;
+    const choixClient = el("input", { type: "text", class: "nr-client", list: "liste-clients-notes", placeholder: "Tapez le nom du client…", autocomplete: "off", value: x.nom || "", "aria-label": "Client" });
+    const cibles = el("div", { class: "nr-cibles" });
+    let pour;
+    const ranger = (f, d) => {
       rangerNote(x, d ? { nom: f.nom, d } : { nom: f.nom });
       informer(d ? `Note rattachée au dossier « ${libelleDossier(d)} » de ${f.nom}.` : `Note rattachée à la fiche de ${f.nom}.`);
       fermer(true);
     };
-    setTimeout(() => choixClient.focus(), 0);
-    return el("div", { class: "nr-form" }, choixClient, choixOu,
-      el("button", { type: "button", class: "bouton", onclick: valider }, "Rattacher"),
-      x.ou !== "libre" ? el("button", { type: "button", class: "bouton-discret", onclick: () => { rangerNote(x, null); informer("Note détachée : elle est dans les notes non affectées."); fermer(true); } }, "Détacher") : null,
-      el("button", { type: "button", class: "bouton-discret", onclick: () => fermer(false) }, "Annuler"));
+    const remplir = () => {
+      const f = donnees.clients[cleClient(choixClient.value)];
+      if ((f ? f.nom : null) === pour) return;
+      pour = f ? f.nom : null;
+      if (!f) { cibles.replaceChildren(el("span", { class: "nr-astuce" }, choixClient.value.trim() ? "Choisissez un client dans la liste." : "Le client, puis sa fiche ou l’un de ses dossiers.")); return; }
+      const ds = dossiersDe(f.nom).filter((d) => !d.archives || d === x.d);
+      const ici = (d) => x.d === d && cleClient(x.nom) === cleClient(f.nom);
+      cibles.replaceChildren(
+        el("button", { type: "button", class: "nr-cible" + (x.ou === "client" && cleClient(x.nom) === cleClient(f.nom) ? " on" : ""), onclick: () => ranger(f, null) }, el("b", null, "👤 Fiche client"), el("small", null, f.nom)),
+        ...ds.map((d) => el("button", { type: "button", class: "nr-cible" + (ici(d) ? " on" : ""), onclick: () => ranger(f, d) },
+          el("b", null, "📁 " + libelleDossier(d)), el("small", null, [d.statut, d.archives ? "archivé" : ""].filter(Boolean).join(" · ") || "dossier"))));
+    };
+    choixClient.addEventListener("input", remplir); choixClient.addEventListener("change", remplir);
+    remplir();
+    setTimeout(() => { choixClient.focus(); choixClient.select(); }, 0);
+    return el("div", { class: "nr-form" },
+      el("div", { class: "nr-ligne" }, choixClient,
+        x.ou !== "libre" ? el("button", { type: "button", class: "bouton-discret", onclick: () => { rangerNote(x, null); informer("Note détachée : elle est dans les notes non affectées."); fermer(true); } }, "Détacher") : null,
+        el("button", { type: "button", class: "bouton-discret", onclick: () => fermer(false) }, "Annuler")),
+      cibles);
   }
-  function carteNote(x, redessiner) {
-    const estRdv = x.ou === "rdv" || x.ou === "rdvd";
+  // une note. opts : { ici : le dossier ouvert (étiquette « Ce dossier »), enLecture : note du rendez-vous de ce dossier (modifiable dans sa rubrique) }
+  function carteNote(x, redessiner, opts = {}) {
+    const estRdv = x.ou === "rdv" || x.ou === "rdvd", dansFiche = "ici" in opts;
     const corps = el("div", { class: "journal-texte" }, ...(estRdv ? [el("b", { class: "nr-objet" }, "📅 " + x.objet), "\n"] : []), ...texteAvecLiens(x.n.texte));
-    if (estRdv) {
-      const ouvrir = () => { if (x.ou === "rdv") ouvrirRdv(x.nom, x.r.id); else { const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, "Rendez-vous"); } };
-      const quand = fmtDate(x.ou === "rdv" ? x.r.date : x.d.rdv) + ((x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) ? " " + (x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) : "");
-      return el("div", { class: "journal-note nr-rdv" },
-        el("div", { class: "journal-tete" }, el("span", null, "Rendez-vous du " + quand),
-          el("button", { type: "button", title: "Corriger", "aria-label": "Corriger la note", onclick: () => {
-            const edit = el("textarea", { class: "journal-saisie" }, x.n.texte);
-            corps.replaceChildren(edit, el("div", { class: "journal-actions" },
-              el("button", { type: "button", class: "bouton", onclick: () => { corrigerNote(x, edit.value.trim()); redessiner(); } }, "Enregistrer"),
-              el("button", { type: "button", class: "bouton-discret", onclick: redessiner }, "Annuler")));
-            edit.focus();
-          } }, "✎"),
-          el("button", { type: "button", title: "Effacer la note (le rendez-vous reste)", "aria-label": "Effacer la note", onclick: () => {
-            if (!confirm("Effacer la note de ce rendez-vous ?\n\nLe rendez-vous, lui, reste dans l’agenda.")) return;
-            retirerNote(x); sauver(); redessiner(); informer("Note du rendez-vous effacée (Annuler : menu ⋯ ou Ctrl + Z).");
-          } }, "✕")),
-        corps,
-        el("div", { class: "nr-pied" }, el("button", { type: "button", class: "nr-place", title: "Ouvrir le rendez-vous", onclick: ouvrir },
-          (x.ou === "rdvd" ? `📁 ${x.nom} · ${libelleDossier(x.d)}` : `👤 ${x.nom}`) + " · rendez-vous")));
-    }
+    const etiquette = () => {
+      if (x.ou === "libre") return "Non affectée";
+      const dos = x.d ? (x.d === opts.ici ? "📁 Ce dossier" : "📁 " + libelleDossier(x.d)) : "";
+      const qui = dansFiche ? "" : x.nom;
+      if (x.ou === "client") return "👤 " + (dansFiche ? "Fiche client" : x.nom);
+      if (x.ou === "dossier") return [qui && "👤 " + qui, dos].filter(Boolean).join(" · ");
+      return [qui && "👤 " + qui, x.ou === "rdvd" ? dos : "", "rendez-vous"].filter(Boolean).join(" · ");
+    };
+    const ouvrir = () => {
+      if (x.ou === "rdv") return ouvrirRdv(x.nom, x.r.id);
+      if (x.ou === "rdvd" || x.ou === "dossier") { if (x.d === opts.ici) return; const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, x.ou === "rdvd" ? "Rendez-vous" : "Notes"); return; }
+      if (!dansFiche) ouvrirClient(x.nom, "Notes");
+    };
     const place = x.ou === "libre" ? el("span", { class: "nr-place libre" }, "Non affectée")
-      : el("button", { type: "button", class: "nr-place", title: "Ouvrir", onclick: () => { if (x.ou === "dossier") { const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, "Notes du dossier"); } else ouvrirClient(x.nom, "Notes"); } },
-          x.ou === "dossier" ? `📁 ${x.nom} · ${libelleDossier(x.d)}` : `👤 ${x.nom}`);
+      : el("button", { type: "button", class: "nr-place" + (x.ou === "rdv" || x.ou === "rdvd" ? " rdv" : x.ou === "client" ? " cl" : ""), title: "Ouvrir", onclick: ouvrir }, etiquette());
+    const quand = estRdv ? "Rendez-vous du " + fmtDate(x.ou === "rdv" ? x.r.date : x.d.rdv) + ((x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) ? " " + (x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) : "") : dateNote(x.n.le);
     const pied = el("div", { class: "nr-pied" }, place,
-      el("button", { type: "button", class: "bouton-discret nr-ranger", onclick: () => { pied.replaceChildren(formulaireRattacher(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner).querySelector(".nr-pied")); })); } },
-        x.ou === "libre" ? "↪ Rattacher à un client ou un dossier" : "↪ Déplacer"));
-    return el("div", { class: "journal-note" + (x.ou === "libre" ? " nr-libre" : "") },
-      el("div", { class: "journal-tete" }, el("span", null, dateNote(x.n.le)),
-        el("button", { type: "button", title: "Corriger", "aria-label": "Corriger la note", onclick: () => {
-          const edit = el("textarea", { class: "journal-saisie" }, x.n.texte);
-          corps.replaceChildren(edit, el("div", { class: "journal-actions" },
-            el("button", { type: "button", class: "bouton", onclick: () => { corrigerNote(x, edit.value.trim()); redessiner(); } }, "Enregistrer"),
-            el("button", { type: "button", class: "bouton-discret", onclick: redessiner }, "Annuler")));
-          edit.focus();
-        } }, "✎"),
-        el("button", { type: "button", title: "Effacer", "aria-label": "Effacer la note", onclick: () => {
-          if (!confirm("Effacer cette note ?")) return;
-          retirerNote(x); sauver(); redessiner(); informer("Note effacée (Annuler : menu ⋯ ou Ctrl + Z).");
-        } }, "✕")),
-      corps, pied);
+      !estRdv ? el("button", { type: "button", class: "bouton-discret nr-ranger", onclick: () => { pied.replaceChildren(formulaireRattacher(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner, opts).querySelector(".nr-pied")); })); } },
+        x.ou === "libre" ? "↪ Rattacher à un client ou un dossier" : "↪ Déplacer") : null,
+      opts.enLecture ? el("span", { class: "nr-astuce" }, "modifiable dans la rubrique Rendez-vous") : null);
+    const outils = opts.enLecture ? [] : [
+      el("button", { type: "button", title: "Corriger", "aria-label": "Corriger la note", onclick: () => {
+        const edit = el("textarea", { class: "journal-saisie" }, x.n.texte);
+        corps.replaceChildren(edit, el("div", { class: "journal-actions" },
+          el("button", { type: "button", class: "bouton", onclick: () => { corrigerNote(x, edit.value.trim()); redessiner(); } }, "Enregistrer"),
+          el("button", { type: "button", class: "bouton-discret", onclick: redessiner }, "Annuler")));
+        edit.focus();
+      } }, "✎"),
+      el("button", { type: "button", title: estRdv ? "Effacer la note (le rendez-vous reste)" : "Effacer", "aria-label": "Effacer la note", onclick: () => {
+        if (!confirm(estRdv ? "Effacer la note de ce rendez-vous ?\n\nLe rendez-vous, lui, reste dans l’agenda." : "Effacer cette note ?")) return;
+        retirerNote(x); sauver(); redessiner(); informer((estRdv ? "Note du rendez-vous effacée" : "Note effacée") + " (Annuler : menu ⋯ ou Ctrl + Z).");
+      } }, "✕")];
+    return el("div", { class: "journal-note" + (x.ou === "libre" ? " nr-libre" : estRdv ? " nr-rdv" : x.ou === "client" ? " nr-cl" : "") },
+      el("div", { class: "journal-tete" }, el("span", null, quand), ...outils), corps, pied);
   }
+  // ---- les notes d'un client, toutes ensemble (fiche, dossiers, rendez-vous) : dans la fiche client et dans chaque dossier ----
+  //   i : le dossier ouvert (ou -1 depuis la fiche client). Une note nouvelle va dans ce dossier ou dans la fiche, au choix.
+  function notesDuClient(nom) { const k = cleClient(nom); return toutesNotes().filter((x) => x.ou !== "libre" && cleClient(x.nom || "") === k); }
+  function resumeNotesClient(nom) {
+    const l = notesDuClient(nom);
+    return l.length ? `${l.length} note${l.length > 1 ? "s" : ""} · ${dateNote(l[0].n.le).replace(" · ", " ")}` : "";
+  }
+  function blocNotesClient(nom, i) {
+    const zone = el("div", { class: "journal nc" });
+    const d = i >= 0 ? donnees.dossiers[i] : null;
+    let ou = d ? "dossier" : "client", filtre = "";
+    const saisieNote = el("textarea", { class: "journal-saisie", placeholder: "Nouvelle note… (Ctrl + Entrée pour l’ajouter)" });
+    const choixOu = d ? el("div", { class: "nc-ou", role: "radiogroup", "aria-label": "Ranger la note" }) : null;
+    const dessinerOu = () => { if (!choixOu) return; choixOu.replaceChildren(el("span", null, "Ranger dans :"),
+      ...[["dossier", "📁 Ce dossier"], ["client", "👤 La fiche du client"]].map(([v, lib]) => el("button", { type: "button", class: "nc-choix" + (ou === v ? " on" : ""), role: "radio", "aria-checked": String(ou === v), onclick: () => { ou = v; dessinerOu(); } }, lib))); };
+    dessinerOu();
+    const ajouter = () => {
+      const t = saisieNote.value.trim(); if (!t) return;
+      saisieNote.value = "";
+      const n = { id: nouvelId(), le: new Date().toISOString(), texte: t };
+      if (ou === "dossier" && d) ecrireJournalDossier(i, [n, ...journalDossier(i)]);
+      else ecrireJournalClient(nom, [n, ...journalClient(nom)]);
+      dessiner();
+      zone.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const brouillon = () => { if (!saisieNote.isConnected) { brouillonsJournal.delete(brouillon); return; } ajouter(); };
+    brouillonsJournal.add(brouillon);
+    saisieNote.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ajouter(); } });
+    saisieNote.addEventListener("blur", () => setTimeout(() => { if (saisieNote.value.trim() && !zone.contains(document.activeElement)) ajouter(); }, 150));
+    const filtres = el("div", { class: "nc-filtres" });
+    const liste = el("div", { class: "journal-liste" });
+    function dessiner() {
+      const tout = notesDuClient(nom);
+      const de = { client: (x) => x.ou === "client", ce: (x) => x.ou === "dossier" && x.d === d, autres: (x) => x.ou === "dossier" && x.d !== d, rdv: (x) => x.ou === "rdv" || x.ou === "rdvd" };
+      const puces = [["", "Toutes"], ["client", "Fiche client"], ...(d ? [["ce", "Ce dossier"]] : []), ["autres", d ? "Autres dossiers" : "Dossiers"], ["rdv", "Rendez-vous"]]
+        .map(([k, lib]) => [k, lib, k ? tout.filter(de[k]).length : tout.length]).filter(([k, , n]) => !k || n);
+      if (filtre && !puces.some(([k]) => k === filtre)) filtre = "";
+      filtres.replaceChildren(...(tout.length > 1 ? puces.map(([k, lib, n]) => el("button", { type: "button", class: "collab" + (filtre === k ? " choisi" : ""), onclick: () => { filtre = k; dessiner(); } }, `${lib} (${n})`)) : []));
+      const l = filtre ? tout.filter(de[filtre]) : tout;
+      const redessiner = () => { dessiner(); zone.dispatchEvent(new Event("input", { bubbles: true })); };
+      liste.replaceChildren(...(l.length ? l.map((x) => carteNote(x, redessiner, { ici: d, enLecture: x.ou === "rdvd" && x.d === d }))
+        : [el("p", { class: "m-vide" }, "Aucune note pour l’instant.")]));
+    }
+    dessiner();
+    zone.append(el("div", { class: "journal-ajout" }, saisieNote, el("button", { type: "button", class: "bouton", onclick: ajouter }, "＋ Ajouter")), choixOu, filtres, liste,
+      document.getElementById("liste-clients-notes") ? null : el("datalist", { id: "liste-clients-notes" }, nomsClients().map((v) => el("option", { value: v }))));
+    return zone;
+  }
+
   // les post-it du premier essai deviennent des notes (une seule fois)
   function reprendrePostits() {
     if (!donnees || !postitsAReprendre.length) return;
@@ -7706,11 +7853,11 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
             } }, (modelesTaches[sansNumero(d.type)] || []).length ? `☑ Ajouter les tâches du modèle « ${sansNumero(d.type)} »` : `☑ Créer un modèle de tâches pour « ${sansNumero(d.type)} »`)),
             resume: () => resumeTaches(d.client) });
           lot.push({ libelle: "◆ Commentaire client", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
-            ...(d.client && i >= 0 ? [{ libelle: "◆ Notes client", contenu: blocJournal({ lire: () => journalClient(d.client), ecrire: (l) => ecrireJournalClient(d.client, l) }), resume: () => resumeJournal(journalClient(d.client)) }] : []),
+            ...(d.client && i >= 0 ? [{ libelle: "Notes", contenu: blocNotesClient(d.client, i), resume: () => resumeNotesClient(d.client) }] : []),
             { libelle: "◆ Coordonnées client", contenu: vueCoordonnees(el("textarea", { name: "coordonnees_client", "data-depart": f.coordonnees || "", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "")),
               resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees_client]") || {}).value) },
             { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) },
-            ...(i >= 0 ? [{ libelle: "Notes du dossier", contenu: blocJournal({ lire: () => journalDossier(i), ecrire: (l) => ecrireJournalDossier(i, l), aide: "Nouvelle note sur ce dossier… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalDossier(i)) }] : []),
+            ...(!d.client && i >= 0 ? [{ libelle: "Notes", contenu: blocJournal({ lire: () => journalDossier(i), ecrire: (l) => ecrireJournalDossier(i, l), aide: "Nouvelle note sur ce dossier… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalDossier(i)) }] : []),
             { libelle: "Coordonnées du dossier", contenu: vueCoordonnees(el("textarea", { name: "coordonnees", class: "zone-coordonnees", placeholder: "Interlocuteurs du dossier : notaire, banque, expert-comptable…" }, d.coordonnees || "")),
               resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees]") || {}).value) },
             { libelle: "Rendez-vous", contenu: rdv, resume: () => lireRdv("rdv") ? versDate(lireRdv("rdv")).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (lireRdv("rdv_heure") ? " " + lireRdv("rdv_heure") : "") + (lireRdv("rdv_objet") ? " · " + lireRdv("rdv_objet") : "") : "" });
@@ -8974,7 +9121,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
           { libelle: "Rendez-vous", contenu: blocRdvClient(nom), resume: () => resumeRdv(nom) },
           { libelle: "Simulations", contenu: blocSimulationsClient(nom), resume: () => resumeSimulations(nom) },
           { libelle: "Commentaire", contenu: el("div", null, ...avecLiens(zoneComm)), resume: () => premiereLigne(zoneComm.value) },
-          { libelle: "Notes", contenu: blocJournal({ lire: () => journalClient(nom), ecrire: (l) => ecrireJournalClient(nom, l), aide: "Nouvelle note sur ce client… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalClient(nom)) },
+          { libelle: "Notes", contenu: blocNotesClient(nom, -1), resume: () => resumeNotesClient(nom) },
           { libelle: "Coordonnées", contenu: vueCoordonnees(zoneCoord), resume: () => premiereLigne(zoneCoord.value) }]);
       })(),
       tuiles([
