@@ -2159,10 +2159,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 .journal-note:not(.ouverte):not(.nr-libre) .nr-ranger, .journal-note:not(.ouverte) .nr-astuce { display: none; }
 .journal-note:not(.ouverte) .nr-ranger { padding: 1px 8px !important; font-size: 11.5px !important; }
 .journal-note:not(.ouverte) .nr-place { font-size: 11px; padding: 1px 8px; font-weight: 600; }
-.journal-note.longue:not(.ouverte) .journal-tete > span::after { content: "  ▾ lire"; font-weight: 500; color: var(--or); }
-.journal-note.ouverte.longue .journal-tete > span::after { content: "  ▴ replier"; font-weight: 500; color: var(--discret); }
-.journal-note.ouverte { cursor: default; }
-.journal-note.ouverte .journal-tete { cursor: pointer; }
+
 .journal-actions { display: flex; gap: 8px; margin-top: 6px; }
 .tuile-page textarea.zone-coordonnees { min-height: 110px !important; }
 #impression .note-impr { margin-bottom: 6px; } #impression .note-impr b { font-size: 10px; color: #666; } #impression .note-impr pre { margin: 2px 0 0; }
@@ -6831,8 +6828,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     document.addEventListener("click", (e) => {
       const n = e.target.closest(".journal-note");
       if (!n || e.target.closest("button, a, textarea, input, select, label, .nr-form") || n.querySelector("textarea")) return;
-      if (n.classList.contains("ouverte") && !e.target.closest(".journal-tete") && getSelection().toString()) return;   // on sélectionne du texte
-      if (n.classList.contains("ouverte") && !e.target.closest(".journal-tete")) return;   // ouverte : on replie par l'en-tête
+      if (n.classList.contains("ouverte") && getSelection().toString()) return;   // on sélectionne du texte : on ne replie pas
       n.classList.toggle("ouverte");
     });
     const marquer = () => document.querySelectorAll(".journal-note:not(.ouverte) .journal-texte").forEach((t) => {
