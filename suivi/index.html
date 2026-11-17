@@ -2147,7 +2147,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 .journal-tete button:hover { background: var(--section); color: var(--bleu); }
 .journal-texte { font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* notes repliées : deux lignes ; un clic sur la note la déplie (et la replie) */
-.journal-note { cursor: pointer; }
+.journal-note { cursor: pointer; touch-action: manipulation; -webkit-user-select: text; user-select: text; }
 .journal-note:not(.ouverte) { padding: 5px 10px 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "pied tete" "texte texte"; column-gap: 8px; align-items: center; }
 .journal-note:not(.ouverte) > .journal-tete { grid-area: tete; } .journal-note:not(.ouverte) > .journal-texte { grid-area: texte; } .journal-note:not(.ouverte) > .nr-pied { grid-area: pied; margin-top: 0 !important; min-width: 0; flex-wrap: nowrap; }
 .journal-note:not(.ouverte) > .journal-tete > span { flex: none; }
@@ -6825,12 +6825,28 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 
   // ---- notes repliées : un clic sur une note la déplie ; « longue » quand elle ne tient pas sur deux lignes ----
   (function notesRepliables() {
+    // un clic (ou un toucher) : ouvrir / refermer ; un double clic (ou double toucher) : corriger la note
+    let attenteClic = null, noteClic = null;
     document.addEventListener("click", (e) => {
       const n = e.target.closest(".journal-note");
       if (!n || e.target.closest("button, a, textarea, input, select, label, .nr-form") || n.querySelector("textarea")) return;
-      if (n.classList.contains("ouverte") && getSelection().toString()) return;   // on sélectionne du texte : on ne replie pas
-      n.classList.toggle("ouverte");
+      if (attenteClic && noteClic === n) {   // deuxième clic rapproché : on corrige
+        clearTimeout(attenteClic); attenteClic = null; noteClic = null;
+        const corriger = n.querySelector('.journal-tete button[title="Corriger"]');
+        if (corriger) { try { getSelection().removeAllRanges(); } catch (er) {} n.classList.add("ouverte"); corriger.click(); }
+        return;
+      }
+      if (n.classList.contains("ouverte") && getSelection().toString().length > 1 && e.detail < 2) return;   // on sélectionne du texte : on ne replie pas
+      clearTimeout(attenteClic); noteClic = n;
+      attenteClic = setTimeout(() => { attenteClic = null; noteClic = null; n.classList.toggle("ouverte"); }, 260);
     });
+    // en correction : un clic ou un toucher en dehors de la note enregistre
+    document.addEventListener("pointerdown", (e) => {
+      for (const n of document.querySelectorAll(".journal-note")) {
+        const ok = n.querySelector(".journal-actions .bouton");
+        if (ok && n.querySelector("textarea") && !n.contains(e.target)) ok.click();
+      }
+    }, true);
     const marquer = () => document.querySelectorAll(".journal-note:not(.ouverte) .journal-texte").forEach((t) => {
       const n = t.closest(".journal-note"); if (t.clientHeight) n.classList.toggle("longue", t.scrollHeight > t.clientHeight + 2);
     });
