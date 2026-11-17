@@ -2181,7 +2181,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 /* Téléphone tenu à l'horizontale alors que le verrouillage n'a pas pu s'appliquer : on invite à le redresser. */
 .redresser { display: none; }
 @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
-  html.telephone body:not(.vue-calendrier) .redresser { display: flex; position: fixed; inset: 0; z-index: 99999; background: var(--fond, #0c2d39);
+  html.telephone.jamais .redresser { display: flex; position: fixed; inset: 0; z-index: 99999; background: var(--fond, #0c2d39);
     color: var(--texte, #fff); align-items: center; justify-content: center; flex-direction: column; gap: 10px;
     font-size: 16px; text-align: center; padding: 20px; }
   html.telephone .redresser span { font-size: 40px; }
@@ -2191,6 +2191,10 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   body.vue-calendrier header.entete, body.vue-calendrier .alerte-modif { display: none !important; }
   body.vue-calendrier main { padding-top: 2px !important; }
 }
+/* téléphone tourné à l'horizontale, depuis n'importe quel onglet : l'agenda seul, sans bandeau en haut ni en bas */
+html.paysage-agenda header.entete, html.paysage-agenda nav.bas, html.paysage-agenda .alerte-modif, html.paysage-agenda .fab,
+html.paysage-agenda .tirer-eclair, html.paysage-agenda .eclair, html.paysage-agenda .filtres { display: none !important; }
+html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-bottom, 0px)) !important; }
 /* tuile visée à l'ouverture (ex. le rendez-vous d'un dossier) */
 .tuile.mise-en-avant { outline: 3px solid var(--or); outline-offset: 1px; }
 /* agenda sur téléphone : le mois replié (bouton « Mois »), 2 journées côte à côte (4 à l'horizontale) */
@@ -9836,7 +9840,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   };
   document.addEventListener("touchstart", (e) => {
     tirerUn = null;
-    if (!estTel() || e.touches.length !== 1) return;
+    if (!estTel() || e.touches.length !== 1 || document.documentElement.classList.contains("paysage-agenda")) return;
     const c = e.target instanceof Element ? e.target : null;
     if (!c || c.closest("input, textarea, select, .feuille, .filtres, .fab, .fab-voile, .eclair, .choix-date, .horloge-voile, .roue-voile, .frise-bloc, .carte-dossier, .menu")) return;
     if (document.querySelector(".feuille.ouverte, .eclair, .roue-voile, .menu-contextuel, .actes-voile, .horloge-voile, .choix-date, .menu.ouvert") || document.body.classList.contains("filtres-ouverts")) return;  // rien d'ouvert par-dessus
@@ -9972,7 +9976,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 
   let eclairActif = 0, eclairLignes = [];
   function ouvrirEclair() {
-    if (document.querySelector(".eclair")) return;
+    if (document.querySelector(".eclair") || document.documentElement.classList.contains("paysage-agenda")) return;   // à l'horizontale : agenda seul
     const saisie = el("input", { type: "search", placeholder: "Rechercher un client, un dossier, un pacte, une action…", "aria-label": "Recherche éclair",
       autocomplete: "off", enterkeyhint: "go", spellcheck: "false" });
     const liste = el("div", { class: "eclair-resultats", role: "listbox" });
@@ -10105,18 +10109,32 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   // on ignore alors l'erreur et un petit message invite à remettre le téléphone droit.
   const estTelephone = () => matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 600;
   // (sauf dans l'agenda : à l'horizontale, il montre quatre jours)
+  // Le téléphone peut tourner : à l'horizontale, quel que soit l'onglet, on ne montre que l'agenda (4 jours),
+  // sans bandeau en haut ni en bas, et sans recherche éclair ; redressé, on revient à l'onglet d'avant.
   function figerPortrait() {
     if (!estTelephone()) return;
-    try {
-      if (!screen.orientation) return;
-      if (document.body && document.body.classList.contains("vue-calendrier")) { screen.orientation.unlock && screen.orientation.unlock(); return; }
-      screen.orientation.lock && screen.orientation.lock("portrait").catch(() => {});
-    } catch (e) {}
+    try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch (e) {}
   }
-  addEventListener("hashchange", () => setTimeout(figerPortrait, 50));
   figerPortrait();
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) figerPortrait(); });
   if (estTelephone()) document.documentElement.classList.add("telephone");
+  const requetePaysage = matchMedia("(orientation: landscape) and (max-height: 500px)");
+  let vueAvantPaysage = null;
+  function suivreOrientation() {
+    const paysage = estTelephone() && requetePaysage.matches, h = document.documentElement;
+    if (paysage === h.classList.contains("paysage-agenda")) return;
+    h.classList.toggle("paysage-agenda", paysage);
+    if (paysage) {
+      document.querySelectorAll(".eclair").forEach((x) => x.remove());
+      vueAvantPaysage = vueCourante();
+      if (vueAvantPaysage !== "calendrier") { history.replaceState(null, "", "#calendrier"); montrerVue(); }
+    } else if (vueAvantPaysage && vueAvantPaysage !== "calendrier" && vueCourante() === "calendrier") {
+      history.replaceState(null, "", "#" + vueAvantPaysage); montrerVue();
+      vueAvantPaysage = null;
+    }
+    if (typeof pxMinTel !== "undefined") { pxMinTel = 0; setTimeout(() => { if (vueCourante() === "calendrier") afficherCalendrier(); }, 60); }
+  }
+  requetePaysage.addEventListener("change", suivreOrientation);
+  setTimeout(suivreOrientation, 0);
 
   // ---------------------------------------------------------------- démarrage
   // l'onglet choisi dans Apparence › Mise en page s'ouvre au lancement (si aucun onglet n'est demandé dans l'adresse)
