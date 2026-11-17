@@ -8706,7 +8706,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     // créneaux libres de la journée (plages de travail seulement)
     const libres = creneauxLibres(iso, fixes, maintenant);
     // on garde l'ordre actuel des tâches, mais une plus courte peut passer devant pour boucher un trou
-    const file = mobiles.sort((a, b) => (b[1].prio ? 1 : 0) - (a[1].prio ? 1 : 0) || a[0] - b[0] || String(a[1].cree || "").localeCompare(String(b[1].cree || ""))).map(([, t]) => t);
+    const rang = (t) => (t._rang === undefined ? 1e9 : t._rang);
+    const file = mobiles.sort((a, b) => (b[1].prio ? 1 : 0) - (a[1].prio ? 1 : 0) || rang(a[1]) - rang(b[1]) || a[0] - b[0] || String(a[1].cree || "").localeCompare(String(b[1].cree || ""))).map(([, t]) => t);
     for (const [a, b] of libres) {
       let c = Math.ceil(a / pas) * pas;
       for (;;) {
@@ -8823,9 +8824,24 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function envoyerEnDernier(nom, id) {
     const t = trouverTache(id);
     if (!t) return "";
-    const avant = t.pour, jour = dernierJourDeLaFile(id);
+    const avant = t.pour, jour = dernierJourDeLaFile(id), A = auto();
     majTaches(nom, (l) => l.map((x) => (x.id !== id ? x : { ...x, pour: jour, heure: "", prio: false, fixe: false })));
-    const r = apresAgenda([avant, jour], null, [id]);
+    let r = "";
+    const aujour = enIso(aujourdhui());
+    const depart = !avant || avant < aujour ? premierJourTravaille() : avant;
+    if (A.actif && A.reporter && depart <= jour) {
+      // toute la file, de son ancien jour jusqu'au bout, remonte d'un cran : on la reprend dans l'ordre et on la repose à la suite
+      const maintenant = new Date().getHours() * 60 + new Date().getMinutes();
+      const file = [];
+      for (let iso = depart, k = 0; iso <= jour && k < 400; iso = jourOuvreSuivant(iso), k++)
+        for (const x of tachesDuJour(iso)) if (x.id !== id && !x.fixe && enMinutes(x.heure) !== null && !(iso === aujour && enMinutes(x.heure) < maintenant)) file.push(x);
+      file.sort((a, b) => a.pour.localeCompare(b.pour) || enMinutes(a.heure) - enMinutes(b.heure));
+      const tt = trouverTache(id);
+      file.push(tt);
+      file.forEach((x, k) => { x._rang = k; x.pour = depart; x.heure = ""; });
+      try { r = apresAgenda([depart], null, file.map((x) => x.id)); }
+      finally { for (const f of Object.values(donnees.clients)) for (const x of f.taches || []) delete x._rang; }
+    } else r = apresAgenda([avant, jour], null, [id]);
     const n = trouverTache(id);
     sauver();
     return `« ${t.texte} » passe en dernier : ${n && n.pour ? fmtDate(n.pour) + (n.heure ? " à " + n.heure : "") : "sans date"}.` + r;
