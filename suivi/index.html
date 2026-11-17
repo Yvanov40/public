@@ -2044,6 +2044,16 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
 .pr-pied { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 @media (max-width: 700px) { .pr-voile { align-items: flex-end; padding: 0; } .pr-fen { border-radius: 16px 16px 0 0; max-height: 92vh; } .pr-ligne { grid-template-columns: auto minmax(0, 1fr); } .pr-fl { display: none; } .pr-ap { grid-column: 2; } }
 
+.fu-liste { padding: 6px; display: grid; gap: 6px; align-content: start; }
+.fu-groupe { border: 1px solid var(--bordure); border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px; }
+.fu-groupe.doute .fu-tete small, .fu-groupe.frappe .fu-tete small { color: var(--or); font-weight: 600; }
+.fu-sep { margin: 10px 0 2px; font: 600 13px var(--titre); color: var(--bleu); }
+.fu-groupe.on { border-color: var(--bleu); background: var(--bleu-doux); }
+.fu-tete { display: flex; align-items: center; gap: 8px; cursor: pointer; } .fu-tete small { margin-left: auto; color: var(--discret); font-size: 11.5px; text-align: right; }
+.fu-noms { display: grid; gap: 2px; padding-left: 24px; }
+.fu-nom { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: 13px; }
+.fu-nom small { color: var(--discret); font-size: 11.5px; } .fu-nom.garde span { font-weight: 600; }
+
 /* ---------- suggestions (client, demandeur, partenaire…) ---------- */
 .sugg { position: fixed; z-index: 2147480000; background: var(--carte); color: var(--texte); border: 1px solid var(--bordure); border-radius: 12px; box-shadow: 0 14px 34px -12px rgba(10,25,30,.35); padding: 5px; display: grid; gap: 1px; max-height: 320px; overflow-y: auto; }
 .sugg[hidden] { display: none; }
@@ -2662,6 +2672,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       <button class="menu-tuile" id="btnGithub"><span>☁</span>Réglages GitHub</button>
       <button class="menu-tuile" id="btnExporter"><span>⤓</span>Exporter une copie</button>
       <button class="menu-tuile" id="btnPrenoms"><span>✂</span>Retirer les prénoms des clients</button>
+      <button class="menu-tuile" id="btnDoublons"><span>⇄</span>Fusionner les clients en double</button>
       <button class="menu-tuile" id="btnImporter"><span>📂</span>Ouvrir un autre fichier</button>
       <button class="menu-tuile" id="btnNouveauFichier"><span>＋</span>Créer un nouveau fichier</button>
       <button class="menu-tuile" id="btnFichierLie" hidden><span>💾</span>Ouvrir et enregistrer dans un fichier</button>
@@ -4333,6 +4344,131 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       el("div", { class: "pr-liste" }, ...l.map((x, i) => el("label", { class: "pr-ligne" + (x.homonyme ? " pr-off" : "") }, cases[i],
         el("span", { class: "pr-av" }, x.ancien), el("span", { class: "pr-fl" }, "→"), el("span", { class: "pr-ap" }, x.homonyme ? "laissé tel quel (un autre client porterait ce nom)" : x.nouveau)))),
       el("div", { class: "pr-pied" }, compte, el("button", { type: "button", class: "bouton", onclick: appliquer }, "Appliquer"))));
+    document.body.append(voile);
+  }
+  // ---- doublons de clients : propositions de fusion ----
+  //   Rapprochés : même nom une fois les accents, la ponctuation, la casse et les précisions entre parenthèses ôtés ;
+  //   même nom de famille avec des prénoms compatibles (l'un contient l'autre, ou initiale : « ABADI M. » / « ABADI Mourad ») ;
+  //   ou une seule lettre d'écart (faute de frappe). Des prénoms différents (MARTIN Paul / MARTIN Pierre) ne sont pas rapprochés.
+  const sansAccentsMin = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  function motsClient(nom) {
+    return sansAccentsMin(String(nom).replace(/\([^)]*\)/g, " ")).replace(/[^a-z0-9@.\s-]/g, " ").replace(/\b(et|ou|mme|mr|m|madame|monsieur|epoux|consorts|famille)\b/g, " ")
+      .split(/[\s-]+/).map((m) => m.replace(/\.+$/, "")).filter(Boolean);
+  }
+  const FORMES = new Set(["sci", "scm", "scp", "sas", "sasu", "sarl", "eurl", "selarl", "selas", "earl", "gfa", "gaec", "sc", "spfpl", "holding", "sa", "snc"]);
+  function ecart1(a, b) {   // une seule lettre d'écart (ajout, retrait ou remplacement)
+    if (a === b) return true; if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0; while (i < a.length && a[i] === b[i]) i++;
+    if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+    return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+  }
+  function memePersonne(a, b) {
+    const ma = motsClient(a), mb = motsClient(b);
+    if (!ma.length || !mb.length) return false;
+    const ja = ma.join(" "), jb = mb.join(" ");
+    if (ja === jb) return "même nom";
+    if (ma.some((m) => FORMES.has(m)) || mb.some((m) => FORMES.has(m))) return false;   // sociétés : seulement le nom exact
+    if (ma[0] !== mb[0]) return false;   // le nom de famille d'abord
+    const [petit, grand] = ma.length <= mb.length ? [ma, mb] : [mb, ma];
+    // chaque mot du plus court se retrouve dans le plus long (entier, ou comme initiale)
+    const reste = grand.slice(1);
+    const ok = petit.slice(1).every((m) => { const k = reste.findIndex((x) => x === m || (m.length === 1 && x[0] === m) || (x.length === 1 && m[0] === x)); if (k < 0) return false; reste.splice(k, 1); return true; });
+    if (!ok) return false;
+    if (petit.length === 1) return "même nom de famille, prénom en plus";
+    return "prénom ou initiale en commun";
+  }
+  function groupesDoublons() {
+    const noms = Object.values(donnees.clients).filter((f) => f.nom && !f.supprime && !estPerso(f.nom)).map((f) => f.nom);
+    const nbDossiers = (n) => donnees.dossiers.filter((d) => cleClient(d.client) === cleClient(n)).length;
+    // par nom de famille, pour ne comparer que des voisins (plus une passe sur les fautes de frappe)
+    const parFamille = new Map();
+    for (const n of noms) { const k = motsClient(n)[0] || ""; if (!parFamille.has(k)) parFamille.set(k, []); parFamille.get(k).push(n); }
+    const lien = new Map(), raisons = new Map();
+    const relier = (a, b, r) => { if (!lien.has(a)) lien.set(a, new Set()); if (!lien.has(b)) lien.set(b, new Set()); lien.get(a).add(b); lien.get(b).add(a); raisons.set(a + "|" + b, r); };
+    for (const l of parFamille.values()) for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) { const r = memePersonne(l[i], l[j]); if (r) relier(l[i], l[j], r); }
+    // fautes de frappe possibles : à part, jamais enchaînées (BAUDET ≠ BOUDET ≠ DAUDET…)
+    const familles = [...parFamille.keys()].filter((k) => k.length >= 7 && !FORMES.has(k)), frappes = [];
+    for (let i = 0; i < familles.length; i++) for (let j = i + 1; j < familles.length; j++) {
+      const a = familles[i], b = familles[j];
+      if (a.slice(0, 3) !== b.slice(0, 3) || !ecart1(a, b)) continue;
+      for (const x of parFamille.get(a)) for (const y of parFamille.get(b)) if (motsClient(x).slice(1).join(" ") === motsClient(y).slice(1).join(" ")) frappes.push([x, y]);
+    }
+    // groupes (composantes reliées)
+    const vus = new Set(), groupes = [];
+    for (const n of lien.keys()) {
+      if (vus.has(n)) continue;
+      const g = [], pile = [n]; vus.add(n);
+      while (pile.length) { const x = pile.pop(); g.push(x); for (const y of lien.get(x)) if (!vus.has(y)) { vus.add(y); pile.push(y); } }
+      const raison = [...new Set(g.flatMap((a) => g.map((b) => raisons.get(a + "|" + b)).filter(Boolean)))].join(", ");
+      // à garder par défaut : le plus de dossiers, puis le nom le plus complet
+      g.sort((a, b) => nbDossiers(b) - nbDossiers(a) || b.length - a.length || a.localeCompare(b, "fr"));
+      const prenoms = new Set(g.map((n) => motsClient(n).slice(1).join(" ")).filter(Boolean));
+      const plusieurs = g.some((a) => g.some((b) => a !== b && !memePersonne(a, b)));
+      groupes.push({ noms: g, raison: plusieurs ? "plusieurs prénoms : à choisir" : raison, dossiers: g.map(nbDossiers), sur: !plusieurs && raison.split(", ").every((r) => r === "même nom" || r === "prénom ou initiale en commun") });
+    }
+    groupes.sort((a, b) => a.noms[0].localeCompare(b.noms[0], "fr"));
+    for (const [x, y] of frappes) { const g = [x, y].sort((a, b) => nbDossiers(b) - nbDossiers(a) || a.localeCompare(b, "fr")); groupes.push({ noms: g, raison: "orthographe proche : à vérifier", dossiers: g.map(nbDossiers), frappe: true }); }
+    return groupes;
+  }
+  // fusionne « ancien » dans « garde » : dossiers, fiche (commentaires, notes, tâches, rendez-vous), pactes, simulations
+  function fusionnerClient(ancien, garde) {
+    const cleA = cleClient(ancien), cleN = cleClient(garde);
+    if (cleA === cleN) return;
+    for (const d of donnees.dossiers) if (cleClient(d.client) === cleA) { const avant = { ...d }; d.client = garde; noterHistorique(d, avant); }
+    const fA = donnees.clients[cleA] || { nom: ancien }, fN = donnees.clients[cleN] || { nom: garde };
+    delete donnees.clients[cleA];
+    const joindre = (a, b) => [a, b].map((x) => (x || "").trim()).filter(Boolean).filter((x, k, l) => l.indexOf(x) === k).join("\n");
+    const liste = (k) => [...(fN[k] || []), ...(fA[k] || []).filter((x) => !(fN[k] || []).some((y) => y.id && y.id === x.id))];
+    const r = { ...fA, ...fN, nom: garde, commentaire: joindre(fN.commentaire, fA.commentaire), notes: joindre(fN.notes, fA.notes), coordonnees: joindre(fN.coordonnees, fA.coordonnees),
+      taches: liste("taches"), journal: liste("journal").sort((x, y) => String(y.le || "").localeCompare(String(x.le || ""))), rdvs: liste("rdvs") };
+    for (const c of COMMUNS) r[c] = fN[c] || fA[c] || "";
+    donnees.clients[cleN] = r;
+    for (const pacte of dutreil.pactes) if (pacte.client_lie && cleClient(pacte.client_lie) === cleA) pacte.client_lie = garde;
+    for (const app of IDS_APPS) { const m = magasin(app); if (!m || !m.liens) continue; for (const [id, c] of Object.entries(m.liens)) if (c && cleClient(c) === cleA) m.liens[id] = garde; }
+  }
+  function proposerFusions() {
+    const groupes = groupesDoublons();
+    if (!groupes.length) { informer("Aucun doublon de client repéré."); return; }
+    const voile = el("div", { class: "pr-voile", onclick: (e) => { if (e.target === voile) voile.remove(); } });
+    const compatibles = (g, garde) => new Set(g.noms.filter((n) => n !== garde && memePersonne(n, garde)));
+    const choix = groupes.map((g) => ({ garde: g.noms[0], avec: g.frappe ? new Set(g.noms.slice(1)) : compatibles(g, g.noms[0]), actif: false }));
+    const compte = el("b");
+    const majCompte = () => { const n = choix.filter((c) => c.actif && c.avec.size).length; compte.textContent = n ? `${n} fusion(s) choisie(s)` : "Cochez les groupes à fusionner"; };
+    const blocs = groupes.map((g, i) => {
+      const c = choix[i];
+      const coche = el("input", { type: "checkbox", "aria-label": "Fusionner ce groupe" });
+      const lignes = el("div", { class: "fu-noms" });
+      const dessiner = () => lignes.replaceChildren(...g.noms.map((n, k) => {
+        const garde = c.garde === n;
+        const radio = el("input", { type: "radio", name: "fu-" + i, checked: garde, title: "Garder ce nom" });
+        radio.addEventListener("change", () => { c.garde = n; c.avec = g.frappe ? new Set(g.noms.filter((x) => x !== n)) : compatibles(g, n); dessiner(); });
+        const avec = el("input", { type: "checkbox", checked: garde || c.avec.has(n), disabled: garde, title: "Inclure dans la fusion" });
+        avec.addEventListener("change", () => { if (avec.checked) c.avec.add(n); else c.avec.delete(n); });
+        return el("div", { class: "fu-nom" + (garde ? " garde" : "") }, radio, avec,
+          el("span", null, n), el("small", null, `${g.dossiers[k]} dossier${g.dossiers[k] > 1 ? "s" : ""}${garde ? " · nom gardé" : ""}`));
+      }));
+      dessiner();
+      coche.addEventListener("change", () => { c.actif = coche.checked; bloc.classList.toggle("on", coche.checked); majCompte(); });
+      const bloc = el("div", { class: "fu-groupe" + (g.frappe ? " frappe" : g.sur ? "" : " doute") }, i === groupes.findIndex((x) => x.frappe) ? el("h4", { class: "fu-sep" }, "Orthographes proches — souvent deux familles différentes, à vérifier") : null, el("label", { class: "fu-tete" }, coche, el("b", null, g.noms[0]), el("small", null, g.raison)), lignes);
+      return bloc;
+    });
+    majCompte();
+    const appliquer = () => {
+      const faits = choix.filter((c) => c.actif && c.avec.size);
+      if (!faits.length) return;
+      let n = 0;
+      for (const c of faits) for (const a of c.avec) { if (a !== c.garde) { fusionnerClient(a, c.garde); n++; } }
+      if (dutreil.pactes.length) sauverDutreil();
+      for (const app of IDS_APPS) garderMagasin(app);
+      sauver(); afficherTout(); voile.remove();
+      informer(`${n} fiche(s) fusionnée(s) dans ${faits.length} client(s). Annuler : menu ⋯ › Annuler la dernière modification.`);
+    };
+    voile.append(el("div", { class: "pr-fen", role: "dialog", "aria-modal": "true", "aria-label": "Fusionner les doublons" },
+      el("div", { class: "pr-tete" }, el("h3", null, `Doublons de clients (${groupes.length})`), el("button", { type: "button", class: "menu-fermer", "aria-label": "Fermer", onclick: () => voile.remove() }, "✕")),
+      el("p", { class: "pr-aide" }, "Cochez les groupes à fusionner. ◉ choisit le nom gardé ; ☑ inclut ou écarte une fiche. Dossiers, tâches, notes, rendez-vous et commentaires sont regroupés sous le nom gardé."),
+      el("div", { class: "pr-actions" }, el("button", { type: "button", class: "bouton-discret", onclick: () => { blocs.forEach((b, i) => { if (groupes[i].sur && !choix[i].actif) b.querySelector(".fu-tete input").click(); }); } }, "Cocher les plus sûrs (même nom, même prénom)")),
+      el("div", { class: "pr-liste fu-liste" }, ...blocs),
+      el("div", { class: "pr-pied" }, compte, el("button", { type: "button", class: "bouton", onclick: appliquer }, "Fusionner"))));
     document.body.append(voile);
   }
   // ---- renommer un client : ses dossiers, sa fiche, ses tâches et ses pactes Dutreil suivent ----
@@ -9587,6 +9723,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("menu").addEventListener("click", (e) => { if (e.target === $("menu")) fermerMenu(); });
   $("btnExporter").addEventListener("click", () => { fermerMenu(); exporter(); });
   $("btnPrenoms").addEventListener("click", () => { fermerMenu(); retirerPrenoms(); });
+  $("btnDoublons").addEventListener("click", () => { fermerMenu(); proposerFusions(); });
   $("btnExporterAlerte").addEventListener("click", exporter);
   const choisirFichier = () => {
     if (donnees && donnees.modifie && !github && !confirm("Des modifications n’ont pas été exportées. Ouvrir un autre fichier les remplacera. Continuer ?")) return;
