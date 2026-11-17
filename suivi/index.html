@@ -2148,9 +2148,13 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 .journal-texte { font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* notes repliées : deux lignes ; un clic sur la note la déplie (et la replie) */
 .journal-note { cursor: pointer; touch-action: manipulation; -webkit-user-select: text; user-select: text; }
-.journal-note:not(.ouverte) { padding: 5px 10px 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "pied tete" "texte texte"; column-gap: 8px; align-items: center; }
+/* repliée : la date (et ✎ ✕), puis le client ou le dossier, puis le texte — chacun sur sa ligne, sans chevauchement */
+.journal-note:not(.ouverte) { padding: 5px 10px 6px; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "tete" "pied" "texte"; row-gap: 3px; align-items: center; }
 .journal-note:not(.ouverte) > .journal-tete { grid-area: tete; } .journal-note:not(.ouverte) > .journal-texte { grid-area: texte; } .journal-note:not(.ouverte) > .nr-pied { grid-area: pied; margin-top: 0 !important; min-width: 0; flex-wrap: nowrap; }
-.journal-note:not(.ouverte) > .journal-tete > span { flex: none; }
+.journal-note:not(.ouverte) > .journal-tete > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.journal-note:not(.ouverte) > .nr-pied > * { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.journal-note:not(.ouverte) > .nr-pied { flex-wrap: wrap !important; }
+.journal-note:not(.ouverte) .nr-place.libre { display: none; }
 .journal-note:not(.ouverte) .nr-place { max-width: 100%; }
 .journal-note:not(.ouverte) .journal-texte { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .journal-note:not(.ouverte) .journal-tete { margin-bottom: 0; }
