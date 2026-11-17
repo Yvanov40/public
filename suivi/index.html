@@ -2181,14 +2181,19 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
 /* Téléphone tenu à l'horizontale alors que le verrouillage n'a pas pu s'appliquer : on invite à le redresser. */
 .redresser { display: none; }
 @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
-  html.telephone .redresser { display: flex; position: fixed; inset: 0; z-index: 99999; background: var(--fond, #0c2d39);
+  html.telephone body:not(.vue-calendrier) .redresser { display: flex; position: fixed; inset: 0; z-index: 99999; background: var(--fond, #0c2d39);
     color: var(--texte, #fff); align-items: center; justify-content: center; flex-direction: column; gap: 10px;
     font-size: 16px; text-align: center; padding: 20px; }
   html.telephone .redresser span { font-size: 40px; }
 }
+/* téléphone à l'horizontale, dans l'agenda : quatre jours, et toute la hauteur pour eux (pas d'entête ni de bandeau) */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1000px) {
+  body.vue-calendrier header.entete, body.vue-calendrier .alerte-modif { display: none !important; }
+  body.vue-calendrier main { padding-top: 2px !important; }
+}
 /* tuile visée à l'ouverture (ex. le rendez-vous d'un dossier) */
 .tuile.mise-en-avant { outline: 3px solid var(--or); outline-offset: 1px; }
-/* agenda sur téléphone : le mois replié (bouton « Mois »), trois journées côte à côte */
+/* agenda sur téléphone : le mois replié (bouton « Mois »), 2 journées côte à côte (4 à l'horizontale) */
 .btn-mois { display: none; }
 @media (max-width: 900px) {
   /* entête (mois ouvert) : titre, flèches, « Auj. » et le bouton ☰ ; mois replié : pas d'entête, tout est dans la grille */
@@ -5767,7 +5772,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
           el("span", null, d.toLocaleDateString("fr-FR", { weekday: "short" })), el("b", null, d.getDate()),
           tel ? el("small", { class: "mois-tete" }, d.toLocaleDateString("fr-FR", { month: "short" })) : null,
           congeDu(iso) ? el("em", { class: "conge" }, congeDu(iso).libelle || "Congé") : null),
-        // téléphone : flèches pour passer aux trois jours d'avant ou d'après
+        // téléphone : flèches pour passer aux jours d'avant ou d'après
         tel && k === 0 ? el("button", { type: "button", class: "fleche-jours avant", "aria-label": "Jours précédents", onclick: () => changerDeuxJours(-1) }, "‹") : null,
         tel && k === jours.length - 1 ? el("button", { type: "button", class: "fleche-jours apres", "aria-label": "Jours suivants", onclick: () => changerDeuxJours(1) }, "›") : null,
         el("div", { class: "semaine-sans-heure", title: "Double-clic pour ajouter une tâche ce jour-là",
@@ -5835,15 +5840,17 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     menu.style.top = Math.min(y, window.innerHeight - b.height - 8) + "px";
   }
   // téléphone : avancer ou reculer de deux jours
-  const JOURS_TEL = 3;   // nombre de journées côte à côte sur téléphone
-  function joursTel(ev) { const l = [jourCalendrier]; while (l.length < JOURS_TEL) l.push(jourSuivantUtile(l[l.length - 1], ev)); return l; }
+  // nombre de journées côte à côte sur téléphone : 2 tenu droit, 4 tenu à l'horizontale
+  const enPaysage = () => matchMedia("(orientation: landscape)").matches;
+  const nbJoursTel = () => (enPaysage() ? 4 : 2);
+  function joursTel(ev) { const l = [jourCalendrier]; while (l.length < nbJoursTel()) l.push(jourSuivantUtile(l[l.length - 1], ev)); return l; }
   function changerDeuxJours(sens) {
     const ev = evenementsCalendrier();
     let x = jourCalendrier;
-    for (let k = 0; k < JOURS_TEL; k++) x = jourSuivantUtile(x, ev, sens);
+    for (let k = 0, n = nbJoursTel(); k < n; k++) x = jourSuivantUtile(x, ev, sens);
     changerJourCalendrier(Math.round((versDate(x) - versDate(jourCalendrier)) / 86400000));
   }
-  // téléphone : hauteur d'une minute, calculée pour que les trois journées tiennent dans l'écran, sans défiler.
+  // téléphone : hauteur d'une minute, calculée pour que les journées tiennent dans l'écran, sans défiler.
   // 0 = à mesurer : on dessine grand, on mesure ce qu'il y a au-dessus et en dessous, puis on redessine à la bonne hauteur.
   let pxMinTel = 0, dessusMesure = 0;
   function ajusterHauteurTel() {
@@ -5861,7 +5868,8 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
     const hauteur = window.innerHeight - dessus - dessous - 3;
     // taille d'affichage agrandie (zoom) : les hauteurs écrites en CSS sont multipliées à l'écran
     const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-    pxMinTel = Math.max(0.35, Math.min(1.3, hauteur / zoom / (FIN_FRISE - DEBUT_FRISE)));
+    // à l'horizontale, l'écran est bas : on garde des heures lisibles, quitte à faire défiler
+    pxMinTel = Math.max(enPaysage() ? 0.6 : 0.35, Math.min(1.3, hauteur / zoom / (FIN_FRISE - DEBUT_FRISE)));
     afficherCalendrier();
   }
   addEventListener("resize", () => { if (estTel() && pxMinTel) { pxMinTel = 0; afficherCalendrier(); } });
@@ -6070,7 +6078,7 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
       if (ev[iso]) suite.push([iso, ev[iso]]);
     }
     if (tel) {
-      // téléphone : trois journées côte à côte, à la hauteur de l'écran (mois replié) ; rien en dessous
+      // téléphone : 2 journées côte à côte (4 à l'horizontale), à la hauteur de l'écran (mois replié) ; rien en dessous
       $("calPanneau").replaceChildren(grilleJours(ev, joursT.map(versDate), true, moisCache ? (pxMinTel || 1.3) : 0));
       if (moisCache) requestAnimationFrame(ajusterHauteurTel);
       return;
@@ -10096,10 +10104,16 @@ body.vue-simulations .filtres, body.vue-simulations #alerteModif { display: none
   // Cela marche dans l'appli installée (Android) ; dans un simple onglet, le navigateur peut refuser :
   // on ignore alors l'erreur et un petit message invite à remettre le téléphone droit.
   const estTelephone = () => matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 600;
+  // (sauf dans l'agenda : à l'horizontale, il montre quatre jours)
   function figerPortrait() {
     if (!estTelephone()) return;
-    try { screen.orientation && screen.orientation.lock && screen.orientation.lock("portrait").catch(() => {}); } catch (e) {}
+    try {
+      if (!screen.orientation) return;
+      if (document.body && document.body.classList.contains("vue-calendrier")) { screen.orientation.unlock && screen.orientation.unlock(); return; }
+      screen.orientation.lock && screen.orientation.lock("portrait").catch(() => {});
+    } catch (e) {}
   }
+  addEventListener("hashchange", () => setTimeout(figerPortrait, 50));
   figerPortrait();
   document.addEventListener("visibilitychange", () => { if (!document.hidden) figerPortrait(); });
   if (estTelephone()) document.documentElement.classList.add("telephone");
