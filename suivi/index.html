@@ -2031,6 +2031,19 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
 }
 
 
+/* ---------- retirer les prénoms : la liste à vérifier ---------- */
+.pr-voile { position: fixed; inset: 0; z-index: 9000; background: rgba(10,25,30,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.pr-fen { background: var(--carte); color: var(--texte); border-radius: 16px; width: min(640px, 100%); max-height: calc(100vh - 32px); display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; gap: 8px; padding: 16px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.pr-tete { display: flex; align-items: center; } .pr-tete h3 { flex: 1; margin: 0; font: 600 20px var(--titre); color: var(--bleu); }
+.pr-aide { margin: 0; font-size: 13px; color: var(--discret); }
+.pr-actions { display: flex; gap: 8px; }
+.pr-liste { overflow-y: auto; border: 1px solid var(--bordure); border-radius: 10px; }
+.pr-ligne { display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; padding: 7px 10px; border-bottom: 1px solid var(--bordure); font-size: 13.5px; cursor: pointer; }
+.pr-ligne:last-child { border-bottom: 0; } .pr-av { color: var(--discret); } .pr-fl { color: var(--or); } .pr-ap { font-weight: 600; }
+.pr-ligne.pr-off .pr-ap { font-weight: 400; font-style: italic; color: var(--discret); font-size: 12px; }
+.pr-pied { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+@media (max-width: 700px) { .pr-voile { align-items: flex-end; padding: 0; } .pr-fen { border-radius: 16px 16px 0 0; max-height: 92vh; } .pr-ligne { grid-template-columns: auto minmax(0, 1fr); } .pr-fl { display: none; } .pr-ap { grid-column: 2; } }
+
 /* ---------- suggestions (client, demandeur, partenaire…) ---------- */
 .sugg { position: fixed; z-index: 2147480000; background: var(--carte); color: var(--texte); border: 1px solid var(--bordure); border-radius: 12px; box-shadow: 0 14px 34px -12px rgba(10,25,30,.35); padding: 5px; display: grid; gap: 1px; max-height: 320px; overflow-y: auto; }
 .sugg[hidden] { display: none; }
@@ -2648,6 +2661,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       <button class="menu-tuile" id="btnAnnulerTout"><span>↶</span>Annuler la dernière modification</button>
       <button class="menu-tuile" id="btnGithub"><span>☁</span>Réglages GitHub</button>
       <button class="menu-tuile" id="btnExporter"><span>⤓</span>Exporter une copie</button>
+      <button class="menu-tuile" id="btnPrenoms"><span>✂</span>Retirer les prénoms des clients</button>
       <button class="menu-tuile" id="btnImporter"><span>📂</span>Ouvrir un autre fichier</button>
       <button class="menu-tuile" id="btnNouveauFichier"><span>＋</span>Créer un nouveau fichier</button>
       <button class="menu-tuile" id="btnFichierLie" hidden><span>💾</span>Ouvrir et enregistrer dans un fichier</button>
@@ -4248,6 +4262,78 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       .filter(([cle, f]) => f.nom && !avecDossier.has(cle) && !f.supprime && !estPerso(f.nom))
       .filter(([, f]) => !t || [f.nom, f.commentaire, f.notes, ...(f.taches || []).map((x) => x.texte)].join(" ").toLocaleLowerCase("fr").includes(t))
       .map(([, f]) => f.nom);
+  }
+  // ---- retirer les prénoms des noms de clients (« ALIX Emmanuelle » → « ALIX E. ») ----
+  //   Le nom de famille est écrit en MAJUSCULES ; les mots écrits « Prénom » (majuscule puis minuscules) sont des prénoms
+  //   et sont réduits à leur initiale. Sans mot en majuscules (on ne sait pas lequel est le prénom), ou avec un @ ou des
+  //   chiffres, le nom reste tel quel. On voit la liste, on décoche ce qu'on veut garder, puis on applique (Annuler possible).
+  const PAS_PRENOMS = new Set(("succession indivision famille consorts epoux époux veuve veuf madame monsieur mme mlle mr me maître holding société societe sci sarl sas sasu eurl snc " +
+    "groupe patrimoine immobilier immobiliere immobilière conseil conseils gestion invest investissement associés associes cabinet office commune mairie association fondation " +
+    "entreprise ets établissements etablissements pharmacie garage restaurant hôtel hotel domaine château chateau ferme earl gaec gfa sca scea senior junior fils père pere mère mere " +
+    "frères freres soeurs sœurs héritiers heritiers enfants parents donation vente partage projet dossier analyse acte rdv perso promotion " +
+    "dr docteur pr professeur perfusanté auros samam demguillem et ou de du des la le les van von der den di da del bis ter").split(" "));
+  const MOT_PRENOM = /^[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ]+(?:-[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ]+)*$/;
+  const MOT_NOM = /^[A-ZÀ-ÖØ-Ý'’-]*[A-ZÀ-ÖØ-Ý]{2,}[A-ZÀ-ÖØ-Ý'’-]*$/;
+  const initiale = (mot, n = 1) => mot.split("-").map((p) => p.slice(0, n) + ".").join("-");
+  function sansPrenoms(nom, n = 1) {
+    if (!nom || /[@\d]/.test(nom)) return null;
+    const mots = nom.split(/\s+/);
+    if (!mots.some((m) => MOT_NOM.test(m))) return null;   // pas de nom en majuscules : doute, on laisse
+    let change = false;
+    const r = mots.map((m) => { if (MOT_PRENOM.test(m) && !PAS_PRENOMS.has(m.toLocaleLowerCase("fr"))) { change = true; return initiale(m, n); } return m; }).join(" ");
+    return change ? r : null;
+  }
+  function propositionsPrenoms() {
+    const pris = new Set(Object.keys(donnees.clients)), out = [];
+    for (const f of Object.values(donnees.clients)) {
+      if (!f.nom || f.supprime || estPerso(f.nom)) continue;
+      let nv = sansPrenoms(f.nom), homonyme = false;
+      if (!nv) continue;
+      // deux clients qui deviendraient pareils (MARTIN Paul, MARTIN Pierre) : deux lettres, sinon on laisse
+      for (const n of [2, 3]) { if (!pris.has(cleClient(nv)) || cleClient(nv) === cleClient(f.nom)) break; nv = sansPrenoms(f.nom, n); }
+      if (pris.has(cleClient(nv)) && cleClient(nv) !== cleClient(f.nom)) homonyme = true;
+      if (!homonyme) pris.add(cleClient(nv));
+      out.push({ ancien: f.nom, nouveau: nv, homonyme });
+    }
+    return out.sort((a, b) => a.ancien.localeCompare(b.ancien, "fr"));
+  }
+  // renomme sans rien demander (pas de regroupement : les homonymes sont écartés plus haut)
+  function renommerSansPrenom(ancien, final) {
+    const cleA = cleClient(ancien), cleN = cleClient(final);
+    for (const d of donnees.dossiers) if (cleClient(d.client) === cleA) { const avant = { ...d }; d.client = final; noterHistorique(d, avant); }
+    const fA = donnees.clients[cleA] || { nom: ancien };
+    delete donnees.clients[cleA];
+    donnees.clients[cleN] = { ...fA, nom: final };
+    for (const pacte of dutreil.pactes) if (pacte.client_lie && cleClient(pacte.client_lie) === cleA) pacte.client_lie = final;
+    for (const app of IDS_APPS) { const m = magasin(app); if (!m || !m.liens) continue; for (const [id, c] of Object.entries(m.liens)) if (c && cleClient(c) === cleA) m.liens[id] = final; }
+  }
+  function retirerPrenoms() {
+    const l = propositionsPrenoms();
+    const voile = el("div", { class: "pr-voile", onclick: (e) => { if (e.target === voile) voile.remove(); } });
+    if (!l.length) { informer("Aucun prénom à retirer : les noms de clients n’en ont pas (ou on ne sait pas les repérer)."); return; }
+    const cases = l.map((x) => el("input", { type: "checkbox", checked: !x.homonyme, disabled: x.homonyme }));
+    const compte = el("b");
+    const majCompte = () => { compte.textContent = `${cases.filter((c) => c.checked).length} client(s) à renommer`; };
+    cases.forEach((c) => c.addEventListener("change", majCompte)); majCompte();
+    const appliquer = () => {
+      const choisis = l.filter((x, i) => cases[i].checked);
+      if (!choisis.length) return;
+      for (const x of choisis) renommerSansPrenom(x.ancien, x.nouveau);
+      if (dutreil.pactes.length) sauverDutreil();
+      for (const app of IDS_APPS) garderMagasin(app);
+      sauver(); afficherTout(); voile.remove();
+      informer(`${choisis.length} client(s) renommé(s) sans prénom. Annuler : menu ⋯ › Annuler la dernière modification.`);
+    };
+    voile.append(el("div", { class: "pr-fen", role: "dialog", "aria-modal": "true", "aria-label": "Retirer les prénoms" },
+      el("div", { class: "pr-tete" }, el("h3", null, "Retirer les prénoms des clients"), el("button", { type: "button", class: "menu-fermer", "aria-label": "Fermer", onclick: () => voile.remove() }, "✕")),
+      el("p", { class: "pr-aide" }, "Le nom en MAJUSCULES reste ; le prénom devient son initiale. Décochez ceux que vous voulez garder tels quels. Les noms sans mot en majuscules sont laissés de côté (on ne sait pas lequel est le prénom)."),
+      el("div", { class: "pr-actions" },
+        el("button", { type: "button", class: "bouton-discret", onclick: () => { cases.forEach((c) => { if (!c.disabled) c.checked = true; }); majCompte(); } }, "Tout cocher"),
+        el("button", { type: "button", class: "bouton-discret", onclick: () => { cases.forEach((c) => { c.checked = false; }); majCompte(); } }, "Tout décocher")),
+      el("div", { class: "pr-liste" }, ...l.map((x, i) => el("label", { class: "pr-ligne" + (x.homonyme ? " pr-off" : "") }, cases[i],
+        el("span", { class: "pr-av" }, x.ancien), el("span", { class: "pr-fl" }, "→"), el("span", { class: "pr-ap" }, x.homonyme ? "laissé tel quel (un autre client porterait ce nom)" : x.nouveau)))),
+      el("div", { class: "pr-pied" }, compte, el("button", { type: "button", class: "bouton", onclick: appliquer }, "Appliquer"))));
+    document.body.append(voile);
   }
   // ---- renommer un client : ses dossiers, sa fiche, ses tâches et ses pactes Dutreil suivent ----
   function renommerClient(ancien) {
@@ -9500,6 +9586,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("btnFermerMenu").addEventListener("click", fermerMenu);
   $("menu").addEventListener("click", (e) => { if (e.target === $("menu")) fermerMenu(); });
   $("btnExporter").addEventListener("click", () => { fermerMenu(); exporter(); });
+  $("btnPrenoms").addEventListener("click", () => { fermerMenu(); retirerPrenoms(); });
   $("btnExporterAlerte").addEventListener("click", exporter);
   const choisirFichier = () => {
     if (donnees && donnees.modifie && !github && !confirm("Des modifications n’ont pas été exportées. Ouvrir un autre fichier les remplacera. Continuer ?")) return;
