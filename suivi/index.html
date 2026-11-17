@@ -5857,6 +5857,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     }
     actions.push({ ic: "↗", lib: "Ouvrir", angle: t ? 135 : -90, faire: () => e.ouvrir() });
     if (e.type !== "dutreil") actions.push({ ic: "🗑", lib: "Supprimer", angle: t ? 45 : 90, faire: () => supprimerEvenement(e) });
+    if (t && !t.fait) actions.push({ ic: "⏭", lib: "En dernier", angle: -45, faire: () => { const r = envoyerEnDernier(e.ref.client, t.id); afficherTout(); informer(r); } });
     if (t && !t.fixe) actions.push({ ic: "⚡", lib: t.prio ? "Plus prioritaire" : "Prioritaire", angle: -135, faire: () => {
       const r = rendrePrioritaire(e.ref.client, e.ref.tache, !t.prio); afficherTout();
       informer(t.prio ? "Tâche prioritaire : placée au premier créneau libre." + r : "La tâche n’est plus prioritaire.");
@@ -8808,6 +8809,28 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return oui && !t.fixe ? apresAgenda([avant, premierJourTravaille()], null, [id]) : "";
   }
 
+  // « en dernier » : une seule fois, au moment où on le demande, la tâche passe au bout de la file des tâches planifiées
+  //   (après la dernière tâche de la suite de jours remplis ; 3 jours travaillés vides d'affilée marquent la fin de la file).
+  //   Elle n'est ni épinglée ni marquée : ensuite elle vit comme les autres.
+  function dernierJourDeLaFile(sauf) {
+    let iso = premierJourTravaille(), dernier = iso, vides = 0;
+    for (let k = 0; k < 250 && vides < 3; k++) {
+      if (tachesDuJour(iso).some((x) => x.id !== sauf && x.heure && !x.fixe)) { dernier = iso; vides = 0; } else vides++;
+      iso = jourOuvreSuivant(iso);
+    }
+    return dernier;
+  }
+  function envoyerEnDernier(nom, id) {
+    const t = trouverTache(id);
+    if (!t) return "";
+    const avant = t.pour, jour = dernierJourDeLaFile(id);
+    majTaches(nom, (l) => l.map((x) => (x.id !== id ? x : { ...x, pour: jour, heure: "", prio: false, fixe: false })));
+    const r = apresAgenda([avant, jour], null, [id]);
+    const n = trouverTache(id);
+    sauver();
+    return `« ${t.texte} » passe en dernier : ${n && n.pour ? fmtDate(n.pour) + (n.heure ? " à " + n.heure : "") : "sans date"}.` + r;
+  }
+
   // après toute modification de l'agenda : on replanifie les jours concernés, on enregistre, on résume
   function apresAgenda(jours, ancre, aCaser = []) {
     let deplacees = 0;
@@ -8885,6 +8908,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         el("label", { class: "case tache-fait" }, el("input", { type: "checkbox", name: "fait", checked: !!t.fait }), `Faite${t.fait ? " le " + new Date(t.fait).toLocaleDateString("fr-FR") : ""}`)),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:90px", placeholder: "Détails, numéro à appeler, lien…" }, t.note || ""))),
       el("div", { class: "actions-fiche" },
+        !t.fait ? el("button", { type: "button", title: "Placer cette tâche après toutes les autres, une fois", onclick: () => { const r = envoyerEnDernier(nom, id); terminerFeuille(); afficherTout(); informer(r); } }, "⏭ En dernier") : null,
         t.pour ? el("button", { type: "button", onclick: () => menuAgenda(`${t.texte} (${nom})`, t.pour, t.note || "", t.heure, t.duree || DUREE_TACHE) }, "📅 Ajouter à l’agenda") : null,
         el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
           if (!confirm(`Supprimer la tâche « ${t.texte} » ?`)) return;
