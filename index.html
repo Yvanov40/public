@@ -39,6 +39,8 @@
   a.appli span { color: var(--discret); font-size: 14px; }          /* la description, en gris */
   a.appli i { font-style: normal; color: var(--or); font-size: 22px; }  /* la flèche › dorée */
   /* L'encadré d'aide en bas, à bord pointillé */
+  a.apk { display: block; color: inherit; text-decoration: none; border-style: solid; border-color: #a57d2f; }
+  a.apk[hidden] { display: none; }
   .aide { margin-top: 26px; font-size: 13.5px; color: var(--discret); background: var(--carte); border: 1px dashed var(--bordure); border-radius: 12px; padding: 12px 14px; }
 </style>
 </head>
@@ -60,7 +62,15 @@
   </div>
   <p class="aide"><b>Installer une appli :</b> ouvrez-la, puis menu du navigateur → « Installer l’application » (Android, ordinateur)
     ou bouton Partager → « Sur l’écran d’accueil » (iPhone). Vos données et vos réglages sont conservés.</p>
+  <!-- sur un téléphone Android (dans le navigateur, pas dans l'application) : l'application qui regroupe tout -->
+  <a class="aide apk" id="apk" hidden href="https://github.com/Yvanov40/public/releases/download/application/mes-applis.apk">
+    <b>📱 Application Android « Mes applis »</b> : toutes les applis dans une seule application, avec exports et impression.
+    Touchez pour télécharger, puis ouvrez le fichier pour l’installer.</a>
 </main>
+<script>
+  // le lien vers l'application Android : seulement sur Android, et pas quand on est déjà dans l'application
+  if (/Android/i.test(navigator.userAgent) && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) document.getElementById("apk").hidden = false;
+</script>
 <script>
   // L'ancien service commun (qui vivait à la racine) n'a plus lieu d'être : chaque appli a le sien.
   // On demande au navigateur la liste des services inscrits pour ce site…

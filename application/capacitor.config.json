@@ -1,0 +1,16 @@
+{
+  "appId": "fr.yvanov.applis",
+  "appName": "Mes applis",
+  "webDir": "www",
+  "server": {
+    "url": "https://yvanov40.github.io/public/",
+    "errorPath": "hors-ligne.html"
+  },
+  "android": {
+    "backgroundColor": "#0c2d39",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "StatusBar": { "overlaysWebView": false, "style": "DARK", "backgroundColor": "#0c2d39" }
+  }
+}

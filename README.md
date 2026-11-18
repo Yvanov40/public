@@ -59,3 +59,18 @@ Ces deux derniers pourront être supprimés quand tous les appareils seront pass
 Chaque appli vérifie au lancement s’il existe une nouvelle version et la prend d’elle-même
 (Suivi, Audit, Succession, Plus-value : le réseau d’abord, la copie gardée seulement hors connexion).
 Les données du Suivi ne sont jamais dans ce dépôt public.
+
+## Application Android (Capacitor)
+
+Le dossier `application/` contient une application Android, « Mes applis », qui ouvre ces pages
+(https://yvanov40.github.io/public/) dans une fenêtre Android. Les applis se mettent à jour d'elles-mêmes ;
+l'application elle-même ne change que rarement.
+
+- En plus des pages : les exports (Excel, PowerPoint, PDF, sauvegardes) passent par le menu Android
+  « Partager / Enregistrer », et « Imprimer » ouvre l'impression d'Android (qui propose « Enregistrer au format PDF ») —
+  voir `application/www/natif.js` et `MainActivity.java`.
+- Construction : à chaque modification du dossier, GitHub Actions (`.github/workflows/application-android.yml`)
+  construit l'APK et la publie : https://github.com/Yvanov40/public/releases/download/application/mes-applis.apk
+- Signature : secrets du dépôt `APPLI_KEYSTORE_B64` (la clé, en base64) et `APPLI_KEYSTORE_MDP` (son mot de passe).
+  Sans eux, l'APK est signée avec une clé de test qui change à chaque construction.
+- Icônes : `application/assets/` puis `npx capacitor-assets generate --android`.

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mes applis</string>
+    <string name="title_activity_main">Mes applis</string>
+    <string name="package_name">fr.yvanov.applis</string>
+    <string name="custom_url_scheme">fr.yvanov.applis</string>
+</resources>

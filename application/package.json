@@ -1,0 +1,16 @@
+{
+  "name": "applis-patrimoine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Application Android (Capacitor) qui regroupe les applis : Suivi, Audit, Succession, Plus-value, Investissement, Révision.",
+  "scripts": { "sync": "cap sync android" },
+  "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": { "@capacitor/cli": "8.6.2", "@capacitor/assets": "4.0.0" }
+}

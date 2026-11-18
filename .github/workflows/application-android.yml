@@ -1,0 +1,42 @@
+# Construit l'application Android (dossier « application ») et la publie dans la version « application » du dépôt :
+#   https://github.com/Yvanov40/public/releases/download/application/mes-applis.apk
+name: Application Android
+on:
+  push:
+    branches: [main]
+    paths: ["application/**", ".github/workflows/application-android.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Préparer Capacitor
+        working-directory: application
+        run: npm ci && npx cap sync android
+      - name: Clé de signature (secret APPLI_KEYSTORE_B64, si présent)
+        env: { CLE: "${{ secrets.APPLI_KEYSTORE_B64 }}" }
+        run: |
+          if [ -n "$CLE" ]; then echo "$CLE" | base64 -d > "$RUNNER_TEMP/appli.keystore"; echo "APPLI_KEYSTORE_FICHIER=$RUNNER_TEMP/appli.keystore" >> "$GITHUB_ENV"; fi
+      - name: Construire l'APK
+        working-directory: application/android
+        env: { APPLI_KEYSTORE_MDP: "${{ secrets.APPLI_KEYSTORE_MDP }}" }
+        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+      - name: Renommer
+        run: cp application/android/app/build/outputs/apk/release/app-release.apk mes-applis.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: application
+          name: "Mes applis — Android"
+          body: |
+            Application Android qui regroupe Suivi, Audit, Succession, Plus-value, Investissement et Révision.
+            Sur le téléphone : télécharger « mes-applis.apk », l'ouvrir, autoriser l'installation depuis le navigateur si Android le demande.
+            Les applis se mettent à jour d'elles-mêmes (elles sont chargées depuis le site) ; cette APK ne change que rarement.
+          files: mes-applis.apk
+          make_latest: true
