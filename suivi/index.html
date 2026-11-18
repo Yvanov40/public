@@ -2078,6 +2078,11 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
 .nr-cible.petite { padding: 3px 9px; border-radius: 999px; } .nr-cible.petite b { font-size: 11.5px; }
 .rp .nr-cible.on { border-color: var(--bleu); background: var(--bleu-doux); }
 @media (max-width: 640px) { .rp-ligne { grid-template-columns: 1fr; } .rp-texte { grid-row: auto; } }
+.nr-lien { border: 1px solid var(--bordure); background: var(--carte); color: var(--bleu); border-radius: 999px; padding: 2px 9px; font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.nr-lien.fait { text-decoration: line-through; color: var(--discret); } .nr-lien.rdv { color: #4f7a4e; }
+.nr-place.a-ranger { cursor: pointer; color: var(--or); border-color: var(--or); font-weight: 600; }
+.journal-tete .nr-ag { font-size: 12px; }
+.cmd-unique { margin-top: 3px; justify-self: start; border: 0; background: none; color: var(--bleu); font: inherit; font-size: 11.5px; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 0; }
 .cmd-apercu { font-size: 12px; color: var(--or); background: var(--or-doux); border-radius: 8px; padding: 5px 9px; margin-top: 4px; display: grid; gap: 2px; }
 .nr-place.rdv { background: #e6efe5; color: #4d6b4c; } .nr-place.cl { background: var(--bleu-doux); }
 .journal-note.nr-cl { border-left-color: var(--bleu); }
@@ -2842,7 +2847,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (!t) return true;
     const f = fiche(d.client);
     const meule = [d.client, d.tache, d.commentaire, d.notes, d.notaire, d.partenaire, d.coordonnees, f.commentaire, f.notes, f.coordonnees,
-      ...(f.journal || []).map((x) => x.texte), ...(d.journal || []).map((x) => x.texte)].join(" ").toLocaleLowerCase("fr");
+      ...textesNotes(d.client)].join(" ").toLocaleLowerCase("fr");
     return t.split(/\s+/).every((m) => meule.includes(m));
   }
   // clients qui ont une tâche ouverte (calculé une fois par affichage)
@@ -4329,6 +4334,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     delete donnees.clients[cleA];
     donnees.clients[cleN] = { ...fA, nom: final };
     for (const pacte of dutreil.pactes) if (pacte.client_lie && cleClient(pacte.client_lie) === cleA) pacte.client_lie = final;
+    notesRenommees(cleA, final);
     for (const app of IDS_APPS) { const m = magasin(app); if (!m || !m.liens) continue; for (const [id, c] of Object.entries(m.liens)) if (c && cleClient(c) === cleA) m.liens[id] = final; }
   }
   function retirerPrenoms() {
@@ -4437,6 +4443,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     for (const c of COMMUNS) r[c] = fN[c] || fA[c] || "";
     donnees.clients[cleN] = r;
     for (const pacte of dutreil.pactes) if (pacte.client_lie && cleClient(pacte.client_lie) === cleA) pacte.client_lie = garde;
+    notesRenommees(cleA, garde);
     for (const app of IDS_APPS) { const m = magasin(app); if (!m || !m.liens) continue; for (const [id, c] of Object.entries(m.liens)) if (c && cleClient(c) === cleA) m.liens[id] = garde; }
   }
   function proposerFusions() {
@@ -4514,6 +4521,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     }
     let pactes = 0;
     for (const pacte of dutreil.pactes) if (pacte.client_lie && cleClient(pacte.client_lie) === cleA) { pacte.client_lie = final; pactes++; }
+    notesRenommees(cleA, final);
     if (pactes) sauverDutreil();
     sauver();
     afficherTout();
@@ -6405,6 +6413,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return ids.length;
   }
   function afficherTout() {
+    if (donnees && !afficherTout.migre) { afficherTout.migre = true; try { migrerNotes(); } catch (e) { console.error(e); } }
+    if (typeof vueCourante === "function" && vueCourante() === "notes" && !document.querySelector("#vue-notes .journal-note textarea")) setTimeout(afficherNotes, 0);
     if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { depuisToutesApps(); const r = reparerAgenda(); const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b || r) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
@@ -7185,18 +7195,73 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     addEventListener("scroll", placer, true); addEventListener("resize", placer);
   })();
 
-  // ---- l'onglet « Notes » : toutes les notes au même format (date, heure, texte) ----
-  //   on les prend ici, puis on les rattache à un client (son journal) ou à un dossier du client (le journal du dossier).
-  //   Les notes non rattachées sont dans « notesLibres » (fichier de suivi, section notes).
+  // ---- les notes : une seule liste, chaque note porte son client (et son dossier) ----
+  //   Une note n'existe qu'à un endroit (« notesLibres », section « notes » du fichier de suivi) : { id, le, texte, client?, dossier? (identifiant), maj? }.
+  //   L'onglet Notes, la fiche client et le dossier montrent la même note : on la corrige d'un côté, c'est corrigé partout.
+  //   Rattacher une note, c'est seulement changer son client : rien ne se copie, rien ne se perd entre deux appareils.
+  //   (Les anciens journaux des fiches et des dossiers y sont repris une fois — voir migrerNotes.)
   var filtreNotes = { aff: "", texte: "" };
-  function garderNotesLibres() { localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); sauver(); }
+  const CLE_NOTES = "suivi-gp-donnees-notes";
+  function garderNotesLibres() { localStorage.setItem(CLE_NOTES, JSON.stringify(notesLibres)); sauver(); }
   const libelleDossier = (d) => [d.tache, sansNumero(d.type)].filter(Boolean).join(" – ") || "Dossier";
-  // toutes les notes, avec leur place : { n, ou: "libre" | "client" | "dossier", nom, d }
+  // reprend dans la liste unique les notes encore rangées dans une fiche ou un dossier (anciennes versions, autre appareil pas à jour)
+  function migrerNotes() {
+    if (!donnees) return 0;
+    let change = 0;
+    const parId = new Map(notesLibres.filter((n) => n && n.id).map((n) => [n.id, n]));
+    const reprendre = (note) => {
+      if (!note || !String(note.texte || "").trim()) return;
+      const ex = parId.get(note.id);
+      if (ex) { if (!ex.client && note.client) { ex.client = note.client; if (note.dossier) ex.dossier = note.dossier; } return; }
+      parId.set(note.id, note); notesLibres.push(note);
+    };
+    for (const [cle, f] of Object.entries(donnees.clients)) {
+      if (Array.isArray(f.journal)) { for (const j of f.journal) reprendre({ ...j, client: f.nom || cle }); delete f.journal; change++; }
+      else if (f.notes && String(f.notes).trim()) { reprendre({ id: "anc-" + cle.replace(/[^a-z0-9]+/g, "-"), le: null, texte: String(f.notes).trim(), client: f.nom || cle }); f.notes = ""; change++; }
+    }
+    for (const d of donnees.dossiers) if (Array.isArray(d.journal)) { for (const j of d.journal) reprendre({ ...j, client: d.client || "", dossier: d.id || "" }); delete d.journal; change++; }
+    // doublons : même identifiant, ou même texte au même moment (on garde la note rattachée)
+    //   (même texte : seulement si l'une des deux n'est rattachée à personne — deux clients peuvent avoir la même note)
+    const vus = new Map(), garde = [];
+    for (const n of notesLibres) {
+      if (!n || !n.id || !String(n.texte || "").trim()) { change++; continue; }
+      const k1 = "id:" + n.id, k2 = "tx:" + (n.le || "") + "|" + n.texte;
+      let deja = vus.get(k1);
+      const memeTexte = n.le ? vus.get(k2) : null;
+      if (!deja && memeTexte && (!memeTexte.client || !n.client)) deja = memeTexte;
+      if (deja) { if (!deja.client && n.client) { deja.client = n.client; if (n.dossier) deja.dossier = n.dossier; } change++; continue; }
+      vus.set(k1, n); if (!vus.has(k2) || !n.client) vus.set(k2, n); garde.push(n);
+    }
+    if (change) { notesLibres = garde; localStorage.setItem(CLE_NOTES, JSON.stringify(notesLibres)); sauver(); }
+    return change;
+  }
+  const reparerNotes = migrerNotes;
+  // un client renommé ou fusionné : ses notes suivent
+  function notesRenommees(cleA, nouveau) {
+    let n = 0;
+    for (const x of notesLibres) if (x.client && cleClient(x.client) === cleA) { x.client = nouveau; n++; }
+    if (n) localStorage.setItem(CLE_NOTES, JSON.stringify(notesLibres));
+  }
+  // les textes des notes d'un client (recherche, numéros de téléphone…)
+  let memoTextes = null;
+  function textesNotes(nom) {
+    if (!memoTextes) {
+      memoTextes = new Map();
+      for (const n of notesLibres) if (n.client) { const k = cleClient(n.client); if (!memoTextes.has(k)) memoTextes.set(k, []); memoTextes.get(k).push(n.texte); }
+      setTimeout(() => { memoTextes = null; }, 0);
+    }
+    return memoTextes.get(cleClient(nom || "")) || [];
+  }
+  // toutes les notes, avec leur place : { n, ou: "libre" | "client" | "dossier" | "rdv" | "rdvd", nom, d }
   function toutesNotes() {
-    const l = notesLibres.map((n) => ({ n, ou: "libre" }));
+    const l = [];
+    const parId = new Map(donnees ? donnees.dossiers.filter((d) => d.id).map((d) => [d.id, d]) : []);
+    for (const n of notesLibres) {
+      const d = n.dossier ? parId.get(n.dossier) : null;
+      const nom = n.client || (d && d.client) || "";
+      l.push({ n, ou: d ? "dossier" : nom ? "client" : "libre", nom, d });
+    }
     if (donnees) {
-      for (const f of Object.values(donnees.clients)) for (const n of (Array.isArray(f.journal) ? f.journal : [])) l.push({ n, ou: "client", nom: f.nom });
-      for (const d of donnees.dossiers) for (const n of (Array.isArray(d.journal) ? d.journal : [])) l.push({ n, ou: "dossier", nom: d.client, d });
       // les notes prises dans les rendez-vous (fiche rendez-vous du client, ou rendez-vous d'un dossier)
       const leRdv = (date, heure) => date + "T" + (heure || "00:00");
       for (const f of Object.values(donnees.clients)) for (const r of f.rdvs || []) if (String(r.note || "").trim())
@@ -7206,32 +7271,95 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     }
     return l.sort((a, b) => String(b.n.le || "").localeCompare(String(a.n.le || "")));
   }
+  // une note nouvelle : { texte, client, dossier } ; les commandes /tache et /rdv sont traitées ici
+  function creerNote(texte, client, dossier) {
+    const id = nouvelId();
+    const t = commandesNote(String(texte || "").trim(), client || "", id, dossier);
+    if (!t) return null;
+    const n = { id, le: new Date().toISOString(), texte: t };
+    if (client) n.client = client;
+    if (dossier) n.dossier = dossier;
+    notesLibres = [n, ...notesLibres];
+    garderNotesLibres();
+    return n;
+  }
+  // une note écrite dans l'onglet Notes : chaque client cité en MAJUSCULES reçoit son passage (une note par client)
+  //   un paragraphe sans client suit le précédent ; ce qui précède le premier client reste non affecté.
+  function decouperParClient(texte) {
+    const t = String(texte || "").trim();
+    if (!t || !donnees) return [{ client: "", texte: t }];
+    let unites = t.split(/\n\s*\n/), sep = "\n\n";
+    if (unites.length < 2) { unites = t.split("\n"); sep = "\n"; }
+    const groupes = [];
+    let cur = null;
+    for (const u of unites) {
+      const c = clientsCites(u)[0];
+      const nom = c && c.nom ? c.nom : "";
+      if (nom && (!cur || cleClient(cur.client) !== cleClient(nom))) {
+        cur = groupes.find((g) => g.client && cleClient(g.client) === cleClient(nom)) || null;
+        if (!cur) { cur = { client: nom, morceaux: [] }; groupes.push(cur); }
+      } else if (!cur) { cur = { client: "", morceaux: [] }; groupes.push(cur); }
+      cur.morceaux.push(u);
+    }
+    if (sep === "\n" && groupes.filter((g) => g.client).length < 2) { const c = groupes.find((g) => g.client); return [{ client: c ? c.client : "", texte: t }]; }
+    return groupes.map((g) => ({ client: g.client, texte: g.morceaux.join(sep).trim() })).filter((g) => g.texte);
+  }
   // retire une note de sa place actuelle
   function retirerNote(x) {
     if (x.ou === "rdv") { majRdvs(x.nom, (l) => l.map((r) => (r.id === x.r.id ? { ...r, note: "" } : r))); return; }
     if (x.ou === "rdvd") { x.d.rdv_note = ""; return; }
-    if (x.ou === "libre") { notesLibres = notesLibres.filter((n) => n.id !== x.n.id); localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); }
-    else if (x.ou === "client") { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: (f.journal || []).filter((n) => n.id !== x.n.id) }; }
-    else if (x.ou === "dossier") x.d.journal = (x.d.journal || []).filter((n) => n.id !== x.n.id);
+    notesLibres = notesLibres.filter((n) => n.id !== x.n.id);
+    localStorage.setItem(CLE_NOTES, JSON.stringify(notesLibres));
   }
   function corrigerNote(x, texte) {
-    const maj = (l) => l.map((n) => (n.id === x.n.id ? { ...n, texte } : n)).filter((n) => n.texte);
     if (x.ou === "rdv") { majRdvs(x.nom, (l) => l.map((r) => (r.id === x.r.id ? { ...r, note: texte } : r))); sauver(); return; }
     if (x.ou === "rdvd") { x.d.rdv_note = texte; sauver(); return; }
-    if (x.ou === "libre") { notesLibres = maj(notesLibres); localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); }
-    else if (x.ou === "client") { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: maj(f.journal || []) }; }
-    else x.d.journal = maj(x.d.journal || []);
-    sauver();
+    notesLibres = notesLibres.map((n) => (n.id === x.n.id ? { ...n, texte, maj: new Date().toISOString() } : n)).filter((n) => String(n.texte || "").trim());
+    garderNotesLibres();
   }
-  // range une note : cible = null (non rattachée), { nom } (le client) ou { nom, d } (un dossier du client)
+  // range une note : cible = null (non rattachée), { nom } (le client) ou { nom, d } (un dossier du client) — la note ne bouge pas, elle change d'étiquette
   function rangerNote(x, cible) {
-    const note = { id: x.n.id, le: x.n.le, texte: x.n.texte };
-    retirerNote(x);
-    if (!cible) notesLibres = [note, ...notesLibres];
-    else if (cible.d) cible.d.journal = [note, ...(cible.d.journal || [])];
-    else { const f = fiche(cible.nom); donnees.clients[cleClient(cible.nom)] = { ...f, nom: f.nom || cible.nom, journal: [note, ...journalClient(cible.nom)], notes: "" }; }
-    localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres));
-    sauver();
+    notesLibres = notesLibres.map((n) => {
+      if (n.id !== x.n.id) return n;
+      const { client: _c, dossier: _d, ...reste } = n;
+      return { ...reste, ...(cible ? { client: cible.nom } : {}), ...(cible && cible.d && cible.d.id ? { dossier: cible.d.id } : {}), maj: new Date().toISOString() };
+    });
+    garderNotesLibres();
+  }
+  // ce que la note a mis dans l'agenda (tâches et rendez-vous créés depuis elle)
+  let memoLiens = null;
+  function liensNote(id) {
+    if (!memoLiens) {
+      memoLiens = new Map();
+      const mettre = (k, v) => { if (!memoLiens.has(k)) memoLiens.set(k, []); memoLiens.get(k).push(v); };
+      for (const f of Object.values(donnees.clients)) {
+        for (const t of f.taches || []) if (t.depuisNote) mettre(t.depuisNote, { type: "tache", nom: f.nom, t });
+        for (const r of f.rdvs || []) if (r.depuisNote) mettre(r.depuisNote, { type: "rdv", nom: f.nom, r });
+      }
+      setTimeout(() => { memoLiens = null; }, 0);
+    }
+    return memoLiens.get(id) || [];
+  }
+  // le client d'une note pour l'agenda : le sien, sinon le premier cité (la note lui est alors rattachée)
+  function clientPourAgenda(x) {
+    if (x.nom) return x.nom;
+    const c = clientsCites(x.n.texte).find((y) => y.nom);
+    if (c) { rangerNote(x, { nom: c.nom }); return c.nom; }
+    return "";
+  }
+  const premiereLigneNote = (t) => String(t || "").split("\n").map((s) => s.trim()).find(Boolean) || "";
+  function noteVersTache(x) {
+    const nom = clientPourAgenda(x);
+    const a = analyserTache(premiereLigneNote(x.n.texte).replace(/✅\s*(tâche|rdv)/gi, ""), nom, x.n.texte);
+    const id = creerTacheDeNote({ ...a, depuisNote: x.n.id, dossier: x.d && x.d.id });
+    const t = trouverTache(id);
+    afficherTout();
+    informer(`Tâche ajoutée pour ${a.perso ? "vous (Perso)" : a.nom}${t && t.pour ? " : " + fmtDate(t.pour) + (t.heure ? " à " + t.heure : "") : ""}. Touchez-la sur la note pour la modifier.`);
+  }
+  function noteVersRdv(x) {
+    const nom = clientPourAgenda(x);
+    const a = analyserTache(premiereLigneNote(x.n.texte).replace(/✅\s*(tâche|rdv)/gi, ""), nom, x.n.texte);
+    ouvrirRdv(nom, null, { date: a.pour, heure: a.heure, objet: a.texte === "À faire" ? "" : a.texte, depuisNote: x.n.id, dossier: x.d && x.d.id, perso: !nom });
   }
   // le petit formulaire « rattacher à… » : on tape le client (suggestions), puis on touche sa fiche ou l'un de ses dossiers
   function formulaireRattacher(x, fermer) {
@@ -7240,7 +7368,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     let pour;
     const ranger = (f, d) => {
       rangerNote(x, d ? { nom: f.nom, d } : { nom: f.nom });
-      informer(d ? `Note rattachée au dossier « ${libelleDossier(d)} » de ${f.nom}.` : `Note rattachée à la fiche de ${f.nom}.`);
+      informer(d ? `Note rattachée au dossier « ${libelleDossier(d)} » de ${f.nom}.` : `Note rattachée à ${f.nom}.`);
       fermer(true);
     };
     const remplir = () => {
@@ -7264,12 +7392,11 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         el("button", { type: "button", class: "bouton-discret", onclick: () => fermer(false) }, "Annuler")),
       cibles);
   }
-  // une note. opts : { ici : le dossier ouvert (étiquette « Ce dossier »), enLecture : note du rendez-vous de ce dossier (modifiable dans sa rubrique) }
+  // une note. opts : { ici : le dossier ouvert (étiquette « Ce dossier »), enLecture : note du rendez-vous de ce dossier (modifiable dans sa rubrique), client : la fiche ouverte }
   function carteNote(x, redessiner, opts = {}) {
     const estRdv = x.ou === "rdv" || x.ou === "rdvd", dansFiche = "ici" in opts;
     const corps = el("div", { class: "journal-texte" }, ...(estRdv ? [el("b", { class: "nr-objet" }, "📅 " + x.objet), "\n"] : []), ...texteAvecLiens(x.n.texte));
     const etiquette = () => {
-      if (x.ou === "libre") return "Non affectée";
       const dos = x.d ? (x.d === opts.ici ? "📁 Ce dossier" : "📁 " + libelleDossier(x.d)) : "";
       const qui = dansFiche ? "" : x.nom;
       if (x.ou === "client") return "👤 " + (dansFiche ? "Fiche client" : x.nom);
@@ -7281,20 +7408,28 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       if (x.ou === "rdvd" || x.ou === "dossier") { if (x.d === opts.ici) return; const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, x.ou === "rdvd" ? "Rendez-vous" : "Notes"); return; }
       if (!dansFiche) ouvrirClient(x.nom, "Notes");
     };
-    const place = x.ou === "libre" ? el("span", { class: "nr-place libre" }, "Non affectée")
-      : el("button", { type: "button", class: "nr-place" + (x.ou === "rdv" || x.ou === "rdvd" ? " rdv" : x.ou === "client" ? " cl" : ""), title: "Ouvrir", onclick: ouvrir }, etiquette());
+    // étiquette du client : un toucher l'ouvre ; « ↪ » pour changer
+    const changer = () => pied.replaceChildren(formulaireRattacher(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner, opts).querySelector(".nr-pied")); }));
+    const place = x.ou === "libre" ? el("button", { type: "button", class: "nr-place libre a-ranger", title: "Rattacher à un client", onclick: changer }, "↪ À rattacher")
+      : el("button", { type: "button", class: "nr-place" + (estRdv ? " rdv" : x.ou === "client" ? " cl" : ""), title: "Ouvrir", onclick: ouvrir }, etiquette());
     const quand = estRdv ? "Rendez-vous du " + fmtDate(x.ou === "rdv" ? x.r.date : x.d.rdv) + ((x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) ? " " + (x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) : "") : dateNote(x.n.le);
-    const pied = el("div", { class: "nr-pied" }, place,
-      !estRdv ? el("button", { type: "button", class: "bouton-discret nr-ranger", onclick: () => { pied.replaceChildren(formulaireRattacher(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner, opts).querySelector(".nr-pied")); })); } },
-        x.ou === "libre" ? "↪ Rattacher à un client ou un dossier" : "↪ Déplacer") : null,
-      !estRdv && morceauxNote(x.n.texte).length > 1 ? el("button", { type: "button", class: "bouton-discret nr-ranger", title: "Envoyer chaque passage chez son client", onclick: () => { pied.replaceChildren(formulaireRepartir(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner, opts).querySelector(".nr-pied")); })); } }, "✂ Répartir par client") : null,
+    // ce que la note a mis dans l'agenda
+    const liens = estRdv ? [] : liensNote(x.n.id).map((l) => l.type === "tache"
+      ? el("button", { type: "button", class: "nr-lien" + (l.t.fait ? " fait" : ""), title: "Ouvrir la tâche", onclick: () => ouvrirTache(l.nom, l.t.id) },
+          (l.t.fait ? "✓ " : "☐ ") + (l.t.pour ? versDate(l.t.pour).toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" }) + (l.t.heure ? " " + l.t.heure : "") : "tâche") + (dansFiche || estPerso(l.nom) ? "" : ""))
+      : el("button", { type: "button", class: "nr-lien rdv", title: "Ouvrir le rendez-vous", onclick: () => ouvrirRdv(l.nom, l.r.id) }, "🤝 " + versDate(l.r.date).toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" }) + (l.r.heure ? " " + l.r.heure : "")));
+    const pied = el("div", { class: "nr-pied" }, place, ...liens,
+      !estRdv && x.ou !== "libre" ? el("button", { type: "button", class: "bouton-discret nr-ranger", onclick: changer }, "↪ Déplacer") : null,
+      !estRdv && morceauxNote(x.n.texte).length > 1 ? el("button", { type: "button", class: "bouton-discret nr-ranger", title: "Envoyer chaque passage chez son client", onclick: () => { pied.replaceChildren(formulaireRepartir(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner, opts).querySelector(".nr-pied")); })); } }, "✂ Répartir") : null,
       opts.enLecture ? el("span", { class: "nr-astuce" }, "modifiable dans la rubrique Rendez-vous") : null);
     const outils = opts.enLecture ? [] : [
+      !estRdv ? el("button", { type: "button", class: "nr-ag", title: "Ajouter à l’agenda comme tâche", "aria-label": "Ajouter une tâche", onclick: () => { noteVersTache(x); redessiner(); } }, "☐＋") : null,
+      !estRdv ? el("button", { type: "button", class: "nr-ag", title: "Prendre un rendez-vous", "aria-label": "Prendre un rendez-vous", onclick: () => noteVersRdv(x) }, "🤝") : null,
       el("button", { type: "button", title: "Corriger", "aria-label": "Corriger la note", onclick: () => {
         const edit = el("textarea", { class: "journal-saisie", "data-client": x.ou === "libre" ? "" : x.nom || "" }, x.n.texte);
         corps.replaceChildren(edit, el("div", { class: "journal-actions" },
-          el("button", { type: "button", class: "bouton", onclick: () => { corrigerNote(x, commandesNote(edit.value.trim(), x.ou === "libre" ? "" : x.nom || "")); redessiner(); } }, "Enregistrer"),
-          el("button", { type: "button", class: "bouton-discret", onclick: redessiner }, "Annuler")));
+          el("button", { type: "button", class: "bouton", onmousedown: (e) => e.preventDefault(), onclick: () => { corrigerNote(x, commandesNote(edit.value.trim(), x.ou === "libre" ? "" : x.nom || "", x.n.id, x.d && x.d.id)); redessiner(); } }, "Enregistrer"),
+          el("button", { type: "button", class: "bouton-discret", onmousedown: (e) => e.preventDefault(), onclick: redessiner }, "Annuler")));
         edit.focus();
       } }, "✎"),
       el("button", { type: "button", title: estRdv ? "Effacer la note (le rendez-vous reste)" : "Effacer", "aria-label": "Effacer la note", onclick: () => {
@@ -7305,7 +7440,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       el("div", { class: "journal-tete" }, el("span", null, quand), ...outils), corps, pied);
   }
   // ---- les notes d'un client, toutes ensemble (fiche, dossiers, rendez-vous) : dans la fiche client et dans chaque dossier ----
-  //   i : le dossier ouvert (ou -1 depuis la fiche client). Une note nouvelle va dans ce dossier ou dans la fiche, au choix.
+  //   i : le dossier ouvert (ou -1 depuis la fiche client). Une note écrite dans un dossier va dans ce dossier ; dans la fiche, chez le client.
   function notesDuClient(nom) { const k = cleClient(nom); return toutesNotes().filter((x) => x.ou !== "libre" && cleClient(x.nom || "") === k); }
   function resumeNotesClient(nom) {
     const l = notesDuClient(nom);
@@ -7314,18 +7449,12 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function blocNotesClient(nom, i) {
     const zone = el("div", { class: "journal nc" });
     const d = i >= 0 ? donnees.dossiers[i] : null;
-    let ou = d ? "dossier" : "client", filtre = "";
-    const saisieNote = el("textarea", { class: "journal-saisie", "data-client": nom, placeholder: "Nouvelle note… (Ctrl + Entrée pour l’ajouter ; /tache pour créer une tâche)" });
-    const choixOu = d ? el("div", { class: "nc-ou", role: "radiogroup", "aria-label": "Ranger la note" }) : null;
-    const dessinerOu = () => { if (!choixOu) return; choixOu.replaceChildren(el("span", null, "Ranger dans :"),
-      ...[["dossier", "📁 Ce dossier"], ["client", "👤 La fiche du client"]].map(([v, lib]) => el("button", { type: "button", class: "nc-choix" + (ou === v ? " on" : ""), role: "radio", "aria-checked": String(ou === v), onclick: () => { ou = v; dessinerOu(); } }, lib))); };
-    dessinerOu();
+    let filtre = "";
+    const saisieNote = el("textarea", { class: "journal-saisie", "data-client": nom || "", placeholder: "Nouvelle note… (Ctrl + Entrée ; « /tache vendredi 10h » crée la tâche)" });
     const ajouter = () => {
-      const t = commandesNote(saisieNote.value.trim(), nom); if (!t) return;
-      saisieNote.value = "";
-      const n = { id: nouvelId(), le: new Date().toISOString(), texte: t };
-      if (ou === "dossier" && d) ecrireJournalDossier(i, [n, ...journalDossier(i)]);
-      else ecrireJournalClient(nom, [n, ...journalClient(nom)]);
+      if (!saisieNote.value.trim()) return;
+      const t = saisieNote.value; saisieNote.value = "";
+      creerNote(t, nom, d && d.id);
       dessiner();
       zone.dispatchEvent(new Event("input", { bubbles: true }));
     };
@@ -7336,19 +7465,19 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const filtres = el("div", { class: "nc-filtres" });
     const liste = el("div", { class: "journal-liste" });
     function dessiner() {
-      const tout = notesDuClient(nom);
+      const tout = nom ? notesDuClient(nom) : toutesNotes().filter((x) => x.d === d);
       const de = { client: (x) => x.ou === "client", ce: (x) => x.ou === "dossier" && x.d === d, autres: (x) => x.ou === "dossier" && x.d !== d, rdv: (x) => x.ou === "rdv" || x.ou === "rdvd" };
       const puces = [["", "Toutes"], ["client", "Fiche client"], ...(d ? [["ce", "Ce dossier"]] : []), ["autres", d ? "Autres dossiers" : "Dossiers"], ["rdv", "Rendez-vous"]]
         .map(([k, lib]) => [k, lib, k ? tout.filter(de[k]).length : tout.length]).filter(([k, , n]) => !k || n);
       if (filtre && !puces.some(([k]) => k === filtre)) filtre = "";
-      filtres.replaceChildren(...(tout.length > 1 ? puces.map(([k, lib, n]) => el("button", { type: "button", class: "collab" + (filtre === k ? " choisi" : ""), onclick: () => { filtre = k; dessiner(); } }, `${lib} (${n})`)) : []));
+      filtres.replaceChildren(...(tout.length > 1 && nom ? puces.map(([k, lib, n]) => el("button", { type: "button", class: "collab" + (filtre === k ? " choisi" : ""), onclick: () => { filtre = k; dessiner(); } }, `${lib} (${n})`)) : []));
       const l = filtre ? tout.filter(de[filtre]) : tout;
       const redessiner = () => { dessiner(); zone.dispatchEvent(new Event("input", { bubbles: true })); };
       liste.replaceChildren(...(l.length ? l.map((x) => carteNote(x, redessiner, { ici: d, enLecture: x.ou === "rdvd" && x.d === d }))
         : [el("p", { class: "m-vide" }, "Aucune note pour l’instant.")]));
     }
     dessiner();
-    zone.append(el("div", { class: "journal-ajout" }, saisieNote, el("button", { type: "button", class: "bouton", onclick: ajouter }, "＋ Ajouter")), choixOu, filtres, liste,
+    zone.append(el("div", { class: "journal-ajout" }, saisieNote, el("button", { type: "button", class: "bouton", onclick: ajouter }, "＋ Ajouter")), filtres, liste,
       document.getElementById("liste-clients-notes") ? null : el("datalist", { id: "liste-clients-notes" }, nomsClients().map((v) => el("option", { value: v }))));
     return zone;
   }
@@ -7360,8 +7489,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       if (!String(p.texte || "").trim() || toutesNotes().some((x) => x.n.id === p.id)) continue;
       const note = { id: p.id || nouvelId(), le: p.cree || p.modifie || new Date().toISOString(), texte: String(p.texte).trim() };
       const f = p.client && donnees.clients[cleClient(p.client)];
-      if (f) donnees.clients[cleClient(p.client)] = { ...f, journal: [note, ...journalClient(f.nom)], notes: "" };
-      else notesLibres = [note, ...notesLibres];
+      notesLibres = [f ? { ...note, client: f.nom } : note, ...notesLibres];
     }
     postitsAReprendre = [];
     localStorage.removeItem("suivi-gp-donnees-postits");
@@ -7371,6 +7499,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function afficherNotes() {
     const z = $("vue-notes");
     if (!z || z.hidden) return;
+    // la saisie en cours survit au rafraîchissement (une mise à jour arrivée d'un autre appareil, par exemple)
+    const enCours = z.querySelector(".journal-ajout .journal-saisie");
+    const garde = enCours ? { v: enCours.value, f: document.activeElement === enCours, a: enCours.selectionStart, b: enCours.selectionEnd, u: enCours.dataset.unique } : null;
+    if (garde && garde.v) setTimeout(() => { const t = z.querySelector(".journal-ajout .journal-saisie"); if (!t || t.value) return; t.value = garde.v; if (garde.u) t.dataset.unique = garde.u; if (garde.f) { t.focus(); t.setSelectionRange(garde.a, garde.b); } t.dispatchEvent(new Event("input", { bubbles: true })); }, 0);
     reprendrePostits();
     reparerNotes();
     const t = sansAccents(filtreNotes.texte);
@@ -7382,13 +7514,16 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const recherche = el("input", { type: "search", class: "nr-recherche", list: "liste-clients-notes", autocomplete: "off", placeholder: "Filtrer par client…", value: filtreNotes.texte, "aria-label": "Filtrer par client" });
     recherche.addEventListener("input", () => { filtreNotes.texte = recherche.value; clearTimeout(afficherNotes.t); afficherNotes.t = setTimeout(() => { afficherNotes(); const r = document.querySelector("#vue-notes .nr-recherche"); if (r) { r.focus(); r.setSelectionRange(r.value.length, r.value.length); } }, 250); });
     // la saisie : une note non rattachée (on la range ensuite)
-    const saisieNote = el("textarea", { class: "journal-saisie", placeholder: "Nouvelle note… (Ctrl + Entrée pour l’ajouter ; vous la rattacherez ensuite ; /tache pour créer une tâche)" });
+    const saisieNote = el("textarea", { class: "journal-saisie", "data-repartir": "1", placeholder: "Nouvelle note… Écrivez les noms des clients en MAJUSCULES : chaque passage part chez son client. « /tache vendredi 10h » crée la tâche, « /rdv » le rendez-vous." });
     const ajouter = () => {
-      const tx = commandesNote(saisieNote.value.trim(), ""); if (!tx) return;
+      const brut = saisieNote.value.trim(); if (!brut) return;
       saisieNote.value = "";
-      notesLibres = [{ id: nouvelId(), le: new Date().toISOString(), texte: tx }, ...notesLibres];
-      garderNotesLibres();
-      if (filtreNotes.aff === "oui") filtreNotes.aff = "";
+      const groupes = saisieNote.dataset.unique === "1" ? [{ client: (decouperParClient(brut).find((g) => g.client) || {}).client || "", texte: brut }] : decouperParClient(brut);
+      delete saisieNote.dataset.unique;
+      const faites = groupes.map((g) => creerNote(g.texte, g.client)).filter(Boolean);
+      const qui = faites.filter((n) => n.client).map((n) => n.client);
+      if (faites.length > 1 || qui.length) informer(faites.length > 1 ? `${faites.length} notes : ${faites.map((n) => n.client || "non affectée").join(", ")}.` : `Note rangée chez ${qui[0]}.`);
+      if (filtreNotes.aff === "oui" && !qui.length) filtreNotes.aff = "";
       afficherNotes();
       const s = document.querySelector("#vue-notes .journal-saisie"); if (s) s.focus();
     };
@@ -7471,6 +7606,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     ote(/\s(?:à\s*|a\s+)?([01]?\d|2[0-3])\s*(?:h|:)\s*([0-5]\d)?(?=\s|[,;.!?]|$)/i, (m) => { heure = `${String(m[1]).padStart(2, "0")}:${m[2] || "00"}`; });
     // le client : celui de la note, sinon celui cité sur la ligne, sinon celui du paragraphe
     let nom = nomContexte || "";
+    if (nom) {   // le nom du client écrit sur la ligne ne fait pas partie de la tâche (« BLAIS : relance » → « Relance »)
+      const c = clientsCites(reste).find((y) => y.noms.some((n) => cleClient(n) === cleClient(nom)));
+      if (c) reste = reste.slice(0, c.pos) + reste.slice(c.fin);
+    }
     if (!nom) {
       const surLigne = clientsCites(reste);
       if (surLigne.length && surLigne[0].nom) {
@@ -7485,25 +7624,35 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     (a.pour ? ` · ${versDate(a.pour).toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" })}` : " · au prochain créneau libre") + (a.heure ? ` à ${a.heure}` : "");
   function creerTacheDeNote(a) {
     const id = nouvelId();
+    const dos = a.dossier && donnees.dossiers.find((d) => d.id === a.dossier && cleClient(d.client) === cleClient(a.nom));
     let pour = a.pour, heure = a.pour ? a.heure : "";
     if (!pour) { const [j, h] = premierCreneau(""); pour = j; heure = h; }
-    majTaches(a.nom, (l) => [...l, { id, texte: a.texte, pour: pour || "", heure: heure || "", duree: "", fixe: false, prio: false, repete: "", note: "", fait: null, cree: new Date().toISOString() }]);
+    majTaches(a.nom, (l) => [...l, { id, texte: a.texte, pour: pour || "", heure: heure || "", duree: "", fixe: false, prio: false, repete: "", note: "", fait: null, cree: new Date().toISOString(),
+      ...(a.depuisNote ? { depuisNote: a.depuisNote } : {}), ...(dos ? { dossier: dos.id, dossier_libelle: dos.tache || sansNumero(dos.type) } : {}) }]);
     apresAgenda([pour], heure ? id : null, heure ? [] : [id]);
     return id;
   }
   // à l'enregistrement d'une note : chaque ligne « /tache … » crée sa tâche, et la ligne garde la trace « ✅ tâche »
-  function commandesNote(texte, nomContexte) {
-    if (!texte || !RE_TACHE.test(texte) || !donnees) return texte;
+  const RE_RDV = /(^|\s)\/rdv\b/i;
+  function commandesNote(texte, nomContexte, idNote, dossier) {
+    if (!texte || !donnees) return texte;
+    if (RE_RDV.test(texte)) {   // /rdv : la fiche du rendez-vous s'ouvre, déjà remplie (une à la fois)
+      const ligne = texte.split("\n").find((l) => RE_RDV.test(l));
+      const a = analyserTache(ligne.replace(RE_RDV, " "), nomContexte, texte);
+      texte = texte.replace(RE_RDV, "$1🤝 rdv");
+      setTimeout(() => ouvrirRdv(a.perso ? "" : a.nom, null, { date: a.pour, heure: a.heure, objet: a.texte === "À faire" ? "" : a.texte, depuisNote: idNote, dossier, perso: a.perso }), 120);
+    }
+    if (!RE_TACHE.test(texte)) return texte;
     const blocs = texte.split(/\n\s*\n/);
     const faits = [];
     const sortie = blocs.map((b) => b.split("\n").map((ligne) => {
       if (!RE_TACHE.test(ligne)) return ligne;
       const a = analyserTache(ligne, nomContexte, b);
-      creerTacheDeNote(a);
+      creerTacheDeNote({ ...a, depuisNote: idNote, dossier });
       faits.push(a);
       return ligne.replace(RE_TACHE, "$1✅ tâche");
     }).join("\n")).join("\n\n");
-    if (faits.length) setTimeout(() => { afficherTout(); informer(faits.length > 1 ? `${faits.length} tâches créées depuis la note.` : "Tâche créée : " + libelleTache(faits[0]) + "."); }, 80);
+    if (faits.length) setTimeout(() => { afficherTout(); informer(faits.length > 1 ? `${faits.length} tâches créées depuis la note.` : "Tâche créée " + libelleTache(faits[0]).replace(/^tâche /, "") + "."); }, 80);
     return sortie;
   }
   // l'aperçu sous la zone de saisie, pendant la frappe
@@ -7513,12 +7662,27 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const ancre = z.parentElement && z.parentElement.classList.contains("journal-ajout") ? z.parentElement : z;
     let ap = ancre.nextElementSibling && ancre.nextElementSibling.classList.contains("cmd-apercu") ? ancre.nextElementSibling : null;
     const v = z.value, lignes = [];
+    let groupes = [];
+    if (z.dataset.repartir && donnees && v.trim()) {
+      groupes = z.dataset.unique === "1" ? [] : decouperParClient(v);
+      if (groupes.length > 1 || (groupes[0] && groupes[0].client)) lignes.push(groupes.length > 1
+        ? `→ ${groupes.length} notes : ${groupes.map((g) => g.client ? "👤 " + g.client : "non affectée").join(" · ")}`
+        : `→ rangée chez 👤 ${groupes[0].client}`);
+    }
     if (RE_TACHE.test(v) && donnees) {
-      for (const b of v.split(/\n\s*\n/)) for (const l of b.split("\n")) if (RE_TACHE.test(l)) lignes.push("→ " + libelleTache(analyserTache(l, z.dataset.client || "", b)));
+      for (const b of v.split(/\n\s*\n/)) for (const l of b.split("\n")) if (RE_TACHE.test(l)) {
+        const g = groupes.find((x) => x.texte.includes(l.trim()));
+        lignes.push("→ " + libelleTache(analyserTache(l, z.dataset.client || (g && g.client) || "", b)));
+      }
     } else if (/(^|\s)\/[a-zâ]{0,4}$/i.test(v.slice(0, z.selectionStart || v.length))) lignes.push("/tache texte jour heure  →  crée une tâche (ex. « /tache relancer le notaire vendredi 10h »)");
-    if (!lignes.length) { if (ap) ap.remove(); return; }
+    if (RE_RDV.test(v)) lignes.push("→ à l’ajout, la fiche du rendez-vous s’ouvre, déjà remplie");
+    if (!lignes.length && z.dataset.unique !== "1") { if (ap) ap.remove(); return; }
     if (!ap) { ap = el("div", { class: "cmd-apercu" }); ap._z = z; ancre.after(ap); }
-    ap.replaceChildren(...lignes.map((t) => el("div", null, t)));
+    const bascule = z.dataset.repartir && (groupes.length > 1 || z.dataset.unique === "1")
+      ? el("button", { type: "button", class: "cmd-unique", onclick: () => { if (z.dataset.unique === "1") delete z.dataset.unique; else z.dataset.unique = "1"; z.dispatchEvent(new Event("input", { bubbles: true })); z.focus(); } },
+          z.dataset.unique === "1" ? "Répartir par client" : "Garder en une seule note") : null;
+    if (z.dataset.unique === "1") lignes.unshift("→ une seule note");
+    ap.replaceChildren(...lignes.map((t) => el("div", null, t)), bascule);
   });
   // retire l'aperçu quand la note est enregistrée (la zone est vidée)
   document.addEventListener("click", () => setTimeout(() => document.querySelectorAll(".cmd-apercu").forEach((a) => { const z = a._z; if (!z || !z.value || !z.isConnected) a.remove(); }), 120), true);
@@ -7556,9 +7720,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       for (const r of lignes) {
         const memePlace = r.nom && ((x.ou === "client" && !r.d && cleClient(x.nom) === cleClient(r.nom)) || (x.ou === "dossier" && r.d === x.d));
         if (!r.nom || memePlace) { restent.push(r.texte); continue; }
-        const note = { id: nouvelId(), le: x.n.le, texte: r.texte };
-        if (r.d) r.d.journal = [note, ...(r.d.journal || [])];
-        else { const f = fiche(r.nom); donnees.clients[cleClient(r.nom)] = { ...f, nom: f.nom || r.nom, journal: [note, ...journalClient(r.nom)], notes: "" }; }
+        notesLibres = [{ id: nouvelId(), le: x.n.le, texte: r.texte, client: r.nom, ...(r.d && r.d.id ? { dossier: r.d.id } : {}) }, ...notesLibres];
         partis.push(r.nom);
       }
       if (!partis.length) { informer("Indiquez au moins un client pour un passage."); return; }
@@ -7576,22 +7738,11 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
 
   // ---- notes : réparer les doublons, retrouver celles qui ont disparu ----
-  // une note rangée chez un client (ou dans un dossier) ne doit plus figurer dans les notes non affectées
-  function reparerNotes() {
-    if (!donnees) return 0;
-    const ailleurs = new Set(), textes = new Set();
-    for (const f of Object.values(donnees.clients)) for (const n of (Array.isArray(f.journal) ? f.journal : [])) { ailleurs.add(n.id); textes.add((n.le || "") + "|" + n.texte); }
-    for (const d of donnees.dossiers) for (const n of (Array.isArray(d.journal) ? d.journal : [])) { ailleurs.add(n.id); textes.add((n.le || "") + "|" + n.texte); }
-    const vus = new Set();
-    const garde = notesLibres.filter((n) => n && !ailleurs.has(n.id) && !textes.has((n.le || "") + "|" + n.texte) && !vus.has(n.id) && vus.add(n.id));
-    const nb = notesLibres.length - garde.length;
-    if (nb) { notesLibres = garde; localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); sauver(); }
-    return nb;
-  }
   // toutes les notes d'un contenu de fichier de suivi : [{ n, ou, nom, dossier }]
   function notesDuContenu(c) {
     const l = [];
-    for (const n of (Array.isArray(c.notes) ? c.notes : [])) if (n && n.id) l.push({ n, ou: "libre" });
+    const ds = new Map((Array.isArray(c.dossiers) ? c.dossiers : []).filter((d) => d.id).map((d) => [d.id, d]));
+    for (const n of (Array.isArray(c.notes) ? c.notes : [])) if (n && n.id) { const d = n.dossier && ds.get(n.dossier); l.push(d ? { n, ou: "dossier", nom: n.client || d.client, dossier: d.id, lib: libelleDossier(d) } : n.client ? { n, ou: "client", nom: n.client } : { n, ou: "libre" }); }
     for (const f of Object.values(c.clients || {})) for (const n of (Array.isArray(f.journal) ? f.journal : [])) if (n && n.id) l.push({ n, ou: "client", nom: f.nom });
     for (const d of (Array.isArray(c.dossiers) ? c.dossiers : [])) for (const n of (Array.isArray(d.journal) ? d.journal : [])) if (n && n.id) l.push({ n, ou: "dossier", nom: d.client, dossier: d.id, lib: libelleDossier(d) });
     return l;
@@ -7644,11 +7795,9 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       }));
       const bouton = el("button", { type: "button", class: "bouton", disabled: true, onclick: () => {
         for (const x of choisis) {
-          const note = { id: x.n.id, le: x.n.le, texte: x.n.texte };
           const d = x.dossier && donnees.dossiers.find((y) => y.id === x.dossier);
-          if (x.ou === "dossier" && d) d.journal = [note, ...(d.journal || [])];
-          else if (x.ou !== "libre" && x.nom && donnees.clients[cleClient(x.nom)]) { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: [note, ...journalClient(x.nom)], notes: "" }; }
-          else notesLibres = [note, ...notesLibres];
+          const note = { id: x.n.id, le: x.n.le, texte: x.n.texte, ...(x.nom ? { client: x.nom } : {}), ...(d ? { dossier: d.id } : {}) };
+          notesLibres = [note, ...notesLibres];
         }
         localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres));
         sauver(); afficherTout(); voile.remove();
@@ -8433,7 +8582,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
             { libelle: "◆ Coordonnées client", contenu: vueCoordonnees(el("textarea", { name: "coordonnees_client", "data-depart": f.coordonnees || "", class: "zone-coordonnees", placeholder: "Téléphones, e-mails, adresse, interlocuteurs…" }, f.coordonnees || "")),
               resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees_client]") || {}).value) },
             { libelle: "Commentaire du dossier", contenu: el("div", null, ...avecLiens(zoneDossier)), resume: () => premiereLigne(zoneDossier.value) },
-            ...(!d.client && i >= 0 ? [{ libelle: "Notes", contenu: blocJournal({ lire: () => journalDossier(i), ecrire: (l) => ecrireJournalDossier(i, l), aide: "Nouvelle note sur ce dossier… (Ctrl + Entrée pour l’ajouter)" }), resume: () => resumeJournal(journalDossier(i)) }] : []),
+            ...(!d.client && i >= 0 ? [{ libelle: "Notes", contenu: blocNotesClient("", i), resume: () => resumeJournal(notesLibres.filter((n) => n.dossier && n.dossier === d.id)) }] : []),
             { libelle: "Coordonnées du dossier", contenu: vueCoordonnees(el("textarea", { name: "coordonnees", class: "zone-coordonnees", placeholder: "Interlocuteurs du dossier : notaire, banque, expert-comptable…" }, d.coordonnees || "")),
               resume: () => premiereLigne(($("corpsDossier").querySelector("[name=coordonnees]") || {}).value) },
             { libelle: "Rendez-vous", contenu: rdv, resume: () => lireRdv("rdv") ? versDate(lireRdv("rdv")).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + (lireRdv("rdv_heure") ? " " + lireRdv("rdv_heure") : "") + (lireRdv("rdv_objet") ? " · " + lireRdv("rdv_objet") : "") : "" });
@@ -8593,18 +8742,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return zone;
   }
   // le journal d'un client (les anciennes « notes » deviennent sa première note, sans date)
-  function journalClient(nom) {
-    const f = fiche(nom);
-    if (Array.isArray(f.journal)) return f.journal;
-    return f.notes && String(f.notes).trim() ? [{ id: "notes-anciennes", le: null, texte: String(f.notes).trim() }] : [];
-  }
-  function ecrireJournalClient(nom, liste) {
-    const cle = cleClient(nom);
-    donnees.clients[cle] = { ...fiche(nom), nom: fiche(nom).nom || nom, journal: liste, notes: "" };
-    sauver();
-  }
-  const journalDossier = (i) => (donnees.dossiers[i] && Array.isArray(donnees.dossiers[i].journal) ? donnees.dossiers[i].journal : []);
-  function ecrireJournalDossier(i, liste) { if (!donnees.dossiers[i]) return; donnees.dossiers[i].journal = liste; sauver(); }
+  // les notes d'un client (impression…) : celles de la liste unique
+  const journalClient = (nom) => notesLibres.filter((n) => n.client && cleClient(n.client) === cleClient(nom));
 
   function texteAvecLiens(texte) {
     const morceaux = [];
@@ -9181,7 +9320,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       (() => {
         const f = fiche(nom), d = iDossier >= 0 ? donnees.dossiers[iDossier] : null;
         const vus = new Set();
-        const contacts = liensDans([f.coordonnees, d && d.coordonnees, f.commentaire, f.notes, ...(f.journal || []).map((x) => x.texte), d && d.commentaire].filter(Boolean).join("\n"))
+        const contacts = liensDans([f.coordonnees, d && d.coordonnees, f.commentaire, f.notes, ...textesNotes(f.nom), d && d.commentaire].filter(Boolean).join("\n"))
           .filter((x) => (x.type === "tel" || x.type === "mail") && !vus.has(x.valeur.replace(/\s|\./g, "")) && vus.add(x.valeur.replace(/\s|\./g, "")));
         return contacts.length ? el("div", { class: "liens tache-contacts" }, contacts.slice(0, 6).map(puceLien)) : "";  // (replaceChildren écrirait « null »)
       })(),
@@ -9305,7 +9444,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // ============================================================== « Ma journée » : aujourd'hui, heure par heure
   function telephoneDe(nom) {
     const f = fiche(nom);
-    const t = liensDans([f.coordonnees, f.commentaire, f.notes, ...(f.journal || []).map((x) => x.texte)].filter(Boolean).join("\n")).find((x) => x.type === "tel");
+    const t = liensDans([f.coordonnees, f.commentaire, f.notes, ...textesNotes(f.nom)].filter(Boolean).join("\n")).find((x) => x.type === "tel");
     return t ? lienPour(t) : null;
   }
   // le jour affiché dans « Ma journée » (aujourd'hui par défaut ; flèches sur ordinateur, glissement sur téléphone)
@@ -9482,7 +9621,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function ouvrirRdv(nom, id, proposition = {}) {
     const r = id ? rdvsDe(nom).find((x) => x.id === id) : null;
     if (id && !r) { informer("Ce rendez-vous n’existe plus."); return; }
-    rdvEnCours = { nom: nom || "", id: id || null };
+    rdvEnCours = { nom: nom || "", id: id || null, depuisNote: proposition.depuisNote || "" };
     $("titreRdv").textContent = r ? "Rendez-vous" : "Nouveau rendez-vous";
     const dossiers = donnees.dossiers.map((d, i) => [d, i]).filter(([d]) => cleClient(d.client) === cleClient(nom));
     const demain = new Date(); demain.setDate(demain.getDate() + 1);
@@ -9494,8 +9633,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         champ("À", el("input", { name: "heure", type: "time", value: r ? (r.heure || "") : (proposition.heure || "") }))),
       el("div", { class: "deux" }, champ("Durée", choixDuree("duree", r ? r.duree : "60")),
         champ("Dossier (facultatif)", el("select", { name: "dossier" }, el("option", { value: "" }, "— aucun —"),
-          dossiers.map(([d]) => el("option", { value: d.id || "", selected: r && r.dossier === d.id }, `${d.tache || sansNumero(d.type)}${d.exercice ? " · " + d.exercice : ""}`))))),
-      champ("Objet", el("input", { name: "objet", type: "text", value: r ? (r.objet || "") : "", placeholder: "Signature, point annuel, bilan…", autocomplete: "off" })),
+          dossiers.map(([d]) => el("option", { value: d.id || "", selected: r ? r.dossier === d.id : !!proposition.dossier && proposition.dossier === d.id }, `${d.tache || sansNumero(d.type)}${d.exercice ? " · " + d.exercice : ""}`))))),
+      champ("Objet", el("input", { name: "objet", type: "text", value: r ? (r.objet || "") : (proposition.objet || ""), placeholder: "Signature, point annuel, bilan…", autocomplete: "off" })),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Lieu, documents à apporter…" }, r ? (r.note || "") : ""))),
       el("div", { class: "actions-fiche" },
         r ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${nom}${r.objet ? " · " + r.objet : ""}`, r.date, r.note || "", r.heure, r.duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
@@ -9521,7 +9660,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const ancien = id ? rdvsDe(nom).find((x) => x.id === id) : null;
     const d = donnees.dossiers.find((x) => x.id && x.id === v.dossier);
     const rdv = { id: id || nouvelId(), date: v.date, heure: v.heure || "", duree: v.duree || "", objet: (v.objet || "").trim(), note: v.note || "",
-      dossier: v.dossier || "", dossier_libelle: d ? (d.tache || sansNumero(d.type)) : "" };
+      dossier: v.dossier || "", dossier_libelle: d ? (d.tache || sansNumero(d.type)) : "",
+      ...((ancien && ancien.depuisNote) || rdvEnCours.depuisNote ? { depuisNote: (ancien && ancien.depuisNote) || rdvEnCours.depuisNote } : {}) };
     majRdvs(nom, (l) => id ? l.map((x) => (x.id === id ? rdv : x)) : [...l, rdv]);
     const resume = apresAgenda([ancien && ancien.date, rdv.date]);  // les tâches s'écartent autour du rendez-vous
     terminerFeuille(); afficherTout();
@@ -9773,8 +9913,9 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       const cleNouveau = cleClient(nom);
       const existant = nomsClients().find((x) => cleClient(x) === cleNouveau);
       if (existant) { informer(`« ${existant} » existe déjà : voici sa fiche.`); terminerFeuille(); setTimeout(() => ouvrirClient(existant), 200); return; }
-      donnees.clients[cleNouveau] = { nom, commentaire: v.commentaire || "", notes: v.notes || "", notaire: v.notaire || "", partenaire: v.partenaire || "",
+      donnees.clients[cleNouveau] = { nom, commentaire: v.commentaire || "", notaire: v.notaire || "", partenaire: v.partenaire || "",
         millionnaire: v.millionnaire || "", a_vie: v.a_vie || "", taches: [], cree: new Date().toISOString() };
+      if (String(v.notes || "").trim()) creerNote(v.notes, nom);   // la première note du client
       sauver(); terminerFeuille(); afficherTout();
       informer(`Client « ${nom} » créé : ajoutez-lui des tâches ou un dossier.`);
       setTimeout(() => ouvrirClient(nom), 200);  // sa fiche s'ouvre, pour les tâches
