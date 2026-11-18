@@ -2047,6 +2047,7 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
 .fu-liste { padding: 6px; display: grid; gap: 6px; align-content: start; }
 .fu-groupe { border: 1px solid var(--bordure); border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px; }
 .fu-groupe.doute .fu-tete small, .fu-groupe.frappe .fu-tete small { color: var(--or); font-weight: 600; }
+.rn { cursor: pointer; } .rn-texte { font-size: 12.5px; white-space: pre-wrap; padding-left: 24px; max-height: 7.5em; overflow: auto; }
 .fu-sep { margin: 10px 0 2px; font: 600 13px var(--titre); color: var(--bleu); }
 .fu-groupe.on { border-color: var(--bleu); background: var(--bleu-doux); }
 .fu-tete { display: flex; align-items: center; gap: 8px; cursor: pointer; } .fu-tete small { margin-left: auto; color: var(--discret); font-size: 11.5px; text-align: right; }
@@ -2681,6 +2682,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       <button class="menu-tuile" id="btnExporter"><span>⤓</span>Exporter une copie</button>
       <button class="menu-tuile" id="btnPrenoms"><span>✂</span>Retirer les prénoms des clients</button>
       <button class="menu-tuile" id="btnDoublons"><span>⇄</span>Fusionner les clients en double</button>
+      <button class="menu-tuile" id="btnNotesPerdues"><span>🗒</span>Retrouver des notes disparues</button>
       <button class="menu-tuile" id="btnImporter"><span>📂</span>Ouvrir un autre fichier</button>
       <button class="menu-tuile" id="btnNouveauFichier"><span>＋</span>Créer un nouveau fichier</button>
       <button class="menu-tuile" id="btnFichierLie" hidden><span>💾</span>Ouvrir et enregistrer dans un fichier</button>
@@ -3534,7 +3536,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     // champ par champ : ce qui a changé ici l'emporte, sinon on prend la version de GitHub
     const resultat = { ...r };
     for (const cle of new Set([...Object.keys(l || {}), ...Object.keys(r || {}), ...Object.keys(b || {})])) {
-      if ((cle === "taches" || cle === "rdvs") && (Array.isArray((l || {})[cle]) || Array.isArray((r || {})[cle]))) {
+      if ((cle === "taches" || cle === "rdvs" || cle === "journal") && (Array.isArray((l || {})[cle]) || Array.isArray((r || {})[cle]))) {
         resultat[cle] = fusionnerListes((b || {})[cle], (l || {})[cle], (r || {})[cle]);
         continue;
       }
@@ -3580,9 +3582,12 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const pris = {};
     for (const k of ["dutreil", "agenda", "societes", "modeles", "emoluments"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
     pris.audits = fusionnerAudits(base.audits, ici.audits, contenu.audits);
+    // notes non affectées : fusionnées note par note (avant, la liste de cet appareil écrasait celle des autres)
+    pris.notes = Array.isArray(contenu.notes) ? fusionnerListes(base.notes, ici.notes, contenu.notes) : ici.notes;
     pris.simulations = {};
     for (const k of ["succession", "pvi", "immo"]) pris.simulations[k] = fusionnerAudits((base.simulations || {})[k], ici.simulations[k], (contenu.simulations || {})[k]);
     appliquerAnnexes(pris);
+    reparerNotes();
     setTimeout(() => { if (reparerAgenda()) afficherTout(); }, 300);   // après une fusion : doublons et chevauchements
     shaDistant = sha;
     localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
@@ -7367,6 +7372,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const z = $("vue-notes");
     if (!z || z.hidden) return;
     reprendrePostits();
+    reparerNotes();
     const t = sansAccents(filtreNotes.texte);
     const tous = toutesNotes();
     const liste = tous.filter((x) => (!filtreNotes.aff || (filtreNotes.aff === "oui") === (x.ou !== "libre"))
@@ -7567,6 +7573,91 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       ...lignes.map((r) => r.el),
       el("div", { class: "nr-ligne" }, el("button", { type: "button", class: "bouton", onclick: valider }, "Répartir"),
         el("button", { type: "button", class: "bouton-discret", onclick: () => fermer(false) }, "Annuler")));
+  }
+
+  // ---- notes : réparer les doublons, retrouver celles qui ont disparu ----
+  // une note rangée chez un client (ou dans un dossier) ne doit plus figurer dans les notes non affectées
+  function reparerNotes() {
+    if (!donnees) return 0;
+    const ailleurs = new Set(), textes = new Set();
+    for (const f of Object.values(donnees.clients)) for (const n of (Array.isArray(f.journal) ? f.journal : [])) { ailleurs.add(n.id); textes.add((n.le || "") + "|" + n.texte); }
+    for (const d of donnees.dossiers) for (const n of (Array.isArray(d.journal) ? d.journal : [])) { ailleurs.add(n.id); textes.add((n.le || "") + "|" + n.texte); }
+    const vus = new Set();
+    const garde = notesLibres.filter((n) => n && !ailleurs.has(n.id) && !textes.has((n.le || "") + "|" + n.texte) && !vus.has(n.id) && vus.add(n.id));
+    const nb = notesLibres.length - garde.length;
+    if (nb) { notesLibres = garde; localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres)); sauver(); }
+    return nb;
+  }
+  // toutes les notes d'un contenu de fichier de suivi : [{ n, ou, nom, dossier }]
+  function notesDuContenu(c) {
+    const l = [];
+    for (const n of (Array.isArray(c.notes) ? c.notes : [])) if (n && n.id) l.push({ n, ou: "libre" });
+    for (const f of Object.values(c.clients || {})) for (const n of (Array.isArray(f.journal) ? f.journal : [])) if (n && n.id) l.push({ n, ou: "client", nom: f.nom });
+    for (const d of (Array.isArray(c.dossiers) ? c.dossiers : [])) for (const n of (Array.isArray(d.journal) ? d.journal : [])) if (n && n.id) l.push({ n, ou: "dossier", nom: d.client, dossier: d.id, lib: libelleDossier(d) });
+    return l;
+  }
+  // relit les versions précédentes du fichier sur GitHub (historique des enregistrements) et propose les notes disparues
+  async function retrouverNotes() {
+    if (!github) { informer("Il faut le lien avec GitHub : l’historique des versions y est gardé."); return; }
+    const voile = el("div", { class: "pr-voile", onclick: (e) => { if (e.target === voile) voile.remove(); } });
+    const etat = el("p", { class: "pr-aide" }, "Lecture de l’historique sur GitHub…");
+    const liste = el("div", { class: "pr-liste fu-liste" });
+    const pied = el("div", { class: "pr-pied" });
+    voile.append(el("div", { class: "pr-fen", role: "dialog", "aria-modal": "true", "aria-label": "Notes disparues" },
+      el("div", { class: "pr-tete" }, el("h3", null, "Retrouver des notes disparues"), el("button", { type: "button", class: "menu-fermer", "aria-label": "Fermer", onclick: () => voile.remove() }, "✕")),
+      etat, liste, pied));
+    document.body.append(voile);
+    try {
+      const depot = `https://api.github.com/repos/${encodeURIComponent(github.proprietaire)}/${encodeURIComponent(github.depot)}`;
+      const depuis = new Date(Date.now() - 14 * 86400000).toISOString();
+      const r = await fetch(`${depot}/commits?path=${encodeURIComponent(github.chemin)}&sha=${encodeURIComponent(github.branche)}&since=${depuis}&per_page=60`, { headers: entetes(), cache: "no-store" });
+      if (!r.ok) throw { statut: r.status };
+      const commits = await r.json();
+      const actuelles = new Set(toutesNotes().map((x) => x.n.id));
+      const textesActuels = new Set(toutesNotes().map((x) => x.n.texte));
+      const trouvees = new Map();
+      let k = 0;
+      for (const c of commits) {
+        if (!voile.isConnected) return;
+        etat.textContent = `Lecture des versions enregistrées… ${++k} / ${commits.length}`;
+        const v = await fetch(adresseFichier() + "?ref=" + c.sha, { headers: entetes("application/vnd.github.raw+json"), cache: "no-store" });
+        if (!v.ok) continue;
+        let contenu; try { contenu = JSON.parse(await v.text()); } catch (e) { continue; }
+        const quand = (c.commit && c.commit.committer && c.commit.committer.date) || "";
+        for (const x of notesDuContenu(contenu)) {
+          if (actuelles.has(x.n.id) || textesActuels.has(x.n.texte)) continue;
+          const deja = trouvees.get(x.n.id);
+          if (!deja || quand > deja.vue) trouvees.set(x.n.id, { ...x, vue: quand });   // la version la plus récente de la note
+        }
+      }
+      const l = [...trouvees.values()].sort((a, b) => String(b.n.le || "").localeCompare(String(a.n.le || "")));
+      etat.textContent = l.length
+        ? `${l.length} note${l.length > 1 ? "s" : ""} présente${l.length > 1 ? "s" : ""} dans une version des 14 derniers jours, mais plus aujourd’hui. Cochez celles à remettre (y compris celles effacées volontairement : à vous de voir).`
+        : "Aucune note disparue dans les versions des 14 derniers jours.";
+      const choisis = new Set();
+      liste.replaceChildren(...l.map((x) => {
+        const c = el("input", { type: "checkbox" });
+        c.addEventListener("change", () => { if (c.checked) choisis.add(x); else choisis.delete(x); bouton.disabled = !choisis.size; });
+        const ou = x.ou === "libre" ? "Non affectée" : x.ou === "client" ? "👤 " + x.nom : "📁 " + x.nom + " · " + x.lib;
+        return el("label", { class: "fu-groupe rn" }, el("div", { class: "fu-tete" }, c, el("b", null, dateNote(x.n.le)), el("small", null, ou + " · vue le " + new Date(x.vue).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))),
+          el("div", { class: "rn-texte" }, x.n.texte));
+      }));
+      const bouton = el("button", { type: "button", class: "bouton", disabled: true, onclick: () => {
+        for (const x of choisis) {
+          const note = { id: x.n.id, le: x.n.le, texte: x.n.texte };
+          const d = x.dossier && donnees.dossiers.find((y) => y.id === x.dossier);
+          if (x.ou === "dossier" && d) d.journal = [note, ...(d.journal || [])];
+          else if (x.ou !== "libre" && x.nom && donnees.clients[cleClient(x.nom)]) { const f = fiche(x.nom); donnees.clients[cleClient(x.nom)] = { ...f, journal: [note, ...journalClient(x.nom)], notes: "" }; }
+          else notesLibres = [note, ...notesLibres];
+        }
+        localStorage.setItem("suivi-gp-donnees-notes", JSON.stringify(notesLibres));
+        sauver(); afficherTout(); voile.remove();
+        informer(`${choisis.size} note${choisis.size > 1 ? "s" : ""} remise${choisis.size > 1 ? "s" : ""} à sa place.`);
+      } }, "Remettre");
+      pied.replaceChildren(el("b", null, ""), l.length ? bouton : el("button", { type: "button", class: "bouton", onclick: () => voile.remove() }, "Fermer"));
+    } catch (e) {
+      etat.textContent = e && e.statut ? messageErreur(e.statut) : "Lecture de l’historique impossible (réseau ?).";
+    }
   }
 
   // ---- l'onglet « Simulations » : tout ce qui a été fait dans les trois applis ----
@@ -9945,6 +10036,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("btnExporter").addEventListener("click", () => { fermerMenu(); exporter(); });
   $("btnPrenoms").addEventListener("click", () => { fermerMenu(); retirerPrenoms(); });
   $("btnDoublons").addEventListener("click", () => { fermerMenu(); proposerFusions(); });
+  $("btnNotesPerdues").addEventListener("click", () => { fermerMenu(); retrouverNotes(); });
   $("btnExporterAlerte").addEventListener("click", exporter);
   const choisirFichier = () => {
     if (donnees && donnees.modifie && !github && !confirm("Des modifications n’ont pas été exportées. Ouvrir un autre fichier les remplacera. Continuer ?")) return;
