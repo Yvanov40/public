@@ -2277,6 +2277,107 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
 }
 }
 </style>
+<script>/* dialogue : début */
+// =====================================================================================
+//  Dialogues communs — à la place des fenêtres du système (confirm, alert, prompt), peu jolies,
+//  surtout dans l'application pour ordinateur. (Module commun, recopié tel quel dans chaque appli,
+//  dans le <head>, entre les repères « dialogue : début » et « dialogue : fin ». Modifier ici, puis recopier.)
+// -------------------------------------------------------------------------------------
+//  Trois fonctions, qui rendent une promesse (on écrit « await demander(…) ») :
+//    demander(message, options) → true / false        (confirm)
+//        options : { ok: "Supprimer", annuler: "Annuler", titre, danger: true }
+//        Sans « ok » : « Supprimer », « Effacer »… est déduit du message ; sinon « OK ».
+//    avertir(message, options)  → (rien)              (alert)
+//    saisir(message, valeur, options) → texte ou null (prompt)
+//  Entrée valide, Échap annule, un clic à côté annule. Les couleurs suivent celles de l'appli
+//  (variables --bleu, --or, --carte, --texte si elles existent ; sinon or et bleu par défaut).
+// =====================================================================================
+(function () {
+  "use strict";
+  if (window.demander) return;
+  var css = ""
+    + ".dlg-voile{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(8,24,31,.42);"
+    + "backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);opacity:0;transition:opacity .14s ease}"
+    + ".dlg-voile.on{opacity:1}"
+    + ".dlg{width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--carte,#fffdf8);color:var(--texte,#1d2a30);"
+    + "border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.05);padding:20px 22px 16px;"
+    + "font:inherit;font-size:14.5px;line-height:1.5;transform:translateY(8px) scale(.98);transition:transform .14s ease}"
+    + ".dlg-voile.on .dlg{transform:none}"
+    + ".dlg h3{margin:0 0 6px;font-size:17px;font-weight:650;color:var(--bleu,#0c2d39)}"
+    + ".dlg p{margin:0 0 6px;white-space:pre-wrap;overflow-wrap:anywhere}"
+    + ".dlg input{width:100%;box-sizing:border-box;margin:8px 0 2px;padding:9px 12px;border:1px solid var(--bordure,#d9d2c3);border-radius:10px;"
+    + "background:var(--fond,#fff);color:inherit;font:inherit;outline:none}"
+    + ".dlg input:focus{border-color:var(--or,#a57d2f);box-shadow:0 0 0 3px rgba(165,125,47,.18)}"
+    + ".dlg-boutons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:14px}"
+    + ".dlg-boutons button{border:0;border-radius:10px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}"
+    + ".dlg-non{background:transparent;color:var(--bleu,#0c2d39);box-shadow:inset 0 0 0 1px var(--bordure,#d9d2c3)}"
+    + ".dlg-non:hover{background:rgba(12,45,57,.06)}"
+    + ".dlg-oui{background:var(--bleu,#0c2d39);color:#fff}"
+    + ".dlg-oui:hover{filter:brightness(1.15)}"
+    + ".dlg-oui.danger{background:#a8452f}"
+    + ".dlg-boutons button:focus-visible{outline:2px solid var(--or,#a57d2f);outline-offset:2px}"
+    + "@media (max-width:480px){.dlg-boutons button{flex:1 1 auto}}";
+  function style() {
+    if (document.getElementById("dlg-style")) return;
+    var s = document.createElement("style"); s.id = "dlg-style"; s.textContent = css;
+    (document.head || document.documentElement).appendChild(s);
+  }
+  var VERBES = /^\s*(Supprimer|Effacer|Retirer|Vider|Remplacer|Écraser|Déconnecter|Réinitialiser)\b/i;
+  function ouvrir(message, o, champ) {
+    style();
+    return new Promise(function (fin) {
+      var avant = document.activeElement;
+      var voile = document.createElement("div"); voile.className = "dlg-voile";
+      var boite = document.createElement("div"); boite.className = "dlg"; boite.setAttribute("role", "dialog"); boite.setAttribute("aria-modal", "true");
+      if (o.titre) { var h = document.createElement("h3"); h.textContent = o.titre; boite.appendChild(h); }
+      var p = document.createElement("p"); p.textContent = String(message == null ? "" : message); boite.appendChild(p);
+      var saisie = null;
+      if (champ) { saisie = document.createElement("input"); saisie.type = "text"; saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocomplete", "off"); boite.appendChild(saisie); }
+      var zone = document.createElement("div"); zone.className = "dlg-boutons";
+      var non = null;
+      if (o.annuler !== false) { non = document.createElement("button"); non.type = "button"; non.className = "dlg-non"; non.textContent = o.annuler || "Annuler"; zone.appendChild(non); }
+      var oui = document.createElement("button"); oui.type = "button"; oui.className = "dlg-oui" + (o.danger ? " danger" : ""); oui.textContent = o.ok || "OK"; zone.appendChild(oui);
+      boite.appendChild(zone); voile.appendChild(boite); document.body.appendChild(voile);
+      requestAnimationFrame(function () { voile.classList.add("on"); });
+      var fini = false;
+      function fermer(r) {
+        if (fini) return; fini = true;
+        if (saisie) champ.lu = saisie.value;
+        document.removeEventListener("keydown", touche, true);
+        voile.classList.remove("on");
+        setTimeout(function () { voile.remove(); try { if (avant && avant.focus) avant.focus(); } catch (e) {} }, 140);
+        fin(r);
+      }
+      function touche(e) {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fermer(o.annuler === false ? true : false); }
+        else if (e.key === "Enter" && !e.shiftKey && (document.activeElement === saisie || !zone.contains(document.activeElement) || document.activeElement === oui)) { e.preventDefault(); e.stopPropagation(); fermer(true); }
+        else if (e.key === "Tab") {   // le focus reste dans la fenêtre
+          var l = [saisie, non, oui].filter(Boolean), i = l.indexOf(document.activeElement);
+          e.preventDefault(); l[(i + (e.shiftKey ? l.length - 1 : 1)) % l.length].focus();
+        }
+      }
+      document.addEventListener("keydown", touche, true);
+      oui.addEventListener("click", function () { fermer(true); });
+      if (non) non.addEventListener("click", function () { fermer(false); });
+      voile.addEventListener("mousedown", function (e) { if (e.target === voile) fermer(o.annuler === false ? true : false); });
+      setTimeout(function () { if (saisie) { saisie.focus(); saisie.select(); } else oui.focus(); }, 20);
+    });
+  }
+  window.demander = function (message, o) {
+    o = o || {};
+    if (!o.ok) { var m = VERBES.exec(String(message || "")); if (m) { o.ok = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase(); if (o.danger == null) o.danger = /^(supprimer|effacer|vider|écraser)$/i.test(m[1]); } }
+    return ouvrir(message, o);
+  };
+  window.avertir = function (message, o) { o = o || {}; o.annuler = false; return ouvrir(message, o).then(function () {}); };
+  window.saisir = function (message, valeur, o) {
+    o = o || {};
+    var champ = { valeur: valeur };
+    return ouvrir(message, o, champ).then(function (ok) {
+      return ok ? champ.lu : null;
+    });
+  };
+})();
+/* dialogue : fin */</script>
 </head>
 <body>
 
@@ -3466,7 +3567,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       });
       if (r.status === 409 || r.status === 422) {
         envoiDutreilEnCours = false;
-        if (confirm("Le suivi Dutreil a été modifié sur un autre appareil.\n\nOK : reprendre la version de GitHub (votre dernière modification ici sera perdue).\nAnnuler : garder la version de cet appareil et l’enregistrer.")) {
+        if (await demander("Le suivi Dutreil a été modifié sur un autre appareil.\n\nReprendre la version de GitHub (votre dernière modification ici sera perdue), ou garder la version de cet appareil et l’enregistrer ?", { titre: "Suivi Dutreil modifié ailleurs", ok: "Reprendre GitHub", annuler: "Garder cet appareil" })) {
           dutreil.modifie = null; chargerDutreil();
         } else envoyerDutreil(true);
         return;
@@ -3662,14 +3763,14 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     zone.hidden = false;
     zone.replaceChildren(el("span", null, reste < 0 ? `Votre clé GitHub a expiré le ${fmtDate(jour)} : la synchronisation est arrêtée.`
       : `Votre clé GitHub expire le ${fmtDate(jour)} (${reste === 0 ? "aujourd’hui" : "dans " + reste + " j"}).`),
-      el("button", { type: "button", onclick: () => alert("Pour prolonger la clé :\n\n1. Sur github.com : photo de profil, Settings, Developer settings, Personal access tokens, Fine-grained tokens.\n2. Cliquez sur la clé « suivi », puis « Regenerate token » et choisissez une nouvelle durée.\n3. Copiez la nouvelle clé, puis ici : menu ⋯, Réglages GitHub, collez-la et touchez « Se connecter ».\n4. Dans la boîte à outils : bouton GitHub…, collez-la aussi.") }, "Comment la prolonger"));
+      el("button", { type: "button", onclick: () => avertir("Pour prolonger la clé :\n\n1. Sur github.com : photo de profil, Settings, Developer settings, Personal access tokens, Fine-grained tokens.\n2. Cliquez sur la clé « suivi », puis « Regenerate token » et choisissez une nouvelle durée.\n3. Copiez la nouvelle clé, puis ici : menu ⋯, Réglages GitHub, collez-la et touchez « Se connecter ».\n4. Dans la boîte à outils : bouton GitHub…, collez-la aussi.") }, "Comment la prolonger"));
   }
 
-  function conflit() {
+  async function conflit() {
     etatSync("erreur", "Le fichier a changé sur GitHub");
-    const choix = confirm("Le fichier a été modifié ailleurs (sur l’ordinateur ?) depuis votre dernière lecture.\n\n"
-      + "OK : reprendre la version de GitHub (votre dernière modification ici sera perdue).\n"
-      + "Annuler : garder la version du téléphone et l’enregistrer sur GitHub.");
+    const choix = await demander("Le fichier a été modifié ailleurs (sur l’ordinateur ?) depuis votre dernière lecture.\n\n"
+      + "Reprendre la version de GitHub (votre dernière modification ici sera perdue), ou garder la version de cet appareil et l’enregistrer sur GitHub ?",
+      { titre: "Suivi modifié ailleurs", ok: "Reprendre GitHub", annuler: "Garder cet appareil" });
     if (choix) chargerDepuisGithub().catch(() => {});
     else envoyerGithub(true);
   }
@@ -3686,8 +3787,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // crée le fichier de suivi dans le dépôt : avec les dossiers déjà sur cet appareil, ou vide
   async function creerFichierGithub(g) {
     const vide = !donnees || !donnees.dossiers.length;
-    if (!confirm(vide ? `Créer un fichier « ${g.chemin} » vide dans le dépôt ${g.depot} ?`
-      : `Créer « ${g.chemin} » dans le dépôt ${g.depot} avec les ${donnees.dossiers.length} dossiers de cet appareil ?`)) return;
+    if (!(await demander(vide ? `Créer un fichier « ${g.chemin} » vide dans le dépôt ${g.depot} ?`
+      : `Créer « ${g.chemin} » dans le dépôt ${g.depot} avec les ${donnees.dossiers.length} dossiers de cet appareil ?`, { ok: "Créer" }))) return;
     const contenu = JSON.stringify({ version: 3, dossiers: vide ? [] : donnees.dossiers, clients: vide ? {} : donnees.clients, ...sectionsAnnexes() }, null, 1);
     const url = `https://api.github.com/repos/${encodeURIComponent(g.proprietaire)}/${encodeURIComponent(g.depot)}/contents/${g.chemin.split("/").map(encodeURIComponent).join("/")}`;
     const r = await fetch(url, { method: "PUT", headers: { "Authorization": "Bearer " + g.cle, "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
@@ -3746,7 +3847,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       return;
     }
     // sans GitHub : le nouveau suivi remplace celui de l'appareil
-    if (donnees && donnees.dossiers.length && mode !== "copie" && !confirm("Le suivi actuel de cet appareil sera remplacé. L’avez-vous exporté ? Continuer ?")) return;
+    if (donnees && donnees.dossiers.length && mode !== "copie" && !(await demander("Le suivi actuel de cet appareil sera remplacé. L’avez-vous exporté ? Continuer ?", { ok: "Continuer" }))) return;
     donnees = { version: 2, dossiers: contenu.dossiers, clients: contenu.clients, importe: new Date().toISOString(), modifie: new Date().toISOString(), fichier: nom };
     appliquerAnnexes({ dutreil: contenu.dutreil, agenda: contenu.agenda || AGENDA_DEFAUT, societes: contenu.societes || societes, modeles: contenu.modeles || {} });
     pileAnnuler.length = 0;
@@ -3763,7 +3864,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       cle: $("ghCle").value.trim(), expiration: $("ghExpiration").value || ""
     };
     if (!g.proprietaire || !g.depot || !g.cle) { informer("Indiquez le nom d’utilisateur, le dépôt et la clé d’accès."); return; }
-    if (donnees && donnees.modifie && !confirm("Des modifications du téléphone n’ont pas été enregistrées ailleurs. Charger la version de GitHub les remplacera. Continuer ?")) return;
+    if (donnees && donnees.modifie && !(await demander("Des modifications du téléphone n’ont pas été enregistrées ailleurs. Charger la version de GitHub les remplacera. Continuer ?", { ok: "Continuer" }))) return;
     const ancien = github;
     github = g;
     $("ghErreur").hidden = true;
@@ -3924,7 +4025,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   async function ouvrirFichierLie() {
     fermerMenu();
     if (fichierLie) {  // déjà lié : on délie
-      if (!confirm(`Arrêter l’enregistrement automatique dans « ${fichierLie.name} » ?`)) return;
+      if (!(await demander(`Arrêter l’enregistrement automatique dans « ${fichierLie.name} » ?`, { ok: "Arrêter" }))) return;
       fichierLie = null; await garderLien(null); majBandeauLien(); majAlerte();
       informer("Le suivi n’est plus lié au fichier. Vos données restent sur cet appareil.");
       return;
@@ -3935,7 +4036,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     try {
       if ((await handle.requestPermission({ mode: "readwrite" })) !== "granted") { informer("Sans autorisation d’écriture, le fichier ne peut pas être mis à jour."); return; }
       const texte = await (await handle.getFile()).text();
-      if (!importer(texte, handle.name, true)) return;   // GitHub relié : importer pose la question (et peut annuler)
+      if (!(await importer(texte, handle.name, true))) return;   // GitHub relié : importer pose la question (et peut annuler)
       fichierLie = handle; lienEnAttente = false;
       await garderLien(handle);
       majBandeauLien();
@@ -3978,7 +4079,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     majBandeauLien();
   });
 
-  function importer(texte, nomFichier) {
+  async function importer(texte, nomFichier) {
     let contenu;
     try { contenu = JSON.parse(texte); }
     catch (e) { informer("Ce fichier n’est pas un fichier JSON lisible."); return; }
@@ -3987,11 +4088,11 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     // relié à GitHub : sans précaution, la synchronisation mélangerait ce fichier et celui de GitHub
     let remplacerGithub = false;
     if (github) {
-      if (confirm(`Votre suivi est relié à GitHub.\n\nOK : ouvrir « ${nomFichier || "ce fichier"} » seul, sans toucher à GitHub (la synchronisation est mise en pause ; « Recharger depuis GitHub » la reprend).\n\nAnnuler : autres choix.`)) {
+      if (await demander(`Votre suivi est relié à GitHub.\n\nOuvrir « ${nomFichier || "ce fichier"} » seul, sans toucher à GitHub ? (La synchronisation est mise en pause ; « Recharger depuis GitHub » la reprend.)`, { titre: "Ouvrir un fichier", ok: "Ouvrir seul", annuler: "Autres choix" })) {
         try { localStorage.setItem(CLE_PAUSE, "1"); } catch (e) {}
         github = null;
         etatSync("local", "Fichier seul · GitHub en pause");
-      } else if (confirm(`Remplacer le suivi enregistré sur GitHub par ce fichier ?\n\nLe contenu actuel de GitHub reste dans les sauvegardes du jour.`)) {
+      } else if (await demander(`Remplacer le suivi enregistré sur GitHub par ce fichier ?\n\nLe contenu actuel de GitHub reste dans les sauvegardes du jour.`, { ok: "Remplacer GitHub", annuler: "Ne rien ouvrir" })) {
         remplacerGithub = true;
       } else { informer("Ouverture annulée : rien n’a changé."); return false; }
     }
@@ -4492,14 +4593,14 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     document.body.append(voile);
   }
   // ---- renommer un client : ses dossiers, sa fiche, ses tâches et ses pactes Dutreil suivent ----
-  function renommerClient(ancien) {
-    const saisi = prompt(`Nouveau nom pour « ${ancien} » :`, ancien);
+  async function renommerClient(ancien) {
+    const saisi = await saisir(`Nouveau nom pour « ${ancien} » :`, ancien, { titre: "Renommer le client", ok: "Renommer" });
     if (saisi === null) return;
     const nouveau = saisi.replace(/\s+/g, " ").trim();
     if (!nouveau || nouveau === ancien) return;
     const cleA = cleClient(ancien), cleN = cleClient(nouveau);
     const autre = cleN !== cleA ? nomsClients().find((x) => cleClient(x) === cleN) : null;
-    if (autre && !confirm(`Un client « ${autre} » existe déjà.\n\nRegrouper les deux fiches sous ce nom ? Les dossiers, tâches et commentaires de « ${ancien} » lui seront rattachés.`)) return;
+    if (autre && !(await demander(`Un client « ${autre} » existe déjà.\n\nRegrouper les deux fiches sous ce nom ? Les dossiers, tâches et commentaires de « ${ancien} » lui seront rattachés.`, { ok: "Regrouper" }))) return;
     const final = autre || nouveau;
     for (const d of donnees.dossiers) {
       if (cleClient(d.client) !== cleA) continue;
@@ -4549,8 +4650,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     ouvrirFeuille("feuilleClient", nouveauClient);
     setTimeout(() => nom.focus(), 50);
   }
-  function supprimerClientSeul(nom) {
-    if (!confirm(`Supprimer la fiche du client « ${nom} » ? Il n’a aucun dossier ; ses tâches et commentaires seront effacés.`)) return;
+  async function supprimerClientSeul(nom) {
+    if (!(await demander(`Supprimer la fiche du client « ${nom} » ? Il n’a aucun dossier ; ses tâches et commentaires seront effacés.`))) return;
     delete donnees.clients[cleClient(nom)];
     sauver(); terminerFeuille(); afficherTout(); informer("Client supprimé.");
   }
@@ -5137,9 +5238,9 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     sauverDutreil(); terminerFeuille(); afficherDutreil();
     informer(pacteEnCours >= 0 ? "Pacte enregistré." : "Pacte ajouté.");
   }
-  function supprimerPacte() {
+  async function supprimerPacte() {
     const p = dutreil.pactes[pacteEnCours];
-    if (!confirm(`Supprimer le pacte « ${p.societe} » ?`)) return;
+    if (!(await demander(`Supprimer le pacte « ${p.societe} » ?`))) return;
     dutreil.pactes.splice(pacteEnCours, 1);
     sauverDutreil(); terminerFeuille(); afficherDutreil(); informer("Pacte supprimé.");
   }
@@ -5372,10 +5473,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     informer(`Rendez-vous ${client} : ${fmtDate(changes.date || avant.date)}${(changes.heure ?? avant.heure) ? " à " + (changes.heure ?? avant.heure) : ""}.${resume}`);
   }
   // supprimer une tâche ou un rendez-vous depuis l'agenda (avec Annuler)
-  function supprimerEvenement(e) {
+  async function supprimerEvenement(e) {
     const r = e.ref || {};
     const nom = e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "");
-    if (!confirm(`Supprimer ${e.type === "tache" ? "la tâche" : "le rendez-vous"} « ${nom} » ?`)) return;
+    if (!(await demander(`Supprimer ${e.type === "tache" ? "la tâche" : "le rendez-vous"} « ${nom} » ?`))) return;
     let annuler = null;
     if (r.tache) {
       const avant = tachesDe(r.client).map((x) => ({ ...x }));
@@ -6687,8 +6788,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return [el("div", { class: "sep" }), el("div", { class: "titre" }, "👥 Collaborateurs"),
       el("div", { class: "rangee-collab" }, ...tousCollabs().map(puce),
         el("button", { type: "button", class: "puce-collab aucun", onclick: () => { fermerMenuSelection(); appliquerAuxDossiers(indices, (d) => { d.collaborateur = ""; }, (k) => `${pluriel(k, "dossier")} sans collaborateur.`); } }, "aucun"),
-        el("button", { type: "button", class: "puce-collab ajout", onclick: () => {
-          const nom = (prompt("Nom du collaborateur à ajouter :") || "").replace(/\s+/g, " ").trim();
+        el("button", { type: "button", class: "puce-collab ajout", onclick: async () => {
+          const nom = ((await saisir("Nom du collaborateur à ajouter :", "", { ok: "Ajouter" })) || "").replace(/\s+/g, " ").trim();
           fermerMenuSelection();
           if (nom) appliquerAuxDossiers(indices, (d) => { d.collaborateur = [...new Set([...collabsDe(d), nom])].join(", "); }, (k) => `${nom} ajouté à ${pluriel(k, "dossier")}.`);
         } }, "＋"))];
@@ -6712,8 +6813,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       ...(tout ? connus : [...new Set([actuel, ...connus.slice(0, 6)].filter(Boolean))]).map((n) => el("button", { type: "button", class: "puce-collab" + (n === actuel ? " choisi" : ""),
         title: etudeDe(n) !== AUTRES_ETUDES ? etudeDe(n) : "", onclick: () => { fermerMenuSelection(); attribuerDemandeur(indices, n); } }, n)),
       connus.length > 6 ? el("button", { type: "button", class: "puce-collab aucun", onclick: (e) => { e.stopPropagation(); tout = !tout; dessiner(); } }, tout ? "moins" : `… tous (${connus.length})`) : null,
-      el("button", { type: "button", class: "puce-collab ajout", onclick: () => {
-        const nom = (prompt("Nom du demandeur :") || "").replace(/\s+/g, " ").trim();
+      el("button", { type: "button", class: "puce-collab ajout", onclick: async () => {
+        const nom = ((await saisir("Nom du demandeur :", "", { ok: "Valider" })) || "").replace(/\s+/g, " ").trim();
         fermerMenuSelection();
         if (nom) attribuerDemandeur(indices, nom);
       } }, "＋"));
@@ -7031,8 +7132,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     .sort((x, y) => String(y.d.maj || "").localeCompare(String(x.d.maj || "")));
   var simulationsDuClient = (nom) => toutesSimulations().filter((x) => x.client && cleClient(x.client) === cleClient(nom));
   var dateSimu = (d) => d.maj ? new Date(d.maj).toLocaleDateString("fr-FR") : "";
-  function demanderClient(app, id, actuel, nomSimu) {
-    const nom = (prompt("Rattacher cette simulation à quel client ?", actuel || nomSimu || "") || "").trim();
+  async function demanderClient(app, id, actuel, nomSimu) {
+    const nom = ((await saisir("Rattacher cette simulation à quel client ?", actuel || nomSimu || "", { ok: "Rattacher" })) || "").trim();
     if (!nom) return;
     lierSimulation(app, id, nom);
     informer("Simulation rattachée à " + nomClientConnu(nom) + ".");
@@ -7052,7 +7153,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         !options.rattacher && x.client ? el("button", { type: "button", class: "lien-sous-champ", title: "Ne plus rattacher cette simulation à ce client",
           onclick: (e) => { lierSimulation(x.app, x.id, ""); if (options.avecClient) afficherSimulations(); else e.target.closest(".simu-ligne").remove(); } }, "détacher") : null,
         !options.rattacher ? el("button", { type: "button", class: "lien-sous-champ", style: "color:var(--rouge)", title: "Effacer cette simulation du fichier et de tous les appareils",
-          onclick: (e) => { if (!confirm(`Effacer « ${x.d.nom || "sans nom"} » (${A.court}) de partout : fichier, GitHub, tous les appareils ?`)) return; effacerSimulations(x.app, [x.id]); if (options.avecClient) afficherSimulations(); else e.target.closest(".simu-ligne").remove(); } }, "effacer") : null));
+          onclick: async (e) => { if (!(await demander(`Effacer « ${x.d.nom || "sans nom"} » (${A.court}) de partout : fichier, GitHub, tous les appareils ?`))) return; effacerSimulations(x.app, [x.id]); if (options.avecClient) afficherSimulations(); else e.target.closest(".simu-ligne").remove(); } }, "effacer") : null));
     return ligne;
   }
   // boutons « nouvelle simulation » (une par appli)
@@ -7432,8 +7533,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
           el("button", { type: "button", class: "bouton-discret", onmousedown: (e) => e.preventDefault(), onclick: redessiner }, "Annuler")));
         edit.focus();
       } }, "✎"),
-      el("button", { type: "button", title: estRdv ? "Effacer la note (le rendez-vous reste)" : "Effacer", "aria-label": "Effacer la note", onclick: () => {
-        if (!confirm(estRdv ? "Effacer la note de ce rendez-vous ?\n\nLe rendez-vous, lui, reste dans l’agenda." : "Effacer cette note ?")) return;
+      el("button", { type: "button", title: estRdv ? "Effacer la note (le rendez-vous reste)" : "Effacer", "aria-label": "Effacer la note", onclick: async () => {
+        if (!(await demander(estRdv ? "Effacer la note de ce rendez-vous ?\n\nLe rendez-vous, lui, reste dans l’agenda." : "Effacer cette note ?"))) return;
         retirerNote(x); sauver(); redessiner(); informer((estRdv ? "Note du rendez-vous effacée" : "Note effacée") + " (Annuler : menu ⋯ ou Ctrl + Z).");
       } }, "✕")];
     return el("div", { class: "journal-note" + (x.ou === "libre" ? " nr-libre" : estRdv ? " nr-rdv" : x.ou === "client" ? " nr-cl" : "") },
@@ -8272,11 +8373,11 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
               el("button", { type: "button", class: "perso-ouvrir", onclick: () => ouvrirPersoEmol(k) }, el("span", { class: "ic" }, b.ic || "📄"),
                 el("span", null, el("b", null, b.court || b.nom, modifie ? el("em", null, "modifié") : ajoute ? el("em", null, "ajouté") : null), el("small", null, resume(b)))),
               el("button", { type: "button", class: "perso-oeil", title: masque ? "Remettre dans la liste" : "Retirer de la liste", "aria-label": masque ? "Remettre dans la liste" : "Retirer de la liste",
-                onclick: () => {
+                onclick: async () => {
                   if (masque) delete emolPerso[k];
                   else if (BAREMES_BASE[k] && !emolPerso[k]) emolPerso[k] = null;
-                  else if (ajoute) { if (!confirm(`Supprimer la prestation « ${b.court || b.nom} » ?`)) return; delete emolPerso[k]; }
-                  else { if (!confirm(`Revenir au réglage d’origine pour « ${b.court || b.nom} » ?`)) return; delete emolPerso[k]; }
+                  else if (ajoute) { if (!(await demander(`Supprimer la prestation « ${b.court || b.nom} » ?`))) return; delete emolPerso[k]; }
+                  else { if (!(await demander(`Revenir au réglage d’origine pour « ${b.court || b.nom} » ?`))) return; delete emolPerso[k]; }
                   garderEmolPerso(); ouvrirPersoEmol();
                 } }, masque ? "＋" : ajoute ? "🗑" : modifie ? "↺" : "👁"));
           })))));
@@ -8652,7 +8753,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       // une page web ne peut pas ouvrir un dossier de l'ordinateur : on copie le chemin
       return el("button", { type: "button", title: "Copier le chemin", onclick: async () => {
         try { await navigator.clipboard.writeText(t.valeur); informer("Chemin copié : collez-le dans l’Explorateur (Windows + E, puis Ctrl + L, puis Ctrl + V)."); }
-        catch (e) { prompt("Copiez ce chemin :", t.valeur); }
+        catch (e) { saisir("Copiez ce chemin :", t.valeur, { annuler: false }); }
       } }, icone, el("span", null, affiche));
     }
     return el("a", { href: lienPour(t), target: t.type === "url" ? "_blank" : null, rel: "noopener", class: t.type === "tel" ? "tel" : null,
@@ -8729,8 +8830,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
                 el("button", { type: "button", class: "bouton", onclick: garder }, "Enregistrer"), el("button", { type: "button", class: "bouton-discret", onclick: dessiner }, "Annuler")));
               edit.focus();
             } }, "✎"),
-            el("button", { type: "button", title: "Effacer", "aria-label": "Effacer la note", onclick: () => {
-              if (!confirm("Effacer cette note ?")) return;
+            el("button", { type: "button", title: "Effacer", "aria-label": "Effacer la note", onclick: async () => {
+              if (!(await demander("Effacer cette note ?"))) return;
               ecrire(lire().filter((x) => x.id !== n.id)); dessiner(); zone.dispatchEvent(new Event("input", { bubbles: true }));
             } }, "✕")),
           corps);
@@ -8759,7 +8860,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
 
   // ---- agenda : Google Agenda ou fichier .ics (Outlook, Apple, Samsung…) ----
-  function menuAgenda(titre, iso, description, heure, duree) {
+  async function menuAgenda(titre, iso, description, heure, duree) {
     // avec une heure : rendez-vous d'une heure, rappel une heure avant ; sans heure : journée entière, rappel la veille
     let debut, fin;
     if (heure) {
@@ -8781,7 +8882,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       "BEGIN:VALARM", heure ? "TRIGGER:-PT1H" : "TRIGGER:-P1D", "ACTION:DISPLAY", `DESCRIPTION:${titre.replace(/[,;]/g, " ")}`, "END:VALARM",
       "END:VEVENT", "END:VCALENDAR"].join("\r\n");
     const lien = el("a", { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar" })), download: "rendez-vous.ics" });
-    if (confirm(`Ajouter « ${titre} » le ${fmtDate(iso)}${heure ? " à " + heure : ""} à votre agenda ?\n\nOK : Google Agenda\nAnnuler : fichier pour Outlook, Apple ou un autre agenda (avec un rappel ${heure ? "une heure avant" : "la veille"})`)) {
+    if (await demander(`Ajouter « ${titre} » le ${fmtDate(iso)}${heure ? " à " + heure : ""} à votre agenda ?\n\nGoogle Agenda, ou un fichier pour Outlook, Apple ou un autre agenda (avec un rappel ${heure ? "une heure avant" : "la veille"}) ?`, { titre: "Ajouter à l’agenda", ok: "Google Agenda", annuler: "Outlook, Apple…" })) {
       window.open(google, "_blank", "noopener");
     } else {
       document.body.append(lien); lien.click(); lien.remove();
@@ -9337,8 +9438,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       el("div", { class: "actions-fiche" },
         !t.fait ? el("button", { type: "button", title: "Placer cette tâche après toutes les autres, une fois", onclick: () => { const r = envoyerEnDernier(nom, id); terminerFeuille(); afficherTout(); informer(r); } }, "⏭ En dernier") : null,
         t.pour ? el("button", { type: "button", onclick: () => menuAgenda(`${t.texte} (${nom})`, t.pour, t.note || "", t.heure, t.duree || DUREE_TACHE) }, "📅 Ajouter à l’agenda") : null,
-        el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
-          if (!confirm(`Supprimer la tâche « ${t.texte} » ?`)) return;
+        el("button", { type: "button", style: "color:var(--rouge)", onclick: async () => {
+          if (!(await demander(`Supprimer la tâche « ${t.texte} » ?`))) return;
           majTaches(nom, (l) => l.filter((x) => x.id !== id));
           apresAgenda([t.pour]);
           terminerFeuille(); afficherTout(); informer("Tâche supprimée.");
@@ -9638,8 +9739,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Lieu, documents à apporter…" }, r ? (r.note || "") : ""))),
       el("div", { class: "actions-fiche" },
         r ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${nom}${r.objet ? " · " + r.objet : ""}`, r.date, r.note || "", r.heure, r.duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
-        r ? el("button", { type: "button", style: "color:var(--rouge)", onclick: () => {
-          if (!confirm("Supprimer ce rendez-vous ?")) return;
+        r ? el("button", { type: "button", style: "color:var(--rouge)", onclick: async () => {
+          if (!(await demander("Supprimer ce rendez-vous ?"))) return;
           majRdvs(nom, (l) => l.filter((x) => x.id !== id));
           const resume = apresAgenda([r.date]);
           terminerFeuille(); afficherTout(); informer("Rendez-vous supprimé." + resume);
@@ -9791,17 +9892,17 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
 
   // « analyse » -> « Analyse » si la nature existe déjà, sinon la nouvelle nature telle quelle
   const natureNormale = (x) => { const t = String(x || "").replace(/\s+/g, " ").trim(); return naturesConnues().find((n) => n.toLowerCase() === t.toLowerCase()) || (t.charAt(0).toLocaleUpperCase("fr") + t.slice(1)); };
-  function enregistrerDossier() {
+  async function enregistrerDossier() {
     const v = lireFormulaire($("corpsDossier"));
     if (v.notaire && v.societe !== undefined && v.societe.trim()) rattacherDemandeur(v.notaire, v.societe);
     delete v.societe;
     if (!v.client) { informer("Indiquez le nom du client."); return; }
     if (!String(v.nature || "").trim()) { informer("Indiquez la nature du dossier (Analyse, Acte… ou une nouvelle)."); return; }
     // vider depuis un dossier ce qui appartient au client (◆) : on prévient, c'est effacé de sa fiche aussi
-    const vides = [["commentaire_client", "le commentaire"], ["coordonnees_client", "les coordonnées"]].filter(([n]) => {
+    const vides = [["commentaire_client", "le commentaire"], ["coordonnees_client", "les coordonnées"]].filter(async ([n]) => {
       const z = $("corpsDossier").querySelector(`[name="${n}"]`); return z && (z.dataset.depart || "").trim() && !z.value.trim();
     }).map(([, lib]) => lib);
-    if (vides.length && !confirm(`Vous videz ${vides.join(" et ")} du client ${v.client}.\n\nCes rubriques (◆) sont celles de sa fiche : elles seront effacées de la fiche et de tous ses dossiers.\n\nContinuer ?`)) return;
+    if (vides.length && !(await demander(`Vous videz ${vides.join(" et ")} du client ${v.client}.\n\nCes rubriques (◆) sont celles de sa fiche : elles seront effacées de la fiche et de tous ses dossiers.\n\nContinuer ?`, { ok: "Vider", danger: true }))) return;
     const avant = enCours >= 0 ? { ...donnees.dossiers[enCours] } : null;
     const d = avant ? { ...avant } : { coche: false, repere: "", heures: 0, reglementaire: "", societe: "", suivi_j: "", notes: "" };
     if ("coordonnees" in v) d.coordonnees = v.coordonnees;
@@ -9838,15 +9939,15 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     // nouveau dossier : le modèle de tâches de sa nature, s'il existe
     if (enCours < 0 && (modelesTaches[sansNumero(d.type)] || []).length) {
       const liste = modelesTaches[sansNumero(d.type)];
-      if (confirm(`Ajouter les ${liste.length} tâches du modèle « ${sansNumero(d.type)} » pour ${d.client} ?\n\n• ${liste.map((m) => m.texte).join("\n• ")}`)) {
+      if (await demander(`Ajouter les ${liste.length} tâches du modèle « ${sansNumero(d.type)} » pour ${d.client} ?\n\n• ${liste.map((m) => m.texte).join("\n• ")}`, { ok: "Ajouter les tâches", annuler: "Non merci" })) {
         const nb = appliquerModele(d);
         afficherTout(); informer(`${nb} tâches du modèle ajoutées pour ${d.client}.`);
       }
     }
   }
-  function supprimerDossier() {
+  async function supprimerDossier() {
     const d = donnees.dossiers[enCours];
-    if (!confirm(`Supprimer le dossier « ${d.tache || sansNumero(d.type)} » de ${d.client} ?`)) return;
+    if (!(await demander(`Supprimer le dossier « ${d.tache || sansNumero(d.type)} » de ${d.client} ?`))) return;
     donnees.dossiers.splice(enCours, 1);
     choisi = null;
     sauver(); terminerFeuille(); afficherTout(); informer("Dossier supprimé.");
@@ -10179,8 +10280,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("btnDoublons").addEventListener("click", () => { fermerMenu(); proposerFusions(); });
   $("btnNotesPerdues").addEventListener("click", () => { fermerMenu(); retrouverNotes(); });
   $("btnExporterAlerte").addEventListener("click", exporter);
-  const choisirFichier = () => {
-    if (donnees && donnees.modifie && !github && !confirm("Des modifications n’ont pas été exportées. Ouvrir un autre fichier les remplacera. Continuer ?")) return;
+  const choisirFichier = async () => {
+    if (donnees && donnees.modifie && !github && !(await demander("Des modifications n’ont pas été exportées. Ouvrir un autre fichier les remplacera. Continuer ?"))) return;
     fermerMenu();
     $("fichier").value = "";
     $("fichier").click();
@@ -10201,7 +10302,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const f = $("fichier").files[0];
     if (!f) return;
     const lecteur = new FileReader();
-    lecteur.onload = () => { if (importer(lecteur.result, f.name) && fichierLie) { fichierLie = null; garderLien(null); majBandeauLien(); } };
+    lecteur.onload = async () => { if ((await importer(lecteur.result, f.name)) && fichierLie) { fichierLie = null; garderLien(null); majBandeauLien(); } };
     lecteur.onerror = () => informer("Le fichier n’a pas pu être lu.");
     lecteur.readAsText(f, "utf-8");
   });
@@ -10436,19 +10537,19 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("btnGithub").addEventListener("click", ouvrirReglages);
   $("btnGithubVide").addEventListener("click", ouvrirReglages);
   $("connecterGithub").addEventListener("click", connecter);
-  $("btnActualiser").addEventListener("click", () => {
+  $("btnActualiser").addEventListener("click", async () => {
     if (!github && githubEnPause()) {
-      if (!confirm("Reprendre la synchronisation GitHub ? Le suivi de GitHub remplacera le fichier ouvert (exportez-le avant si vous voulez le garder).")) return;
+      if (!(await demander("Reprendre la synchronisation GitHub ? Le suivi de GitHub remplacera le fichier ouvert (exportez-le avant si vous voulez le garder)."))) return;
       try { localStorage.removeItem(CLE_PAUSE); } catch (e) {}
       lireReglages();
     }
     if (!github) { ouvrirReglages(); return; }
-    if (donnees && donnees.modifie && !confirm("Une modification n’est pas encore enregistrée sur GitHub. Recharger quand même ?")) return;
+    if (donnees && donnees.modifie && !(await demander("Une modification n’est pas encore enregistrée sur GitHub. Recharger quand même ?"))) return;
     fermerMenu();
     chargerDepuisGithub().then(() => chargerDutreil()).catch(() => {});
   });
-  $("deconnecterGithub").addEventListener("click", () => {
-    if (!confirm("Déconnecter cet appareil de GitHub ? Les données restent affichées, mais ne seront plus enregistrées sur GitHub.")) return;
+  $("deconnecterGithub").addEventListener("click", async () => {
+    if (!(await demander("Déconnecter cet appareil de GitHub ? Les données restent affichées, mais ne seront plus enregistrées sur GitHub."))) return;
     localStorage.removeItem(CLE_GITHUB);
     github = null;
     etatSync("local", "Pas connecté à GitHub");
@@ -10571,7 +10672,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     ["＋", "Nouveau dossier", "créer ajouter", () => ouvrirDossier(-1)],
     ["＋", "Nouveau client", "créer ajouter prospect", () => nouveauClient()],
     ["＋", "Nouveau pacte Dutreil", "créer ajouter", () => ouvrirPacte(-1)],
-    ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", () => { const nom = (prompt("Pour quel client ?") || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
+    ["📅", "Nouveau rendez-vous client", "rdv rendez-vous client agenda", async () => { const nom = ((await saisir("Pour quel client ?", "", { ok: "Continuer" })) || "").trim(); if (nom) ouvrirRdv(nomsClients().find((n) => cleClient(n) === cleClient(nom)) || nom, null); }],
     ["🧮", "Simulations", "audit succession plus-value pvi simulateur transmission démembrement assurance-vie", () => { location.hash = "#simulations"; }],
     ["🧭", "Ouvrir l’Audit civil et fiscal", "audit transmission", () => ouvrirSimulation("audit")],
     ["🕊", "Ouvrir le simulateur de succession", "succession conjoint survivant usufruit", () => ouvrirSimulation("succession")],

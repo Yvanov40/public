@@ -36,7 +36,7 @@
   function garder(changes) {
     var p = brut();
     for (var k in changes) p[k === "part" && C.app ? "part-" + C.app : k] = changes[k];
-    try { localStorage.setItem(CLE, JSON.stringify(p)); } catch (e) { if (changes.logo) alert("Image trop lourde pour être gardée : choisissez un logo plus léger."); }
+    try { localStorage.setItem(CLE, JSON.stringify(p)); } catch (e) { if (changes.logo) (window.avertir || alert)("Image trop lourde pour être gardée : choisissez un logo plus léger."); }
     appliquer();
   }
   function appliquer() {
@@ -171,7 +171,7 @@
       return function (b) {
         var f = C.exports && C.exports[type]; if (!f || b.disabled) return;
         b.disabled = true; b.style.opacity = ".6";
-        Promise.resolve().then(f).catch(function (er) { console.error(er); alert("Export impossible : " + (er && er.message || er)); })
+        Promise.resolve().then(f).catch(function (er) { console.error(er); (window.avertir || alert)("Export impossible : " + (er && er.message || er)); })
           .then(function () { b.disabled = false; b.style.opacity = ""; });
       };
     };

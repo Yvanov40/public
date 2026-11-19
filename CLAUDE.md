@@ -21,6 +21,8 @@ chargent ces pages depuis le site. Voir aussi le README.
 - Chaque appli tient dans un seul `index.html` (plus quelques fichiers à côté : `excel.js`, `vendor/`…).
   Les modules communs `habillage.source.js` (Personnaliser : apparence) et `disposition.source.js`
   (mise en page, exports PowerPoint / PDF / Excel) sont recopiés dans chaque appli : une correction se reporte dans toutes.
+  De même `dialogue.source.js` : jamais de `confirm`, `alert` ou `prompt` du navigateur, mais `await demander(…)`,
+  `avertir(…)` et `await saisir(…)` (fenêtres aux couleurs de l'appli).
 - Tester avant d'envoyer (navigateur sans interface, ordinateur et téléphone) : aucune erreur, et le parcours modifié fonctionne.
 - Garder les données existantes : une nouvelle structure reprend l'ancienne (migration) sans rien perdre,
   y compris quand un autre appareil a encore l'ancienne version et synchronise entre-temps.

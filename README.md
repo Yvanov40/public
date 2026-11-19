@@ -40,6 +40,8 @@ Audit, Succession, Plus-value et Investissement ont le même bouton « Personnal
 pas à pas ; largeur de la colonne de saisie (gardée par appli), largeur de la page, navigation (barre, menu
 latéral, masquée), densité ; nom du cabinet et logo des exports. Puis trois boutons : PowerPoint, PDF, Excel.
 
+- `dialogue.source.js` : les fenêtres de confirmation, d'information et de saisie (à la place de confirm, alert et prompt),
+  recopiées dans le `<head>` de chaque appli (repères `dialogue : début` / `dialogue : fin`).
 - `disposition.source.js` : le module commun, recopié à la fin de chaque simulateur (repères `disposition : début` /
   `disposition : fin`) ; chaque appli décrit sa mise en page et ses exports dans `window.DISPOSITION`.
 - Excel en formules vivantes : `immo/excel.js` et `pvi/excel.js` (hypothèses en haut de chaque onglet, en jaune ;
