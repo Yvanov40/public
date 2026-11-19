@@ -384,6 +384,9 @@ nav.bas { display: none; }
 .feuille-entete h3 { flex: 1; margin: 0; font: 600 20px/1.15 var(--titre); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .feuille-entete button { border: 0; background: none; color: var(--barre-texte); padding: 8px 10px; font-weight: 600; }
 .feuille-entete button.valider { background: var(--or); border-radius: 8px; color: #fff; }
+.feuille-entete button.abandonner { font-weight: 500; opacity: .72; padding-left: 4px; }
+.feuille-entete button.abandonner:hover { opacity: 1; }
+@media (max-width: 420px) { .feuille-entete button.abandonner { font-size: 13px; padding: 8px 4px; } .feuille-entete h3 { font-size: 17px; } }
 .feuille-corps { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
 .champ { display: grid; gap: 4px; margin-bottom: 11px; }
 .champ label { font-size: 12.5px; color: var(--discret); }
@@ -10221,8 +10224,25 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (!document.querySelector(".feuille.ouverte")) return;
     const r = enregistrerAvantFermeture();
     if (r === true) return;      // enregistrée : elle s'est fermée toute seule
-    if (r === null) return;      // il manque quelque chose (le message le dit) : on reste dans la fiche
+    if (r === null) {            // il manque quelque chose (le message le dit) : on reste dans la fiche, avec de quoi abandonner
+      informer($("messageTexte").textContent, { texte: "Abandonner", faire: () => quitterFeuille() });
+      return;
+    }
+    quitterFeuille();
+  }
+  // ferme la fiche sans rien enregistrer
+  function quitterFeuille() {
+    if (!document.querySelector(".feuille.ouverte")) return;
     if (history.state && history.state.fiche) history.back(); else retourFiche(false);
+  }
+  // bouton « Abandonner » : quitter sans enregistrer (après confirmation s'il y a des saisies)
+  async function abandonnerFeuille() {
+    const f = document.querySelector(".feuille.ouverte");
+    if (!f) return;
+    const change = f.dataset.photo !== undefined && f.dataset.photo !== photoChamps(f);
+    if (change && !(await demander("Abandonner cette fiche ? Ce qui vient d’être saisi ne sera pas enregistré.", { ok: "Abandonner", annuler: "Continuer la saisie", danger: true }))) return;
+    $("message").classList.remove("visible");
+    quitterFeuille();
   }
   // après un enregistrement : retour à la fiche d'avant, remise à jour avec les nouvelles données
   function terminerFeuille() {
@@ -10238,6 +10258,13 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (n && history.state && history.state.fiche) { ignorerRetour = 1; history.go(-n); }
   }
   document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerFeuilles));
+  // chaque fiche enregistrée automatiquement reçoit un bouton « Abandonner », pour pouvoir sortir sans rien garder
+  Object.keys(FICHES_AUTO).forEach((id) => {
+    const f = $(id), fermer = f && f.querySelector(".feuille-entete [data-fermer]");
+    if (!fermer) return;
+    const b = el("button", { type: "button", class: "abandonner", title: "Quitter sans enregistrer", onclick: abandonnerFeuille }, "Abandonner");
+    fermer.after(b);
+  });
   // toucher le fond assombri referme la fenêtre : sur ordinateur, et sur téléphone pour les petites fenêtres (qui ne couvrent pas tout l'écran)
   document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && (window.innerWidth > 900 || f.classList.contains("feuille-petite"))) fermerFeuilles(); }));
   // téléphone : toutes les feuilles qui montent du bas (menu d'une carte, choix d'un acte ou d'une liste, calendrier, horloge)
