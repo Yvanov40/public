@@ -1,0 +1,914 @@
+{
+ "id": "2026-11-19-holding-apports",
+ "titre": "Holding et apports en société",
+ "fichier": "4 fiches : Holding, apport-cession 150-0 B ter, apport d'entreprise 151 octies, apport de titres 151 octies B",
+ "fichiers": [
+  "Holding",
+  "Apport à une holding contrôlée : report d'imposition (CGI. art. 150-0 B ter)",
+  "Apport en société d'une entreprise individuelle ou d'une branche complète d'activités : report d'imposition (CGI. art. 151 octies)",
+  "Apport en société de titres inscrits en immobilisation : report d'imposition (CGI. art. 151 octies B)"
+ ],
+ "date": "2026-11-19",
+ "questions": [
+  {
+   "theme": "Holding",
+   "question": "Quel critère est indispensable pour qu'une holding soit qualifiée d'animatrice ?",
+   "choix": [
+    "Participer activement à la conduite de la politique du groupe et au contrôle des filiales",
+    "Facturer des management fees à ses filiales",
+    "Rendre des services administratifs, comptables et juridiques aux filiales",
+    "Détenir au moins 95 % de chaque filiale"
+   ],
+   "reponse": 0,
+   "explication": "CE 13 juin 2018 : la conduite de la politique du groupe et le contrôle des filiales sont impératifs ; les services internes ne sont qu'un critère non déterminant."
+  },
+  {
+   "theme": "Holding",
+   "question": "Pourquoi la qualification de holding animatrice est-elle si importante ?",
+   "choix": [
+    "Elle seule permet le régime mère-fille",
+    "L'animation est assimilée à une activité commerciale : elle ouvre le Dutreil, l'exonération d'IFI des biens professionnels, l'abattement de 500 000 €…",
+    "Elle exonère la holding d'IS",
+    "Elle dispense la holding de commissaire aux comptes"
+   ],
+   "reponse": 1,
+   "explication": "Les holdings animatrices sont potentiellement éligibles aux régimes de faveur ; les holdings passives en sont en principe exclues (sauf aménagements)."
+  },
+  {
+   "theme": "Holding",
+   "question": "Quel délai de reprise l'administration dispose-t-elle pour contester le caractère animateur d'une holding ?",
+   "choix": [
+    "1 an",
+    "6 ans : la qualification nécessite des recherches ultérieures",
+    "3 ans",
+    "10 ans"
+   ],
+   "reponse": 1,
+   "explication": "Le délai abrégé de 3 ans ne s'applique pas : la qualification de holding animatrice suppose des recherches, d'où le délai de 6 ans."
+  },
+  {
+   "theme": "Holding",
+   "question": "Depuis la loi de finances pour 2024, qui doit en principe prouver l'absence d'animation pour le Dutreil et l'IFI ?",
+   "choix": [
+    "Le commissaire aux comptes de la holding",
+    "Le notaire rédacteur de l'acte",
+    "Toujours le contribuable",
+    "L'administration, la définition de la holding animatrice étant désormais légale (787 B et 966 du CGI)"
+   ],
+   "reponse": 3,
+   "explication": "La légalisation de la définition renverse la charge de la preuve, mais il reste essentiel de documenter l'animation (convention, PV, reportings…)."
+  },
+  {
+   "theme": "Holding",
+   "question": "Une donation Dutreil porte sur les titres d'une holding créée 8 jours plus tôt. Qu'en a jugé la jurisprudence ?",
+   "choix": [
+    "L'exonération est ramenée à 50 %",
+    "Le Dutreil a été remis en cause : l'animation ne se décrète pas, elle se constate",
+    "La donation est nulle",
+    "Le Dutreil est acquis dès la création de la holding"
+   ],
+   "reponse": 1,
+   "explication": "CA Dijon 24 oct. 2017. Par prudence, laisser au moins un exercice entre la création de la holding et le recours à un régime de faveur."
+  },
+  {
+   "theme": "Holding",
+   "question": "Régime mère-fille : quelles conditions de détention de la filiale ?",
+   "choix": [
+    "Au moins 10 % des droits de vote pendant 1 an",
+    "Au moins 5 %, y compris en usufruit",
+    "Au moins 95 % du capital et des droits de vote",
+    "Au moins 5 % du capital, en pleine propriété ou nue-propriété, conservés au moins 2 ans"
+   ],
+   "reponse": 3,
+   "explication": "BOI-IS-BASE-10-10-10-20 : les titres en usufruit ne comptent pas. Le régime s'applique dès la première année si les 5 % sont ensuite conservés 2 ans."
+  },
+  {
+   "theme": "Holding",
+   "question": "En régime mère-fille, quelle part des dividendes reçus par la holding est taxée à l'IS ?",
+   "choix": [
+    "Une quote-part de frais et charges de 5 %",
+    "1 %",
+    "Rien du tout",
+    "12 %"
+   ],
+   "reponse": 0,
+   "explication": "CGI 216 : quote-part de 5 % (1 % pour certaines distributions intra-UE entre sociétés pouvant former un groupe). En intégration fiscale, la quote-part est de 1 % et neutralisée."
+  },
+  {
+   "theme": "Holding",
+   "question": "La holding cède les titres de sa filiale 18 mois après les avoir acquis, après avoir appliqué le régime mère-fille. Conséquence ?",
+   "choix": [
+    "Amende de 5 %",
+    "Perte du régime pour toutes ses filiales",
+    "Aucune",
+    "Déclaration rectificative dans les 3 mois, IS sur les dividendes et intérêts de retard"
+   ],
+   "reponse": 3,
+   "explication": "Le régime n'est définitivement acquis qu'après 2 ans de détention (BOI-IS-BASE-10-10-10-20 § 230)."
+  },
+  {
+   "theme": "Holding",
+   "question": "Intégration fiscale : quelle détention de la filiale faut-il ?",
+   "choix": [
+    "Au moins 95 % du capital et des droits de vote, en pleine propriété, de façon continue pendant tout l'exercice",
+    "75 % du capital",
+    "Plus de 50 % au jour de la clôture",
+    "Au moins 5 % pendant 2 ans"
+   ],
+   "reponse": 0,
+   "explication": "CGI 223 A. Les exercices doivent aussi s'ouvrir et se clore aux mêmes dates ; l'option vaut pour 5 exercices, renouvelable tacitement."
+  },
+  {
+   "theme": "Holding",
+   "question": "Plus-value nette sur des titres de participation détenus depuis au moins 2 ans (« niche Copé ») : quelle imposition ?",
+   "choix": [
+    "Taux réduit de 15 %",
+    "Exonération, sauf une quote-part de frais et charges de 12 % de la plus-value brute",
+    "Exonération totale",
+    "Imposition à 19 %"
+   ],
+   "reponse": 1,
+   "explication": "CGI 219 I a quinquies. Pas de quote-part en cas de moins-value nette, laquelle n'est ni déductible ni reportable. Titres de sociétés à prépondérance immobilière exclus."
+  },
+  {
+   "theme": "Holding",
+   "question": "Qu'est-ce que l'« amendement Charasse » ?",
+   "choix": [
+    "Le plafond de déduction de 30 % de l'EBITDA",
+    "La réintégration d'une partie des charges financières quand une holding intégrée rachète une société à ceux qui contrôlent le groupe (OBO), sur 9 exercices",
+    "L'interdiction des conventions de trésorerie",
+    "Une exonération des intérêts d'emprunt d'une holding de reprise"
+   ],
+   "reponse": 1,
+   "explication": "CGI 223 B al. 7 : réintégration sur l'exercice d'acquisition et les 8 suivants. Il ne joue pas pour une filiale à l'IR (238 bis K) ni en simple régime mère-fille."
+  },
+  {
+   "theme": "Holding",
+   "question": "Plafond général de déduction des charges financières nettes (exercices ouverts depuis 2019) ?",
+   "choix": [
+    "150 000 € d'intérêts",
+    "75 % des charges financières",
+    "Le plus faible de 30 % de l'EBITDA ou 3 M€",
+    "Le plus élevé de 30 % de l'EBITDA fiscal ou 3 000 000 €"
+   ],
+   "reponse": 3,
+   "explication": "CGI 212 bis et 223 B bis (directive ATAD). Une clause de sauvegarde et un complément de déduction de 75 % existent pour les sociétés non sous-capitalisées."
+  },
+  {
+   "theme": "Holding",
+   "question": "Apport pur et simple de titres de la filiale à une holding (constitution ou augmentation de capital) : quels droits d'enregistrement ?",
+   "choix": [
+    "Droit fixe de 500 €",
+    "3 % après abattement",
+    "0,1 %",
+    "Aucun : l'apport est exonéré"
+   ],
+   "reponse": 3,
+   "explication": "Exonération à la constitution, et depuis le 1er janvier 2019 en cas d'augmentation de capital (auparavant droit fixe de 375 € ou 500 €), même si la filiale est à prépondérance immobilière."
+  },
+  {
+   "theme": "Holding",
+   "question": "Droits d'enregistrement sur la cession de parts sociales d'une SARL non à prépondérance immobilière ?",
+   "choix": [
+    "Droit fixe de 125 €",
+    "3 % après un abattement de 23 000 € proratisé au nombre de parts cédées",
+    "5 % du prix",
+    "0,1 % du prix"
+   ],
+   "reponse": 1,
+   "explication": "CGI 726. Actions : 0,1 %. Sociétés à prépondérance immobilière : 5 %."
+  },
+  {
+   "theme": "Holding",
+   "question": "En SARL ou SAS, quand peut-on se passer d'un commissaire aux apports pour un apport de titres ?",
+   "choix": [
+    "Si l'apport est inférieur à 100 000 €",
+    "Si l'apporteur est seul associé, quel que soit le montant",
+    "Si aucun apport en nature n'excède 30 000 € et que leur total ne dépasse pas la moitié du capital",
+    "Jamais"
+   ],
+   "reponse": 2,
+   "explication": "Conditions cumulatives. Même facultatif, il reste recommandé pour sécuriser la valeur de l'apport. En société civile, il est facultatif."
+  },
+  {
+   "theme": "Holding",
+   "question": "Dutreil sur les titres d'une holding passive : à quelles conditions ?",
+   "choix": [
+    "Aucune : la holding passive est exclue",
+    "Exonération sur toute la valeur si la holding détient 95 % de la filiale",
+    "2 niveaux d'interposition au plus, et exonération limitée à la fraction de valeur représentant les titres de la société opérationnelle",
+    "Un seul niveau, exonération sur toute la valeur"
+   ],
+   "reponse": 2,
+   "explication": "Le donateur doit détenir au moins un titre en direct dans la société opérationnelle ; la fonction de direction s'exerce dans la société opérationnelle. Ni réduction de 50 % ni abattement salarié ni paiement différé."
+  },
+  {
+   "theme": "Holding",
+   "question": "Abattement de 500 000 € pour départ en retraite sur des titres de holding passive : condition ?",
+   "choix": [
+    "Au moins 50 % de la valeur vénale en filiales",
+    "Aucune holding passive n'y a droit",
+    "Actif brut comptable constitué d'au moins 90 % de titres de sociétés opérationnelles, un seul niveau d'interposition",
+    "Holding détenue depuis 8 ans"
+   ],
+   "reponse": 2,
+   "explication": "BOI-RPPM-PVBMI-20-40-10-20 § 60 : on retient la valeur comptable (et non vénale) ; les placements issus des distributions des filiales sont neutralisés pendant 12 mois."
+  },
+  {
+   "theme": "Holding",
+   "question": "Holding animatrice et IFI « biens professionnels » : sur quoi porte l'exonération ?",
+   "choix": [
+    "Sur les seules filiales détenues à plus de 50 %",
+    "Sur toute la valeur des titres",
+    "Sur 75 % de la valeur",
+    "Sur la seule fraction de la valeur des titres représentant les biens affectés à l'activité"
+   ],
+   "reponse": 3,
+   "explication": "À la différence du Dutreil (toute la valeur, hors biens somptuaires depuis le 21 fév. 2026), l'IFI exonère seulement la fraction affectée à l'activité éligible."
+  },
+  {
+   "theme": "Holding",
+   "question": "Pour l'exclusion d'IFI en cas de détention de moins de 10 % d'une société opérationnelle, comment s'apprécie la prépondérance ?",
+   "choix": [
+    "Critères objectifs : au moins 80 % du chiffre d'affaires et 80 % de l'actif affectés à l'activité opérationnelle",
+    "Faisceau d'indices",
+    "90 % de l'actif brut comptable",
+    "50 % du chiffre d'affaires et de l'actif"
+   ],
+   "reponse": 0,
+   "explication": "BOI-PAT-IFI-20-20-20-20 § 20. L'arrêt du CE du 23 janv. 2020 (qui a écarté les critères de 50 % pour le Dutreil) n'a pas d'incidence ici."
+  },
+  {
+   "theme": "Holding",
+   "question": "Pourquoi déconseille-t-on de déléguer les fonctions de direction de la filiale par une convention de management fees au dirigeant qui partira à la retraite ?",
+   "choix": [
+    "Cela entraîne la TVA sur les dividendes",
+    "Cela rend la holding passive",
+    "Cela interdit le régime mère-fille",
+    "Cela fait obstacle à l'abattement de 500 000 € : la direction n'est plus assurée personnellement et de façon continue"
+   ],
+   "reponse": 3,
+   "explication": "CE 25 oct. 2023, n° 470394. Les conventions de management fees exposent aussi à des risques fiscal (acte anormal de gestion), social, juridique et pénal."
+  },
+  {
+   "theme": "Holding",
+   "question": "Une holding peut-elle prêter de la trésorerie à sa filiale malgré le monopole bancaire ?",
+   "choix": [
+    "Oui, s'il existe des liens en capital conférant à l'une un contrôle effectif sur l'autre",
+    "Oui, sans aucune condition",
+    "Non, jamais",
+    "Oui, uniquement si le prêt est gratuit"
+   ],
+   "reponse": 0,
+   "explication": "CMF L. 511-7, 3. Contrôle effectif : majorité des droits de vote, ou au moins 40 % si aucun autre associé ne détient davantage. Le taux doit être normal."
+  },
+  {
+   "theme": "Holding",
+   "question": "Filiale à l'IR détenue par une holding à l'IS (article 238 bis K) : lequel de ces avantages est exact ?",
+   "choix": [
+    "La holding doit détenir 95 % de la filiale",
+    "Le résultat de la filiale est exonéré",
+    "Aucun seuil de détention, pas de quote-part de frais et charges, pas d'amendement Charasse",
+    "La filiale doit opter pour l'IS"
+   ],
+   "reponse": 2,
+   "explication": "Le résultat de la filiale est déterminé selon les règles de l'IS et remonte par semi-transparence. Le montage reste réversible. Il ne joue pas si l'associé est soumis aux BNC."
+  },
+  {
+   "theme": "Holding",
+   "question": "Une société opérationnelle devient une holding passive. Conséquence fiscale ?",
+   "choix": [
+    "Simple déclaration de modification",
+    "Aucune",
+    "Changement d'activité assimilé à une cessation d'entreprise : imposition des bénéfices non taxés et des plus-values latentes",
+    "Perte du régime mère-fille pour 5 ans"
+   ],
+   "reponse": 2,
+   "explication": "CE 7 janv. 1985 et 30 juin 2010. L'inverse (holding passive devenant opérationnelle) emporte les mêmes conséquences."
+  },
+  {
+   "theme": "Holding",
+   "question": "Taxe sur les sociétés holdings patrimoniales (CGI 235 ter C) : laquelle de ces conditions est exacte ?",
+   "choix": [
+    "Toute holding détenant des filiales",
+    "Sociétés à l'IR détenant des immeubles",
+    "Holdings animatrices de plus de 10 M€",
+    "Société à l'IS, actifs d'au moins 5 M€, au moins 50 % de revenus passifs, contrôlée par une personne physique"
+   ],
+   "reponse": 3,
+   "explication": "Taxe de 20 % sur la valeur vénale des biens somptuaires et de jouissance, due pour les exercices clos à compter du 31 déc. 2026. Aucune détention de filiale n'est exigée."
+  },
+  {
+   "theme": "Holding",
+   "question": "Apport de parts d'une SCI à l'IR à prépondérance immobilière (non professionnelle) à une société à l'IS : quel régime de plus-value ?",
+   "choix": [
+    "Exonération totale",
+    "Report optionnel 151 octies",
+    "Report de l'article 150-0 B ter",
+    "Sursis automatique au titre des plus-values immobilières (CGI 150 UB)"
+   ],
+   "reponse": 3,
+   "explication": "Fiche Holding § 3.4.2 : sursis 150 UB pour un apport à une société à l'IS ; aucun différé si la société bénéficiaire est à l'IR."
+  },
+  {
+   "theme": "Holding",
+   "question": "Holding à l'IS : quand le taux réduit d'IS de 15 % s'applique-t-il ?",
+   "choix": [
+    "Sur les 42 500 premiers euros de bénéfice, si CA < 10 M€ et capital libéré détenu à 75 % au moins par des personnes physiques",
+    "Jamais pour une holding",
+    "Sur les dividendes reçus des filiales",
+    "Sur tout le bénéfice des holdings animatrices"
+   ],
+   "reponse": 0,
+   "explication": "Au-delà, taux normal de 25 %. Chaque société du groupe à l'IS peut en bénéficier si elle remplit les conditions."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Le report de l'article 150-0 B ter s'applique-t-il sur option ?",
+   "choix": [
+    "Oui, dans les 60 jours de l'apport",
+    "Oui, dans l'acte d'apport",
+    "Non, de plein droit, aux apports réalisés depuis le 14 novembre 2012 à une holding à l'IS contrôlée par l'apporteur",
+    "Oui, dans la déclaration 2074"
+   ],
+   "reponse": 2,
+   "explication": "Le report est automatique ; le contribuable doit cependant remplir des obligations déclaratives."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "L'apport aboutit à une moins-value. Quel régime s'applique ?",
+   "choix": [
+    "La moins-value est imputable immédiatement",
+    "Le report de l'article 151 octies",
+    "Le sursis d'imposition de l'article 150-0 B",
+    "Le report de l'article 150-0 B ter"
+   ],
+   "reponse": 2,
+   "explication": "BOI-RPPM-PVBMI-30-10-60-10 § 70 : le report ne joue qu'en cas de plus-value."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Quelles règles d'imposition s'appliquent à la plus-value en report quand le report prend fin ?",
+   "choix": [
+    "Assiette de l'année d'apport, taux de l'année d'expiration",
+    "Taux de l'année d'apport, assiette de l'année d'expiration",
+    "Assiette et taux figés à la date de l'apport",
+    "Règles de l'année d'expiration"
+   ],
+   "reponse": 2,
+   "explication": "Le report n'est qu'un paiement différé. Ex. : prélèvements sociaux au taux de l'année d'apport, la hausse à 18,6 % ne touchant pas les apports antérieurs à 2025."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Quand l'apporteur est-il présumé contrôler la holding ?",
+   "choix": [
+    "S'il détient au moins 33,33 % des droits de vote ou financiers et qu'aucun autre associé ne détient une fraction supérieure",
+    "S'il détient au moins 25 %",
+    "S'il est président de la holding",
+    "S'il détient au moins 10 % et un pacte"
+   ],
+   "reponse": 0,
+   "explication": "Il y a aussi contrôle avec la majorité (seul ou avec le groupe familial : conjoint, partenaire, ascendants, descendants, frères et sœurs) ou par accord avec d'autres associés."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "À quel moment apprécie-t-on le contrôle de la holding ?",
+   "choix": [
+    "À l'issue de l'apport",
+    "Au jour de la cession de la filiale",
+    "2 ans avant l'apport",
+    "À la clôture du premier exercice"
+   ],
+   "reponse": 0,
+   "explication": "BOI-RPPM-PVBMI-30-10-60-10 § 90 : on tient compte des droits détenus après l'apport."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Apport réalisé en 2026 avec une soulte inférieure à 10 % de la valeur nominale des titres reçus. Traitement ?",
+   "choix": [
+    "La soulte est exonérée",
+    "Toute la plus-value est en report",
+    "Toute la plus-value est imposée",
+    "La plus-value est imposée immédiatement à concurrence de la soulte, le surplus est en report"
+   ],
+   "reponse": 3,
+   "explication": "Régime applicable depuis le 1er janvier 2017 (LFR 2016). Avant, toute la plus-value était en report, sous réserve de l'abus de droit."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "La soulte dépasse 10 % de la valeur nominale des titres reçus. Conséquence ?",
+   "choix": [
+    "Seule la fraction au-delà de 10 % est imposée",
+    "Le report ne s'applique pas : toute la plus-value est imposée immédiatement",
+    "Le sursis s'applique",
+    "La soulte est imposée, le reste reporté"
+   ],
+   "reponse": 1,
+   "explication": "BOI-RPPM-PVBMI-30-10-60-10 § 150, quelle que soit la date de l'apport."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Par rapport à quoi s'apprécie le seuil de 10 % de la soulte ?",
+   "choix": [
+    "La plus-value d'apport",
+    "La valeur des titres apportés",
+    "Le capital total de la holding",
+    "La valeur nominale des titres de la holding reçus, pour l'ensemble des titres échangés par un même contribuable"
+   ],
+   "reponse": 3,
+   "explication": "CAA Douai 26 oct. 2023. En cas d'apports simultanés distincts dans l'acte, le seuil peut s'apprécier apport par apport (CE 12 mars 2026)."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Lequel de ces éléments est considéré comme une soulte ?",
+   "choix": [
+    "La reprise par la holding de l'emprunt personnel ayant financé les titres apportés",
+    "Une augmentation de la prime d'émission",
+    "Un complément de prix payé en titres de la holding",
+    "L'attribution d'obligations convertibles en actions"
+   ],
+   "reponse": 0,
+   "explication": "Constituent aussi une soulte : une somme inscrite en compte courant d'associé, ou la prise en charge par la holding d'une soulte de partage due par l'apporteur."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "La holding cède les titres de la filiale 4 ans après l'apport, sans réinvestir. Conséquence sur le report ?",
+   "choix": [
+    "Le report prend fin",
+    "Seule la moitié de la plus-value devient imposable",
+    "Le report devient un sursis",
+    "Aucune : au-delà de 3 ans, la cession de la filiale ne met pas fin au report"
+   ],
+   "reponse": 3,
+   "explication": "Seule une cession, un rachat, un remboursement ou une annulation des titres de la filiale dans les 3 ans de l'apport (de date à date) met fin au report, sauf réinvestissement."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Filiale cédée par la holding dans les 3 ans de l'apport, après le 21 février 2026 : quel quota de réinvestissement ?",
+   "choix": [
+    "70 % du prix de cession",
+    "60 % du prix de cession",
+    "50 % du prix de cession",
+    "100 % du prix de cession"
+   ],
+   "reponse": 0,
+   "explication": "LF 2026 : 70 % (60 % du 1er janv. 2019 au 20 fév. 2026, 50 % avant 2019). Le prix est net des frais directement liés à la cession ; le solde est libre."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Filiale cédée après le 21 février 2026 : de quel délai la holding dispose-t-elle pour réinvestir ?",
+   "choix": [
+    "24 mois",
+    "36 mois à compter de la cession",
+    "5 ans",
+    "12 mois"
+   ],
+   "reponse": 1,
+   "explication": "Délai de 3 ans, de date à date (2 ans pour les cessions antérieures). Un investissement réalisé avant la cession ne compte pas."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Filiale cédée après le 21 février 2026 : combien de temps conserver le réinvestissement ?",
+   "choix": [
+    "Aucune durée",
+    "12 mois",
+    "24 mois",
+    "Au moins 5 ans, quelle que soit sa nature"
+   ],
+   "reponse": 3,
+   "explication": "LF 2026. Auparavant (2019-2026) : 12 mois en principe, 5 ans pour les fonds de capital-investissement."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Lequel de ces réinvestissements est éligible pour une cession de filiale intervenue en 2026 ?",
+   "choix": [
+    "L'achat d'un immeuble loué meublé",
+    "La création d'une activité de marchand de biens",
+    "L'achat de 30 % des titres existants d'une société opérationnelle",
+    "La souscription en numéraire au capital d'une société opérationnelle, sans condition de contrôle"
+   ],
+   "reponse": 3,
+   "explication": "L'acquisition de titres existants doit conférer le contrôle. Depuis le 21 fév. 2026, sont exclues les activités immobilières, financières, de construction, de gestion de patrimoine et à revenus garantis."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Réinvestissement dans des FCPR, FPCI, SCR ou SLP (cession après le 21 février 2026) : quelles étapes ?",
+   "choix": [
+    "Engagement de souscription dans les 3 ans de la cession, puis libération des fonds dans les 5 ans de l'engagement",
+    "Libération immédiate de 100 %",
+    "Souscription et libération dans les 24 mois",
+    "Engagement dans les 6 mois"
+   ],
+   "reponse": 0,
+   "explication": "Le fonds doit atteindre un quota de 75 % de titres de sociétés éligibles non cotées dans les 5 ans de l'engagement. La holding conserve ces souscriptions 5 ans."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "La holding a pris l'engagement de réinvestir mais ne l'a pas respecté. Conséquence ?",
+   "choix": [
+    "Fin du report : l'impôt est dû l'année d'expiration du délai, avec intérêts de retard depuis la date de l'apport",
+    "Aucune si la holding est de bonne foi",
+    "Le report est prolongé de 2 ans",
+    "Simple amende de 5 %"
+   ],
+   "reponse": 0,
+   "explication": "CGI 150-0 B ter, I, 2°. En cas de manquement à une condition, les intérêts de retard courent depuis l'apport."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "L'apporteur décède en détenant toujours les titres de la holding. Sort de la plus-value en report ?",
+   "choix": [
+    "Elle est purgée, sans condition de durée de conservation",
+    "Elle est transmise aux héritiers",
+    "Elle est purgée seulement après 5 ans de détention",
+    "Elle devient exigible dans la succession"
+   ],
+   "reponse": 0,
+   "explication": "La plus-value en report relève des plus-values privées : le décès la purge. Avec des titres communs, la purge ne joue a priori que pour la part transmise par succession."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Donation des titres de la holding en 2026 à un enfant qui contrôle la holding (avec son groupe familial). Que devient le report ?",
+   "choix": [
+    "Il est transféré au donataire, et purgé si celui-ci conserve les titres 6 ans (11 ans en cas de réinvestissement dans des fonds)",
+    "Il est purgé immédiatement",
+    "Il est exigible chez le donateur",
+    "Il est purgé après 18 mois"
+   ],
+   "reponse": 0,
+   "explication": "Donations depuis le 21 fév. 2026 : 6 ans ; du 1er janv. 2020 au 20 fév. 2026 : 5 ans (10 ans) ; avant 2020 : 18 mois."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "La donation porte sur la nue-propriété des titres de la holding. Que devient le report ?",
+   "choix": [
+    "Il est entièrement purgé",
+    "Il est entièrement transféré au donataire",
+    "Il devient exigible pour l'usufruit",
+    "Il est transféré au donataire pour la seule nue-propriété ; le donateur garde le report sur l'usufruit"
+   ],
+   "reponse": 3,
+   "explication": "La valeur de la nue-propriété est déterminée selon l'âge de l'usufruitier au jour de la donation, sans réévaluation ultérieure."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "L'apporteur transfère son domicile fiscal hors de France. Conséquence sur le report ?",
+   "choix": [
+    "Le report expire, mais il peut bénéficier du sursis de paiement de l'exit tax",
+    "Le report est purgé",
+    "Aucune",
+    "Le report est maintenu seulement si le départ a lieu après 3 ans"
+   ],
+   "reponse": 0,
+   "explication": "La plus-value en report entre dans l'exit tax, même si les seuils habituels (800 000 €, 50 %, 6 ans de résidence) ne sont pas atteints."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "L'abattement de 500 000 € pour départ en retraite peut-il s'appliquer à la plus-value en report ?",
+   "choix": [
+    "Oui, de plein droit",
+    "Oui, sur option",
+    "Non : la condition d'absence de lien avec le cessionnaire (la holding) n'est pas remplie",
+    "Oui, si l'apporteur part à la retraite dans les 2 ans"
+   ],
+   "reponse": 2,
+   "explication": "Il pourra en revanche s'appliquer à la plus-value sur les titres de la holding elle-même, si les conditions sont remplies."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Les abattements pour durée de détention peuvent-ils réduire une plus-value en report sur un apport réalisé en 2022 ?",
+   "choix": [
+    "Oui, toujours",
+    "Oui, seulement si les titres apportés ont été acquis avant 2018 et que l'apporteur a opté pour le barème l'année de l'apport",
+    "Oui, si le report dure plus de 8 ans",
+    "Non, jamais"
+   ],
+   "reponse": 1,
+   "explication": "Pour les apports depuis 2018, l'abattement suppose des titres acquis avant le 1er janv. 2018 et l'option globale pour le barème (sinon PFU de 12,8 %)."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "L'apporteur apporte les titres de la holding à sa communauté. Effet sur le report ?",
+   "choix": [
+    "Transfert du report au conjoint",
+    "Aucun : c'est une opération intercalaire qui ne met pas fin au report",
+    "Fin du report",
+    "Purge du report"
+   ],
+   "reponse": 1,
+   "explication": "CE 27 mars 2023 (rendu pour l'ancien 92 B, transposable). Les conséquences d'un décès ultérieur ne sont pas précisées par les textes."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "Jusqu'à quand l'administration peut-elle contrôler une plus-value en report dont le report prend fin en 2026 ?",
+   "choix": [
+    "Jusqu'à 3 ans après l'apport",
+    "Jusqu'au 31 décembre 2032",
+    "Jusqu'au 31 décembre 2029",
+    "Jusqu'au 31 décembre 2026"
+   ],
+   "reponse": 2,
+   "explication": "Le délai court jusqu'à la fin de la 3e année suivant l'événement mettant fin au report, même si le contribuable a omis de déclarer."
+  },
+  {
+   "theme": "Apport-cession · 150-0 B ter",
+   "question": "La holding réduit son capital par rachat et annulation de titres de l'apporteur. Conséquence ?",
+   "choix": [
+    "Fin du report seulement en l'absence de pertes",
+    "Fin du report pour les titres annulés, même si la réduction est motivée par des pertes",
+    "Purge du report",
+    "Aucune conséquence"
+   ],
+   "reponse": 1,
+   "explication": "RM Woerth 2023. En revanche, une réduction motivée par des pertes par baisse de la valeur nominale, sans remboursement, ne met pas fin au report."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Quelle opération est éligible au report de l'article 151 octies ?",
+   "choix": [
+    "L'apport de titres de société à une holding",
+    "La vente d'une entreprise individuelle à une société",
+    "L'apport d'une entreprise individuelle ou d'une branche complète d'activité, rémunéré par des titres, à une société soumise à un régime réel",
+    "L'apport d'un fonds par une société à une autre société"
+   ],
+   "reponse": 2,
+   "explication": "Apport pur et simple par une personne physique. Société bénéficiaire nouvelle ou existante, à l'IS ou à l'IR."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Comment opte-t-on pour le report de l'article 151 octies ?",
+   "choix": [
+    "Dans la déclaration de revenus de l'apporteur",
+    "Le report est automatique",
+    "Par lettre au service des impôts dans les 6 mois",
+    "Conjointement par l'apporteur et la société, expressément dans l'acte d'apport, sans régularisation possible ensuite"
+   ],
+   "reponse": 3,
+   "explication": "CE 26 fév. 2002, CAA Bordeaux 2001. Un modèle d'option figure au BOFiP (BOI-LETTRE-000058)."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Plus-values sur les éléments non amortissables (fonds de commerce, clientèle) : quel traitement ?",
+   "choix": [
+    "Exonération définitive",
+    "Imposition immédiate au taux réduit",
+    "Report d'imposition au nom de l'apporteur : assiette calculée à la date de l'apport, plus-value à long terme imposée au taux en vigueur à l'expiration",
+    "Réintégration étalée dans les résultats de la société"
+   ],
+   "reponse": 2,
+   "explication": "Contrairement au 150-0 B ter, le taux n'est pas figé : c'est celui de l'année où le report prend fin."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Plus-values sur les éléments amortissables : qui est imposé ?",
+   "choix": [
+    "La société bénéficiaire, par réintégration étalée : 15 ans pour les constructions, 5 ans pour les autres biens",
+    "L'apporteur, à l'expiration du report",
+    "Personne : elles sont exonérées",
+    "L'apporteur, immédiatement au barème"
+   ],
+   "reponse": 0,
+   "explication": "L'apporteur peut toutefois opter pour l'imposition immédiate à son nom de la plus-value nette à long terme (pas de la plus-value à court terme)."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "L'entrepreneur souhaite conserver l'immeuble d'exploitation. Le report 151 octies reste-t-il possible ?",
+   "choix": [
+    "Oui, sans aucune condition",
+    "Oui, si le bail dure au moins 3 ans",
+    "Non, l'immeuble doit être apporté",
+    "Oui, si l'immeuble est mis à disposition de la société par un bail d'au moins 9 ans ; mais sa sortie du bilan est taxée"
+   ],
+   "reponse": 3,
+   "explication": "CGI 151 octies I al. 10. Le retrait de l'immeuble dans le patrimoine privé est imposé selon les plus-values professionnelles ; l'arrêt de la mise à disposition met fin au report."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Quel événement met fin au report sur les plus-values non amortissables ?",
+   "choix": [
+    "Le départ à la retraite et la cession des titres",
+    "La donation des titres avec engagement du donataire",
+    "La fusion de la société bénéficiaire",
+    "La cession, le rachat ou l'annulation des titres reçus, ou la cession des biens par la société si elle est antérieure"
+   ],
+   "reponse": 3,
+   "explication": "Une cession partielle met fin au report à proportion. Le report est maintenu en cas d'apports successifs, de fusion/scission, de transmission gratuite avec engagement, et de cession lors du départ à la retraite."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Peut-on cumuler, lors de l'apport, le report 151 octies avec l'exonération 151 septies (seuil de recettes) ?",
+   "choix": [
+    "Non : les deux régimes ne se cumulent pas, pas plus qu'avec 238 quindecies ou 151 septies A",
+    "Oui, si l'activité a plus de 5 ans",
+    "Oui, totalement",
+    "Oui, sur les seuls biens amortissables"
+   ],
+   "reponse": 0,
+   "explication": "Si une exonération totale (151 septies) est possible, inutile de rechercher le report. Le report reste utile quand les exonérations sont nulles ou partielles."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Plus tard, l'apporteur part à la retraite et cède ses titres de la société à l'IS. Que devient la plus-value en report ?",
+   "choix": [
+    "Elle peut être exonérée d'IR au titre du 151 septies A, mais les prélèvements sociaux restent dus",
+    "Elle est exonérée d'IR et de prélèvements sociaux",
+    "Elle est purgée par le départ à la retraite",
+    "Elle est imposée au barème sans abattement"
+   ],
+   "reponse": 0,
+   "explication": "CGI 151 septies A, IV bis ; CE 12 oct. 2018 : les prélèvements sociaux restent dus."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Lequel de ces modes de rémunération de l'apport fait perdre le bénéfice du 151 octies ?",
+   "choix": [
+    "Des titres d'une société existante après augmentation de capital",
+    "Des parts sociales de SARL",
+    "Des actions de SAS",
+    "L'inscription d'une partie de l'apport en compte courant d'associé de l'apporteur"
+   ],
+   "reponse": 3,
+   "explication": "Excluent aussi le régime : une somme d'argent et la prise en charge d'un passif personnel de l'apporteur. L'actif circulant n'a pas à être rémunéré en titres."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "La société à l'IS cède plus tard les titres en moins-value. L'apporteur peut-il l'imputer sur sa plus-value professionnelle en report ?",
+   "choix": [
+    "Oui, toujours",
+    "Oui, si les titres sont détenus depuis 5 ans",
+    "Oui, dans la limite de 10 ans",
+    "Non : la moins-value relève des plus-values des particuliers, la plus-value en report des plus-values professionnelles"
+   ],
+   "reponse": 3,
+   "explication": "RM Lamy 2011, CE 21 nov. 2025. L'imputation est possible seulement pour des parts de société de personnes (même régime professionnel)."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Profits sur stocks lors de l'apport : quand l'apporteur n'est-il pas imposé ?",
+   "choix": [
+    "Quand les stocks valent moins de 10 % de l'actif",
+    "Jamais",
+    "Toujours",
+    "Quand la société inscrit les stocks à son actif pour la même valeur que dans l'entreprise apporteuse"
+   ],
+   "reponse": 3,
+   "explication": "La société sera imposée lors de la revente des stocks au-delà de leur valeur d'inscription."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Quelle sanction en cas d'absence d'état de suivi joint à la déclaration de revenus de l'apporteur ?",
+   "choix": [
+    "Aucune",
+    "Imposition immédiate des plus-values reportées sur les biens non amortissables",
+    "Amende de 1 %",
+    "Amende de 5 % des résultats omis"
+   ],
+   "reponse": 1,
+   "explication": "CGI 151 octies II. L'état doit être joint l'année de l'apport et chacune des années suivantes tant que le report subsiste."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "L'entreprise a été apportée (151 octies), puis les titres apportés à une holding (150-0 B ter) qui les revend. Conséquence ?",
+   "choix": [
+    "Les deux reports sont purgés",
+    "Le report 151 octies prend fin ; le réinvestissement ne maintient que le report 150-0 B ter",
+    "Seul le report 150-0 B ter prend fin",
+    "Les deux reports sont maintenus si la holding réinvestit"
+   ],
+   "reponse": 1,
+   "explication": "CE 12 mars 2026, n° 503786."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "L'apporteur décède. Ses héritiers optent pour l'article 151 nonies, II. Effet ?",
+   "choix": [
+    "Le report est transféré à la société",
+    "Le report tombe, l'impôt est déductible",
+    "Le report 151 octies est maintenu, et l'impôt correspondant n'est pas déductible de l'actif successoral",
+    "Le report est purgé"
+   ],
+   "reponse": 2,
+   "explication": "Sans cette option, le report tombe et l'impôt devient déductible pour le calcul des droits de succession."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Un fonds de commerce appartenant aux deux époux n'est exploité que par l'un d'eux. Le conjoint non exploitant bénéficie-t-il du report à l'apport ?",
+   "choix": [
+    "Oui, à hauteur de 50 % seulement",
+    "Non, le fonds doit d'abord être partagé",
+    "Non, seul l'exploitant en bénéficie",
+    "Oui (CE 5 juin 2020)"
+   ],
+   "reponse": 3,
+   "explication": "CE 5 juin 2020, n° 425113."
+  },
+  {
+   "theme": "Apport d'entreprise · 151 octies",
+   "question": "Apport en société d'une entreprise individuelle suivi de la donation des titres la même année, la société bénéficiant de l'article 73 B (jeunes agriculteurs). Qu'a jugé la CAA de Nantes ?",
+   "choix": [
+    "Un abus de droit : le montage visait à éluder l'impôt sur la plus-value latente",
+    "Une opération régulière",
+    "Une simple erreur de déclaration",
+    "Une exonération définitive"
+   ],
+   "reponse": 0,
+   "explication": "CAA Nantes 17 mars 2023 et 7 janv. 2022."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Quelle opération vise l'article 151 octies B ?",
+   "choix": [
+    "L'apport d'une branche complète d'activité",
+    "La vente de titres à une holding",
+    "L'apport de titres inscrits en immobilisation à l'actif d'une entreprise individuelle exercée à titre professionnel",
+    "L'apport de titres détenus dans le patrimoine privé"
+   ],
+   "reponse": 2,
+   "explication": "L'activité (commerciale, industrielle, artisanale, agricole ou libérale) doit être exercée de façon personnelle, continue et directe (151 septies)."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Les titres apportés et les titres reçus doivent-ils être seulement utiles à l'activité ?",
+   "choix": [
+    "Seuls les titres apportés doivent être nécessaires",
+    "Oui, l'utilité suffit",
+    "Aucune condition",
+    "Non, ils doivent être nécessaires ; leur seule inscription à l'actif ne suffit pas"
+   ],
+   "reponse": 3,
+   "explication": "CE 13 juill. 2022, n° 459899 (médecin associé de la clinique où il exerce : titres non nécessaires). Les titres de sociétés à prépondérance immobilière ne sont pas nécessaires."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Quelle part des titres faut-il apporter ?",
+   "choix": [
+    "L'intégralité des titres détenus par l'apporteur",
+    "Au moins 50 %",
+    "Librement",
+    "Au moins 10 %"
+   ],
+   "reponse": 0,
+   "explication": "CGI 151 octies B. Les titres doivent figurer à l'actif ou au registre des immobilisations."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Quelle soulte est admise avec le 151 octies B ?",
+   "choix": [
+    "Jusqu'à 20 %",
+    "Jusqu'à 10 %, totalement en report",
+    "Aucune soulte",
+    "Au plus 10 % de la valeur nominale des droits attribués, sans dépasser la plus-value ; la fraction correspondante est taxée immédiatement"
+   ],
+   "reponse": 3,
+   "explication": "La fraction de plus-value correspondant à la soulte est imposable lors de l'apport."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Quelle condition doit remplir la société bénéficiaire ?",
+   "choix": [
+    "Contrôler, à l'issue des opérations, la société dont les titres sont apportés (plus de 50 %) et être soumise à un régime réel",
+    "Être obligatoirement à l'IS",
+    "Être détenue à 95 % par l'apporteur",
+    "Être une holding animatrice"
+   ],
+   "reponse": 0,
+   "explication": "Comme pour le 151 octies, elle peut être à l'IS ou non."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Lequel de ces événements met fin au report du 151 octies B ?",
+   "choix": [
+    "L'apporteur cesse d'exercer son activité à titre professionnel",
+    "Un nouvel apport des titres sous 151 octies B",
+    "La fusion de la société bénéficiaire",
+    "La donation avec engagement du donataire de payer l'impôt"
+   ],
+   "reponse": 0,
+   "explication": "Fin aussi en cas de cession, rachat ou annulation des titres apportés ou reçus, ou si les titres reçus cessent d'être nécessaires à l'activité."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Comment et quand exerce-t-on l'option pour le 151 octies B ?",
+   "choix": [
+    "Le report est automatique",
+    "Dans la déclaration annuelle de revenus de l'année de l'apport",
+    "Dans les 60 jours de l'apport",
+    "Dans l'acte d'apport, conjointement avec la société"
+   ],
+   "reponse": 1,
+   "explication": "Dispositif optionnel, applicable aux opérations réalisées depuis le 1er janvier 2007. La société tient un registre des plus-values en report."
+  },
+  {
+   "theme": "Titres d'EI · 151 octies B",
+   "question": "Quel dispositif d'exonération peut s'appliquer aux plus-values en report du 151 octies B ?",
+   "choix": [
+    "Seulement l'exonération pour départ à la retraite (151 septies A)",
+    "L'exonération 238 quindecies",
+    "Tous les dispositifs d'exonération",
+    "L'exonération 151 septies (seuil de recettes)"
+   ],
+   "reponse": 0,
+   "explication": "Les autres dispositifs d'exonération des plus-values ne se cumulent pas avec le 151 octies B."
+  }
+ ]
+}
