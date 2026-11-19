@@ -1,0 +1,505 @@
+{
+ "id": "2026-11-19-dutreil-paiement",
+ "titre": "Dutreil et paiement des droits",
+ "fichier": "3 fiches : Dutreil entreprise individuelle, Dutreil société, paiement différé et fractionné",
+ "fichiers": [
+  "DMTG : Dutreil - Entreprise individuelle (CGI. art. 787 C)",
+  "DMTG : Dutreil - Société (CGI. art. 787 B)",
+  "DMTG : Paiement différé et/ou fractionné"
+ ],
+ "date": "2026-11-19",
+ "questions": [
+  {
+   "theme": "Dutreil · règles communes",
+   "question": "À hauteur de combien le pacte Dutreil exonère-t-il de droits la valeur transmise ?",
+   "choix": [
+    "75 % dans la limite de 1 M€",
+    "50 %",
+    "100 % dans la limite de 500 000 €",
+    "75 % : seuls 25 % de la valeur sont taxés"
+   ],
+   "reponse": 3,
+   "explication": "Exonération partielle de 75 %, sans plafond de montant (CGI 787 B et 787 C). Elle était de 50 % pour les transmissions avant le 4 août 2005."
+  },
+  {
+   "theme": "Dutreil · règles communes",
+   "question": "Quelle est la durée de l'engagement individuel de conservation pour une transmission réalisée à compter du 21 février 2026 ?",
+   "choix": [
+    "4 ans",
+    "6 ans",
+    "2 ans",
+    "8 ans"
+   ],
+   "reponse": 1,
+   "explication": "Loi de finances pour 2026 (19 fév. 2026, art. 8) : 6 ans pour les donations et décès à compter du 21 février 2026, contre 4 ans auparavant, en entreprise individuelle comme en société."
+  },
+  {
+   "theme": "Dutreil · règles communes",
+   "question": "La donation Dutreil peut-elle se cumuler avec la réduction de 50 % des droits liée à l'âge du donateur ?",
+   "choix": [
+    "Oui, si la donation est en pleine propriété et le donateur a moins de 70 ans",
+    "Non, jamais",
+    "Oui, quel que soit l'âge, en pleine propriété ou en démembrement",
+    "Oui, seulement en nue-propriété"
+   ],
+   "reponse": 0,
+   "explication": "CGI 790 : réduction de 50 % des droits, appliquée après l'exonération Dutreil, si donation en pleine propriété par un donateur de moins de 70 ans. Pas de réduction pour une donation démembrée."
+  },
+  {
+   "theme": "Dutreil · règles communes",
+   "question": "Que doit payer le bénéficiaire en cas de remise en cause de l'exonération Dutreil ?",
+   "choix": [
+    "Le complément de droits, l'intérêt de retard (0,20 % par mois) et, en cas de manquement délibéré, une majoration de 40 %",
+    "Le double des droits éludés",
+    "Une amende forfaitaire de 10 %",
+    "Seulement le complément de droits"
+   ],
+   "reponse": 0,
+   "explication": "CGI 1727 : complément de droits + intérêt de retard de 0,20 % par mois + majoration de 40 % si manquement délibéré. Seul celui qui a rompu son engagement individuel est sanctionné."
+  },
+  {
+   "theme": "Dutreil · règles communes",
+   "question": "L'abattement de 500 000 € pour donation d'entreprise à un salarié se cumule-t-il avec le Dutreil ?",
+   "choix": [
+    "Partiellement : seuls le fonds de commerce, le fonds agricole ou la clientèle cumulent les deux",
+    "Oui, mais seulement pour un salarié de la famille",
+    "Non, jamais",
+    "Totalement, sur tous les biens donnés"
+   ],
+   "reponse": 0,
+   "explication": "CGI 790 A : donation en pleine propriété à un salarié en CDI ou un apprenti qui poursuit l'activité 5 ans. Le cumul avec le Dutreil n'est que partiel."
+  },
+  {
+   "theme": "Dutreil · règles communes",
+   "question": "Une activité de location meublée est-elle éligible au Dutreil pour une transmission réalisée aujourd'hui ?",
+   "choix": [
+    "Oui, c'est une activité commerciale (BIC)",
+    "Oui, si le loueur est LMP",
+    "Non : la loi de finances pour 2024 l'exclut pour les transmissions depuis le 17 octobre 2023",
+    "Oui, en société mais pas en direct"
+   ],
+   "reponse": 2,
+   "explication": "La location meublée, comme la location nue et la location équipée, est une activité civile exclue. Le débat jurisprudentiel de 2023 est clos par la loi."
+  },
+  {
+   "theme": "Dutreil · règles communes",
+   "question": "Qui peut bénéficier de l'exonération Dutreil ?",
+   "choix": [
+    "Uniquement le conjoint et les enfants",
+    "Uniquement les descendants",
+    "Les donataires, héritiers et légataires, avec ou sans lien de parenté",
+    "Uniquement les héritiers réservataires"
+   ],
+   "reponse": 2,
+   "explication": "Le texte ne pose aucune condition de parenté. En société, une personne morale ou un fonds de pérennité peut aussi en bénéficier."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "Quelles sont les trois conditions du Dutreil « entreprise individuelle » (787 C) ?",
+   "choix": [
+    "Détention depuis 5 ans, engagement de 6 ans, poursuite 5 ans",
+    "Détention depuis 2 ans si acquise à titre onéreux, engagement individuel de conservation, poursuite de l'exploitation 3 ans par un bénéficiaire",
+    "Aucune condition de détention, engagement de 2 ans, activité 2 ans",
+    "Engagement collectif de 2 ans, engagement individuel, fonction de direction"
+   ],
+   "reponse": 1,
+   "explication": "CGI 787 C a, b et c. L'entrepreneur étant seul, il n'y a pas d'engagement collectif à signer."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "L'entreprise individuelle a été créée par le donateur il y a 8 mois. La condition de durée de détention est-elle remplie ?",
+   "choix": [
+    "Oui : aucune durée n'est exigée en cas de création ou d'acquisition à titre gratuit",
+    "Oui, mais l'exonération est réduite à 50 %",
+    "Non : il faut 5 ans d'activité",
+    "Non : il faut 2 ans de détention"
+   ],
+   "reponse": 0,
+   "explication": "Les 2 ans de détention ne sont exigés que si l'entreprise a été acquise à titre onéreux."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "Quels biens bénéficient du Dutreil en entreprise individuelle ?",
+   "choix": [
+    "Tous les biens inscrits au bilan, y compris les parts de SCPI",
+    "Le seul fonds de commerce",
+    "Tous les biens du chef d'entreprise",
+    "Les biens nécessaires à l'exploitation, même non inscrits au bilan (ex. immeuble professionnel)"
+   ],
+   "reponse": 3,
+   "explication": "Seuls les biens nécessaires à l'activité : l'immobilier professionnel même hors bilan y entre, mais pas les biens non affectés (logement, titres de placement, SCPI, trésorerie excédentaire)."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "Où l'engagement individuel de conservation doit-il figurer en entreprise individuelle ?",
+   "choix": [
+    "Dans un acte séparé enregistré dans les 6 mois",
+    "Il peut être produit à la demande de l'administration",
+    "Dans le registre du commerce",
+    "Dans l'acte de donation ou dans la déclaration de succession, sans régularisation possible ensuite"
+   ],
+   "reponse": 3,
+   "explication": "Faute d'engagement dans l'acte ou la déclaration, aucune régularisation ultérieure n'est admise (Cass. com. 16 avr. 2013)."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "Le fonds de commerce transmis est donné en location-gérance à une société tierce. Dutreil possible ?",
+   "choix": [
+    "Non, sauf si le fonds a plus de 5 ans",
+    "Non, car l'exploitation n'est pas assurée par l'entreprise individuelle ; c'est admis si la location-gérance est consentie à un héritier ou donataire (depuis le 30 mai 2024)",
+    "Oui, si le loyer est commercial",
+    "Oui, sans condition"
+   ],
+   "reponse": 1,
+   "explication": "La location-gérance à une société d'exploitation fait perdre l'exonération (RM Giro, CA Grenoble 2021). Le BOFiP admet depuis le 30 mai 2024 le fonds loué à l'un des héritiers, donataires ou légataires."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "Combien de temps l'un des bénéficiaires doit-il poursuivre l'exploitation après la transmission ?",
+   "choix": [
+    "2 ans",
+    "6 ans",
+    "3 ans",
+    "5 ans"
+   ],
+   "reponse": 2,
+   "explication": "787 C c : 3 ans (5 ans avant le 26 sept. 2007), par une même personne ou des bénéficiaires successifs. Si aucun héritier ne peut exploiter, un mandat à effet posthume peut être utilisé."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "Fiscalement, que déclenche la donation de l'entreprise individuelle, au-delà des droits de donation ?",
+   "choix": [
+    "Une cessation d'activité : imposition des bénéfices en cours et des plus-values, sauf exonérations (151 septies, 238 quindecies) ou report de l'article 41",
+    "L'IFI sur la valeur du fonds",
+    "Rien : la donation purge les plus-values",
+    "Uniquement la TVA sur le stock"
+   ],
+   "reponse": 0,
+   "explication": "La donation est un fait générateur des plus-values professionnelles. Si le donataire poursuit 5 ans, le report de l'article 41 peut aboutir à une exonération."
+  },
+  {
+   "theme": "Dutreil · entreprise individuelle",
+   "question": "Depuis 2019, quel régime Dutreil s'applique à une EURL ou une SASU ?",
+   "choix": [
+    "Au choix du donateur",
+    "Celui des sociétés (787 B), sur les seuls biens détenus par la société",
+    "Celui des entreprises individuelles (787 C)",
+    "Aucun : les sociétés unipersonnelles sont exclues"
+   ],
+   "reponse": 1,
+   "explication": "Depuis la création de l'engagement unilatéral (2019), les sociétés à associé unique relèvent du 787 B. Les biens nécessaires à l'activité détenus hors de la société ne sont plus exonérés."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Pour une société non cotée, quels seuils l'engagement collectif ou unilatéral (signé depuis 2019) doit-il couvrir ?",
+   "choix": [
+    "Au moins 34 % du capital",
+    "Au moins 17 % des droits financiers et 34 % des droits de vote",
+    "Au moins 50 % des droits de vote",
+    "Au moins 10 % des droits financiers et 20 % des droits de vote"
+   ],
+   "reponse": 1,
+   "explication": "Non cotées : 17 % / 34 %. Cotées : 10 % / 20 %. Avant 2019 : 34 % des titres (non cotées) ou 20 % (cotées)."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Quelle est la durée de l'engagement collectif ou unilatéral de conservation ?",
+   "choix": [
+    "4 ans exactement",
+    "2 ans minimum, sans durée maximale",
+    "1 an renouvelable",
+    "6 ans"
+   ],
+   "reponse": 1,
+   "explication": "2 ans au moins, de date à date, à compter de l'acte authentique ou de l'enregistrement de l'acte sous seing privé. Une prorogation est possible ; éviter le terme « reconduction »."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Sous quelle forme doit être conclu l'engagement collectif écrit ?",
+   "choix": [
+    "Acte authentique ou acte sous seing privé enregistré",
+    "Mention dans les statuts",
+    "Simple lettre au service des impôts",
+    "Délibération d'assemblée générale"
+   ],
+   "reponse": 0,
+   "explication": "BOI-ENR-DMTG-10-20-40-10 § 120 : acte notarié ou sous seing privé enregistré (l'enregistrement le rend opposable à l'administration)."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Un engagement collectif peut être « réputé acquis » sans écrit. À quelles conditions ?",
+   "choix": [
+    "Le donateur (seul ou avec conjoint, partenaire ou concubin) détient les seuils depuis 2 ans et l'un d'eux y exerce depuis 2 ans son activité principale ou une fonction de direction",
+    "Les donataires sont salariés de la société",
+    "La société a plus de 10 ans d'existence",
+    "Le donateur détient 100 % du capital depuis 6 mois"
+   ],
+   "reponse": 0,
+   "explication": "Depuis le 7 mars 2017 (RM), le donataire, héritier ou légataire doit en outre exercer l'activité ou la fonction de direction après la transmission. L'avantage : l'engagement individuel commence dès la transmission."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Aucun pacte n'existait au décès. Les héritiers peuvent-ils encore profiter du Dutreil ?",
+   "choix": [
+    "Oui, mais avec une exonération de 50 %",
+    "Oui : un engagement post mortem de 2 ans, pris dans les 6 mois du décès, suivi de l'engagement individuel",
+    "Oui, s'ils signent dans les 2 ans",
+    "Non, le pacte doit être signé du vivant"
+   ],
+   "reponse": 1,
+   "explication": "Engagement collectif ou unilatéral post mortem souscrit dans la déclaration de succession (6 mois), avec simultanément l'engagement individuel (6 ans pour les décès depuis le 21 fév. 2026)."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Après la transmission (pacte écrit), pendant combien de temps une fonction de direction (société à l'IS) doit-elle être exercée, et par qui ?",
+   "choix": [
+    "6 ans, par un donataire obligatoirement",
+    "3 ans, par un signataire (même le donateur) ou un bénéficiaire de la transmission",
+    "Pendant toute la durée de l'engagement individuel, par un salarié",
+    "2 ans, par le donateur seul"
+   ],
+   "reponse": 1,
+   "explication": "BOI § 390 : 3 ans à compter de la transmission. Le donateur peut continuer à diriger, seul ou en co-direction. Société à l'IR : il s'agit de l'activité professionnelle principale."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "La société exerce à titre prépondérant une activité opérationnelle. Sur quoi porte l'exonération Dutreil ?",
+   "choix": [
+    "Sur la seule trésorerie",
+    "Sur la seule fraction opérationnelle de l'actif",
+    "Sur les seuls immeubles professionnels",
+    "Sur la valeur de l'ensemble des titres, actifs non opérationnels compris (sauf biens somptuaires et logements depuis le 21 fév. 2026)"
+   ],
+   "reponse": 3,
+   "explication": "Une fois la prépondérance établie, tous les titres sont exonérés. Depuis la LF 2026, certains biens (yachts, véhicules de tourisme, objets d'art, logements…) sortent de l'assiette sauf affectation exclusive à l'activité. La trésorerie reste dans l'assiette."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Depuis le 21 février 2026, lequel de ces biens détenus par la société n'est pas exonéré (s'il n'est pas affecté à l'activité) ?",
+   "choix": [
+    "La trésorerie de la société",
+    "Des valeurs mobilières de placement",
+    "Un appartement loué meublé",
+    "Un local commercial utilisé par l'activité"
+   ],
+   "reponse": 2,
+   "explication": "Les biens « somptuaires » (chasse, pêche, véhicules de tourisme, yachts, aéronefs, bijoux, objets d'art, chevaux, vins) et les logements, loués ou non, sont exclus. L'immobilier professionnel et les placements financiers restent dans l'assiette."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Une holding peut-elle bénéficier du Dutreil ?",
+   "choix": [
+    "Oui, toute holding",
+    "Oui si elle est animatrice (définie par la loi de finances 2024) ; une holding passive seulement dans la limite de 2 niveaux d'interposition",
+    "Oui, si elle détient plus de 50 % de la filiale",
+    "Non, jamais"
+   ],
+   "reponse": 1,
+   "explication": "La holding animatrice est assimilée à une société opérationnelle (787 B al. 2). Pour une holding passive, l'exonération est limitée à la valeur des participations dans la société opérationnelle sous engagement."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Jusqu'à quand l'administration peut-elle remettre en cause l'exonération pour non-conservation des titres ?",
+   "choix": [
+    "3 ans après la donation",
+    "10 ans après le décès",
+    "Jusqu'au 31 décembre de la 3e année suivant la fin de l'engagement individuel",
+    "6 ans après la donation"
+   ],
+   "reponse": 2,
+   "explication": "Le délai court à compter de la fin de l'engagement individuel. Le délai de 6 ans peut jouer quand des recherches sont nécessaires (activité opérationnelle, animation de la holding)."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Le donataire apporte ses titres à une holding pendant son engagement individuel. Conséquence ?",
+   "choix": [
+    "En principe remise en cause, sauf respect des conditions strictes prévues pour l'apport à une holding",
+    "L'engagement est simplement prolongé de 2 ans",
+    "Aucune, l'apport est toujours neutre",
+    "Seul l'abattement de 100 000 € est perdu"
+   ],
+   "reponse": 0,
+   "explication": "BOI-ENR-DMTG-10-20-40-20 § 80 : l'apport pendant les engagements remet en cause le pacte, sauf exceptions encadrées (holding signataire ou holding de reprise respectant les conditions et déclarations)."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Donation-partage avec soulte : qui doit tenir l'engagement individuel de conservation ?",
+   "choix": [
+    "Personne : la soulte fait perdre le Dutreil",
+    "Tous les copartageants",
+    "Le donateur",
+    "Le seul attributaire des titres ; les copartageants allotis d'une soulte n'y sont pas tenus"
+   ],
+   "reponse": 3,
+   "explication": "RM Vachet 2006 : l'exonération est calculée sur les lots théoriques et profite à tous, mais l'engagement individuel est reporté sur le bénéficiaire effectif des titres."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Société à l'IR (ex. société civile agricole) : quelle condition d'activité s'applique ?",
+   "choix": [
+    "La détention de plus de 50 % des parts",
+    "L'exercice de l'activité professionnelle principale dans la société par un signataire",
+    "Une fonction de direction rémunérée",
+    "Aucune condition d'activité"
+   ],
+   "reponse": 1,
+   "explication": "Société à l'IR : activité professionnelle principale ; société à l'IS : fonction de direction (définitions des biens professionnels à l'IFI)."
+  },
+  {
+   "theme": "Dutreil · société",
+   "question": "Pendant l'engagement collectif, que se passe-t-il si la société cesse son activité opérationnelle au profit d'une activité civile ?",
+   "choix": [
+    "Le pacte est prorogé de 2 ans",
+    "L'exonération est remise en cause : l'activité opérationnelle doit être maintenue jusqu'au terme de l'engagement individuel",
+    "Rien, seule compte la date de la transmission",
+    "L'exonération passe à 50 %"
+   ],
+   "reponse": 1,
+   "explication": "LFR 2022 : l'activité opérationnelle doit être exercée depuis la conclusion du pacte (ou 2 ans avant en cas de réputé acquis) et jusqu'au terme de l'engagement individuel. Un changement vers une autre activité éligible reste possible."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Paiement fractionné de droit commun des droits de succession : quelle durée et combien de versements ?",
+   "choix": [
+    "1 an, versements tous les 6 mois au plus : 3 versements",
+    "5 ans, 10 versements",
+    "10 ans, 21 versements",
+    "3 ans, 7 versements"
+   ],
+   "reponse": 0,
+   "explication": "Premier versement au dépôt de la déclaration, puis tous les 6 mois au plus, sur 1 an au maximum : 3 versements (régime depuis le 1er janvier 2015)."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Quand le paiement fractionné peut-il s'étaler sur 3 ans (7 versements au plus) ?",
+   "choix": [
+    "Toujours, sur simple demande",
+    "Quand les droits dépassent 100 000 €",
+    "Quand l'actif héréditaire comprend au moins 50 % de biens non liquides",
+    "Quand les héritiers sont en ligne directe"
+   ],
+   "reponse": 2,
+   "explication": "Biens non liquides : immeubles, fonds de commerce, clientèle, parts sociales et valeurs non cotées, créances non exigibles, brevets, droits d'auteur, offices, objets d'art…"
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Lequel de ces biens n'est pas « non liquide » pour le délai spécial de 3 ans ?",
+   "choix": [
+    "Des actions cotées en Bourse",
+    "Un fonds de commerce",
+    "Des parts sociales non cotées",
+    "Un immeuble"
+   ],
+   "reponse": 0,
+   "explication": "CGI ann. III art. 404 A : seules les valeurs mobilières non cotées figurent dans la liste des biens non liquides."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Le paiement fractionné ou différé de droit commun concerne-t-il les droits de donation ?",
+   "choix": [
+    "Oui, pour les donations-partages",
+    "Oui, toujours",
+    "Non : seulement les droits de succession, sauf le régime spécial des transmissions d'entreprise",
+    "Oui, si le donataire est mineur"
+   ],
+   "reponse": 2,
+   "explication": "Hors transmission d'entreprise, seuls les droits de succession peuvent être fractionnés ou différés."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Dans quel cas le paiement différé des droits de succession est-il possible ?",
+   "choix": [
+    "Toute succession dont l'actif dépasse 1 M€",
+    "Succession comprenant un contrat d'assurance-vie",
+    "Succession comportant des biens en nue-propriété (et quelques autres cas limitatifs)",
+    "Sur simple demande motivée"
+   ],
+   "reponse": 2,
+   "explication": "Cas limitatifs : nue-propriété, droits viagers du conjoint au logement, attribution préférentielle ou réduction de libéralités, transmission d'entreprise."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Le nu-propriétaire demande le paiement différé jusqu'à l'extinction de l'usufruit. Quelles options a-t-il ?",
+   "choix": [
+    "Droits sur l'usufruit avec intérêts",
+    "Droits sur la nue-propriété sans intérêts",
+    "Aucune option : intérêts au taux légal",
+    "Droits sur la pleine propriété sans intérêts, ou droits sur la nue-propriété avec intérêts annuels ; option irrévocable"
+   ],
+   "reponse": 3,
+   "explication": "CGI ann. III art. 397 : soit les droits assis sur la valeur en pleine propriété (au jour du décès) sans intérêts, soit sur la nue-propriété avec intérêts annuels (« prêt in fine »). Choix irrévocable (Cass. 13 mars 2024)."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Transmission d'entreprise : comment fonctionne le paiement différé et fractionné ?",
+   "choix": [
+    "15 ans de différé sans intérêts",
+    "1 an de différé, puis 3 ans",
+    "10 ans de différé, puis 5 ans de fractionnement",
+    "5 ans de différé (intérêts seuls), puis 10 ans de fractionnement (21 versements au plus)"
+   ],
+   "reponse": 3,
+   "explication": "CGI ann. III art. 397 A : phase 1, différé de 5 ans avec intérêts annuels ; phase 2, versements semestriels égaux sur 10 ans. Applicable aux donations comme aux successions."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Titres de société transmis : quelle condition propre au paiement différé et fractionné « entreprise » ?",
+   "choix": [
+    "Engagement Dutreil obligatoire",
+    "Société cotée détenue à plus de 25 %",
+    "Société de plus de 10 ans",
+    "Société non cotée à activité opérationnelle, et chaque bénéficiaire reçoit au moins 5 % du capital"
+   ],
+   "reponse": 3,
+   "explication": "BOI-ENR-DG-50-20-50 § 110-120. Les holdings animatrices sont admises ; les holdings passives sont exclues."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Quel est le taux d'intérêt du crédit de paiement pour une demande déposée en 2026 ?",
+   "choix": [
+    "3,09 %",
+    "Le taux d'intérêt légal",
+    "1,7 % et 0,5 %",
+    "2 % en droit commun, 0,6 % en transmission d'entreprise"
+   ],
+   "reponse": 3,
+   "explication": "Taux de référence 3,09 % réduit d'un tiers = 2 % ; réduit des deux tiers en transmission d'entreprise (part > 10 % du capital par héritier ou plus du tiers transmis) = 0,6 %. Taux figé pour toute la durée du crédit."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Quelles garanties le comptable public peut-il accepter ?",
+   "choix": [
+    "Aucune : la demande suffit",
+    "Uniquement une hypothèque sur un immeuble de la succession",
+    "Hypothèque, nantissement d'assurance-vie ou de titres, caution personnelle ou bancaire…",
+    "Uniquement une caution bancaire"
+   ],
+   "reponse": 2,
+   "explication": "Les garanties doivent couvrir les droits et les intérêts jusqu'à la dernière échéance ; tous types de garanties peuvent être proposés. Le comptable statue dans les 4 mois."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Le nu-propriétaire vend une partie du bien grevé du paiement différé. Conséquence ?",
+   "choix": [
+    "Déchéance du terme pour l'ensemble des droits dus (sauf assouplissements)",
+    "Aucune",
+    "Pénalité de 10 % sur la fraction vendue",
+    "Déchéance pour la seule fraction vendue"
+   ],
+   "reponse": 0,
+   "explication": "La cession, même partielle, entraîne en principe l'exigibilité de l'ensemble des droits différés. Il ne s'agit que d'une déchéance du terme : l'intérêt de crédit reste dû, sans pénalités."
+  },
+  {
+   "theme": "Paiement différé / fractionné",
+   "question": "Les droits dus au titre d'une assurance-vie (757 B) peuvent-ils être fractionnés avec ceux de la succession ?",
+   "choix": [
+    "Oui, de plein droit",
+    "A priori non : l'assurance-vie est hors succession et aucun texte ne le prévoit",
+    "Oui, mais seulement si la clause est démembrée",
+    "Oui, sur 3 ans"
+   ],
+   "reponse": 1,
+   "explication": "En l'absence de texte ou de commentaire administratif, le paiement fractionné ou différé ne paraît pas applicable aux droits liés à l'assurance-vie."
+  }
+ ]
+}

@@ -1,6 +1,14 @@
 {
  "qcm": [
   {
+   "id": "2026-11-19-dutreil-paiement",
+   "titre": "Dutreil et paiement des droits",
+   "fichier": "3 fiches : Dutreil entreprise individuelle, Dutreil société, paiement différé et fractionné",
+   "date": "2026-11-19",
+   "nb": 41,
+   "theme": "Transmission d'entreprise"
+  },
+  {
    "id": "2026-11-19-assurance-vie",
    "titre": "Assurance-vie",
    "fichier": "5 fiches : principes, clause bénéficiaire, 990 I, 757 B, rachat",
