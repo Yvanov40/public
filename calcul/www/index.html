@@ -67,10 +67,15 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .res:empty{padding:0}
 
 /* Écran */
+.hint{margin:8px 10px 0;padding:8px 12px;border-radius:10px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--rule);font-size:14px;line-height:1.4}
+.hint .sig{color:var(--muted)}
+.hint .sig b{color:var(--ink);font-weight:600}
+.hint .sig .now{color:var(--accent-ink);background:var(--accent);border-radius:5px;padding:0 5px;font-weight:500}
+.hint .exm{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
 .display{padding:8px 14px 6px;display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:58px}
 .display .lab{font-size:12px;color:var(--muted);flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .display .big{font-size:calc(32px * var(--z));font-weight:500;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
-.display .big.err{font-size:14px;color:var(--warn);white-space:normal}
+.app[data-layout] .display .big.err{font-size:14px;color:var(--warn);white-space:normal;text-align:right}
 
 /* Raccourcis */
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 10px 8px;scrollbar-width:none}
@@ -174,6 +179,7 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
     <main class="sheet" id="sheet" aria-label="Lignes de calcul"></main>
   </div>
   <div class="panel">
+    <div class="hint" id="hint" hidden></div>
     <section class="display" aria-live="polite">
       <span class="lab" id="dLab"></span>
       <span class="big" id="dBig">0</span>
@@ -287,6 +293,42 @@ const FN = {
   succtiers:a=>{need(a,1,'succtiers'); return droits(num(a[0]), a[1]===undefined?B.abat.tiers:num(a[1]), [[Infinity,.60]]);},
   usuf:a=>{need(a,2,'usufruit'); return num(a[0])*usufTaux(num(a[1]));},
   np:a=>{need(a,2,'np'); return num(a[0])*(1-usufTaux(num(a[1])));}
+};
+const SIG={
+  ir:[['revenu net imposable','nombre de parts','1 si seul, facultatif'],'ir(90 000; 3) : couple avec 2 enfants'],
+  tmi:[['revenu net imposable','nombre de parts'],'tmi(90 000; 3)'],
+  parts:[['couple : 1 oui, 0 non','nombre d’enfants'],'parts(1; 2) donne 3 parts'],
+  pmt:[['capital emprunté','taux annuel en %','durée en années'],'mensualite(250 000; 3,4%; 20)'],
+  cost:[['capital emprunté','taux annuel en %','durée en années'],'cout(250 000; 3,4%; 20) : total des intérêts'],
+  cap:[['mensualité','taux annuel en %','durée en années'],'capital(1 200; 3,4%; 25) : somme empruntable'],
+  fv:[['capital placé','taux annuel en %','durée en années'],'vf(10 000; 3%; 8)'],
+  pv:[['montant futur','taux annuel en %','durée en années'],'va(15 000; 3%; 8)'],
+  succ:[['part reçue','abattement restant (facultatif, 100 000 €)'],'succ(400 000)'],
+  succpe:[['part reçue','abattement restant (facultatif, 31 865 €)'],'succpe(80 000)'],
+  succfrere:[['part reçue','abattement restant (facultatif, 15 932 €)'],'succfrere(200 000)'],
+  succneveu:[['part reçue','abattement restant (facultatif, 7 967 €)'],'succneveu(100 000)'],
+  succtiers:[['part reçue','abattement restant (facultatif, 1 594 €)'],'succtiers(50 000)'],
+  np:[['valeur en pleine propriété','âge de l’usufruitier'],'np(300 000; 72)'],
+  usuf:[['valeur en pleine propriété','âge de l’usufruitier'],'usufruit(300 000; 72)'],
+  ifi:[['patrimoine immobilier net taxable'],'ifi(2 000 000)'],
+  pfu:[['revenu ou plus-value'],'pfu(10 000)'],
+  ps:[['montant','taux (facultatif, 18,6 %)'],'ps(10 000; 17,2%)'],
+  ttc:[['montant hors taxe','taux de TVA (facultatif)'],'ttc(100; 5,5%)'],
+  ht:[['montant TTC','taux de TVA (facultatif)'],'ht(120)'],
+  tva:[['montant hors taxe','taux de TVA (facultatif)'],'tva(100)'],
+  evol:[['valeur de départ','valeur d’arrivée'],'evol(850; 910)'],
+  if:[['condition','résultat si oui','résultat si non'],'si(L2 > 1000; L2 × 10%; 0)'],
+  round:[['nombre','décimales (facultatif)'],'arrondi(2/3; 2)'],
+  floor:[['nombre','décimales (facultatif)'],'plancher(7,8)'],
+  ceil:[['nombre','décimales (facultatif)'],'plafond(7,2)'],
+  sum:[['valeurs séparées par ; ou plage L1:L5'],'somme(L1:L5)','*'],
+  avg:[['valeurs séparées par ; ou plage L1:L5'],'moy(12; 15; 9)','*'],
+  min:[['valeurs séparées par ; ou plage L1:L5'],'min(L1:L5)','*'],
+  max:[['valeurs séparées par ; ou plage L1:L5'],'max(L1:L5)','*'],
+  count:[['valeurs ou plage L1:L5'],'nb(L1:L5)','*'],
+  pow:[['nombre','exposant'],'puissance(2; 10)'],
+  sqrt:[['nombre'],'racine(2)'], abs:[['nombre'],'abs(−4)'], ln:[['nombre'],'ln(10)'], log:[['nombre'],'log(1000)'], exp:[['nombre'],'exp(1)'],
+  sin:[['angle en degrés'],'sin(30)'], cos:[['angle en degrés'],'cos(60)'], tan:[['angle en degrés'],'tan(45)']
 };
 const RESERVED = new Set([...Object.keys(ALIAS),'pi','e','ans','total','de','of','du','des','mod','et','ou']);
 const CMP = new Set(['<','>','<=','>=','=','==','<>','!=']);
@@ -404,7 +446,9 @@ function evaluate(src, ctx){
         }
         const name=ALIAS[t.v]; if(!name) throw new Error('Fonction inconnue : '+t.raw);
         if(FISCAL.has(name)) ctx.touch('€');
-        return FN[name](args());
+        const av=args();
+        if((name==='ir'||name==='tmi') && !ctx.note){ const pt=av[1]===undefined?1:num(av[1]); ctx.note=(name==='ir'?'Impôt':'TMI')+' pour '+fmt(pt)+' part'+(pt>1?'s':'')+(av[1]===undefined?' (ajoutez ; parts)':''); }
+        return FN[name](av);
       }
       let m;
       if((m=t.v.match(/^l(\d+)$/))) return lineVal(+m[1]);
@@ -423,6 +467,7 @@ function evaluate(src, ctx){
   return v;
 }
 
+let lastFuncs=new Map();
 function computeSheet(lines){
   const ctx={vars:new Map(),funcs:new Map(),results:[],ans:undefined,ansCur:'',block:[],blockCur:'',lineCur:'',
     touch(c){ if(c&&!this.lineCur) this.lineCur=c; }};
@@ -453,7 +498,7 @@ function computeSheet(lines){
     m=t.match(/^([\p{L}_][\p{L}\d_]*)\s*=(?!=)\s*(.+)$/u);
     if(m){ name=m[1].toLowerCase(); t=m[2]; }
     const cm=t.match(/[€$£]/); ctx.lineCur=cm?cm[0]:''; t=t.replace(/[€$£]/g,'');
-    ctx.usedTotal=false;
+    ctx.usedTotal=false; ctx.note='';
     try{
       if(name && (RESERVED.has(name)||/^l\d+$/.test(name))) throw new Error('« '+m[1]+' » est un nom réservé');
       if(!t.trim()) throw new Error('Calcul vide');
@@ -461,7 +506,7 @@ function computeSheet(lines){
       if(Array.isArray(v)) throw new Error('Utilisez somme(…) pour une plage');
       const isPct=v instanceof Pct, value=num(v);
       if(typeof value!=='number' || Number.isNaN(value)) throw new Error('Résultat non défini');
-      Object.assign(res,{kind:'value',value,isPct,display:isPct?v.v:value,cur:isPct?'':ctx.lineCur,name,isTotal:ctx.usedTotal});
+      Object.assign(res,{kind:'value',value,isPct,display:isPct?v.v:value,cur:isPct?'':ctx.lineCur,name,isTotal:ctx.usedTotal,note:ctx.note});
       if(name) ctx.vars.set(name,{v:value,cur:res.cur});
       ctx.ans=value; ctx.ansCur=res.cur;
       if(ctx.usedTotal){ ctx.block=[]; ctx.blockCur=''; }
@@ -473,6 +518,7 @@ function computeSheet(lines){
     res.run=ctx.block.reduce((s,x)=>s+x,0); res.runCur=ctx.blockCur; res.runCount=ctx.block.length;
     ctx.results.push(res);
   }
+  lastFuncs=ctx.funcs;
   return ctx.results;
 }
 
@@ -691,6 +737,7 @@ function refresh(){
     else { res.textContent=''; res.removeAttribute('aria-label'); }
   });
   renderDisplay();
+  if(typeof updateHint==='function') updateHint();
 }
 function fitBig(){
   const big=$('dBig'); big.style.fontSize='';
@@ -702,7 +749,7 @@ function renderDisplay(){ renderDisplay0(); fitBig(); }
 function renderDisplay0(){
   const lab=$('dLab'), big=$('dBig'); big.classList.remove('err');
   const r=results[active];
-  if(r && r.kind==='value'){ lab.textContent=r.name?r.name:'Ligne '+(active+1); big.textContent=show(r); return; }
+  if(r && r.kind==='value'){ lab.textContent=r.note||(r.name?r.name:'Ligne '+(active+1)); big.textContent=show(r); return; }
   if(r && r.kind==='error'){ lab.textContent='Ligne '+(active+1); big.textContent=r.msg; big.classList.add('err'); return; }
   if(r && r.kind==='fn'){ lab.textContent='Ligne '+(active+1); big.textContent=r.label; big.classList.add('err'); big.style.color='var(--muted)'; return; }
   big.style.color='';
@@ -759,6 +806,39 @@ function insert(text){
   cur().lines[active]=e.value; save(); refresh();
   e.scrollIntoView({block:'nearest'});
 }
+function callAt(text,pos){
+  const stack=[];
+  for(let i=0;i<pos;i++){
+    const ch=text[i];
+    if(ch==='('){ const m=text.slice(0,i).match(/([\p{L}_][\p{L}\d_]*)\s*$/u); stack.push({name:m?m[1]:'',arg:0}); }
+    else if(ch===')') stack.pop();
+    else if(stack.length && (ch===';' || (ch===',' && !(/\d/.test(text[i-1]||'') && /\d/.test(text[i+1]||''))))) stack[stack.length-1].arg++;
+  }
+  for(let k=stack.length-1;k>=0;k--) if(stack[k].name) return stack[k];
+  return null;
+}
+function updateHint(){
+  const h=$('hint'), e=document.activeElement;
+  const c=(e && e.classList && e.classList.contains('ex')) ? callAt(e.value, e.selectionStart??e.value.length) : null;
+  let sig=null, label='';
+  if(c){
+    const low=c.name.toLowerCase();
+    if(lastFuncs.has(low)){ const f=lastFuncs.get(low); sig=[f.params,'votre fonction : '+c.name+'('+f.params.join('; ')+') = '+f.body]; }
+    else if(ALIAS[low] && SIG[ALIAS[low]]) sig=SIG[ALIAS[low]];
+    label=c.name;
+  }
+  if(!sig){ if(!h.hidden){ h.hidden=true; fitBig(); } return; }
+  const [ps,ex,vari]=sig, cur=vari?0:Math.min(c.arg,ps.length-1);
+  h.innerHTML='';
+  const line=el('span',{className:'sig'},el('b',{textContent:label}),'(');
+  ps.forEach((p,i)=>{ if(i) line.append(' ; '); line.append(i===cur && (vari||c.arg<ps.length) ? el('span',{className:'now',textContent:p}) : p); });
+  line.append(')');
+  h.append(line, el('span',{className:'exm',textContent:(ex.startsWith('votre')?'':'Exemple : ')+ex}));
+  h.hidden=false;
+}
+document.addEventListener('selectionchange',updateHint);
+['keyup','click','focusin'].forEach(t=>sheetEl.addEventListener(t,()=>setTimeout(updateHint,0)));
+sheetEl.addEventListener('focusout',()=>setTimeout(updateHint,0));
 function backspace(){
   const e=ensureActive(); const a=e.selectionStart, b=e.selectionEnd;
   if(a!==b) e.setRangeText('',a,b,'end');
@@ -810,7 +890,7 @@ const KEYS=[
 const CHIPS=[['total','total'],['somme(','somme('],['moy(','moy('],[':',':'],['=',' = '],['de',' de '],
   ['ttc(','ttc('],['ht(','ht('],['evol(','evol('],['arrondi(','arrondi('],['si(','si('],['<','<'],['>','>'],
   ['√(','racine('],['π','pi'],['#','# ']];
-const FCHIPS=[['ir(','ir('],['tmi(','tmi('],['succ(','succ('],['ifi(','ifi('],['mensualite(','mensualite('],['pfu(','pfu(']];
+const FCHIPS=[['ir(revenu; parts)','ir('],['tmi(','tmi('],['succ(','succ('],['ifi(','ifi('],['mensualite(','mensualite('],['pfu(','pfu(']];
 const OPS=new Set(['+','*','/','^','%']);
 function press(v){
   if(state.prefs.vibrate) buzz(8);
@@ -855,8 +935,8 @@ const FX=[
   ['Comme un tableur',[['loyer = 850','crée une variable'],['loyer / 30','réutilise-la'],['L2 × 12','résultat de la ligne 2'],['somme(L1:L5)','plage de lignes'],['moy(12; 15; 9)','arguments séparés par ;'],['min(L1:L5)','aussi max(…), nb(…)'],['total','additionne le bloc au-dessus'],['ans × 2','dernier résultat'],['Courses : 45 + 12,30','étiquette avant « : »'],['# Vacances','titre, coupe les totaux']]],
   ['Conditions',[['si(L2 > 1000; L2 × 10%; 0)','si … alors … sinon'],['si(L2 >= 1000 et L2 < 5000; 1; 0)','et, ou'],['L1 = L2','vrai = 1, faux = 0 ; aussi <>, <=, >=']]],
   ['Mes fonctions',[['marge(x) = x × 1,35','crée une fonction'],['marge(200)','utilise-la partout dans la feuille'],['prix(ht; remise) = ttc(ht − remise%)','plusieurs paramètres']]],
-  ['Crédit et placement',[['mensualite(250 000; 3,4%; 20)','capital, taux annuel, années'],['cout(250 000; 3,4%; 20)','total des intérêts'],['capital(1 200; 3,4%; 25)','somme empruntable pour une mensualité'],['vf(10 000; 3%; 8)','valeur future, intérêts composés'],['va(15 000; 3%; 8)','valeur actuelle']]],
-  ['Impôt sur le revenu 2026',[['ir(45 000)','revenu net imposable, 1 part'],['ir(90 000; 3)','couple avec 2 enfants : 3 parts'],['ir(40 000; 2; 1)','3e valeur 1 : personne seule (base 1 part)'],['tmi(90 000; 3)','tranche marginale'],['parts(1; 3)','parts : couple (1) ou seul (0), nombre d’enfants'],['pfu(10 000)','flat tax 31,4 % (12,8 % + 18,6 %)'],['ps(10 000)','prélèvements sociaux 18,6 % ; ps(x; 17,2%) pour le foncier']]],
+  ['Crédit et placement',[['mensualite(250 000; 3,4%; 20)','mensualite(capital; taux annuel %; durée en années)'],['cout(250 000; 3,4%; 20)','cout(capital; taux %; années) : total des intérêts'],['capital(1 200; 3,4%; 25)','capital(mensualité; taux %; années) : somme empruntable'],['vf(10 000; 3%; 8)','vf(capital; taux %; années) : valeur future'],['va(15 000; 3%; 8)','va(montant futur; taux %; années) : valeur actuelle']]],
+  ['Impôt sur le revenu 2026',[['ir(45 000; 1)','ir(revenu; parts) : personne seule, 1 part'],['ir(90 000; 3)','couple avec 2 enfants : 3 parts'],['ir(40 000; 2; 1)','3e valeur 1 : personne seule (base 1 part)'],['tmi(90 000; 3)','tmi(revenu; parts) : tranche marginale'],['parts(1; 3)','parts : couple (1) ou seul (0), nombre d’enfants'],['pfu(10 000)','flat tax 31,4 % (12,8 % + 18,6 %)'],['ps(10 000)','prélèvements sociaux 18,6 % ; ps(x; 17,2%) pour le foncier']]],
   ['Successions et donations',[['succ(400 000)','enfant : abattement 100 000 €, barème 5 à 45 %'],['succ(400 000; 0)','2e valeur : abattement encore disponible'],['donation(150 000)','même barème en ligne directe'],['succpe(80 000)','petit-enfant (donation : abattement 31 865 €)'],['succfrere(200 000)','frère ou sœur : 15 932 €, 35 % puis 45 %'],['succneveu(100 000)','neveu ou nièce : 7 967 €, 55 %'],['succtiers(50 000)','sans lien : 1 594 €, 60 %'],['np(300 000; 72)','nue-propriété selon l’âge de l’usufruitier'],['usufruit(300 000; 72)','valeur de l’usufruit (art. 669)']]],
   ['IFI 2026',[['ifi(2 000 000)','patrimoine immobilier net taxable'],['ifi(1 350 000)','décote entre 1,3 et 1,4 M€'],['ifi(1 500 000 × 0,7)','résidence principale : abattement 30 %']]]
 ];
