@@ -40,7 +40,8 @@
   a.appli i { font-style: normal; color: var(--or); font-size: 22px; }  /* la flèche › dorée */
   /* L'encadré d'aide en bas, à bord pointillé */
   a.apk { display: block; color: inherit; text-decoration: none; border-style: solid; border-color: #a57d2f; }
-  a.apk[hidden] { display: none; }
+  .apk[hidden] { display: none; }
+  #pc a { color: #a57d2f; font-weight: 600; }
   .aide { margin-top: 26px; font-size: 13.5px; color: var(--discret); background: var(--carte); border: 1px dashed var(--bordure); border-radius: 12px; padding: 12px 14px; }
 </style>
 </head>
@@ -66,10 +67,16 @@
   <a class="aide apk" id="apk" hidden href="https://github.com/Yvanov40/public/releases/download/application/mes-applis.apk">
     <b>📱 Application Android « Mes applis »</b> : toutes les applis dans une seule application, avec exports et impression.
     Touchez pour télécharger, puis ouvrez le fichier pour l’installer.</a>
+  <!-- sur un ordinateur (dans le navigateur, pas dans l'application) : l'application pour Windows ou Mac -->
+  <p class="aide apk" id="pc" hidden><b>💻 Application pour ordinateur « Mes applis »</b> : toutes les applis dans une application, chacune dans sa fenêtre.
+    <a id="pc-win" href="https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Windows.exe">Windows</a> ·
+    <a id="pc-mac" href="https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Mac.dmg">Mac</a></p>
 </main>
 <script>
   // le lien vers l'application Android : seulement sur Android, et pas quand on est déjà dans l'application
   if (/Android/i.test(navigator.userAgent) && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) document.getElementById("apk").hidden = false;
+  // le lien vers l'application pour ordinateur : sur Windows et Mac, pas dans l'application elle-même
+  if (/Windows NT|Macintosh/.test(navigator.userAgent) && !/Electron\//.test(navigator.userAgent) && !("ontouchend" in document && /Macintosh/.test(navigator.userAgent))) document.getElementById("pc").hidden = false;
 </script>
 <script>
   // L'ancien service commun (qui vivait à la racine) n'a plus lieu d'être : chaque appli a le sien.

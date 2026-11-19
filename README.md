@@ -84,3 +84,14 @@ Le même projet contient la version iPhone (`application/ios`). Elle se construi
 3. Dans Xcode : cible « App » › Signing & Capabilities › Team : votre identifiant Apple (Add Account…).
 4. iPhone branché (et « Mode développeur » activé dans Réglages › Confidentialité et sécurité), choisir l'iPhone en haut, puis ▶.
 5. Avec un identifiant Apple gratuit, l'application est à réinstaller (▶) tous les 7 jours ; avec le programme développeur, elle tient un an.
+
+## Application pour ordinateur (Windows et Mac)
+
+Le dossier `bureau/` contient « Mes applis » pour ordinateur (Electron) : l'accueil, puis chaque appli dans sa fenêtre
+(taille et place gardées), exports par « Enregistrer sous », impression du système, liens extérieurs dans le navigateur.
+GitHub Actions (`.github/workflows/bureau.yml`) la construit à chaque modification du dossier :
+- Windows : https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Windows.exe
+- Mac : https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Mac.dmg
+
+Elle n'est pas signée : Windows (« Windows a protégé votre ordinateur » › Informations complémentaires › Exécuter quand même)
+et le Mac (clic droit › Ouvrir) demandent une confirmation au premier lancement.

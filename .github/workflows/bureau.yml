@@ -1,0 +1,46 @@
+# Construit « Mes applis » pour ordinateur (dossier « bureau ») et la publie dans la version « bureau » du dépôt :
+#   Windows : https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Windows.exe
+#   Mac     : https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Mac.dmg
+name: Application ordinateur
+on:
+  push:
+    branches: [main]
+    paths: ["bureau/**", ".github/workflows/bureau.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  construire:
+    strategy:
+      matrix:
+        include:
+          - { os: windows-latest, cible: windows, fichier: Mes-applis-Windows.exe }
+          - { os: macos-latest, cible: mac, fichier: Mes-applis-Mac.dmg }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Construire
+        working-directory: bureau
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: "false" }
+        run: npm ci && npm run ${{ matrix.cible }}
+      - uses: actions/upload-artifact@v4
+        with: { name: "${{ matrix.cible }}", path: "bureau/dist/${{ matrix.fichier }}" }
+  publier:
+    needs: construire
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: fichiers, merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: bureau
+          name: "Mes applis — ordinateur (Windows et Mac)"
+          body: |
+            Toutes les applis (Suivi, Audit, Succession, Plus-value, Investissement, Révision) dans une application pour ordinateur.
+            Windows : « Mes-applis-Windows.exe ». Au premier lancement, Windows peut afficher « Windows a protégé votre ordinateur » : Informations complémentaires › Exécuter quand même.
+            Mac : « Mes-applis-Mac.dmg », glisser l'application dans Applications. Au premier lancement : clic droit › Ouvrir (ou Réglages › Confidentialité et sécurité › Ouvrir quand même).
+            Les applis se mettent à jour d'elles-mêmes ; cette application ne change que rarement.
+          files: fichiers/*
+          make_latest: false
