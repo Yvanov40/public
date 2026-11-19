@@ -28,6 +28,12 @@ chargent ces pages depuis le site. Voir aussi le README.
   y compris quand un autre appareil a encore l'ancienne version et synchronise entre-temps.
 - Commits au nom de `Yvanov40` (`git -c user.name=Yvanov40 -c user.email=Yvanov40@users.noreply.github.com commit …`).
 
+## Révision : QCM à la demande
+
+Quand Yvan envoie une fiche en demandant un QCM : lire toute la fiche, écrire autant de questions qu'il faut pour la couvrir
+(chiffres, conditions, exceptions, articles), 4 choix plausibles, une explication courte ; format et étapes dans `revision/README.md`
+(nouveau `data/qcm/<id>.json`, en tête de `data/qcm/index.json`, version de `revision/sw.js` augmentée). Pas de données de clients.
+
 ## Préférences de Yvan
 
 - **Répondre en français**, simplement, sans jargon technique inutile ; commencer par citer ses sources.

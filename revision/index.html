@@ -235,16 +235,9 @@ window.HABILLAGE = {
 })();
 </script>
 <!-- habillage : fin -->
-
-
-
-
-
-
-
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Révision de la base</title>
-<meta name="description" content="Réviser la base documentaire patrimoniale en QCM, vrai ou faux et fiches.">
+<title>Révision — QCM</title>
+<meta name="description" content="QCM de révision, un par fiche de la base documentaire.">
 <meta name="theme-color" content="#0C2D39">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -255,178 +248,396 @@ window.HABILLAGE = {
 <meta name="apple-mobile-web-app-title" content="Révision">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=EB+Garamond:wght@500;600&display=swap" rel="stylesheet">
 <style>
+/* Révision : des QCM, un par fiche envoyée à Claude (data/qcm/). Chaque QCM est une tuile, avec sa date. */
 :root{
   color-scheme: light;
-  --bg:#EEF2F1; --surface:#FFFFFF; --ink:#0C2D39; --muted:#4E6770; --line:#CBD6D6;
-  --teal:#2B6474; --gold:#B8862F; --gold-soft:#F3E6C8; --tab:#E2B866; --tab-ink:#3B2A0A;
-  --ok:#2F6B45; --ok-soft:#DCEBDF; --ko:#A23B2A; --ko-soft:#F5DEDA; --rule:rgba(43,100,116,.13);
-  --serif:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --bg:#f7f4ee; --surface:#fffdf9; --ink:#0c2d39; --muted:#5d6b70; --line:#e2dacb; --section:#efe9de;
+  --teal:#0c2d39; --gold:#a57d2f; --gold-soft:#f3e8d2;
+  --ok:#2f6b45; --ok-soft:#dcebdf; --ko:#a23b2a; --ko-soft:#f5deda;
+  --serif:"EB Garamond", Garamond, Georgia, serif;
   --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  --rayon:14px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){ color-scheme: dark;
-    --bg:#0A2530; --surface:#10394A; --ink:#EAF0EF; --muted:#9DB4B8; --line:#1F4D5E;
-    --teal:#7FB3C0; --gold:#E2B866; --gold-soft:rgba(226,184,102,.14); --tab:#E2B866; --tab-ink:#2A1E06;
-    --ok:#86CFA0; --ok-soft:rgba(134,207,160,.14); --ko:#F29A88; --ko-soft:rgba(242,154,136,.14); --rule:rgba(127,179,192,.12);
-  }
+    --bg:#0f1b20; --surface:#16262d; --ink:#e8e3d9; --muted:#9aa7a9; --line:#27404a; --section:#1b2e36;
+    --teal:#8fb8c4; --gold:#d4af6c; --gold-soft:rgba(212,175,108,.14);
+    --ok:#86cfa0; --ok-soft:rgba(134,207,160,.14); --ko:#f29a88; --ko-soft:rgba(242,154,136,.14); }
 }
 :root[data-theme="dark"]{ color-scheme: dark;
-    --bg:#0A2530; --surface:#10394A; --ink:#EAF0EF; --muted:#9DB4B8; --line:#1F4D5E;
-    --teal:#7FB3C0; --gold:#E2B866; --gold-soft:rgba(226,184,102,.14); --tab:#E2B866; --tab-ink:#2A1E06;
-    --ok:#86CFA0; --ok-soft:rgba(134,207,160,.14); --ko:#F29A88; --ko-soft:rgba(242,154,136,.14); --rule:rgba(127,179,192,.12);
-  }
-
-*,*::before,*::after{box-sizing:inherit}
-html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+  --bg:#0f1b20; --surface:#16262d; --ink:#e8e3d9; --muted:#9aa7a9; --line:#27404a; --section:#1b2e36;
+  --teal:#8fb8c4; --gold:#d4af6c; --gold-soft:rgba(212,175,108,.14);
+  --ok:#86cfa0; --ok-soft:rgba(134,207,160,.14); --ko:#f29a88; --ko-soft:rgba(242,154,136,.14); }
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:15.5px/1.5 var(--sans);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:4px}
-.wrap{max-width:680px;margin:0 auto;padding:0 18px 48px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
+.wrap{max-width:var(--largeur,980px);margin:0 auto;padding:16px 18px 56px}
 
 /* barre haute */
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:12px;padding:12px 18px;max-width:680px;margin:0 auto}
-header.top .mark{width:30px;height:30px;flex:none}
-header.top h1{font:600 17px/1.2 var(--sans);margin:0;flex:1;letter-spacing:-.01em}
-header.top h1 small{display:block;font-weight:400;font-size:13px;color:var(--muted)}
-.iconbtn{background:none;border:0;padding:8px;border-radius:8px;color:var(--muted);display:inline-flex}
-.iconbtn:hover{color:var(--ink)}
-.iconbtn svg{width:22px;height:22px}
+header.top{position:sticky;top:0;z-index:5;background:var(--teal);color:#fff;display:flex;align-items:center;gap:12px;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(18px,calc(50% - var(--largeur,980px)/2 + 18px)) 10px}
+header.top .mark{width:30px;height:30px;flex:none;border-radius:8px}
+header.top h1{font:600 22px/1.15 var(--serif);margin:0;flex:1;min-width:0}
+header.top h1 small{display:block;font:400 12.5px var(--sans);color:rgba(255,255,255,.7)}
+.iconbtn{background:none;border:0;padding:8px;border-radius:10px;color:#fff;display:inline-flex;opacity:.85}
+.iconbtn:hover{opacity:1;background:rgba(255,255,255,.1)}
+.iconbtn svg{width:20px;height:20px}
+#retour{display:none} body.dans-qcm #retour{display:inline-flex}
 
-/* accueil */
-.today{margin:14px 0 30px;position:relative;padding-top:14px}
-.today .stack{position:relative}
-.today .sheet{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:22px 22px 20px;position:relative;z-index:2}
-.today .under{position:absolute;inset:8px -6px -8px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);opacity:.6;z-index:1}
-.today h2{font:600 28px/1.15 var(--serif);margin:0 0 6px;letter-spacing:-.01em}
-.today p{margin:0 0 18px;color:var(--muted)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:11px 16px;font-weight:500;min-height:46px;text-decoration:none;color:var(--ink)}
-.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.btn.block{width:100%}
-.btn:disabled{opacity:.45;cursor:default}
-.row{display:flex;gap:10px;flex-wrap:wrap}
+/* barre d'outils de l'accueil */
+.outils{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 14px}
+.recherche{flex:1 1 220px;min-width:0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);outline:none}
+.recherche:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+.puces{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:3px;gap:2px}
+.puces button{border:0;background:none;border-radius:999px;padding:5px 11px;font-size:13px;color:var(--muted)}
+.puces button.on{background:var(--teal);color:#fff}
+.bilan{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px}
+.bilan div{flex:1 1 130px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rayon);padding:10px 14px}
+.bilan b{display:block;font:600 24px var(--serif);color:var(--teal)}
+.bilan span{font-size:12.5px;color:var(--muted)}
 
-h3.sec{font:600 15px/1.3 var(--sans);color:var(--muted);margin:30px 0 10px;letter-spacing:.01em}
-.modes{border-top:1px solid var(--line)}
-.mode{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:15px 4px}
-.mode .glyph{width:38px;height:38px;flex:none;border-radius:8px;background:var(--gold-soft);color:var(--gold);display:grid;place-items:center;font:600 15px var(--serif)}
-.mode b{display:block;font-weight:600}
-.mode span{color:var(--muted);font-size:14px}
-.mode .count{margin-left:auto;color:var(--muted);font-size:14px;white-space:nowrap}
+/* les tuiles */
+.grille{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(var(--tuile,260px),1fr))}
+body.liste .grille{grid-template-columns:1fr;gap:8px}
+.card{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--rayon);padding:14px 16px 12px;
+  display:flex;flex-direction:column;gap:6px;min-height:150px;transition:transform .12s, box-shadow .12s, border-color .12s}
+.card:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(12,45,57,.10);border-color:var(--gold)}
+body.liste .card{min-height:0;display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 14px}
+.card .date{font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--gold)}
+.card h2{margin:0;font:600 19px/1.2 var(--serif);color:var(--teal)}
+.card .src{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .pied{margin-top:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+body.liste .card .pied{grid-row:1 / span 3;grid-column:2;margin:0;justify-content:flex-end}
+.pastille{border-radius:999px;padding:2px 9px;font-weight:600;font-size:12px;background:var(--section);color:var(--muted)}
+.pastille.nouveau{background:var(--gold-soft);color:var(--gold)}
+.pastille.bon{background:var(--ok-soft);color:var(--ok)} .pastille.moyen{background:var(--gold-soft);color:var(--gold)} .pastille.faible{background:var(--ko-soft);color:var(--ko)}
+.jauge{height:4px;border-radius:4px;background:var(--section);overflow:hidden;margin-top:4px}
+.jauge i{display:block;height:100%;background:var(--gold)}
+.vide{background:var(--surface);border:1px dashed var(--line);border-radius:var(--rayon);padding:28px 20px;text-align:center;color:var(--muted)}
+.vide h2{font:600 22px var(--serif);color:var(--teal);margin:0 0 6px}
 
-.themes{display:grid;gap:2px}
-.theme{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
-.theme input{width:20px;height:20px;accent-color:var(--teal)}
-.theme label{cursor:pointer}
-.theme .name{font-weight:500}
-.theme .meta{font-size:13px;color:var(--muted)}
-.bar{grid-column:2/4;height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:-4px}
-.bar i{display:block;height:100%;background:var(--teal);border-radius:2px}
-.theme .pct{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
-
-.foot{margin-top:34px;display:grid;gap:10px}
-.note{font-size:14px;color:var(--muted)}
-
-/* carte */
-.session-top{display:flex;align-items:center;gap:12px;margin:6px 0 26px}
-.progress{flex:1;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
-.progress i{display:block;height:100%;background:var(--gold);transition:width .3s}
-.session-top .n{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
-.card{position:relative;margin-top:16px}
-.card .tab{position:absolute;top:-22px;left:14px;background:var(--tab);color:var(--tab-ink);font:600 12.5px/1 var(--sans);padding:6px 12px 10px;border-radius:6px 6px 0 0;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .face{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--tab);border-radius:2px 6px 6px 6px;padding:20px 20px 22px;position:relative}
-.card .src{font-size:13px;color:var(--muted);margin:0 0 14px;padding-right:64px}
-.notches{position:absolute;top:16px;right:16px;display:flex;gap:4px}
-.notches i{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--teal);opacity:.6}
-.notches i.on{background:var(--teal);opacity:1}
-.prompt{font:400 20px/1.55 var(--serif);margin:0}
-.ruled{background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(1.55em - 1px),var(--rule) calc(1.55em - 1px),var(--rule) 1.55em);}
-.blank{display:inline-block;min-width:4.2em;border-bottom:2px solid var(--gold);height:1.05em;vertical-align:-.15em}
-mark.hl{background:var(--gold-soft);color:inherit;padding:0 .2em;border-radius:3px;box-shadow:inset 0 -2px 0 var(--gold)}
-mark.hl.ok{background:var(--ok-soft);box-shadow:inset 0 -2px 0 var(--ok)}
-mark.hl.ko{background:var(--ko-soft);box-shadow:inset 0 -2px 0 var(--ko);text-decoration:line-through}
-.choices{display:grid;gap:10px;margin-top:20px}
-.choice{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:13px 14px;min-height:50px;display:flex;align-items:center;gap:12px;font-variant-numeric:tabular-nums}
-.choice kbd{font:500 12px var(--sans);color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
-.choice:hover:not(:disabled){border-color:var(--teal)}
-.choice.ok{border-color:var(--ok);background:var(--ok-soft)}
-.choice.ko{border-color:var(--ko);background:var(--ko-soft)}
-.choice:disabled{cursor:default}
-.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
-.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px}
-.trio .btn{padding:10px 6px;font-size:15px}
-.verdict{margin:18px 0 0;font-weight:600}
-.verdict.ok{color:var(--ok)} .verdict.ko{color:var(--ko)}
-.reveal{animation:reveal .35s ease-out}
-@keyframes reveal{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.reveal{animation:none}.progress i{transition:none}}
-details.ctx{margin-top:16px;border-top:1px dashed var(--line);padding-top:12px}
-details.ctx summary{cursor:pointer;color:var(--teal);font-weight:500;font-size:15px}
-.next{margin-top:20px}
-.small-actions{display:flex;justify-content:space-between;margin-top:14px}
-.linkbtn{background:none;border:0;color:var(--muted);font-size:14px;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
-
-/* contenu de fiche */
-.doc{font:400 17px/1.6 var(--serif)}
-.doc p{margin:0 0 .7em}
-.doc ul{margin:0 0 .8em;padding-left:1.2em}
-.doc li{margin:.2em 0}
-.doc .lbl{font:600 14px var(--sans);color:var(--gold);margin:1em 0 .3em}
-.doc h2{font:600 22px/1.25 var(--serif);margin:1.6em 0 .5em}
-.doc h3{font:600 18.5px/1.3 var(--serif);margin:1.3em 0 .4em}
-.doc h4{font:600 16px/1.3 var(--sans);margin:1.1em 0 .3em;color:var(--muted)}
-.tblwrap{overflow-x:auto;margin:.6em 0 1em;border:1px solid var(--line);border-radius:6px}
-.doc table{border-collapse:collapse;font:14px/1.4 var(--sans);min-width:100%}
-.doc td{border-bottom:1px solid var(--line);padding:7px 9px;vertical-align:top}
-.doc tr:first-child td{font-weight:600;background:var(--gold-soft)}
-.clip{max-height:340px;overflow:hidden;position:relative}
-.clip::after{content:"";position:absolute;left:0;right:0;bottom:0;height:70px;background:linear-gradient(transparent,var(--surface))}
-
-/* lecture */
-.search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:8px 0 6px}
-.doclist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:13px 4px}
-.doclist button span{display:block;font-size:13px;color:var(--muted)}
-.hit{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 4px;font-size:15px}
-.hit b{display:block;font-size:13px;color:var(--muted);font-weight:500}
-.toc{font-size:15px;margin:10px 0 24px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
-.toc a{display:block;color:var(--teal);padding:3px 0;text-decoration:none}
-.toc a.l2{padding-left:14px}.toc a.l3{padding-left:28px;font-size:14px}
-
-/* import */
-.drop{border:1.5px dashed var(--line);border-radius:8px;padding:22px;text-align:center;background:var(--surface)}
-.drop.over{border-color:var(--teal)}
-ol.steps{padding-left:1.2em;color:var(--muted);font-size:15px}
-ol.steps li{margin:.35em 0}
-.log{font-size:14px;color:var(--muted);max-height:220px;overflow:auto;margin-top:12px}
-.score{font:600 54px/1 var(--serif);margin:10px 0 6px;font-variant-numeric:tabular-nums}
-.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:8px;font-size:15px;z-index:20;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px)}
-.toast button{background:none;border:0;color:var(--tab);font-weight:600;padding:0}
-.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
-.seg button{flex:1;border:0;background:none;padding:9px 6px;font-size:15px}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.hidden{display:none!important}
+/* le QCM */
+.qcm{max-width:720px;margin:0 auto}
+.avance{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:4px 0 12px}
+.avance .barre{flex:1;height:6px;border-radius:6px;background:var(--section);overflow:hidden}
+.avance .barre i{display:block;height:100%;background:var(--gold);transition:width .25s}
+.question{background:var(--surface);border:1px solid var(--line);border-radius:var(--rayon);padding:18px 18px 16px}
+.question .theme{font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.04em}
+.question h2{font:600 21px/1.3 var(--serif);color:var(--teal);margin:4px 0 14px}
+.choix{display:grid;gap:8px}
+.choix button{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);
+  transition:border-color .12s, background .12s}
+.choix button:hover:not(:disabled){border-color:var(--gold)}
+.choix button .l{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:700;background:var(--section);color:var(--muted)}
+.choix button.juste{border-color:var(--ok);background:var(--ok-soft)} .choix button.juste .l{background:var(--ok);color:#fff}
+.choix button.faux{border-color:var(--ko);background:var(--ko-soft)} .choix button.faux .l{background:var(--ko);color:#fff}
+.choix button:disabled{cursor:default}
+.explication{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--section);font-size:14.5px}
+.explication b{color:var(--teal)}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+.btn{border:0;border-radius:12px;padding:10px 18px;font-weight:600;background:var(--teal);color:#fff}
+.btn:hover{filter:brightness(1.12)}
+.btn.or{background:var(--gold)}
+.btn.discret{background:transparent;color:var(--teal);box-shadow:inset 0 0 0 1px var(--line)}
+.fin{background:var(--surface);border:1px solid var(--line);border-radius:var(--rayon);padding:22px;text-align:center}
+.fin .score{font:600 52px/1 var(--serif);color:var(--teal)}
+.fin p{color:var(--muted);margin:6px 0 0}
+.revue{margin-top:16px;display:grid;gap:8px}
+.revue div{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ko);border-radius:12px;padding:10px 14px;font-size:14px}
+.revue div b{display:block;color:var(--teal);margin-bottom:2px}
+.revue div .ok{color:var(--ok);font-weight:600}
+.aide{font-size:13px;color:var(--muted)}
+@media (max-width:560px){ .card{min-height:0} header.top h1{font-size:20px} .question h2{font-size:19px} }
 </style>
+<script>/* dialogue : début */
+// =====================================================================================
+//  Dialogues communs — à la place des fenêtres du système (confirm, alert, prompt), peu jolies,
+//  surtout dans l'application pour ordinateur. (Module commun, recopié tel quel dans chaque appli,
+//  dans le <head>, entre les repères « dialogue : début » et « dialogue : fin ». Modifier ici, puis recopier.)
+// -------------------------------------------------------------------------------------
+//  Trois fonctions, qui rendent une promesse (on écrit « await demander(…) ») :
+//    demander(message, options) → true / false        (confirm)
+//        options : { ok: "Supprimer", annuler: "Annuler", titre, danger: true }
+//        Sans « ok » : « Supprimer », « Effacer »… est déduit du message ; sinon « OK ».
+//    avertir(message, options)  → (rien)              (alert)
+//    saisir(message, valeur, options) → texte ou null (prompt)
+//  Entrée valide, Échap annule, un clic à côté annule. Les couleurs suivent celles de l'appli
+//  (variables --bleu, --or, --carte, --texte si elles existent ; sinon or et bleu par défaut).
+// =====================================================================================
+(function () {
+  "use strict";
+  if (window.demander) return;
+  var css = ""
+    + ".dlg-voile{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(8,24,31,.42);"
+    + "backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);opacity:0;transition:opacity .14s ease}"
+    + ".dlg-voile.on{opacity:1}"
+    + ".dlg{width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--carte,#fffdf8);color:var(--texte,#1d2a30);"
+    + "border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.05);padding:20px 22px 16px;"
+    + "font:inherit;font-size:14.5px;line-height:1.5;transform:translateY(8px) scale(.98);transition:transform .14s ease}"
+    + ".dlg-voile.on .dlg{transform:none}"
+    + ".dlg h3{margin:0 0 6px;font-size:17px;font-weight:650;color:var(--bleu,#0c2d39)}"
+    + ".dlg p{margin:0 0 6px;white-space:pre-wrap;overflow-wrap:anywhere}"
+    + ".dlg input{width:100%;box-sizing:border-box;margin:8px 0 2px;padding:9px 12px;border:1px solid var(--bordure,#d9d2c3);border-radius:10px;"
+    + "background:var(--fond,#fff);color:inherit;font:inherit;outline:none}"
+    + ".dlg input:focus{border-color:var(--or,#a57d2f);box-shadow:0 0 0 3px rgba(165,125,47,.18)}"
+    + ".dlg-boutons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:14px}"
+    + ".dlg-boutons button{border:0;border-radius:10px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}"
+    + ".dlg-non{background:transparent;color:var(--bleu,#0c2d39);box-shadow:inset 0 0 0 1px var(--bordure,#d9d2c3)}"
+    + ".dlg-non:hover{background:rgba(12,45,57,.06)}"
+    + ".dlg-oui{background:var(--bleu,#0c2d39);color:#fff}"
+    + ".dlg-oui:hover{filter:brightness(1.15)}"
+    + ".dlg-oui.danger{background:#a8452f}"
+    + ".dlg-boutons button:focus-visible{outline:2px solid var(--or,#a57d2f);outline-offset:2px}"
+    + "@media (max-width:480px){.dlg-boutons button{flex:1 1 auto}}";
+  function style() {
+    if (document.getElementById("dlg-style")) return;
+    var s = document.createElement("style"); s.id = "dlg-style"; s.textContent = css;
+    (document.head || document.documentElement).appendChild(s);
+  }
+  var VERBES = /^\s*(Supprimer|Effacer|Retirer|Vider|Remplacer|Écraser|Déconnecter|Réinitialiser)\b/i;
+  function ouvrir(message, o, champ) {
+    style();
+    return new Promise(function (fin) {
+      var avant = document.activeElement;
+      var voile = document.createElement("div"); voile.className = "dlg-voile";
+      var boite = document.createElement("div"); boite.className = "dlg"; boite.setAttribute("role", "dialog"); boite.setAttribute("aria-modal", "true");
+      if (o.titre) { var h = document.createElement("h3"); h.textContent = o.titre; boite.appendChild(h); }
+      var p = document.createElement("p"); p.textContent = String(message == null ? "" : message); boite.appendChild(p);
+      var saisie = null;
+      if (champ) { saisie = document.createElement("input"); saisie.type = "text"; saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocomplete", "off"); boite.appendChild(saisie); }
+      var zone = document.createElement("div"); zone.className = "dlg-boutons";
+      var non = null;
+      if (o.annuler !== false) { non = document.createElement("button"); non.type = "button"; non.className = "dlg-non"; non.textContent = o.annuler || "Annuler"; zone.appendChild(non); }
+      var oui = document.createElement("button"); oui.type = "button"; oui.className = "dlg-oui" + (o.danger ? " danger" : ""); oui.textContent = o.ok || "OK"; zone.appendChild(oui);
+      boite.appendChild(zone); voile.appendChild(boite); document.body.appendChild(voile);
+      requestAnimationFrame(function () { voile.classList.add("on"); });
+      var fini = false;
+      function fermer(r) {
+        if (fini) return; fini = true;
+        if (saisie) champ.lu = saisie.value;
+        document.removeEventListener("keydown", touche, true);
+        voile.classList.remove("on");
+        setTimeout(function () { voile.remove(); try { if (avant && avant.focus) avant.focus(); } catch (e) {} }, 140);
+        fin(r);
+      }
+      function touche(e) {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fermer(o.annuler === false ? true : false); }
+        else if (e.key === "Enter" && !e.shiftKey && (document.activeElement === saisie || !zone.contains(document.activeElement) || document.activeElement === oui)) { e.preventDefault(); e.stopPropagation(); fermer(true); }
+        else if (e.key === "Tab") {   // le focus reste dans la fenêtre
+          var l = [saisie, non, oui].filter(Boolean), i = l.indexOf(document.activeElement);
+          e.preventDefault(); l[(i + (e.shiftKey ? l.length - 1 : 1)) % l.length].focus();
+        }
+      }
+      document.addEventListener("keydown", touche, true);
+      oui.addEventListener("click", function () { fermer(true); });
+      if (non) non.addEventListener("click", function () { fermer(false); });
+      voile.addEventListener("mousedown", function (e) { if (e.target === voile) fermer(o.annuler === false ? true : false); });
+      setTimeout(function () { if (saisie) { saisie.focus(); saisie.select(); } else oui.focus(); }, 20);
+    });
+  }
+  window.demander = function (message, o) {
+    o = o || {};
+    if (!o.ok) { var m = VERBES.exec(String(message || "")); if (m) { o.ok = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase(); if (o.danger == null) o.danger = /^(supprimer|effacer|vider|écraser)$/i.test(m[1]); } }
+    return ouvrir(message, o);
+  };
+  window.avertir = function (message, o) { o = o || {}; o.annuler = false; return ouvrir(message, o).then(function () {}); };
+  window.saisir = function (message, valeur, o) {
+    o = o || {};
+    var champ = { valeur: valeur };
+    return ouvrir(message, o, champ).then(function (ok) {
+      return ok ? champ.lu : null;
+    });
+  };
+})();
+/* dialogue : fin */</script>
 </head>
 <body>
 <header class="top">
-  <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0C2D39"/><rect x="15" y="22" width="34" height="24" rx="2.5" fill="none" stroke="#E2B866" stroke-opacity=".5" stroke-width="2.5" transform="rotate(-6 32 34)"/><rect x="15" y="20" width="34" height="24" rx="2.5" fill="#F4ECDD"/><rect x="18" y="16" width="12" height="6" rx="1.5" fill="#E2B866"/><path d="M20 29h24M20 34h24M20 39h15" stroke="#2B6474" stroke-width="2" stroke-linecap="round"/></svg>
-  <h1 id="hTitle">Révision<small id="hSub">La base, carte par carte</small></h1>
-  <button class="iconbtn hidden" id="btnBack" aria-label="Retour à l’accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-  <button class="iconbtn" id="btnRead" aria-label="Lire la base"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14C9.5 18 6.5 18 4 19.5z"/><path d="M20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></svg></button>
-  <button class="iconbtn" id="btnSettings" aria-label="Base et réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.2 6.5l2.6 1.5M17.2 16l2.6 1.5M4.2 17.5l2.6-1.5M17.2 8l2.6-1.5"/></svg></button>
+  <button class="iconbtn" id="retour" aria-label="Retour aux QCM" title="Retour aux QCM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <img class="mark" src="icons/icon-192.png" alt="">
+  <h1 id="titre">Révision<small>QCM de la base documentaire</small></h1>
+  <button class="iconbtn" id="btnSettings" aria-label="Affichage" title="Affichage des tuiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
 </header>
-<main class="wrap" id="app" aria-live="polite"></main>
-<input type="file" id="fileInput" accept=".docx,.md,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden>
-<input type="file" id="dirInput" webkitdirectory multiple hidden>
-<input type="file" id="restoreInput" accept=".json,application/json" hidden>
-<input type="file" id="sessionInput" accept=".json,application/json,text/plain" hidden>
-<script src="vendor/jszip.min.js"></script>
-<script src="engine.js"></script>
-<script src="app.js"></script>
+<main class="wrap" id="vue"></main>
+<script>
+"use strict";
+// ---- Révision : des QCM préparés par Claude, un par fiche (data/qcm/index.json + data/qcm/<id>.json) ----
+//   Résultats gardés sur l'appareil : localStorage « revision-qcm ». Réglages d'affichage : « revision-affichage ».
+const $ = (s, r = document) => r.querySelector(s);
+const h = (tag, attrs, ...enfants) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (k === "class") e.className = v; else if (k === "style") e.style.cssText = v; else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of enfants.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : String(c));
+  return e;
+};
+const lire = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const sans = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const dateFr = (iso) => { const d = new Date(iso + (iso.length === 10 ? "T12:00" : "")); return isNaN(d) ? "" : d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); };
+const melanger = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+
+let liste = [];                                      // les QCM (index.json)
+let resultats = lire("revision-qcm", {});            // { id: { essais: [{ le, bons, total }], erreurs: [numéros] } }
+let affichage = Object.assign({ mise: "tuiles", tri: "date", taille: "normale", melanger: true }, lire("revision-affichage", {}));
+const vue = $("#vue");
+
+function appliquerAffichage() {
+  document.body.classList.toggle("liste", affichage.mise === "liste");
+  document.documentElement.style.setProperty("--tuile", { petite: "210px", normale: "260px", grande: "330px" }[affichage.taille] || "260px");
+}
+async function charger() {
+  try {
+    const r = await fetch("data/qcm/index.json?t=" + Date.now(), { cache: "no-store" });
+    if (r.ok) { liste = (await r.json()).qcm || []; ecrire("revision-qcm-liste", liste); }
+    else liste = lire("revision-qcm-liste", []);
+  } catch (e) { liste = lire("revision-qcm-liste", []); }
+}
+async function chargerQcm(id) {
+  const r = await fetch("data/qcm/" + encodeURIComponent(id) + ".json", { cache: "no-cache" });
+  if (!r.ok) throw new Error("QCM introuvable");
+  return r.json();
+}
+const dernier = (id) => { const e = (resultats[id] || {}).essais || []; return e[e.length - 1]; };
+const meilleur = (id) => Math.max(-1, ...((resultats[id] || {}).essais || []).map((x) => Math.round(x.bons / x.total * 100)));
+const classeScore = (p) => (p >= 80 ? "bon" : p >= 50 ? "moyen" : "faible");
+
+// ---------------- accueil : les tuiles ----------------
+let filtre = "";
+function accueil() {
+  document.body.classList.remove("dans-qcm");
+  $("#titre").innerHTML = "Révision<small>QCM de la base documentaire</small>";
+  document.title = "Révision — QCM";
+  if (!liste.length) {
+    vue.replaceChildren(h("div", { class: "vide" }, h("h2", null, "Pas encore de QCM"),
+      h("p", null, "Envoyez une fiche à Claude en lui demandant un QCM : une tuile apparaît ici, avec la date du QCM, et y reste.")));
+    return;
+  }
+  const faits = liste.filter((q) => dernier(q.id));
+  const moy = faits.length ? Math.round(faits.reduce((s, q) => { const d = dernier(q.id); return s + d.bons / d.total * 100; }, 0) / faits.length) : null;
+  const recherche = h("input", { class: "recherche", type: "search", placeholder: "Chercher une fiche, un thème…", value: filtre, "aria-label": "Chercher" });
+  recherche.addEventListener("input", () => { filtre = recherche.value; dessinerTuiles(); });
+  const puces = (cle, options) => h("div", { class: "puces", role: "group" }, options.map(([v, lib]) => h("button", { type: "button", class: affichage[cle] === v ? "on" : "", onclick: () => { affichage[cle] = v; ecrire("revision-affichage", affichage); appliquerAffichage(); accueil(); } }, lib)));
+  const grille = h("div", { class: "grille" });
+  function dessinerTuiles() {
+    const f = sans(filtre);
+    let l = liste.filter((q) => !f || sans([q.titre, q.fichier, q.theme].join(" ")).includes(f));
+    const tri = { date: (a, b) => String(b.date).localeCompare(String(a.date)) || a.titre.localeCompare(b.titre, "fr"),
+      titre: (a, b) => a.titre.localeCompare(b.titre, "fr"),
+      score: (a, b) => meilleur(a.id) - meilleur(b.id) || String(b.date).localeCompare(String(a.date)) }[affichage.tri];
+    l = l.slice().sort(tri);
+    grille.replaceChildren(...(l.length ? l.map(tuile) : [h("p", { class: "aide" }, "Aucun QCM ne correspond.")]));
+  }
+  vue.replaceChildren(
+    h("div", { class: "bilan" },
+      h("div", null, h("b", null, liste.length), h("span", null, liste.length > 1 ? "QCM" : "QCM")),
+      h("div", null, h("b", null, faits.length), h("span", null, "déjà faits")),
+      h("div", null, h("b", null, moy == null ? "—" : moy + " %"), h("span", null, "moyenne du dernier essai"))),
+    h("div", { class: "outils" }, recherche, puces("tri", [["date", "Récents"], ["titre", "A → Z"], ["score", "À retravailler"]])),
+    grille);
+  dessinerTuiles();
+}
+function tuile(q) {
+  const d = dernier(q.id), m = meilleur(q.id);
+  const p = d ? Math.round(d.bons / d.total * 100) : null;
+  return h("button", { type: "button", class: "card", onclick: () => ouvrir(q.id) },
+    h("span", { class: "date" }, "QCM du " + dateFr(q.date)),
+    h("h2", null, q.titre),
+    q.fichier ? h("span", { class: "src", title: q.fichier }, "📄 " + q.fichier) : null,
+    h("div", { class: "pied" },
+      h("span", null, q.nb + " questions"),
+      d ? h("span", { class: "pastille " + classeScore(p) }, "Dernier : " + p + " %") : h("span", { class: "pastille nouveau" }, "Nouveau"),
+      d && m !== p ? h("span", { class: "pastille" }, "Meilleur : " + m + " %") : null),
+    d ? h("div", { class: "jauge" }, h("i", { style: "width:" + p + "%" })) : null);
+}
+
+// ---------------- le QCM ----------------
+async function ouvrir(id, seulementErreurs) {
+  let qcm;
+  try { qcm = await chargerQcm(id); } catch (e) { await avertir("Ce QCM n’a pas pu être chargé. Vérifiez la connexion puis réessayez."); return; }
+  let numeros = qcm.questions.map((_, i) => i);
+  if (seulementErreurs) numeros = ((resultats[id] || {}).erreurs || []).filter((i) => i < qcm.questions.length);
+  if (affichage.melanger) numeros = melanger(numeros);
+  const etat = { k: 0, bons: 0, erreurs: [] };
+  location.hash = "#qcm-" + id;
+  document.body.classList.add("dans-qcm");
+  $("#titre").innerHTML = "";
+  $("#titre").append(qcm.titre, h("small", null, "QCM du " + dateFr(qcm.date) + (seulementErreurs ? " · les erreurs" : "")));
+  document.title = qcm.titre + " — QCM";
+  const suivante = () => {
+    if (etat.k >= numeros.length) return fin();
+    const n = numeros[etat.k], q = qcm.questions[n];
+    const ordre = affichage.melanger ? melanger(q.choix.map((_, i) => i)) : q.choix.map((_, i) => i);
+    const zoneChoix = h("div", { class: "choix" });
+    const bas = h("div");
+    ordre.forEach((i, rang) => zoneChoix.append(h("button", { type: "button", "data-i": i, onclick: (ev) => repondre(i, ev.currentTarget) },
+      h("span", { class: "l" }, "ABCDEF"[rang]), h("span", null, q.choix[i]))));
+    function repondre(i, bouton) {
+      zoneChoix.querySelectorAll("button").forEach((b) => { b.disabled = true; if (+b.dataset.i === q.reponse) b.classList.add("juste"); });
+      const bon = i === q.reponse;
+      if (bon) etat.bons++; else { bouton.classList.add("faux"); etat.erreurs.push(n); }
+      bas.replaceChildren(
+        h("div", { class: "explication" }, h("b", null, bon ? "Bonne réponse. " : "Réponse : " + q.choix[q.reponse] + ". "), q.explication || ""),
+        h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: () => { etat.k++; suivante(); } }, etat.k + 1 < numeros.length ? "Question suivante →" : "Voir le résultat")));
+      bas.querySelector(".btn").focus();
+    }
+    vue.replaceChildren(h("div", { class: "qcm" },
+      h("div", { class: "avance" }, h("span", null, `Question ${etat.k + 1} / ${numeros.length}`), h("div", { class: "barre" }, h("i", { style: `width:${etat.k / numeros.length * 100}%` })), h("span", null, `${etat.bons} bonne${etat.bons > 1 ? "s" : ""}`)),
+      h("div", { class: "question" }, q.theme ? h("div", { class: "theme" }, q.theme) : null, h("h2", null, q.question), zoneChoix, bas)));
+    scrollTo(0, 0);
+  };
+  const fin = () => {
+    const total = numeros.length;
+    const r = resultats[id] || { essais: [], erreurs: [] };
+    r.essais = [...(r.essais || []), { le: new Date().toISOString(), bons: etat.bons, total, erreurs: seulementErreurs || undefined }].slice(-30);
+    // les erreurs à retravailler : un essai complet les remplace ; un essai « erreurs » retire celles qui sont réussies
+    r.erreurs = seulementErreurs ? (r.erreurs || []).filter((x) => etat.erreurs.includes(x)) : etat.erreurs.slice().sort((a, b) => a - b);
+    resultats[id] = r; ecrire("revision-qcm", resultats);
+    const p = Math.round(etat.bons / total * 100);
+    vue.replaceChildren(h("div", { class: "qcm" },
+      h("div", { class: "fin" }, h("div", { class: "score" }, p + " %"), h("p", null, `${etat.bons} bonne${etat.bons > 1 ? "s" : ""} réponse${etat.bons > 1 ? "s" : ""} sur ${total}`),
+        h("div", { class: "actions", style: "justify-content:center" },
+          etat.erreurs.length ? h("button", { type: "button", class: "btn or", onclick: () => ouvrir(id, true) }, `Refaire les ${etat.erreurs.length} erreur${etat.erreurs.length > 1 ? "s" : ""}`) : null,
+          h("button", { type: "button", class: "btn discret", onclick: () => ouvrir(id) }, "Refaire tout le QCM"),
+          h("button", { type: "button", class: "btn", onclick: () => { location.hash = ""; } }, "Retour aux QCM"))),
+      etat.erreurs.length ? h("div", { class: "revue" }, h("p", { class: "aide" }, "À revoir :"), etat.erreurs.map((n) => { const q = qcm.questions[n]; return h("div", null, h("b", null, q.question), h("span", { class: "ok" }, "→ " + q.choix[q.reponse]), q.explication ? h("div", { class: "aide" }, q.explication) : null); })) : null));
+    scrollTo(0, 0);
+  };
+  if (!numeros.length) { await avertir("Plus aucune erreur à refaire sur ce QCM."); location.hash = ""; return; }
+  suivante();
+}
+
+// ---------------- affichage (bouton en haut à droite) ----------------
+$("#btnSettings").addEventListener("click", () => {
+  const voile = h("div", { class: "dlg-voile on", onmousedown: (e) => { if (e.target === voile) voile.remove(); } });
+  const ligne = (lib, cle, options) => h("div", { style: "margin:10px 0" }, h("div", { class: "aide", style: "margin-bottom:4px" }, lib),
+    h("div", { class: "puces" }, options.map(([v, l]) => h("button", { type: "button", class: affichage[cle] === v ? "on" : "", onclick: () => { affichage[cle] = v; ecrire("revision-affichage", affichage); appliquerAffichage(); voile.remove(); if (!document.body.classList.contains("dans-qcm")) accueil(); } }, l))));
+  voile.append(h("div", { class: "dlg" }, h("h3", null, "Affichage"),
+    ligne("Présentation", "mise", [["tuiles", "Tuiles"], ["liste", "Liste"]]),
+    ligne("Taille des tuiles", "taille", [["petite", "Petites"], ["normale", "Normales"], ["grande", "Grandes"]]),
+    ligne("Ordre des questions et des réponses", "melanger", [[true, "Mélangé"], [false, "Tel quel"]]),
+    h("p", { class: "aide" }, "Couleurs, polices et taille du texte : bouton Apparence, à gauche de celui-ci."),
+    h("div", { class: "dlg-boutons" }, h("button", { type: "button", class: "dlg-oui", onclick: () => voile.remove() }, "Fermer"))));
+  document.body.append(voile);
+});
+$("#retour").addEventListener("click", () => { location.hash = ""; });
+addEventListener("hashchange", () => { if (!location.hash.startsWith("#qcm-")) accueil(); });
+
+(async () => {
+  appliquerAffichage();
+  await charger();
+  const m = /^#qcm-(.+)$/.exec(location.hash);
+  if (m && liste.some((q) => q.id === decodeURIComponent(m[1]))) ouvrir(decodeURIComponent(m[1])); else accueil();
+})();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
 </body>
 </html>
