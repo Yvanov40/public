@@ -5,7 +5,8 @@
 //   - Les applis viennent du site : elles se mettent à jour d'elles-mêmes (et restent disponibles hors connexion une fois ouvertes).
 //   - Exports : la fenêtre « Enregistrer sous » du système. Impression : celle du système (et le PDF).
 //   - Les liens vers d'autres sites s'ouvrent dans le navigateur habituel.
-const { app, BrowserWindow, Menu, shell, screen } = require("electron");
+//   - Pas de barre de titre : elle apparaît quand la souris touche le haut de la fenêtre (voir barreDuHaut).
+const { app, BrowserWindow, Menu, shell, screen, ipcMain } = require("electron");
 const path = require("path");
 
 const SITE = "https://yvanov40.github.io/public/";
@@ -23,13 +24,46 @@ function creerFenetre() {
     backgroundColor: "#0c2d39", title: "Mes applis",
     icon: path.join(__dirname, "build", "icon.png"),
     autoHideMenuBar: true,
+    titleBarStyle: "hidden",   // sans barre de titre (la fenêtre reste redimensionnable) ; la nôtre apparaît au survol du haut
+    ...(process.platform === "darwin" ? { trafficLightPosition: { x: 14, y: 11 } } : {}),
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: true, webviewTag: true }
   });
+  if (process.platform === "darwin") fenetre.setWindowButtonVisibility(false);
+  const etat = () => ordre("etat-fenetre", { agrandie: fenetre.isMaximized(), plein: fenetre.isFullScreen() });
+  fenetre.on("maximize", etat); fenetre.on("unmaximize", etat); fenetre.on("enter-full-screen", etat); fenetre.on("leave-full-screen", etat);
+  barreDuHaut(fenetre);
   fenetre.once("ready-to-show", () => { fenetre.setBounds(screen.getPrimaryDisplay().workArea); fenetre.maximize(); fenetre.show(); });   // ouverte en grand
   fenetre.loadFile(path.join(__dirname, "cadre.html"));
   fenetre.webContents.on("will-navigate", (e) => e.preventDefault());
   fenetre.on("closed", () => { fenetre = null; });
 }
+
+// la barre du haut : la souris contre le bord du haut la fait apparaître, elle s'efface quand la souris s'éloigne.
+//   (Les pages des applis gardent les mouvements de la souris pour elles : on regarde donc où est le pointeur, quatre fois par seconde.)
+function barreDuHaut(f) {
+  let visible = false, depuis = 0;
+  const minuteur = setInterval(() => {
+    if (f.isDestroyed()) { clearInterval(minuteur); return; }
+    if (!f.isFocused() && !visible) return;
+    const p = screen.getCursorScreenPoint(), b = f.getContentBounds();
+    const dedans = p.x >= b.x && p.x < b.x + b.width && p.y >= b.y - 2 && p.y < b.y + b.height;
+    const y = p.y - b.y;
+    if (!visible && dedans && y <= 4) { if (!depuis) depuis = Date.now(); else if (Date.now() - depuis >= 120) { visible = true; depuis = 0; montrer(true); } }
+    else if (!visible) depuis = 0;
+    else if (visible && (!dedans || y > 44)) { if (!depuis) depuis = Date.now(); else if (Date.now() - depuis >= 450) { visible = false; depuis = 0; montrer(false); } }
+    else depuis = 0;
+  }, 60);
+  function montrer(v) {
+    ordre("barre", v);
+    if (process.platform === "darwin") f.setWindowButtonVisibility(v);
+  }
+}
+ipcMain.on("fenetre", (e, action) => {
+  if (!fenetre) return;
+  if (action === "reduire") fenetre.minimize();
+  else if (action === "agrandir") { if (fenetre.isFullScreen()) fenetre.setFullScreen(false); else if (fenetre.isMaximized()) fenetre.unmaximize(); else fenetre.maximize(); }
+  else if (action === "fermer") fenetre.close();
+});
 
 // les pages des applis (dans le cadre) : liens entre applis, liens extérieurs, fenêtres
 app.on("web-contents-created", (e, wc) => {

@@ -48,10 +48,26 @@
   .appli.active { background: rgba(165,125,47,.22); box-shadow: inset 3px 0 0 var(--or); }
   .appli.active b { color: var(--or-clair); }
   .appli.chargee:not(.active)::after { content: ""; position: absolute; left: 4px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--or); }
+  /* la barre du haut (titre, réduire, agrandir, fermer) : cachée ; elle descend quand la souris touche le haut de la fenêtre */
+  #barre { position: fixed; z-index: 60; top: 0; left: 0; right: 0; height: 36px; display: flex; align-items: center;
+    background: rgba(12, 45, 57, .97); color: var(--creme); box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    transform: translateY(-100%); transition: transform .16s ease; -webkit-app-region: drag; user-select: none; }
+  body.barre #barre { transform: none; }
+  #barre .titre { flex: 1; min-width: 0; padding: 0 14px; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(245,239,228,.85); }
+  #barre .titre b { color: var(--or-clair); font-weight: 600; }
+  body.mac #barre .titre { padding-left: 84px; }
+  #barre .btn { -webkit-app-region: no-drag; width: 46px; height: 36px; border: 0; background: none; color: rgba(245,239,228,.85); font: 15px system-ui; cursor: pointer; }
+  #barre .btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+  #barre .btn.fermer:hover { background: #c42b1c; }
+  body.mac #barre .btn { display: none; }
   .pied { padding: 10px 18px 14px; font-size: 11.5px; color: rgba(245,239,228,.45); line-height: 1.5; }
 </style>
 </head>
 <body>
+<div id="barre"><div class="titre" id="titreBarre"><b>Mes applis</b></div>
+  <button class="btn" id="bReduire" title="Réduire" aria-label="Réduire">–</button>
+  <button class="btn" id="bAgrandir" title="Agrandir" aria-label="Agrandir">▢</button>
+  <button class="btn fermer" id="bFermer" title="Fermer" aria-label="Fermer">✕</button></div>
 <div id="scene"></div>
 <div id="voile"></div>
 <div id="bord" title=""></div>
@@ -142,6 +158,8 @@
   window.cadre.surOrdre((ordre, arg) => {
     const w = actuelle();
     if (ordre === "appli") return ouvrir(arg.id, arg.url);
+    if (ordre === "barre") return document.body.classList.toggle("barre", !!arg);
+    if (ordre === "etat-fenetre") { const b = document.getElementById("bAgrandir"); b.textContent = arg.agrandie || arg.plein ? "❐" : "▢"; b.title = arg.agrandie || arg.plein ? "Niveau inférieur" : "Agrandir"; return; }
     if (ordre === "panneau") return document.body.classList.contains("ouvert") ? fermer() : ouvrirPanneau();
     if (ordre === "numero") { const a = APPLIS[arg]; if (a) ouvrir(a.id); return; }
     if (!w) return;
@@ -153,6 +171,18 @@
     else if (ordre === "outils") w.isDevToolsOpened() ? w.closeDevTools() : w.openDevTools();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") fermer(); });
+
+  // la barre du haut
+  if (window.cadre.mac) document.body.classList.add("mac");
+  document.getElementById("bReduire").addEventListener("click", () => window.cadre.fenetre("reduire"));
+  document.getElementById("bAgrandir").addEventListener("click", () => window.cadre.fenetre("agrandir"));
+  document.getElementById("bFermer").addEventListener("click", () => window.cadre.fenetre("fermer"));
+  document.getElementById("barre").addEventListener("dblclick", () => window.cadre.fenetre("agrandir"));
+  new MutationObserver(() => {
+    const a = APPLIS.find((x) => x.id === active);
+    document.getElementById("titreBarre").innerHTML = "<b>Mes applis</b>" + (a ? " · " : "");
+    if (a) document.getElementById("titreBarre").append(document.title && document.title !== "Mes applis" ? document.title : a.nom);
+  }).observe(document.querySelector("title"), { childList: true });
 
   ouvrir(lire("appli-active", "suivi"));
 </script>
