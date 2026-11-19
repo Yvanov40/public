@@ -1,4 +1,4 @@
-// Injecté par l'application Android dans chaque page des applis (Suivi, Audit, Succession…).
+// Injecté par l'application (Android et iPhone) dans chaque page des applis (Suivi, Audit, Succession…).
 // Le navigateur intégré d'Android ne sait ni télécharger un fichier créé par la page, ni imprimer :
 //   - un export (Excel, PowerPoint, PDF, sauvegarde JSON) s'ouvre dans le menu Android « Partager / Enregistrer » ;
 //   - « Imprimer » ouvre l'impression d'Android (qui sait aussi « Enregistrer au format PDF »).
@@ -26,4 +26,6 @@
     if (estExport(a) && P) { e.preventDefault(); e.stopPropagation(); partager(a.href, a.getAttribute("download")); }
   }, true);
   if (window.AppliAndroid) window.print = function () { window.AppliAndroid.imprimer(document.title || "Document"); };
+  var ios = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.appliImprimer;
+  if (ios) window.print = function () { ios.postMessage(document.title || "Document"); };
 })();

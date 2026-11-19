@@ -74,3 +74,13 @@ l'application elle-même ne change que rarement.
 - Signature : secrets du dépôt `APPLI_KEYSTORE_B64` (la clé, en base64) et `APPLI_KEYSTORE_MDP` (son mot de passe).
   Sans eux, l'APK est signée avec une clé de test qui change à chaque construction.
 - Icônes : `application/assets/` puis `npx capacitor-assets generate --android`.
+
+### Version iPhone (sur le Mac)
+
+Le même projet contient la version iPhone (`application/ios`). Elle se construit avec Xcode, sur le Mac :
+
+1. Xcode (App Store du Mac) et Node.js (nodejs.org) installés.
+2. Dans le Terminal : `git clone https://github.com/Yvanov40/public.git`, puis `cd public/application`, `npm ci`, `npx cap sync ios`, `npx cap open ios`.
+3. Dans Xcode : cible « App » › Signing & Capabilities › Team : votre identifiant Apple (Add Account…).
+4. iPhone branché (et « Mode développeur » activé dans Réglages › Confidentialité et sécurité), choisir l'iPhone en haut, puis ▶.
+5. Avec un identifiant Apple gratuit, l'application est à réinstaller (▶) tous les 7 jours ; avec le programme développeur, elle tient un an.
