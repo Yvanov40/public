@@ -89,6 +89,22 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 /* Pavé */
 .pad{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:0 10px 10px}
 .pad.hide{display:none}
+.tiles{height:calc(var(--kh) * 5 + 34px);overflow-y:auto;overscroll-behavior:contain;padding:0 10px 10px}
+.app[data-layout="tableur"] .tiles{height:calc(var(--kh) * 3.9 + 34px)}
+.tiles h4{margin:6px 2px 6px;font-size:12px;font-weight:600;color:var(--muted)}
+.tiles h4:first-child{margin-top:0}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.tile{position:relative;overflow:hidden;min-height:58px;border-radius:12px;background:var(--key);box-shadow:0 1px 0 var(--rule);
+  padding:8px 10px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:3px;touch-action:manipulation;user-select:none}
+.tile b{font-size:calc(15px * var(--z));font-weight:600;line-height:1.15}
+.tile small{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile.fav{background:color-mix(in srgb, var(--accent) 13%, var(--key))}
+.tile.fav::before{content:"";position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.tile:active{filter:brightness(.93)}
+.tile::after{content:"";position:absolute;inset:0;background:var(--accent);opacity:.22;transform:scaleX(0);transform-origin:left;pointer-events:none}
+.tile.hold::after{transform:scaleX(1);transition:transform .6s linear}
+.tiles p{font-size:12px;color:var(--muted);margin:10px 2px 0}
+.chip.on{background:var(--accent);color:var(--accent-ink)}
 .k{position:relative;overflow:hidden;height:var(--kh);border-radius:12px;background:var(--key);font-size:21px;
   box-shadow:0 1px 0 var(--rule);touch-action:manipulation;user-select:none}
 .k.op{background:var(--key-op)}
@@ -188,6 +204,7 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
     </section>
     <div class="chips" id="chips"></div>
     <div class="pad" id="pad"></div>
+    <div class="tiles" id="tiles" hidden></div>
   </div>
 </div>
 
@@ -558,7 +575,7 @@ const FONTS={
 const LAYOUTS=[['calc','Calculatrice'],['tableur','Tableur'],['cote','Côte à côte']];
 const KEYSZ=[['compact','Petites'],['normal','Normales'],['grand','Grandes']];
 const DECS=[['auto','Auto'],['0','0'],['2','2'],['4','4']];
-const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true};
+const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
 
 function hexOk(h){ return /^#[0-9a-f]{6}$/i.test(h); }
 function lum(h){ const c=[1,3,5].map(i=>{ const v=parseInt(h.substr(i,2),16)/255; return v<=.03928?v/12.92:((v+.055)/1.055)**2.4; }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
@@ -618,6 +635,7 @@ function sanitize(s){
   P.zoom=Math.min(1.5,Math.max(.8,+P.zoom||1));
   P.tva=Number.isFinite(+P.tva)?+P.tva:20;
   if(!hexOk(P.accent)) P.accent=DEF_PREFS.accent;
+  P.favs=Array.isArray(P.favs)?P.favs.filter(x=>typeof x==='string').slice(0,24):DEF_PREFS.favs.slice();
   s.prefs=P; s.updatedAt=+s.updatedAt||0; return s;
 }
 let state;
@@ -716,7 +734,7 @@ function renderRows(){
   s.lines.forEach((line,i)=>{
     const row=el('div',{className:'row'}); row.dataset.i=i;
     const inp=el('input',{className:'ex',value:line,autocomplete:'off',autocorrect:'off',autocapitalize:'off',spellcheck:false,enterkeyhint:'next','aria-label':'Ligne '+(i+1)});
-    inp.inputMode=state.prefs.pad?'none':'text';
+    inp.inputMode=(state.prefs.pad||tilesOpen)?'none':'text';
     if(i===s.lines.length-1) inp.placeholder='Tapez un calcul…';
     row.append(el('span',{className:'ln',textContent:i+1}),inp,el('button',{className:'res',type:'button'}));
     sheetEl.appendChild(row);
@@ -740,6 +758,7 @@ function refresh(){
   });
   renderDisplay();
   if(typeof updateHint==='function') updateHint();
+  if(tilesOpen){ const k=[...lastFuncs.keys()].join(); if(k!==refresh.fk){ refresh.fk=k; renderTiles(); } }
 }
 function fitBig(){
   const big=$('dBig'); big.style.fontSize='';
@@ -893,6 +912,51 @@ const CHIPS=[['total','total'],['somme(','somme('],['moy(','moy('],[':',':'],['=
   ['ttc(','ttc('],['ht(','ht('],['evol(','evol('],['arrondi(','arrondi('],['si(','si('],['<','<'],['>','>'],
   ['√(','racine('],['π','pi'],['#','# ']];
 const FCHIPS=[['ir(revenu; parts)','ir('],['tmi(','tmi('],['succ(','succ('],['ifi(','ifi('],['mensualite(','mensualite('],['pfu(','pfu(']];
+const TILES=[
+  ['Impôt et fiscalité',[['Impôt sur le revenu','ir(','revenu ; parts'],['Taux marginal','tmi(','revenu ; parts'],['Nombre de parts','parts(','couple 1/0 ; enfants'],['IFI','ifi(','patrimoine net'],['Flat tax 31,4 %','pfu(','montant'],['Prélèv. sociaux','ps(','montant ; taux']]],
+  ['Successions et donations',[['Enfant','succ(','part ; abattement'],['Petit-enfant','succpe(','part ; abattement'],['Frère, sœur','succfrere(','part ; abattement'],['Neveu, nièce','succneveu(','part ; abattement'],['Sans lien','succtiers(','part ; abattement'],['Nue-propriété','np(','valeur ; âge'],['Usufruit','usufruit(','valeur ; âge']]],
+  ['Crédit et placement',[['Mensualité','mensualite(','capital ; taux ; années'],['Coût du crédit','cout(','capital ; taux ; années'],['Capacité d’emprunt','capital(','mensualité ; taux ; années'],['Valeur future','vf(','capital ; taux ; années'],['Valeur actuelle','va(','montant ; taux ; années']]],
+  ['Pourcentages et TVA',[['Prix TTC','ttc(','HT ; taux'],['Prix HT','ht(','TTC ; taux'],['Montant de TVA','tva(','HT ; taux'],['Évolution en %','evol(','départ ; arrivée'],['Pourcentage de','% de ','15% de 80']]],
+  ['Tableur',[['Somme','somme(','valeurs ou L1:L5'],['Moyenne','moy(','valeurs ou L1:L5'],['Minimum','min(','valeurs'],['Maximum','max(','valeurs'],['Total du bloc','total','lignes au-dessus'],['Condition','si(','test ; oui ; non'],['Arrondi','arrondi(','nombre ; décimales'],['Dernier résultat','ans','ligne précédente'],['Titre','# ','coupe les totaux']]],
+  ['Maths',[['Racine','racine(','nombre'],['Puissance','^','2^10'],['Valeur absolue','abs(','nombre'],['Reste','mod ','17 mod 5'],['Pi','pi','3,14159…']]]
+];
+let tilesOpen=false;
+function holdable(b,onHold,onTap){
+  let timer=null, fired=false;
+  const stop=()=>{ clearTimeout(timer); timer=null; b.classList.remove('hold'); };
+  b.addEventListener('pointerdown',()=>{ fired=false; b.classList.add('hold'); timer=setTimeout(()=>{ fired=true; stop(); buzz(25); onHold(); },600); });
+  ['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,stop));
+  b.addEventListener('click',()=>{ if(fired){ fired=false; return; } onTap(); });
+}
+function setTiles(open){
+  tilesOpen=open;
+  sheetEl.querySelectorAll('.ex').forEach(i=>i.inputMode=(state.prefs.pad||tilesOpen)?'none':'text');
+  renderPad();
+  if(!open && !state.prefs.pad){ const e=inputAt(active>=0?active:cur().lines.length-1); if(e){ e.blur(); setTimeout(()=>e.focus(),30); } }
+}
+function renderTiles(){
+  const T=$('tiles'); T.hidden=!tilesOpen; if(!tilesOpen) return;
+  const y=T.scrollTop; T.innerHTML='';
+  const all=new Map(); TILES.forEach(([,its])=>its.forEach(t=>all.set(t[1],t)));
+  const mine=[...lastFuncs.entries()].map(([n,f])=>[n,n+'(',f.params.join(' ; ')]);
+  mine.forEach(t=>all.set(t[1],t));
+  const favs=state.prefs.favs.filter(k=>all.has(k));
+  const tile=t=>{
+    const [nom,ins,aide]=t, b=el('button',{className:'tile'+(favs.includes(ins)?' fav':''),type:'button','aria-label':nom+', '+aide+'. Maintenir pour les favoris'},el('b',{textContent:nom}),el('small',{textContent:aide}));
+    holdable(b,()=>{
+      const F=state.prefs.favs, i=F.indexOf(ins);
+      if(i>=0){ F.splice(i,1); toast('« '+nom+' » retiré des favoris'); } else { F.push(ins); toast('« '+nom+' » ajouté aux favoris'); }
+      save(); renderTiles();
+    },()=>{ if(state.prefs.vibrate) buzz(8); insert(ins); setTiles(false); });
+    return b;
+  };
+  const section=(titre,its)=>{ if(!its.length) return; T.append(el('h4',{textContent:titre}),el('div',{className:'tgrid'},...its.map(tile))); };
+  section('Favoris',favs.map(k=>all.get(k)));
+  section('Mes fonctions',mine);
+  TILES.forEach(([titre,its])=>section(titre,its));
+  T.append(el('p',{textContent:favs.length?'Maintenez une tuile pour l’ajouter aux favoris ou l’en retirer.':'Maintenez une tuile pour l’ajouter aux favoris, en haut de cette page.'}));
+  T.scrollTop=y;
+}
 const OPS=new Set(['+','*','/','^','%']);
 function press(v){
   if(state.prefs.vibrate) buzz(8);
@@ -903,31 +967,28 @@ function press(v){
   insert(v);
 }
 function renderPad(){
-  const pad=$('pad'); pad.innerHTML=''; pad.classList.toggle('hide',!state.prefs.pad);
+  const pad=$('pad'); pad.innerHTML=''; pad.classList.toggle('hide',!state.prefs.pad||tilesOpen);
+  renderTiles();
   KEYS.forEach(([lab,v,cls])=>{
     const b=el('button',{className:'k'+(cls?' '+cls:''),type:'button',textContent:lab,'aria-label':{clear:'Effacer la ligne. Maintenir pour effacer toute la feuille',back:'Retour arrière',enter:'Nouvelle ligne'}[v]||lab});
-    if(v==='clear'){
-      b.title='Maintenir pour tout effacer';
-      let timer=null, fired=false;
-      const stop=()=>{ clearTimeout(timer); timer=null; b.classList.remove('hold'); };
-      b.addEventListener('pointerdown',()=>{ fired=false; b.classList.add('hold'); timer=setTimeout(()=>{ fired=true; stop(); clearAll(); },600); });
-      ['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,stop));
-      b.addEventListener('click',()=>{ if(fired){ fired=false; return; } press(v); });
-    } else b.addEventListener('click',()=>press(v));
+    if(v==='clear'){ b.title='Maintenir pour tout effacer'; holdable(b,clearAll,()=>press(v)); }
+    else b.addEventListener('click',()=>press(v));
     pad.appendChild(b);
   });
   const ch=$('chips'); ch.innerHTML='';
+  ch.appendChild(el('button',{className:'chip'+(tilesOpen?' on':''),type:'button',textContent:tilesOpen?'Pavé':'Tuiles','aria-pressed':String(tilesOpen),
+    'aria-label':tilesOpen?'Revenir au pavé':'Afficher les tuiles de formules',on:{click:()=>setTiles(!tilesOpen)}}));
   ch.appendChild(el('button',{className:'chip mode',type:'button',textContent:state.prefs.pad?'ABC':'123',
     'aria-label':state.prefs.pad?'Passer au clavier texte':'Revenir au pavé numérique',
     on:{click:()=>{
-      state.prefs.pad=!state.prefs.pad; save(); renderPad();
+      state.prefs.pad=!state.prefs.pad; tilesOpen=false; save(); renderPad();
       sheetEl.querySelectorAll('.ex').forEach(i=>i.inputMode=state.prefs.pad?'none':'text');
       const e=inputAt(active>=0?active:cur().lines.length-1); if(e){ e.blur(); setTimeout(()=>e.focus(),30); }
     }}}));
   CHIPS.forEach(([lab,v])=>ch.appendChild(el('button',{className:'chip',type:'button',textContent:lab,on:{click:()=>insert(v)}})));
   FCHIPS.forEach(([lab,v])=>ch.appendChild(el('button',{className:'chip fisc',type:'button',textContent:lab,on:{click:()=>insert(v)}})));
 }
-['pad','chips'].forEach(id=>{ $(id).addEventListener('pointerdown',e=>{ if(e.target.closest('button')) e.preventDefault(); });
+['pad','chips','tiles'].forEach(id=>{ $(id).addEventListener('pointerdown',e=>{ if(e.target.closest('button')) e.preventDefault(); });
   $(id).addEventListener('contextmenu',e=>e.preventDefault()); });
 
 /* ===================== Formules et barèmes ===================== */
