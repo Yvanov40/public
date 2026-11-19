@@ -242,7 +242,7 @@ window.HABILLAGE = {
 
 
 
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Simulateur de succession — options du conjoint survivant</title>
 <meta name="theme-color" content="#0c2d39">
 <link rel="manifest" href="manifest.webmanifest">
@@ -474,7 +474,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12.5px}
   .top{position:relative}
   .top-in{padding:12px 14px;flex-wrap:wrap}
   .actions{width:100%}
-  .actions{gap:6px;flex-wrap:nowrap;justify-content:flex-end}
+  .actions{gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .actions .btn{flex:none;justify-content:center;padding-left:10px;padding-right:10px}
   .brand h1{font-size:14px}
   .actions .lbl-txt{display:none}
@@ -650,6 +650,53 @@ body.bg-cool{--bg:color-mix(in srgb,var(--blue) 6%,#f4f6f7)}
   };
 })();
 /* dialogue : fin */</script>
+<script>/* bandeaux : début */
+// =====================================================================================
+//  Bandeaux du haut et du bas — pour l'application Android / iPhone, où la page s'étend sous
+//  la barre d'état (heure, batterie) et sous la barre de navigation (◁ ○ □).
+//  Deux bandes de la couleur de la barre de l'appli recouvrent ces zones : rien n'y passe dessous,
+//  et l'on ne clique jamais « derrière » les boutons du téléphone. Sur ordinateur ou dans un
+//  navigateur, ces zones mesurent 0 : rien ne change. (Module commun, recopié tel quel dans chaque
+//  appli, dans le <head>, entre les repères « bandeaux : début » et « bandeaux : fin ». Modifier ici, puis recopier.)
+//  La couleur suit celle de l'en-tête de l'appli (y compris quand on la personnalise).
+// =====================================================================================
+(function () {
+  "use strict";
+  if (window.__bandeaux) return; window.__bandeaux = true;
+  var css = ""
+    // env() : navigateur et WebView récents ; --safe-area-inset-* : valeurs posées par l'application Capacitor
+    + ":root{--bandeau-haut:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));"
+    + "--bandeau-bas:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px))}"
+    + "html::before,html::after{content:'';position:fixed;left:0;right:0;pointer-events:none;background:var(--bandeau,var(--hb-barre,#0c2d39))}"
+    + "html::before{top:0;height:var(--bandeau-haut);z-index:2147483600}"
+    // en bas, sous les barres et fenêtres de l'appli (qui ont déjà leur marge), mais au-dessus du contenu
+    + "html::after{bottom:0;height:var(--bandeau-bas);z-index:14}"
+    + "@media (max-width:760px){html,body{overflow-x:clip}}"   // pas de glissement de côté sur téléphone
+    + "@media print{html::before,html::after{display:none}}";
+  var s = document.createElement("style"); s.id = "bandeaux-style"; s.textContent = css;
+  (document.head || document.documentElement).appendChild(s);
+  var ENTETES = "header.haut,header.top,header.entete,body>header";
+  var minuteur = 0;
+  function maj() {
+    clearTimeout(minuteur);
+    minuteur = setTimeout(function () {
+      var h = document.querySelector(ENTETES), c = "";
+      if (h) { c = getComputedStyle(h).backgroundColor; if (/rgba\(.*,\s*0\)$|transparent/.test(c)) c = ""; }
+      if (c) document.documentElement.style.setProperty("--bandeau", c);
+      else document.documentElement.style.removeProperty("--bandeau");
+    }, 60);
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    maj();
+    try {   // personnalisation (styles ajoutés, thème jour / nuit) : la couleur suit
+      new MutationObserver(maj).observe(document.head, { childList: true, subtree: true, characterData: true });
+      new MutationObserver(maj).observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "data-mode", "data-nuit"] });
+      if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", maj);
+    } catch (e) {}
+  });
+  window.addEventListener("load", maj);
+})();
+/* bandeaux : fin */</script>
 </head><body>
 <header class="top"><div class="top-in">
  <a class="brand" href="../" title="Retour à Mes applis" style="color:inherit;text-decoration:none"><span id="brandLogo"></span><div style="min-width:0"><small>Simulateur de succession</small><h1>Options du conjoint survivant</h1></div></a>

@@ -23,6 +23,8 @@ chargent ces pages depuis le site. Voir aussi le README.
   (mise en page, exports PowerPoint / PDF / Excel) sont recopiés dans chaque appli : une correction se reporte dans toutes.
   De même `dialogue.source.js` : jamais de `confirm`, `alert` ou `prompt` du navigateur, mais `await demander(…)`,
   `avertir(…)` et `await saisir(…)` (fenêtres aux couleurs de l'appli).
+  Et `bandeaux.source.js` (bandes de couleur sous la barre d'état et la barre de navigation du téléphone) :
+  chaque page garde `viewport-fit=cover` et ses barres fixées tiennent compte de `env(safe-area-inset-…)`.
 - Tester avant d'envoyer (navigateur sans interface, ordinateur et téléphone) : aucune erreur, et le parcours modifié fonctionne.
 - Garder les données existantes : une nouvelle structure reprend l'ancienne (migration) sans rien perdre,
   y compris quand un autre appareil a encore l'ancienne version et synchronise entre-temps.

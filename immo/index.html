@@ -284,7 +284,8 @@ button, input, select { font: inherit; color: inherit; }
 h1, h2, h3 { font-family: var(--titre); font-weight: 600; color: var(--bleu); margin: 0; }
 
 /* ---------- en-tête ---------- */
-header.haut { position: sticky; top: 0; z-index: 20; background: #0c2d39; color: #fff; }
+header.haut { position: sticky; top: 0; z-index: 20; background: #0c2d39; color: #fff; padding-top: env(safe-area-inset-top, 0px); }
+body { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .haut-in { display: flex; align-items: center; gap: 16px; padding: 10px 18px; max-width: 1600px; margin: 0 auto; }
 .marque { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; min-width: 0; }
 .marque img { width: 38px; height: 38px; border-radius: 10px; flex: none; }
@@ -447,7 +448,7 @@ select { width: 100%; padding: var(--pchamp) 11px; border: 1px solid var(--bordu
   .haut-in { padding: 8px 12px; gap: 10px; }
   .marque small, .meilleur, .bt-h span { display: none; }
   .actions { gap: 5px; } .actions .bt-h { padding: 7px 8px; }
-  .actions { margin-left: auto; }
+  .actions { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
   .bt-h { padding: 8px 9px; }
   .grille { grid-template-columns: 1fr 1fr; gap: 8px 10px; }
   /* téléphone : le nom sur une ligne, capital / résultats / TMI sur la suivante */
@@ -584,6 +585,53 @@ select { width: 100%; padding: var(--pchamp) 11px; border: 1px solid var(--bordu
   };
 })();
 /* dialogue : fin */</script>
+<script>/* bandeaux : début */
+// =====================================================================================
+//  Bandeaux du haut et du bas — pour l'application Android / iPhone, où la page s'étend sous
+//  la barre d'état (heure, batterie) et sous la barre de navigation (◁ ○ □).
+//  Deux bandes de la couleur de la barre de l'appli recouvrent ces zones : rien n'y passe dessous,
+//  et l'on ne clique jamais « derrière » les boutons du téléphone. Sur ordinateur ou dans un
+//  navigateur, ces zones mesurent 0 : rien ne change. (Module commun, recopié tel quel dans chaque
+//  appli, dans le <head>, entre les repères « bandeaux : début » et « bandeaux : fin ». Modifier ici, puis recopier.)
+//  La couleur suit celle de l'en-tête de l'appli (y compris quand on la personnalise).
+// =====================================================================================
+(function () {
+  "use strict";
+  if (window.__bandeaux) return; window.__bandeaux = true;
+  var css = ""
+    // env() : navigateur et WebView récents ; --safe-area-inset-* : valeurs posées par l'application Capacitor
+    + ":root{--bandeau-haut:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));"
+    + "--bandeau-bas:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px))}"
+    + "html::before,html::after{content:'';position:fixed;left:0;right:0;pointer-events:none;background:var(--bandeau,var(--hb-barre,#0c2d39))}"
+    + "html::before{top:0;height:var(--bandeau-haut);z-index:2147483600}"
+    // en bas, sous les barres et fenêtres de l'appli (qui ont déjà leur marge), mais au-dessus du contenu
+    + "html::after{bottom:0;height:var(--bandeau-bas);z-index:14}"
+    + "@media (max-width:760px){html,body{overflow-x:clip}}"   // pas de glissement de côté sur téléphone
+    + "@media print{html::before,html::after{display:none}}";
+  var s = document.createElement("style"); s.id = "bandeaux-style"; s.textContent = css;
+  (document.head || document.documentElement).appendChild(s);
+  var ENTETES = "header.haut,header.top,header.entete,body>header";
+  var minuteur = 0;
+  function maj() {
+    clearTimeout(minuteur);
+    minuteur = setTimeout(function () {
+      var h = document.querySelector(ENTETES), c = "";
+      if (h) { c = getComputedStyle(h).backgroundColor; if (/rgba\(.*,\s*0\)$|transparent/.test(c)) c = ""; }
+      if (c) document.documentElement.style.setProperty("--bandeau", c);
+      else document.documentElement.style.removeProperty("--bandeau");
+    }, 60);
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    maj();
+    try {   // personnalisation (styles ajoutés, thème jour / nuit) : la couleur suit
+      new MutationObserver(maj).observe(document.head, { childList: true, subtree: true, characterData: true });
+      new MutationObserver(maj).observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "data-mode", "data-nuit"] });
+      if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", maj);
+    } catch (e) {}
+  });
+  window.addEventListener("load", maj);
+})();
+/* bandeaux : fin */</script>
 </head>
 <body>
 

@@ -15,7 +15,7 @@
 
 // Nom de la « boîte » où sont rangées les copies. Changer ce nom (suivi-v2, suivi-v3…)
 // oblige tous les appareils à tout recopier : utile si on veut repartir sur des copies neuves.
-const VERSION = "suivi-v32";
+const VERSION = "suivi-v33";
 
 // La liste des fichiers de l'appli à copier dès l'installation, pour pouvoir s'ouvrir hors connexion.
 // "./" veut dire « ce dossier-ci » (suivi/), c'est-à-dire la page d'accueil de l'appli.

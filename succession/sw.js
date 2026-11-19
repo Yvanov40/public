@@ -4,7 +4,7 @@
    Les bibliothèques PowerPoint et Excel sont incluses dans index.html.
    Pour forcer une mise à jour des copies, augmenter VERSION (succession-v2, v3…).
    ===================================================================================== */
-const VERSION = "succession-v3";
+const VERSION = "succession-v4";
 const LOCAL = ["./", "./index.html", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png", "./apple-touch-icon.png", "./logo.svg"];
 
 self.addEventListener("install", (e) => {
