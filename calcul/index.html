@@ -20,7 +20,7 @@
   --key:#FFFFFF; --key-op:#D6DED5; --accent:#2557E8; --accent-ink:#FFFFFF; --warn:#B4532A; --active:#EEF2FD;
   --res:color-mix(in srgb, var(--accent) 85%, var(--ink));
   --font:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --z:1; --kh:clamp(44px,7.2vh,58px); --padh:calc(var(--kh) * 5 + 24px);
+  --z:1; --kh:clamp(34px,5.8vh,50px); --kf:1; --kg:6px; --kr:12px; --padh:calc(var(--kh) * 5 + var(--kg) * 4);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -95,26 +95,22 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .display .big{font-size:calc(32px * var(--z));font-weight:500;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
 .app[data-layout] .display .big.err{font-size:14px;color:var(--warn);white-space:normal;text-align:right}
 
-/* Clavier maison : pavé et lettres côte à côte, on glisse de l'un à l'autre */
-.kbd{position:relative;overflow:hidden;touch-action:none;padding:2px 0 12px;user-select:none;-webkit-user-select:none}
+/* Clavier maison : pavé et lettres, on passe de l'un à l'autre avec ABC et 123 */
+.kbd{position:relative;overflow:hidden;touch-action:none;padding:2px 0 8px;user-select:none;-webkit-user-select:none}
 .kbd.hide{display:none}
 .track{display:flex;width:200%;transform:translateX(0);transition:transform .26s cubic-bezier(.2,.8,.2,1);will-change:transform}
 .track.drag{transition:none}
 .track>*{width:50%;flex:none}
-.dots{position:absolute;left:0;right:0;bottom:3px;display:flex;justify-content:center;gap:6px;pointer-events:none}
-.dots i{width:6px;height:6px;border-radius:50%;background:var(--rule);transition:background .2s,width .2s}
-.dots i.on{background:var(--muted);width:14px;border-radius:3px}
-.pad{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:0 10px;align-content:start}
-.abc{display:flex;flex-direction:column;gap:6px;padding:0 6px;height:var(--padh)}
-.abc .r{display:flex;gap:4px;flex:1;min-height:0}
+.pad{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--kg);padding:0 10px;align-content:start}
+.abc{display:flex;flex-direction:column;gap:var(--kg);padding:0 6px;height:var(--padh)}
+.abc .r{display:flex;gap:calc(var(--kg) * .67);flex:1;min-height:0}
 .k.down{filter:brightness(.9)}
 .k.on{background:var(--accent);color:var(--accent-ink)}
 .pop{position:fixed;z-index:25;display:flex;gap:3px;padding:4px;border-radius:12px;background:var(--surface);color:var(--ink);
   box-shadow:0 6px 22px rgb(0 0 0 / .28),inset 0 0 0 1px var(--rule);pointer-events:none}
 .pop span{min-width:38px;height:46px;display:grid;place-items:center;border-radius:9px;font-size:21px}
 .pop span.hi{background:var(--accent);color:var(--accent-ink)}
-.tiles{height:calc(var(--kh) * 5 + 34px);overflow-y:auto;overscroll-behavior:contain;padding:0 10px 10px}
-.app[data-layout="tableur"] .tiles{height:calc(var(--kh) * 3.9 + 34px)}
+.tiles{height:calc(var(--padh) + 10px);overflow-y:auto;overscroll-behavior:contain;padding:0 10px 10px}
 .tiles h4{margin:6px 2px 6px;font-size:12px;font-weight:600;color:var(--muted)}
 .tiles h4:first-child{margin-top:0}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
@@ -128,12 +124,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .tile::after{content:"";position:absolute;inset:0;background:var(--accent);opacity:.22;transform:scaleX(0);transform-origin:left;pointer-events:none}
 .tile.hold::after{transform:scaleX(1);transition:transform .6s linear}
 .tiles p{font-size:12px;color:var(--muted);margin:10px 2px 0}
-.k{position:relative;overflow:hidden;height:var(--kh);border-radius:12px;background:var(--key);font-size:21px;
+.k{position:relative;overflow:hidden;height:var(--kh);border-radius:var(--kr);background:var(--key);font-size:calc(21px * var(--kf));
   box-shadow:0 1px 0 var(--rule);touch-action:manipulation;user-select:none}
 .k.op{background:var(--key-op)}
-.k.fn{background:var(--key-op);font-size:16px}
-.k.go{background:var(--accent);color:var(--accent-ink);font-size:22px;font-weight:500}
-.k.tl{font-size:15px;font-weight:500}
+.k.fn{background:var(--key-op);font-size:calc(16px * var(--kf))}
+.k.go{background:var(--accent);color:var(--accent-ink);font-size:calc(22px * var(--kf));font-weight:500}
+.k.tl{font-size:calc(15px * var(--kf));font-weight:500}
 .k:active{filter:brightness(.92)}
 .k::after{content:"";position:absolute;inset:0;background:var(--warn);opacity:.28;transform:scaleX(0);transform-origin:left;pointer-events:none}
 .k.hold::after{transform:scaleX(1);transition:transform .6s linear}
@@ -146,13 +142,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .app[data-layout="tableur"] .res.var::before{margin-right:.3em}
 .app[data-layout="tableur"] .display{min-height:40px;padding-top:4px}
 .app[data-layout="tableur"] .display .big{font-size:calc(22px * var(--z))}
-.app[data-layout="tableur"] .k{height:calc(var(--kh) * .78);font-size:18px;border-radius:9px}
-.app[data-layout="tableur"] .k.fn{font-size:14px}
-.app[data-layout="tableur"]{--padh:calc(var(--kh) * .78 * 5 + 24px)}
-.app .abc .k{height:auto;flex:1;min-width:0;padding:0;font-size:19px;border-radius:9px}
-.app .abc .k.w15{flex:1.5;font-size:16px}
-.app .abc .k.sp{flex:4;font-size:14px;color:var(--muted)}
-.app .abc .k.op{font-size:19px}
+.app[data-layout="tableur"] .k{height:calc(var(--kh) * .82);font-size:calc(18px * var(--kf));border-radius:calc(var(--kr) * .75)}
+.app[data-layout="tableur"] .k.fn{font-size:calc(14px * var(--kf))}
+.app[data-layout="tableur"]{--padh:calc(var(--kh) * .82 * 5 + var(--kg) * 4)}
+.app .abc .k{height:auto;flex:1;min-width:0;padding:0;font-size:calc(19px * var(--kf));border-radius:calc(var(--kr) * .75)}
+.app .abc .k.w15{flex:1.5;font-size:calc(16px * var(--kf))}
+.app .abc .k.sp{flex:4;font-size:calc(14px * var(--kf));color:var(--muted)}
+.app .abc .k.op{font-size:calc(19px * var(--kf))}
 .app[data-layout="calc"] .display{min-height:72px}
 .app[data-layout="calc"] .display .big{font-size:calc(40px * var(--z))}
 @media (min-width:640px){
@@ -234,7 +230,6 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
     </section>
     <div class="kbd" id="kbd">
       <div class="track" id="track"><div class="pad" id="pad"></div><div class="abc" id="abc"></div></div>
-      <div class="dots" aria-hidden="true"><i></i><i></i></div>
     </div>
     <div class="tiles" id="tiles" hidden></div>
   </div>
@@ -620,8 +615,11 @@ const FONTS={
 };
 const LAYOUTS=[['calc','Calculatrice'],['tableur','Tableur'],['cote','Côte à côte']];
 const KEYSZ=[['compact','Petites'],['normal','Normales'],['grand','Grandes']];
+const KBG=[['serre','Serré'],['normal','Normal'],['large','Large']];
+const KBR=[['rond','Arrondies'],['doux','Peu arrondies'],['carre','Carrées']];
+const KBL=[['azerty','AZERTY'],['qwerty','QWERTY']];
 const DECS=[['auto','Auto'],['0','0'],['2','2'],['4','4']];
-const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
+const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',kbh:90,kbf:100,kbg:'normal',kbr:'rond',kbl:'azerty',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
 
 function hexOk(h){ return /^#[0-9a-f]{6}$/i.test(h); }
 function lum(h){ const c=[1,3,5].map(i=>{ const v=parseInt(h.substr(i,2),16)/255; return v<=.03928?v/12.92:((v+.055)/1.055)**2.4; }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
@@ -647,7 +645,11 @@ function applyPrefs(){
   const href=f.g?'https://fonts.googleapis.com/css2?family='+f.g+'&display=swap':'';
   if(href && link.getAttribute('href')!==href) link.setAttribute('href',href);
   s.setProperty('--z',P.zoom);
-  s.setProperty('--kh',{compact:'clamp(38px,6vh,46px)',normal:'clamp(44px,7.2vh,58px)',grand:'clamp(54px,8.6vh,70px)'}[P.keys]||'clamp(44px,7.2vh,58px)');
+  s.setProperty('--kh','calc(clamp(34px, 5.8vh, 50px) * '+(P.kbh/100)+')');
+  s.setProperty('--kf',P.kbf/100);
+  s.setProperty('--kg',{serre:'3px',normal:'6px',large:'9px'}[P.kbg]);
+  s.setProperty('--kr',{rond:'12px',doux:'6px',carre:'2px'}[P.kbr]);
+  if(typeof renderPad==='function' && applyPrefs.kbl!==P.kbl){ const first=applyPrefs.kbl===undefined; applyPrefs.kbl=P.kbl; if(!first) renderPad(); }
   document.getElementById('app').dataset.layout=P.layout;
   setDecimals(P.decimals); PREF_TVA=+P.tva||20;
   const meta=document.querySelector('meta[name="theme-color"]')||document.head.appendChild(Object.assign(document.createElement('meta'),{name:'theme-color'}));
@@ -676,6 +678,12 @@ function sanitize(s){
   if(!FONTS[P.font]) P.font='plex';
   if(!LAYOUTS.some(l=>l[0]===P.layout)) P.layout='calc';
   if(!KEYSZ.some(l=>l[0]===P.keys)) P.keys='normal';
+  if(!(s.prefs&&'kbh' in s.prefs)) P.kbh={compact:75,normal:90,grand:110}[P.keys]||90;   // ancien réglage « Touches »
+  P.kbh=Math.min(140,Math.max(60,Math.round(+P.kbh||90)));
+  P.kbf=Math.min(140,Math.max(70,Math.round(+P.kbf||100)));
+  if(!KBG.some(l=>l[0]===P.kbg)) P.kbg='normal';
+  if(!KBR.some(l=>l[0]===P.kbr)) P.kbr='rond';
+  if(!KBL.some(l=>l[0]===P.kbl)) P.kbl='azerty';
   if(!DECS.some(l=>l[0]===String(P.decimals))) P.decimals='auto';
   P.decimals=String(P.decimals);
   P.zoom=Math.min(1.5,Math.max(.8,+P.zoom||1));
@@ -1136,14 +1144,13 @@ function press(v){
 }
 
 /* Clavier lettres (AZERTY). Maintenir une voyelle ou le c : accents. */
-const ABC_ROWS=[
-  'azertyuiop'.split(''),
-  'qsdfghjklm'.split(''),
-  [['⇧','shift','fn w15'],'w','x','c','v','b','n',["'","'"],['⌫','back','fn w15']],
-  [['123','p0','fn tl w15'],[',',','],['espace',' ','sp'],[':',':','op'],['=',' = ','op'],['↵','enter','go w15']]
-];
+const ABC_BAS=[['123','p0','fn tl w15'],[',',','],['espace',' ','sp'],[':',':','op'],['=',' = ','op'],['↵','enter','go w15']];
+const ABC_LAYOUTS={
+  azerty:['azertyuiop'.split(''),'qsdfghjklm'.split(''),[['⇧','shift','fn w15'],'w','x','c','v','b','n',["'","'"],['⌫','back','fn w15']],ABC_BAS],
+  qwerty:['qwertyuiop'.split(''),'asdfghjkl'.split(''),[['⇧','shift','fn w15'],'z','x','c','v','b','n','m',['⌫','back','fn w15']],ABC_BAS]
+};
 const ACC={e:'éèêë',a:'àâä',u:'ùûü',i:'îï',o:'ôö',c:'ç',y:'ÿ',n:'ñ'};
-const LABELS={clear:'Effacer la ligne. Maintenir pour effacer toute la feuille',back:'Retour arrière, maintenir pour répéter',enter:'Nouvelle ligne',tiles:'Tuiles de formules',abc:'Lettres (ou glissez le clavier)',p0:'Chiffres (ou glissez le clavier)',shift:'Majuscule, deux fois pour verrouiller',' ':'Espace'};
+const LABELS={clear:'Effacer la ligne. Maintenir pour effacer toute la feuille',back:'Retour arrière, maintenir pour répéter',enter:'Nouvelle ligne',tiles:'Tuiles de formules',abc:'Lettres',p0:'Chiffres',shift:'Majuscule, deux fois pour verrouiller',' ':'Espace'};
 let kbPage=0, shift=0, shiftT=0;
 function typeChar(c){
   insert(shift?c.toUpperCase():c);
@@ -1167,7 +1174,6 @@ function setPage(p,anim=true){
   tr.style.transform='translateX('+(-p*50)+'%)';
   if(!anim){ void tr.offsetWidth; tr.classList.remove('drag'); }
   $('pad').inert=p!==0; $('abc').inert=p!==1;
-  document.querySelectorAll('.dots i').forEach((d,i)=>d.classList.toggle('on',i===p));
   if(changed && anim && state.prefs.vibrate) buzz(6);
 }
 function keyBtn(lab,v,cls){
@@ -1179,12 +1185,12 @@ function renderPad(){
   const pad=$('pad'); pad.innerHTML='';
   KEYS.forEach(([lab,v,cls])=>pad.appendChild(keyBtn(lab,v,cls)));
   const abc=$('abc'); abc.innerHTML='';
-  ABC_ROWS.forEach(row=>abc.appendChild(el('div',{className:'r'},...row.map(k=>Array.isArray(k)?keyBtn(k[0],k[1]??k[0],k[2]):keyBtn(k,k)))));
+  (ABC_LAYOUTS[state.prefs.kbl]||ABC_LAYOUTS.azerty).forEach(row=>abc.appendChild(el('div',{className:'r'},...row.map(k=>Array.isArray(k)?keyBtn(k[0],k[1]??k[0],k[2]):keyBtn(k,k)))));
   updShift(); setPage(kbPage,false);
 }
 
-/* Gestes du clavier : appui (la touche part au relâché), maintien, glisser pour changer de page */
-const kb={id:null,key:null,sx:0,sy:0,x:0,t0:0,w:1,drag:false,done:false,timer:null,rep:null,pop:null,hi:null};
+/* Gestes du clavier : appui (la touche part au relâché), maintien (C, ⌫, accents) */
+const kb={id:null,key:null,sx:0,sy:0,x:0,done:false,timer:null,rep:null,pop:null,hi:null};
 function closePop(){ if(kb.pop){ kb.pop.remove(); kb.pop=null; kb.hi=null; } }
 function kbStop(){
   clearTimeout(kb.timer); clearInterval(kb.rep); kb.timer=kb.rep=null;
@@ -1208,31 +1214,23 @@ function popHi(x,y){
 }
 function kbFinish(){
   const k=kb.key, v=k&&k.dataset.v;
-  if(kb.drag){
-    const dx=kb.x-kb.sx, sp=dx/Math.max(1,performance.now()-kb.t0);
-    let p=kbPage;
-    if(dx<-kb.w*.18||sp<-.35) p=Math.min(1,kbPage+1);
-    else if(dx>kb.w*.18||sp>.35) p=Math.max(0,kbPage-1);
-    $('track').classList.remove('drag'); setPage(p);
-    kbStop();
-  } else if(kb.pop){
+  if(kb.pop){
     const c=kb.hi&&kb.hi.textContent; kbStop();
     if(c){ insert(c); if(shift===1){ shift=0; updShift(); } }
   } else {
     const fire=!kb.done&&k; kbStop();
     if(fire) press(v);
   }
-  kb.id=null; kb.key=null; kb.drag=false;
+  kb.id=null; kb.key=null;
 }
 (()=>{
-  const K=$('kbd'), tr=$('track');
+  const K=$('kbd');
   K.addEventListener('pointerdown',e=>{
     if(e.button>0) return;
     e.preventDefault();                       // la ligne garde le curseur
-    if(kb.id!==null && !kb.drag) kbFinish();  // frappe à deux pouces : la touche précédente part tout de suite
-    else if(kb.id!==null) return;
+    if(kb.id!==null) kbFinish();  // frappe à deux pouces : la touche précédente part tout de suite
     const k=e.target.closest('.k');
-    Object.assign(kb,{id:e.pointerId,key:k,sx:e.clientX,sy:e.clientY,x:e.clientX,t0:performance.now(),w:K.clientWidth||1,drag:false,done:false});
+    Object.assign(kb,{id:e.pointerId,key:k,sx:e.clientX,sy:e.clientY,x:e.clientX,done:false});
     try{ K.setPointerCapture(e.pointerId); }catch(_){}
     if(!k) return;
     k.classList.add('down');
@@ -1245,22 +1243,13 @@ function kbFinish(){
     if(e.pointerId!==kb.id) return;
     kb.x=e.clientX;
     if(kb.pop){ popHi(e.clientX,e.clientY); return; }
-    const dx=e.clientX-kb.sx, dy=e.clientY-kb.sy;
-    if(!kb.drag){
-      if(kb.done || Math.abs(dx)<14 || Math.abs(dx)<1.3*Math.abs(dy)) return;
-      kb.drag=true; clearTimeout(kb.timer); kb.timer=null;
-      if(kb.key) kb.key.classList.remove('hold','down');
-      tr.classList.add('drag');
-    }
-    let off=-kbPage*kb.w+dx;
-    if(off>0) off/=3; else if(off<-kb.w) off=-kb.w+(off+kb.w)/3;   // résiste au-delà des bords
-    tr.style.transform='translateX('+off+'px)';
+    // le doigt a glissé loin de la touche : on annule (rien n'est tapé)
+    if(!kb.done && Math.hypot(e.clientX-kb.sx,e.clientY-kb.sy)>28){ kb.done=true; clearTimeout(kb.timer); kb.timer=null; if(kb.key) kb.key.classList.remove('hold','down'); }
   });
   K.addEventListener('pointerup',e=>{ if(e.pointerId===kb.id) kbFinish(); });
   K.addEventListener('pointercancel',e=>{
     if(e.pointerId!==kb.id) return;
-    const d=kb.drag; kbStop(); kb.id=null; kb.key=null; kb.drag=false;
-    if(d){ tr.classList.remove('drag'); setPage(kbPage); }
+    kbStop(); kb.id=null; kb.key=null;
   });
   // touches activées au clavier physique (Tab puis Entrée) : pas de pointeur
   K.addEventListener('click',e=>{ if(e.detail!==0) return; const k=e.target.closest('.k'); if(k) press(k.dataset.v); });
@@ -1323,8 +1312,20 @@ function renderSettings(){
       el('button',{type:'button',textContent:'A−','aria-label':'Réduire',on:{click:()=>setPref('zoom',Math.max(.8,Math.round((P.zoom-.1)*10)/10))}}),
       el('output',{textContent:Math.round(P.zoom*100)+' %'}),
       el('button',{type:'button',textContent:'A+','aria-label':'Agrandir',on:{click:()=>setPref('zoom',Math.min(1.5,Math.round((P.zoom+.1)*10)/10))}})),
-    el('h3',{textContent:'Touches'}),
-    seg(KEYSZ,P.keys,v=>setPref('keys',v)),
+    el('h3',{textContent:'Clavier'}),
+    el('div',{className:'field'},el('span',{textContent:'Hauteur',style:'min-width:7.5em'}),el('div',{className:'stepper'},
+      el('button',{type:'button',textContent:'−','aria-label':'Clavier moins haut',on:{click:()=>setPref('kbh',Math.max(60,P.kbh-5))}}),
+      el('output',{textContent:P.kbh+' %'}),
+      el('button',{type:'button',textContent:'+','aria-label':'Clavier plus haut',on:{click:()=>setPref('kbh',Math.min(140,P.kbh+5))}}))),
+    el('div',{className:'field',style:'margin-top:8px'},el('span',{textContent:'Texte des touches',style:'min-width:7.5em'}),el('div',{className:'stepper'},
+      el('button',{type:'button',textContent:'A−','aria-label':'Texte des touches plus petit',on:{click:()=>setPref('kbf',Math.max(70,P.kbf-10))}}),
+      el('output',{textContent:P.kbf+' %'}),
+      el('button',{type:'button',textContent:'A+','aria-label':'Texte des touches plus grand',on:{click:()=>setPref('kbf',Math.min(140,P.kbf+10))}}))),
+    el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'Écart',style:'min-width:7.5em'}),seg(KBG,P.kbg,v=>setPref('kbg',v))),
+    el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'Forme',style:'min-width:7.5em'}),seg(KBR,P.kbr,v=>setPref('kbr',v))),
+    el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'Lettres',style:'min-width:7.5em'}),seg(KBL,P.kbl,v=>setPref('kbl',v))),
+    el('button',{className:'toggle',type:'button','aria-pressed':String(!!P.vibrate),on:{click:()=>setPref('vibrate',!P.vibrate)}},el('span',{textContent:'Vibrer à chaque touche'}),el('i')),
+    el('p',{className:'note',textContent:'Les réglages s’appliquent tout de suite : fermez ce panneau pour voir le clavier.'}),
     el('h3',{textContent:'Disposition'}),
     seg(LAYOUTS,P.layout,v=>setPref('layout',v)),
     el('p',{className:'note',textContent:{calc:'Grand résultat au-dessus du pavé.',tableur:'Lignes serrées, colonne des résultats, pavé compact : plus de lignes visibles.',cote:'La feuille à gauche et le pavé à droite, sur tablette ou téléphone en paysage. Sur un écran étroit, la feuille reste au-dessus.'}[P.layout]}),
@@ -1332,7 +1333,6 @@ function renderSettings(){
     el('div',{className:'field'},el('span',{textContent:'Décimales'}),seg(DECS,P.decimals,v=>setPref('decimals',v))),
     el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'TVA par défaut'}),
       el('input',{inputMode:'decimal',value:String(P.tva).replace('.',','),'aria-label':'TVA par défaut en %',on:{change:e=>{ const v=parseFloat(e.target.value.replace(',','.')); if(Number.isFinite(v)&&v>=0&&v<100) setPref('tva',v); else { e.target.value=String(P.tva).replace('.',','); toast('Taux entre 0 et 99'); } }}}),el('span',{textContent:'%'})),
-    el('button',{className:'toggle',type:'button','aria-pressed':String(!!P.vibrate),on:{click:()=>setPref('vibrate',!P.vibrate)}},el('span',{textContent:'Vibrer à chaque touche'}),el('i')),
     el('h3',{textContent:'Mes feuilles'}),
     el('div',{className:'btnrow'},
       el('button',{className:'btn',type:'button',textContent:'Copier toutes les feuilles',on:{click:()=>copy(JSON.stringify({calculEnLignes:1,sheets:state.sheets}),'Feuilles copiées')}}),
