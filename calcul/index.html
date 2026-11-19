@@ -1380,7 +1380,17 @@ window.__calc={computeSheet,impotIR,ifiCalc,show};
 window.addEventListener('resize',fitBig);
 // Sur le site (et dans l'appli Android qui l'ouvre) : copie hors ligne et mises à jour automatiques
 if('serviceWorker' in navigator && /\.github\.io$/.test(location.hostname)){
-  try{ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}); }catch(e){}
+  try{
+    const hadSW=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+      reg.update();
+      // retour dans l'appli (laissée ouverte en arrière-plan) : on regarde s'il y a une nouvelle version
+      document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') reg.update().catch(()=>{}); });
+    }).catch(()=>{});
+    // nouvelle version installée : on recharge la page (les feuilles sont déjà enregistrées)
+    let reloading=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(!hadSW||reloading) return; reloading=true; save(); location.reload(); });
+  }catch(e){}
 }
 applyPrefs();
 renderAll();
