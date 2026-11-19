@@ -6539,7 +6539,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const parJour = new Map();
     for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) {
       const m = enMinutes(t.heure);
-      if (t.fait || !t.pour || t.pour < auj || m === null) continue;
+      if (t.fait || !t.pour || t.pour < auj || m === null || tacheRapide(t)) continue;
       (parJour.get(t.pour) || parJour.set(t.pour, []).get(t.pour)).push([m, m + dureeTache(t)]);
     }
     for (const d of donnees.dossiers) { const m = enMinutes(d.rdv_heure); if (d.rdv && d.rdv >= auj && m !== null && !d.archives && parJour.has(d.rdv)) parJour.get(d.rdv).push([m, m + (Number(d.rdv_duree) || dureeRdvDefaut())]); }
@@ -6553,7 +6553,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function replacerSansHeure() {
     if (!donnees || !auto().reporter) return 0;
     const auj = enIso(aujourdhui()), jours = new Set(), ids = [];
-    for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (!t.fait && t.pour && t.pour >= auj && !t.heure && !t.fixe) { jours.add(t.pour); ids.push(t.id); }
+    for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (!t.fait && t.pour && t.pour >= auj && !t.heure && !t.fixe && !tacheRapide(t)) { jours.add(t.pour); ids.push(t.id); }
     if (!ids.length) return 0;
     apresAgenda([...jours].sort(), null, ids);
     return ids.length;
@@ -9156,7 +9156,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
 
   // ---- durées et créneaux : une tâche sans heure se place au prochain créneau libre de sa journée ----
-  const DUREES = [["", "—"], ["15", "15 min"], ["30", "30 min"], ["45", "45 min"], ["60", "1 h"], ["90", "1 h 30"], ["120", "2 h"], ["180", "3 h"], ["240", "4 h"]];
+  const DUREES = [["", "— rapide (hors tri)"], ["15", "15 min"], ["30", "30 min"], ["45", "45 min"], ["60", "1 h"], ["90", "1 h 30"], ["120", "2 h"], ["180", "3 h"], ["240", "4 h"]];
   const DUREE_TACHE = 30, DUREE_RDV = 60;          // valeurs par défaut quand rien n'est indiqué
   const JOURNEE = [9 * 60, 18 * 60];              // amplitude de la journée de travail
   // ---- horaires de travail, jours travaillés et congés : réglables (⚙ Horaires), partagés par GitHub (agenda.json) ----
@@ -9216,7 +9216,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     }
     for (const r of rdvsClientsDuJour(iso)) { const m = enMinutes(r.heure); if (m !== null) liste.push([m, m + (Number(r.duree) || DUREE_RDV)]); }
     for (const f of Object.values(donnees ? donnees.clients : {})) for (const t of f.taches || []) {
-      if (t.fait || t.pour !== iso || t.id === sauf) continue;
+      if (t.fait || t.pour !== iso || t.id === sauf || tacheRapide(t)) continue;
       const m = enMinutes(t.heure);
       if (m !== null) liste.push([m, m + (Number(t.duree) || DUREE_TACHE)]);
     }
@@ -9266,6 +9266,9 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // les autres se décalent ; une tâche courte peut passer devant pour boucher un trou trop petit pour la suivante.
   // Ce qui ne tient plus dans la journée part au jour ouvré suivant.
   const dureeTache = (t) => Number(t.duree) || auto().dureeTache || DUREE_TACHE;
+  // une tâche sans durée (« — ») est un petit truc rapide : elle reste où on l'a mise, n'occupe pas de place
+  // et n'entre pas dans le tri automatique (elle ne pousse rien et n'est jamais poussée). Les tâches de dossiers ont toujours une durée.
+  const tacheRapide = (t) => !!t && !Number(t.duree) && !t.auto;
   const dureeRdvDefaut = () => auto().dureeRdv || DUREE_RDV;
   function jourOuvreSuivant(iso) {
     const d = versDate(iso);
@@ -9295,6 +9298,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     for (const r of rdvsClientsDuJour(iso)) { const m = enMinutes(r.heure); if (m !== null) fixes.push([m, m + (Number(r.duree) || dureeRdvDefaut()) + marge]); }
     const mobiles = [];
     for (const t of tachesDuJour(iso)) {
+      if (tacheRapide(t)) continue;   // tâche rapide : ni déplacée, ni prise en compte
       const m = enMinutes(t.heure);
       if (m === null) { if (aCaser.includes(t.id)) mobiles.push([Infinity, t]); continue; }
       // gestion coupée : les tâches déjà placées ne bougent plus (seules les nouvelles cherchent une place)
@@ -9415,7 +9419,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function dernierJourDeLaFile(sauf) {
     let iso = premierJourTravaille(), dernier = iso, vides = 0;
     for (let k = 0; k < 250 && vides < 3; k++) {
-      if (tachesDuJour(iso).some((x) => x.id !== sauf && x.heure && !x.fixe)) { dernier = iso; vides = 0; } else vides++;
+      if (tachesDuJour(iso).some((x) => x.id !== sauf && x.heure && !x.fixe && !tacheRapide(x))) { dernier = iso; vides = 0; } else vides++;
       iso = jourOuvreSuivant(iso);
     }
     return dernier;
@@ -9433,7 +9437,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       const maintenant = new Date().getHours() * 60 + new Date().getMinutes();
       const file = [];
       for (let iso = depart, k = 0; iso <= jour && k < 400; iso = jourOuvreSuivant(iso), k++)
-        for (const x of tachesDuJour(iso)) if (x.id !== id && !x.fixe && enMinutes(x.heure) !== null && !(iso === aujour && enMinutes(x.heure) < maintenant)) file.push(x);
+        for (const x of tachesDuJour(iso)) if (x.id !== id && !x.fixe && !tacheRapide(x) && enMinutes(x.heure) !== null && !(iso === aujour && enMinutes(x.heure) < maintenant)) file.push(x);
       file.sort((a, b) => a.pour.localeCompare(b.pour) || enMinutes(a.heure) - enMinutes(b.heure));
       const tt = trouverTache(id);
       file.push(tt);
@@ -9889,7 +9893,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       const existe = estPerso(saisi) || nomsClients().some((n) => cleClient(n) === cleClient(saisi));
       const id = nouvelId();
       // ni date ni heure : la tâche se range à la suite (ou, prioritaire, au premier créneau libre devant les autres)
-      if (!v.pour) { if (v.prio) { v.pour = premierJourTravaille(); v.heure = ""; } else { const [jour, h] = premierCreneau(v.duree); if (jour) { v.pour = jour; v.heure = h; } } }
+      if (!v.pour) { if (v.prio || !Number(v.duree)) { v.pour = premierJourTravaille(); v.heure = ""; } else { const [jour, h] = premierCreneau(v.duree); if (jour) { v.pour = jour; v.heure = h; } } }
       majTaches(nom, (l) => [...l, { id, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", fixe: !!v.fixe, repete: v.repete || "", prio: !!v.prio,
         note: v.note || "", fait: null, cree: new Date().toISOString() }]);
       const resume = apresAgenda([v.pour], v.heure ? id : null, v.heure ? [] : [id]);
