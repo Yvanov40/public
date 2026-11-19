@@ -20,7 +20,7 @@
   --key:#FFFFFF; --key-op:#D6DED5; --accent:#2557E8; --accent-ink:#FFFFFF; --warn:#B4532A; --active:#EEF2FD;
   --res:color-mix(in srgb, var(--accent) 85%, var(--ink));
   --font:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --z:1; --kh:clamp(44px,7.2vh,58px);
+  --z:1; --kh:clamp(44px,7.2vh,58px); --padh:calc(var(--kh) * 5 + 24px);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -95,16 +95,24 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .display .big{font-size:calc(32px * var(--z));font-weight:500;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
 .app[data-layout] .display .big.err{font-size:14px;color:var(--warn);white-space:normal;text-align:right}
 
-/* Raccourcis */
-.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 10px 8px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chip{white-space:nowrap;padding:7px 11px;border-radius:8px;background:var(--key-op);font-size:14px}
-.chip.mode{background:var(--ink);color:var(--surface);font-weight:500}
-.chip.fisc{box-shadow:inset 0 0 0 1px var(--accent)}
-
-/* Pavé */
-.pad{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:0 10px 10px}
-.pad.hide{display:none}
+/* Clavier maison : pavé et lettres côte à côte, on glisse de l'un à l'autre */
+.kbd{position:relative;overflow:hidden;touch-action:none;padding:2px 0 12px;user-select:none;-webkit-user-select:none}
+.kbd.hide{display:none}
+.track{display:flex;width:200%;transform:translateX(0);transition:transform .26s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.track.drag{transition:none}
+.track>*{width:50%;flex:none}
+.dots{position:absolute;left:0;right:0;bottom:3px;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--rule);transition:background .2s,width .2s}
+.dots i.on{background:var(--muted);width:14px;border-radius:3px}
+.pad{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:0 10px;align-content:start}
+.abc{display:flex;flex-direction:column;gap:6px;padding:0 6px;height:var(--padh)}
+.abc .r{display:flex;gap:4px;flex:1;min-height:0}
+.k.down{filter:brightness(.9)}
+.k.on{background:var(--accent);color:var(--accent-ink)}
+.pop{position:fixed;z-index:25;display:flex;gap:3px;padding:4px;border-radius:12px;background:var(--surface);color:var(--ink);
+  box-shadow:0 6px 22px rgb(0 0 0 / .28),inset 0 0 0 1px var(--rule);pointer-events:none}
+.pop span{min-width:38px;height:46px;display:grid;place-items:center;border-radius:9px;font-size:21px}
+.pop span.hi{background:var(--accent);color:var(--accent-ink)}
 .tiles{height:calc(var(--kh) * 5 + 34px);overflow-y:auto;overscroll-behavior:contain;padding:0 10px 10px}
 .app[data-layout="tableur"] .tiles{height:calc(var(--kh) * 3.9 + 34px)}
 .tiles h4{margin:6px 2px 6px;font-size:12px;font-weight:600;color:var(--muted)}
@@ -120,7 +128,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .tile::after{content:"";position:absolute;inset:0;background:var(--accent);opacity:.22;transform:scaleX(0);transform-origin:left;pointer-events:none}
 .tile.hold::after{transform:scaleX(1);transition:transform .6s linear}
 .tiles p{font-size:12px;color:var(--muted);margin:10px 2px 0}
-.chip.on{background:var(--accent);color:var(--accent-ink)}
 .k{position:relative;overflow:hidden;height:var(--kh);border-radius:12px;background:var(--key);font-size:21px;
   box-shadow:0 1px 0 var(--rule);touch-action:manipulation;user-select:none}
 .k.op{background:var(--key-op)}
@@ -141,6 +148,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .app[data-layout="tableur"] .display .big{font-size:calc(22px * var(--z))}
 .app[data-layout="tableur"] .k{height:calc(var(--kh) * .78);font-size:18px;border-radius:9px}
 .app[data-layout="tableur"] .k.fn{font-size:14px}
+.app[data-layout="tableur"]{--padh:calc(var(--kh) * .78 * 5 + 24px)}
+.app .abc .k{height:auto;flex:1;min-width:0;padding:0;font-size:19px;border-radius:9px}
+.app .abc .k.w15{flex:1.5;font-size:16px}
+.app .abc .k.sp{flex:4;font-size:14px;color:var(--muted)}
+.app .abc .k.op{font-size:19px}
 .app[data-layout="calc"] .display{min-height:72px}
 .app[data-layout="calc"] .display .big{font-size:calc(40px * var(--z))}
 @media (min-width:640px){
@@ -220,8 +232,10 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
       <span class="lab" id="dLab"></span>
       <span class="big" id="dBig">0</span>
     </section>
-    <div class="chips" id="chips"></div>
-    <div class="pad" id="pad"></div>
+    <div class="kbd" id="kbd">
+      <div class="track" id="track"><div class="pad" id="pad"></div><div class="abc" id="abc"></div></div>
+      <div class="dots" aria-hidden="true"><i></i><i></i></div>
+    </div>
     <div class="tiles" id="tiles" hidden></div>
   </div>
 </div>
@@ -766,7 +780,7 @@ function renderRows(){
   s.lines.forEach((line,i)=>{
     const row=el('div',{className:'row'}); row.dataset.i=i;
     const inp=el('input',{className:'ex',value:line,autocomplete:'off',autocorrect:'off',autocapitalize:'off',spellcheck:false,enterkeyhint:'next','aria-label':'Ligne '+(i+1)});
-    inp.inputMode=(state.prefs.pad||tilesOpen)?'none':'text';
+    inp.inputMode='none';   // jamais le clavier du téléphone : le clavier maison suffit
     if(i===s.lines.length-1) inp.placeholder='Tapez un calcul…';
     row.append(el('button',{className:'ln',type:'button',textContent:i+1,'aria-label':'Sélectionner la ligne '+(i+1)}),inp,el('button',{className:'res',type:'button'}));
     sheetEl.appendChild(row);
@@ -1014,10 +1028,6 @@ const KEYS=[
   ['1','1'],['2','2'],['3','3'],['+','+','op'],[';',';','op'],
   ['Tuiles','tiles','fn tl'],['0','0'],[',',','],['ABC','abc','fn tl'],['↵','enter','go']
 ];
-const CHIPS=[['total','total'],['somme(','somme('],['moy(','moy('],[':',':'],['=',' = '],['de',' de '],
-  ['ttc(','ttc('],['ht(','ht('],['evol(','evol('],['arrondi(','arrondi('],['si(','si('],['<','<'],['>','>'],
-  ['√(','racine('],['π','pi'],['#','# ']];
-const FCHIPS=[['ir(revenu; parts)','ir('],['tmi(','tmi('],['succ(','succ('],['ifi(','ifi('],['mensualite(','mensualite('],['pfu(','pfu(']];
 const TILES=[
   ['Impôt et fiscalité','IR, TMI, IFI, flat tax',[['Impôt sur le revenu','ir(','revenu ; parts'],['Taux marginal','tmi(','revenu ; parts'],['Nombre de parts','parts(','couple 1/0 ; enfants'],['IFI','ifi(','patrimoine net'],['Flat tax 31,4 %','pfu(','montant'],['Prélèv. sociaux','ps(','montant ; taux']]],
   ['Successions et donations','droits, usufruit',[['Enfant','succ(','part ; abattement'],['Petit-enfant','succpe(','part ; abattement'],['Frère, sœur','succfrere(','part ; abattement'],['Neveu, nièce','succneveu(','part ; abattement'],['Sans lien','succtiers(','part ; abattement'],['Nue-propriété','np(','valeur ; âge'],['Usufruit','usufruit(','valeur ; âge']]],
@@ -1034,18 +1044,11 @@ function holdable(b,onHold,onTap){
   ['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,stop));
   b.addEventListener('click',()=>{ if(fired){ fired=false; return; } onTap(); });
 }
-function setKeyboard(pad){
-  state.prefs.pad=pad; tilesOpen=false; save(); renderPad();
-  sheetEl.querySelectorAll('.ex').forEach(i=>i.inputMode=state.prefs.pad?'none':'text');
-  const e=inputAt(active>=0?active:cur().lines.length-1); if(e){ e.blur(); setTimeout(()=>e.focus(),30); }
-}
 let tilesTheme=null;
 function setTiles(open){
   if(open) tilesTheme=null;
   tilesOpen=open;
-  sheetEl.querySelectorAll('.ex').forEach(i=>i.inputMode=(state.prefs.pad||tilesOpen)?'none':'text');
   renderPad();
-  if(!open && !state.prefs.pad){ const e=inputAt(active>=0?active:cur().lines.length-1); if(e){ e.blur(); setTimeout(()=>e.focus(),30); } }
 }
 function renderTiles(){
   const T=$('tiles'); T.hidden=!tilesOpen; if(!tilesOpen) return;
@@ -1124,28 +1127,146 @@ function press(v){
   if(v==='back') return backspace();
   if(v==='enter') return newLine();
   if(v==='tiles') return setTiles(true);
-  if(v==='abc') return setKeyboard(false);
+  if(v==='abc') return setPage(1);
+  if(v==='p0') return setPage(0);
+  if(v==='shift') return shiftTap();
   if(OPS.has(v)) return operator(v);
+  if(v.length===1 && /\p{L}/u.test(v)) return typeChar(v);
   insert(v);
 }
-function renderPad(){
-  const pad=$('pad'); pad.innerHTML=''; pad.classList.toggle('hide',!state.prefs.pad||tilesOpen);
-  renderTiles();
-  KEYS.forEach(([lab,v,cls])=>{
-    const b=el('button',{className:'k'+(cls?' '+cls:''),type:'button',textContent:lab,'aria-label':{clear:'Effacer la ligne. Maintenir pour effacer toute la feuille',back:'Retour arrière',enter:'Nouvelle ligne',tiles:'Tuiles de formules',abc:'Clavier texte'}[v]||lab});
-    if(v==='clear'){ b.title='Maintenir pour tout effacer'; holdable(b,clearAll,()=>press(v)); }
-    else b.addEventListener('click',()=>press(v));
-    pad.appendChild(b);
-  });
-  const ch=$('chips'); ch.innerHTML='';
-  if(!state.prefs.pad && !tilesOpen){
-    ch.appendChild(el('button',{className:'chip mode',type:'button',textContent:'123','aria-label':'Revenir au pavé numérique',on:{click:()=>setKeyboard(true)}}));
-    ch.appendChild(el('button',{className:'chip on',type:'button',textContent:'Tuiles','aria-label':'Tuiles de formules',on:{click:()=>setTiles(true)}}));
-  }
-  CHIPS.forEach(([lab,v])=>ch.appendChild(el('button',{className:'chip',type:'button',textContent:lab,on:{click:()=>insert(v)}})));
-  FCHIPS.forEach(([lab,v])=>ch.appendChild(el('button',{className:'chip fisc',type:'button',textContent:lab,on:{click:()=>insert(v)}})));
+
+/* Clavier lettres (AZERTY). Maintenir une voyelle ou le c : accents. */
+const ABC_ROWS=[
+  'azertyuiop'.split(''),
+  'qsdfghjklm'.split(''),
+  [['⇧','shift','fn w15'],'w','x','c','v','b','n',["'","'"],['⌫','back','fn w15']],
+  [['123','p0','fn tl w15'],[',',','],['espace',' ','sp'],[':',':','op'],['=',' = ','op'],['↵','enter','go w15']]
+];
+const ACC={e:'éèêë',a:'àâä',u:'ùûü',i:'îï',o:'ôö',c:'ç',y:'ÿ',n:'ñ'};
+const LABELS={clear:'Effacer la ligne. Maintenir pour effacer toute la feuille',back:'Retour arrière, maintenir pour répéter',enter:'Nouvelle ligne',tiles:'Tuiles de formules',abc:'Lettres (ou glissez le clavier)',p0:'Chiffres (ou glissez le clavier)',shift:'Majuscule, deux fois pour verrouiller',' ':'Espace'};
+let kbPage=0, shift=0, shiftT=0;
+function typeChar(c){
+  insert(shift?c.toUpperCase():c);
+  if(shift===1){ shift=0; updShift(); }
 }
-['pad','chips','tiles','selbar'].forEach(id=>{ $(id).addEventListener('pointerdown',e=>{ if(e.target.closest('button')) e.preventDefault(); });
+function shiftTap(){
+  const now=Date.now();
+  shift = shift===0 ? 1 : (shift===1 && now-shiftT<350) ? 2 : 0;
+  shiftT=now; updShift();
+}
+function updShift(){
+  $('abc').querySelectorAll('.k').forEach(b=>{
+    const v=b.dataset.v;
+    if(v==='shift'){ b.classList.toggle('on',shift>0); b.textContent=shift===2?'⇪':'⇧'; b.setAttribute('aria-pressed',String(shift>0)); }
+    else if(v.length===1 && /\p{L}/u.test(v)) b.textContent=shift?v.toUpperCase():v;
+  });
+}
+function setPage(p,anim=true){
+  const tr=$('track'), changed=p!==kbPage; kbPage=p;
+  if(!anim) tr.classList.add('drag');
+  tr.style.transform='translateX('+(-p*50)+'%)';
+  if(!anim){ void tr.offsetWidth; tr.classList.remove('drag'); }
+  $('pad').inert=p!==0; $('abc').inert=p!==1;
+  document.querySelectorAll('.dots i').forEach((d,i)=>d.classList.toggle('on',i===p));
+  if(changed && anim && state.prefs.vibrate) buzz(6);
+}
+function keyBtn(lab,v,cls){
+  return el('button',{className:'k'+(cls?' '+cls:''),type:'button',textContent:lab,'data-v':v,'aria-label':LABELS[v]||lab});
+}
+function renderPad(){
+  $('kbd').classList.toggle('hide',tilesOpen);
+  renderTiles();
+  const pad=$('pad'); pad.innerHTML='';
+  KEYS.forEach(([lab,v,cls])=>pad.appendChild(keyBtn(lab,v,cls)));
+  const abc=$('abc'); abc.innerHTML='';
+  ABC_ROWS.forEach(row=>abc.appendChild(el('div',{className:'r'},...row.map(k=>Array.isArray(k)?keyBtn(k[0],k[1]??k[0],k[2]):keyBtn(k,k)))));
+  updShift(); setPage(kbPage,false);
+}
+
+/* Gestes du clavier : appui (la touche part au relâché), maintien, glisser pour changer de page */
+const kb={id:null,key:null,sx:0,sy:0,x:0,t0:0,w:1,drag:false,done:false,timer:null,rep:null,pop:null,hi:null};
+function closePop(){ if(kb.pop){ kb.pop.remove(); kb.pop=null; kb.hi=null; } }
+function kbStop(){
+  clearTimeout(kb.timer); clearInterval(kb.rep); kb.timer=kb.rep=null;
+  if(kb.key) kb.key.classList.remove('hold','down');
+  closePop();
+}
+function openPop(k){
+  const base=k.dataset.v, vars=[...ACC[base]].map(c=>shift?c.toUpperCase():c);
+  const pop=el('div',{className:'pop','aria-hidden':'true'},...vars.map(c=>el('span',{textContent:c})));
+  document.body.appendChild(pop);
+  const r=k.getBoundingClientRect(), pw=pop.offsetWidth, ph=pop.offsetHeight;
+  pop.style.left=Math.max(4,Math.min(innerWidth-pw-4,r.left+r.width/2-pw/2))+'px';
+  pop.style.top=Math.max(4,r.top-ph-6)+'px';
+  kb.pop=pop; kb.done=true; k.classList.remove('down'); popHi(kb.x,kb.sy); buzz(12);
+}
+function popHi(x,y){
+  // premier accent sous le doigt, puis on glisse vers la droite pour les suivants
+  const spans=[...kb.pop.children], kr=kb.key.getBoundingClientRect(), step=spans[0].offsetWidth+3;
+  const hi = y<kr.bottom+40 ? spans[Math.max(0,Math.min(spans.length-1,Math.round((x-kb.sx)/step)))] : null;
+  spans.forEach(s=>s.classList.toggle('hi',s===hi)); kb.hi=hi;
+}
+function kbFinish(){
+  const k=kb.key, v=k&&k.dataset.v;
+  if(kb.drag){
+    const dx=kb.x-kb.sx, sp=dx/Math.max(1,performance.now()-kb.t0);
+    let p=kbPage;
+    if(dx<-kb.w*.18||sp<-.35) p=Math.min(1,kbPage+1);
+    else if(dx>kb.w*.18||sp>.35) p=Math.max(0,kbPage-1);
+    $('track').classList.remove('drag'); setPage(p);
+    kbStop();
+  } else if(kb.pop){
+    const c=kb.hi&&kb.hi.textContent; kbStop();
+    if(c){ insert(c); if(shift===1){ shift=0; updShift(); } }
+  } else {
+    const fire=!kb.done&&k; kbStop();
+    if(fire) press(v);
+  }
+  kb.id=null; kb.key=null; kb.drag=false;
+}
+(()=>{
+  const K=$('kbd'), tr=$('track');
+  K.addEventListener('pointerdown',e=>{
+    if(e.button>0) return;
+    e.preventDefault();                       // la ligne garde le curseur
+    if(kb.id!==null && !kb.drag) kbFinish();  // frappe à deux pouces : la touche précédente part tout de suite
+    else if(kb.id!==null) return;
+    const k=e.target.closest('.k');
+    Object.assign(kb,{id:e.pointerId,key:k,sx:e.clientX,sy:e.clientY,x:e.clientX,t0:performance.now(),w:K.clientWidth||1,drag:false,done:false});
+    try{ K.setPointerCapture(e.pointerId); }catch(_){}
+    if(!k) return;
+    k.classList.add('down');
+    const v=k.dataset.v;
+    if(v==='clear'){ k.classList.add('hold'); kb.timer=setTimeout(()=>{ kb.done=true; k.classList.remove('hold','down'); buzz(25); clearAll(); },600); }
+    else if(v==='back'){ kb.timer=setTimeout(()=>{ kb.done=true; backspace(); kb.rep=setInterval(backspace,70); },420); }
+    else if(ACC[v]) kb.timer=setTimeout(()=>openPop(k),380);
+  });
+  K.addEventListener('pointermove',e=>{
+    if(e.pointerId!==kb.id) return;
+    kb.x=e.clientX;
+    if(kb.pop){ popHi(e.clientX,e.clientY); return; }
+    const dx=e.clientX-kb.sx, dy=e.clientY-kb.sy;
+    if(!kb.drag){
+      if(kb.done || Math.abs(dx)<14 || Math.abs(dx)<1.3*Math.abs(dy)) return;
+      kb.drag=true; clearTimeout(kb.timer); kb.timer=null;
+      if(kb.key) kb.key.classList.remove('hold','down');
+      tr.classList.add('drag');
+    }
+    let off=-kbPage*kb.w+dx;
+    if(off>0) off/=3; else if(off<-kb.w) off=-kb.w+(off+kb.w)/3;   // résiste au-delà des bords
+    tr.style.transform='translateX('+off+'px)';
+  });
+  K.addEventListener('pointerup',e=>{ if(e.pointerId===kb.id) kbFinish(); });
+  K.addEventListener('pointercancel',e=>{
+    if(e.pointerId!==kb.id) return;
+    const d=kb.drag; kbStop(); kb.id=null; kb.key=null; kb.drag=false;
+    if(d){ tr.classList.remove('drag'); setPage(kbPage); }
+  });
+  // touches activées au clavier physique (Tab puis Entrée) : pas de pointeur
+  K.addEventListener('click',e=>{ if(e.detail!==0) return; const k=e.target.closest('.k'); if(k) press(k.dataset.v); });
+  K.addEventListener('contextmenu',e=>e.preventDefault());
+})();
+['tiles','selbar'].forEach(id=>{ $(id).addEventListener('pointerdown',e=>{ if(e.target.closest('button')) e.preventDefault(); });
   $(id).addEventListener('contextmenu',e=>e.preventDefault()); });
 
 /* ===================== Formules et barèmes ===================== */
