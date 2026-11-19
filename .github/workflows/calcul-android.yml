@@ -1,0 +1,42 @@
+# Construit l'appli Android « Calcul en lignes » (dossier « calcul ») et la publie dans la version « calcul » du dépôt :
+#   https://github.com/Yvanov40/public/releases/download/calcul/calcul-en-lignes.apk
+name: Calcul Android
+on:
+  push:
+    branches: [main]
+    paths: ["calcul/**", ".github/workflows/calcul-android.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Préparer Capacitor
+        working-directory: calcul
+        run: |
+          npm ci
+          npx cap add android
+          npx @capacitor/assets generate --android
+          npx cap sync android
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+      - name: Construire l'APK
+        working-directory: calcul/android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Renommer
+        run: cp calcul/android/app/build/outputs/apk/debug/app-debug.apk calcul-en-lignes.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: calcul
+          name: "Calcul en lignes — Android"
+          body: |
+            Calculatrice en lignes, entre le tableur et la calculatrice de téléphone.
+            Sur le téléphone : télécharger « calcul-en-lignes.apk », l'ouvrir, autoriser l'installation depuis le navigateur si Android le demande.
+          files: calcul-en-lignes.apk
+          make_latest: false
