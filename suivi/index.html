@@ -106,7 +106,7 @@
     const CAL_DEFAUT = { rdv: "#7d9c7c", tache: "#c9a45c", dutreil: "#6b77b0", perso: "#8b68c1", retard: "#c0504d" };
     window.CAL_DEFAUT = CAL_DEFAUT;
     // mise en page : taille, tuiles par ligne, cases de l'accueil, menu, onglets… (d'origine tant qu'on n'y touche pas)
-    const PAGE_DEFAUT = { taille: 100, tuiles: 3, accCols: 3, menu: "gauche", bas: "complet", coins: "arrondis", relief: "normal", largeur: "pleine",
+    const PAGE_DEFAUT = { taille: 100, valider: true, tuiles: 3, accCols: 3, menu: "gauche", bas: "complet", coins: "arrondis", relief: "normal", largeur: "pleine",
       ouverture: "accueil", masques: [], cartes: ["journee", "honoraires", "taches", "rdv", "etapes", "relancer", "dutreil"], cartesMasquees: [] };
     const CARTES_ACCUEIL = ["journee", "honoraires", "taches", "rdv", "etapes", "relancer", "dutreil"];  // dans l'ordre de la page
     window.PAGE_DEFAUT = PAGE_DEFAUT;
@@ -1538,6 +1538,11 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .menu-tete { display: flex; justify-content: space-between; align-items: center; }
 .menu-fermer { border: 0; background: var(--section); color: var(--bleu); width: 34px; height: 34px; border-radius: 17px; font-size: 15px; cursor: pointer; }
 .menu-panneau h4 { margin: 6px 0 0; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--discret); font-weight: 600; }
+.menu-taille { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 8px; font-size: 13.5px; color: var(--discret); }
+.tt { display: inline-flex; align-items: center; border: 1px solid var(--bordure); border-radius: 999px; background: var(--fond); overflow: hidden; }
+.tt button { border: 0; background: none; color: var(--bleu); font: inherit; cursor: pointer; padding: 6px 12px; }
+.tt .tt-btn { font-weight: 700; font-size: 14px; } .tt .tt-btn:hover, .tt .tt-val:hover { background: var(--section); }
+.tt .tt-val { min-width: 62px; font-size: 13px; font-weight: 600; border-inline: 1px solid var(--bordure); font-variant-numeric: tabular-nums; }
 .menu-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .menu-tuile { display: flex; align-items: center; gap: 9px; text-align: left; border: 1px solid var(--bordure); background: var(--fond); color: var(--texte);
   border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.25; cursor: pointer; min-height: 52px; }
@@ -2765,6 +2770,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
 <div class="menu" id="menu">
   <div class="menu-panneau">
     <div class="menu-tete"><h3>Menu</h3><button class="menu-fermer" id="btnFermerMenu" aria-label="Fermer">✕</button></div>
+    <div class="menu-taille"><span>Taille de l’affichage</span><div id="menuTaille"></div></div>
     <h4>Outils</h4>
     <div class="menu-grille">
       <button class="menu-tuile" id="btnEmoluments"><span>🧮</span>Tarifs</button>
@@ -4901,11 +4907,17 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     champDem.addEventListener("input", majDemandeurs);
     ouvrirFeuille("feuilleLot", () => modifierEnLot(indices, noms));
   }
-  function enregistrerLot() {
+  async function enregistrerLot() {
     if (!lotEnCours) return;
     const v = lireFormulaire($("corpsLot"));
     const val = (k) => String(v[k] || "").trim();
     const { indices, clients } = lotEnCours;
+    if (validerActif()) {
+      const libs = [["statut", "Étape", (x) => nomEtape(x + ".")], ["nature", "Nature"], ["precision", "Précision"], ["collaborateur", "Collaborateur"], ["exercice", "Exercice"],
+        ["notaire", "Demandeur (tous les dossiers du client)"], ["partenaire", "Partenaire (tous les dossiers du client)"], ["millionnaire", "Millionnaire"], ["societe", "Société du demandeur"]];
+      const l = libs.filter(([k]) => val(k)).map(([k, lib, f]) => `${lib} : ${f ? f(val(k)) : val(k)}`);
+      if (l.length && !(await demander(`${pluriel(indices.length, "dossier")} (${pluriel(clients.length, "client")}) :\n\n• ${l.join("\n• ")}`, { titre: "Modifier en lot ?", ok: "Appliquer" }))) return;
+    }
     const avant = [];
     const avantFiches = clients.map((n) => [n, { ...fiche(n) }]);
     let nb = 0;
@@ -5820,6 +5832,35 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     }
   });
 
+  // ---- téléphone : un appui long dans un endroit libre de l'agenda ouvre le même menu que le clic droit sur l'ordinateur ----
+  //   (nouvelle tâche, nouveau rendez-vous, perso) ; calc(ev) donne { iso, heure } là où le doigt s'est posé.
+  function appuiLongVide(zone, calc) {
+    let a = null;
+    const fin = () => { if (a) { clearTimeout(a.t); a = null; } };
+    zone.addEventListener("pointerdown", (ev) => {
+      if (ev.pointerType !== "touch" || ev.target.closest(".ev, .frise-bloc, .fleche-jours, .points")) return;
+      const c = calc(ev);
+      if (!c) return;
+      const x = ev.clientX, y = ev.clientY;
+      fin();
+      a = { x, y, t: setTimeout(() => {
+        a = null;
+        zone.dataset.bloque = "1"; setTimeout(() => delete zone.dataset.bloque, 600);
+        try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+        menuCreation(x, y, c.iso, c.heure || "");
+      }, 520) };
+    });
+    zone.addEventListener("pointermove", (ev) => { if (a && Math.hypot(ev.clientX - a.x, ev.clientY - a.y) > 10) fin(); });
+    zone.addEventListener("pointerup", fin);
+    zone.addEventListener("pointercancel", fin);
+    zone.addEventListener("contextmenu", (ev) => { if (estTel() && !ev.target.closest(".ev, .frise-bloc")) ev.preventDefault(); });
+  }
+
+  // les jours sans heure (semaine) et les cases du mois : l'appui long y crée pour ce jour-là
+  new MutationObserver(() => {
+    for (const z of document.querySelectorAll("[data-appui]:not([data-appui-ok])")) { z.dataset.appuiOk = "1"; appuiLongVide(z, () => ({ iso: z.dataset.appui, heure: "" })); }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+
   // ---- la journée en frise : chaque élément à sa place ; glisser pour déplacer, tirer le bas pour allonger ----
   const DEBUT_FRISE = 8 * 60, FIN_FRISE = 20 * 60;
   function friseJour(elements, iso = jourCalendrier, compacte = false, pxImpose = 0) {
@@ -5841,6 +5882,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       nouvelleTache({ pour: iso, heure: enHeure(minute) });
     });
     frise.title = estTel() ? "" : "Double-clic pour ajouter une tâche à cette heure";
+    appuiLongVide(frise, (ev) => {
+      const yy = ev.clientY - frise.getBoundingClientRect().top;
+      return { iso, heure: enHeure(Math.min(FIN_FRISE - 15, Math.max(DEBUT_FRISE, DEBUT_FRISE + Math.floor(yy / pxMin / 15) * 15))) };
+    });
     for (let h = DEBUT_FRISE / 60; h <= FIN_FRISE / 60; h++) {
       frise.append(el("div", { class: "frise-heure", style: `top:${(h * 60 - DEBUT_FRISE) * pxMin}px` }, el("span", null, `${h} h`)));
     }
@@ -6128,7 +6173,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         // téléphone : flèches pour passer aux jours d'avant ou d'après
         tel && k === 0 ? el("button", { type: "button", class: "fleche-jours avant", "aria-label": "Jours précédents", onclick: () => changerDeuxJours(-1) }, "‹") : null,
         tel && k === jours.length - 1 ? el("button", { type: "button", class: "fleche-jours apres", "aria-label": "Jours suivants", onclick: () => changerDeuxJours(1) }, "›") : null,
-        el("div", { class: "semaine-sans-heure", title: "Double-clic pour ajouter une tâche ce jour-là",
+        el("div", { class: "semaine-sans-heure", title: "Double-clic pour ajouter une tâche ce jour-là", "data-appui": iso,
           ondblclick: (ev) => { if (!ev.target.closest(".ev")) nouvelleTache({ pour: iso }); },
           oncontextmenu: (ev) => { if (ev.target.closest(".ev")) return; ev.preventDefault(); menuCreation(ev.clientX, ev.clientY, iso, ""); } }, sansHeure.map((e) => {
           const puce = el("button", { type: "button", class: `ev ${e.type}${e.fait ? " faite" : ""}${e.retard ? " retard" : ""}${e.perso ? " perso" : ""}`, title: e.sous, onclick: e.ouvrir }, e.titre);
@@ -6376,7 +6421,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       if (congeDu(iso)) classes.push("conge");
       if (iso === auj) classes.push("aujourdhui");
       if (iso === jourCalendrier) classes.push("choisi");
-      cellules.push(el("button", { type: "button", class: classes.join(" "), "data-jour": iso,
+      cellules.push(el("button", { type: "button", class: classes.join(" "), "data-jour": iso, "data-appui": iso,
         ondblclick: (ev) => { if (!estTel() && !ev.target.closest(".ev")) nouvelleTache({ pour: iso }); },
         oncontextmenu: (ev) => { if (estTel() || ev.target.closest(".ev")) return; ev.preventDefault(); menuCreation(ev.clientX, ev.clientY, iso, ""); }, "aria-label": `${jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}, ${liste.length} élément(s)`,
         onclick: (ev) => { if (ev.currentTarget.dataset.bloque) return; jourCalendrier = iso; afficherCalendrier(); if (estTel()) $("calPanneau").scrollIntoView({ behavior: "smooth", block: "start" }); } },
@@ -6730,9 +6775,14 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
 
   // plusieurs dossiers déplacés ensemble : vers une autre colonne, chacun garde sa nature ;
   // dans la même colonne, ils prennent la nature de la section visée
-  function deplacerSelection(cible, statutSeul) {
+  async function deplacerSelection(cible, statutSeul) {
     const statut = cible.charAt(0);
     const avant = [];
+    const essai = [...selectionMulti].map((i) => donnees.dossiers[i]).filter(Boolean).map((d) => {
+      const nouveau = (statutSeul || etapeDe(d) !== statut) ? `${statut}. ${sansNumero(d.type)}` : cible;
+      return [d, { ...d, type: nouveau, precision: d.type.charAt(0) !== statut ? "" : d.precision }];
+    }).filter(([d, x]) => x.type !== d.type);
+    if (!(await validerDossiers(essai, { titre: `Déplacer ${pluriel(essai.length, "dossier")} ?`, ok: "Déplacer" }))) { afficherTout(); return; }
     for (const i of selectionMulti) {
       const d = donnees.dossiers[i];
       if (!d) continue;
@@ -6754,8 +6804,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
   // ---- clic droit : collaborateurs et demandeur, en rangées de cases ----
   // modifier : (dossier) => change le dossier ; renvoie le nombre de dossiers changés, avec Annuler
-  function appliquerAuxDossiers(indices, modifier, message, annulerAussi = null) {
+  async function appliquerAuxDossiers(indices, modifier, message, annulerAussi = null) {
     const avant = [];
+    const essai = indices.map((i) => donnees.dossiers[i]).filter(Boolean).map((d) => { const x = { ...d }; modifier(x); return [d, x]; });
+    if (!(await validerDossiers(essai))) { if (annulerAussi) annulerAussi(); afficherTout(); return; }
     for (const i of indices) {
       const d = donnees.dossiers[i];
       if (!d) continue;
@@ -6822,8 +6874,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return [el("div", { class: "sep" }), el("div", { class: "titre" }, "🏛 Demandeur"), zone];
   }
 
-  function archiverSelection(archiver) {
+  async function archiverSelection(archiver) {
     const changes = [];
+    const essai = [...selectionMulti].map((i) => donnees.dossiers[i]).filter((d) => d && !!d.archives !== archiver).map((d) => [d, { ...d, archives: archiver }]);
+    if (!(await validerDossiers(essai, { titre: `${archiver ? "Archiver" : "Désarchiver"} ${pluriel(essai.length, "dossier")} ?`, ok: archiver ? "Archiver" : "Désarchiver" }))) return;
     for (const i of selectionMulti) {
       const d = donnees.dossiers[i];
       if (!d || !!d.archives === archiver) continue;
@@ -6907,11 +6961,44 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
   const valeurLisible = (v) => v === true ? "oui" : v === false ? "non" : v === null || v === "" ? "vide" : estIso(String(v)) ? fmtDate(v) : (typeof v === "number" ? euros(v) : (String(v).length > 60 ? String(v).slice(0, 60) + "…" : String(v)));
 
-  function changerType(i, nouveau) {
+  // ---- valider chaque modification de dossier : une fenêtre dit ce qui va changer (sauf dans l'agenda) ----
+  //   Réglable : Apparence › Mise en page › « Valider les modifications de dossiers ».
+  const validerActif = () => window.lireApparence().page.valider !== false;
+  const nomEtape = (t) => (ETAPES.find(([k]) => k === String(t || "").charAt(0)) || [, ""])[1];
+  function differences(avant, apres) {
+    const l = [];
+    for (const [cle, lib] of Object.entries(SUIVIS)) {
+      const a = avant ? avant[cle] ?? "" : "", b = apres[cle] ?? "";
+      if (String(a) === String(b) || (a === "" && (b === null || b === false)) || ((a === null || a === false) && b === "")) continue;
+      if (!avant) { if (b !== "" && b !== null && b !== false && cle !== "type") l.push(`${lib} : ${valeurLisible(b)}`); continue; }
+      if (cle === "type") {
+        if (nomEtape(a) !== nomEtape(b)) l.push(`Étape : ${nomEtape(a) || "vide"} → ${nomEtape(b)}`);
+        if (sansNumero(a) !== sansNumero(b)) l.push(`Nature : ${sansNumero(a) || "vide"} → ${sansNumero(b)}`);
+        continue;
+      }
+      l.push(`${lib} : ${valeurLisible(a)} → ${valeurLisible(b)}`);
+    }
+    if (!avant) l.unshift(`Étape : ${nomEtape(apres.type)} · ${sansNumero(apres.type)}`);
+    return l;
+  }
+  // paires : [[avant (null pour un nouveau dossier), après]] → vrai si on valide (ou si la validation est coupée)
+  async function validerDossiers(paires, opts = {}) {
+    if (!validerActif()) return true;
+    const blocs = paires.map(([a, d]) => [d, differences(a, d)]).filter(([, l]) => l.length);
+    if (!blocs.length) return true;
+    let msg;
+    if (blocs.length === 1) { const [d, l] = blocs[0]; msg = `${d.client} · ${d.tache || sansNumero(d.type)}\n\n• ${l.join("\n• ")}`; }
+    else msg = blocs.slice(0, 10).map(([d, l]) => `• ${d.client} : ${l.join(" ; ")}`).join("\n") + (blocs.length > 10 ? `\n… et ${blocs.length - 10} autres dossiers` : "");
+    return demander(msg, { titre: opts.titre || (blocs.length > 1 ? `Modifier ${blocs.length} dossiers ?` : "Modifier ce dossier ?"), ok: opts.ok || "Valider", annuler: opts.annuler || "Annuler" });
+  }
+
+  async function changerType(i, nouveau) {
     const d = donnees.dossiers[i];
     const ancien = d.type || "";
     if (nouveau === ancien || nouveau == null) return;
     const avantChangement = { ...d };
+    const apres = { ...d, type: nouveau, precision: ancien.charAt(0) !== nouveau.charAt(0) ? "" : d.precision };
+    if (!(await validerDossiers([[avantChangement, apres]]))) { afficherTout(); return; }
     d.type = nouveau;
     if (ancien.charAt(0) !== nouveau.charAt(0)) d.precision = "";  // « en attente du notaire » n'a plus de sens une fois terminé
     noterHistorique(d, avantChangement);
@@ -9893,6 +9980,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // « analyse » -> « Analyse » si la nature existe déjà, sinon la nouvelle nature telle quelle
   const natureNormale = (x) => { const t = String(x || "").replace(/\s+/g, " ").trim(); return naturesConnues().find((n) => n.toLowerCase() === t.toLowerCase()) || (t.charAt(0).toLocaleUpperCase("fr") + t.slice(1)); };
   async function enregistrerDossier() {
+    const enFermeture = fermetureEnCours;
     const v = lireFormulaire($("corpsDossier"));
     if (v.notaire && v.societe !== undefined && v.societe.trim()) rattacherDemandeur(v.notaire, v.societe);
     delete v.societe;
@@ -9916,6 +10004,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       archives: v.archives, commentaire: v.commentaire
     });
     if (!d.id) d.id = nouvelId();
+    if (!(await validerDossiers([[avant, d]], { titre: avant ? "Enregistrer les modifications ?" : "Créer ce dossier ?", ok: avant ? "Enregistrer" : "Créer", annuler: enFermeture ? "Ne pas enregistrer" : "Revenir" }))) {
+      if (enFermeture) terminerFeuille();
+      return;
+    }
     const rdvChange = !avant || avant.rdv !== d.rdv || (avant.rdv_heure || "") !== (d.rdv_heure || "") || String(avant.rdv_duree || "") !== String(d.rdv_duree || "");
     noterHistorique(d, avant);
     if (enCours >= 0) donnees.dossiers[enCours] = d; else donnees.dossiers.push(d);
@@ -10055,6 +10147,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   let finFeuilleDemandee = false;
   // renvoie vrai si la fiche s'est enregistrée et fermée d'elle-même ; faux s'il n'y avait rien à enregistrer ;
   // null si l'enregistrement a échoué (champ manquant…) : la fiche reste ouverte
+  var fermetureEnCours = false;   // vrai pendant l'enregistrement fait en fermant une fiche (clic à côté, Échap…)
   function enregistrerAvantFermeture() {
     validerBrouillonsJournal();
     const f = document.querySelector(".feuille.ouverte");
@@ -10062,7 +10155,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const bouton = $(FICHES_AUTO[f.id]);
     if (!bouton || bouton.hidden || f.dataset.photo === undefined || f.dataset.photo === photoChamps(f)) return false;
     finFeuilleDemandee = false;
-    bouton.click();
+    fermetureEnCours = true;
+    try { bouton.click(); } finally { fermetureEnCours = false; }
     if (finFeuilleDemandee) return true;
     // enregistré sans se fermer (ex. une prestation qui revient à la liste) : on prend la nouvelle photo
     if (f.classList.contains("ouverte") && f.dataset.photo !== photoChamps(f)) return null;
@@ -10265,8 +10359,26 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("enregistrerDossier").addEventListener("click", enregistrerDossier);
   $("enregistrerClient").addEventListener("click", enregistrerClient);
 
+  // ---- la taille de tout (texte, boutons, marges) : A− / A+, de 70 % à 150 % ; vaut aussi pour les autres applis ----
+  const TAILLES = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 130, 140, 150];
+  function changerTaille(sens) {
+    const a = window.lireApparence(), t = +a.page.taille || 100;
+    const n = sens === 0 ? 100 : (sens > 0 ? TAILLES.find((x) => x > t) : [...TAILLES].reverse().find((x) => x < t)) || t;
+    try { localStorage.setItem("suivi-gp-apparence", JSON.stringify({ ...a, page: { ...a.page, taille: n } })); } catch (e) {}
+    window.appliquerApparence();
+    if (donnees) afficherTout();
+    return n;
+  }
+  function curseurTaille(apres) {
+    const t = +window.lireApparence().page.taille || 100;
+    const val = el("button", { type: "button", class: "tt-val", title: "Revenir à 100 %", onclick: (e) => { e.stopPropagation(); val.textContent = changerTaille(0) + " %"; if (apres) apres(); } }, t + " %");
+    const b = (sens, txt, titre) => el("button", { type: "button", class: "tt-btn", title: titre, "aria-label": titre,
+      onclick: (e) => { e.stopPropagation(); val.textContent = changerTaille(sens) + " %"; if (apres) apres(); } }, txt);
+    return el("div", { class: "tt" }, b(-1, "A−", "Plus petit"), val, b(1, "A+", "Plus grand"));
+  }
   function ouvrirMenu() {
     majAlerte();
+    $("menuTaille").replaceChildren(curseurTaille());
     $("btnActualiser").hidden = !github && !githubEnPause();
     $("btnActualiser").textContent = githubEnPause() ? "Reprendre la synchronisation GitHub" : "Recharger depuis GitHub";
     $("menu").classList.add("ouvert");
@@ -10458,6 +10570,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         const l = document.createElement("link"); l.id = "police-" + cle; l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + pol[1] + "&display=swap"; document.head.appendChild(l);
       }
       const tel = estTel();
+      const reglageTaille = () => el("div", { class: "champ" }, el("label", null, "Taille de l’affichage"), curseurTaille(() => { const c = $("corpsApparence"), h = c.scrollTop; dessiner(); c.scrollTop = h; }),
+        el("p", { class: "aide" }, "Tout grandit ou rapetisse : texte, boutons, marges. Aussi dans le menu ⋯, et pour les autres applis (si elles suivent l’apparence du Suivi)."));
       const reglage = (lib, cle, options, aide) => el("div", { class: "champ" }, el("label", null, lib),
         el("div", { class: "app-choix" }, options.map(([v, nom]) => el("button", { type: "button", class: "collab" + (String(a.page[cle]) === String(v) ? " choisi" : ""),
           onclick: () => garderPage({ [cle]: v }) }, nom))), aide ? el("p", { class: "aide" }, aide) : null);
@@ -10493,7 +10607,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         el("h4", { class: "rubrique" }, "Police des titres"),
         casesPolice("titres", ["garamond", "playfair", "lora", "georgia", "inter", "nunito"]),
         el("h4", { class: "rubrique" }, "Mise en page"),
-        reglage("Taille de l’affichage", "taille", [[90, "Petite"], [100, "Normale"], [110, "Grande"], [125, "Très grande"]]),
+        reglageTaille(),
+        reglage("Valider les modifications de dossiers", "valider", [[true, "Oui"], [false, "Non"]], "Une fenêtre dit ce qui va changer avant d’enregistrer un dossier, un déplacement dans le Kanban ou une modification en lot (pas dans l’agenda)."),
         reglage("Tuiles par ligne", "tuiles", [[2, "2"], [3, "3"], [4, "4"]], "Tâches, rendez-vous, clients et cartes du Kanban sur le téléphone ; agenda et Kanban sur l’ordinateur."),
         tel ? null : reglage("Colonnes de l’accueil", "accCols", [[2, "2"], [3, "3"], [4, "4"]]),
         tel ? null : reglage("Menu des onglets", "menu", [["gauche", "À gauche"], ["haut", "En haut"]]),
