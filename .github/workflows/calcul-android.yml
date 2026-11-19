@@ -1,10 +1,10 @@
-# Construit l'appli Android « Calcul en lignes » (dossier « calcul ») et la publie dans la version « calcul » du dépôt :
+# Construit l'appli Android « Calcul en lignes » (dossier « calcul/appli » : elle ouvre la page calcul/ du site) et la publie dans la version « calcul » du dépôt :
 #   https://github.com/Yvanov40/public/releases/download/calcul/calcul-en-lignes.apk
 name: Calcul Android
 on:
   push:
     branches: [main]
-    paths: ["calcul/**", ".github/workflows/calcul-android.yml"]
+    paths: ["calcul/appli/**", ".github/workflows/calcul-android.yml"]
   workflow_dispatch:
 permissions:
   contents: write
@@ -22,7 +22,7 @@ jobs:
         run: |
           if [ -n "$CLE" ]; then echo "$CLE" | base64 -d > "$RUNNER_TEMP/appli.keystore"; echo "APPLI_KEYSTORE_FICHIER=$RUNNER_TEMP/appli.keystore" >> "$GITHUB_ENV"; fi
       - name: Préparer Capacitor
-        working-directory: calcul
+        working-directory: calcul/appli
         env: { NUMERO: "${{ github.run_number }}" }
         run: |
           npm ci
@@ -31,17 +31,17 @@ jobs:
           npx cap sync android
           node preparer-android.js
       - name: Construire l'APK
-        working-directory: calcul/android
+        working-directory: calcul/appli/android
         env: { APPLI_KEYSTORE_MDP: "${{ secrets.APPLI_KEYSTORE_MDP }}", APPLI_KEYSTORE_ALIAS: "${{ secrets.APPLI_KEYSTORE_ALIAS }}" }
         run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
       - name: Renommer
-        run: cp calcul/android/app/build/outputs/apk/release/app-release.apk calcul-en-lignes.apk
+        run: cp calcul/appli/android/app/build/outputs/apk/release/app-release.apk calcul-en-lignes.apk
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: calcul
           name: "Calcul en lignes — Android"
           body: |
-            Calculatrice en lignes, entre le tableur et la calculatrice de téléphone.
+            Calculatrice en lignes, entre le tableur et la calculatrice de téléphone. L'appli ouvre la page du site : elle se met à jour d'elle-même.
             Sur le téléphone : télécharger « calcul-en-lignes.apk », l'ouvrir, autoriser l'installation depuis le navigateur si Android le demande.
           files: calcul-en-lignes.apk
           make_latest: false
