@@ -9899,7 +9899,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (!v.client) { informer("Indiquez le nom du client."); return; }
     if (!String(v.nature || "").trim()) { informer("Indiquez la nature du dossier (Analyse, Acte… ou une nouvelle)."); return; }
     // vider depuis un dossier ce qui appartient au client (◆) : on prévient, c'est effacé de sa fiche aussi
-    const vides = [["commentaire_client", "le commentaire"], ["coordonnees_client", "les coordonnées"]].filter(async ([n]) => {
+    const vides = [["commentaire_client", "le commentaire"], ["coordonnees_client", "les coordonnées"]].filter(([n]) => {
       const z = $("corpsDossier").querySelector(`[name="${n}"]`); return z && (z.dataset.depart || "").trim() && !z.value.trim();
     }).map(([, lib]) => lib);
     if (vides.length && !(await demander(`Vous videz ${vides.join(" et ")} du client ${v.client}.\n\nCes rubriques (◆) sont celles de sa fiche : elles seront effacées de la fiche et de tous ses dossiers.\n\nContinuer ?`, { ok: "Vider", danger: true }))) return;
