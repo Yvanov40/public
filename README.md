@@ -87,8 +87,10 @@ Le même projet contient la version iPhone (`application/ios`). Elle se construi
 
 ## Application pour ordinateur (Windows et Mac)
 
-Le dossier `bureau/` contient « Mes applis » pour ordinateur (Electron) : l'accueil, puis chaque appli dans sa fenêtre
-(taille et place gardées), exports par « Enregistrer sous », impression du système, liens extérieurs dans le navigateur.
+Le dossier `bureau/` contient « Mes applis » pour ordinateur (Electron) : une seule fenêtre, ouverte en grand ; l'appli choisie
+occupe tout l'espace et la liste des applis glisse depuis la gauche (petite flèche en haut à gauche, ou souris contre le bord gauche ;
+📌 pour la garder ouverte ; Ctrl + 1 … 6). Chaque appli ouverte reste chargée. Exports par « Enregistrer sous », impression du système,
+liens extérieurs dans le navigateur (`main.js`, `cadre.html`, `preload.js`).
 GitHub Actions (`.github/workflows/bureau.yml`) la construit à chaque modification du dossier :
 - Windows : https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Windows.exe
 - Mac : https://github.com/Yvanov40/public/releases/download/bureau/Mes-applis-Mac.dmg

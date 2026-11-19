@@ -1,7 +1,7 @@
 {
   "name": "mes-applis",
   "productName": "Mes applis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Mes applis : Suivi, Audit, Succession, Plus-value, Investissement, Révision — pour Windows et Mac.",
   "author": "Yvanov40",
@@ -18,11 +18,41 @@
   "build": {
     "appId": "fr.yvanov.applis",
     "productName": "Mes applis",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "build/icon.png"],
-    "win": { "target": "nsis", "icon": "build/icon.png", "artifactName": "Mes-applis-Windows.${ext}" },
-    "nsis": { "oneClick": true, "perMachine": false, "createDesktopShortcut": true, "createStartMenuShortcut": true, "shortcutName": "Mes applis" },
-    "mac": { "target": { "target": "dmg", "arch": ["universal"] }, "icon": "build/icon.png", "category": "public.app-category.business", "identity": null, "artifactName": "Mes-applis-Mac.${ext}" },
-    "dmg": { "title": "Mes applis" }
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "cadre.html",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png",
+      "artifactName": "Mes-applis-Windows.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mes applis"
+    },
+    "mac": {
+      "target": {
+        "target": "dmg",
+        "arch": [
+          "universal"
+        ]
+      },
+      "icon": "build/icon.png",
+      "category": "public.app-category.business",
+      "identity": null,
+      "artifactName": "Mes-applis-Mac.${ext}"
+    },
+    "dmg": {
+      "title": "Mes applis"
+    }
   }
 }

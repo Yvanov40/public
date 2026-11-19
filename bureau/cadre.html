@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; img-src 'self' https://yvanov40.github.io data:">
+<title>Mes applis</title>
+<style>
+  /* « Mes applis » pour ordinateur : une seule fenêtre ; les applis en plein cadre ;
+     la liste des applis glisse depuis la gauche (petite flèche en haut à gauche, ou souris contre le bord gauche). */
+  :root { --or: #a57d2f; --or-clair: #d4af6c; --bleu: #0c2d39; --bleu-2: #12404f; --creme: #f5efe4; --largeur: 270px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bleu); font: 14px "Segoe UI", system-ui, -apple-system, sans-serif; color: var(--creme); }
+  #scene { position: absolute; inset: 0; transition: left .2s ease; }
+  body.epingle #scene { left: var(--largeur); }
+  webview { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; visibility: hidden; background: #fff; }
+  webview.active { visibility: visible; }
+
+  /* la languette (flèche) et la bande sensible au bord gauche */
+  #languette { position: fixed; z-index: 30; top: 10px; left: 0; width: 16px; height: 34px; border: 0; padding: 0; cursor: pointer;
+    border-radius: 0 9px 9px 0; background: rgba(12, 45, 57, .55); color: var(--creme); font-size: 13px; line-height: 34px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25); transition: width .15s, background .15s, opacity .2s; }
+  #languette:hover { width: 22px; background: var(--bleu); color: var(--or-clair); }
+  #bord { position: fixed; z-index: 25; top: 0; bottom: 0; left: 0; width: 5px; }
+  body.ouvert #languette, body.epingle #languette, body.ouvert #bord, body.epingle #bord { opacity: 0; pointer-events: none; }
+
+  /* le panneau */
+  #panneau { position: fixed; z-index: 40; top: 0; bottom: 0; left: 0; width: var(--largeur); transform: translateX(-102%);
+    background: linear-gradient(180deg, var(--bleu-2), var(--bleu)); box-shadow: 4px 0 24px rgba(0,0,0,.35);
+    display: flex; flex-direction: column; transition: transform .2s ease; }
+  body.ouvert #panneau, body.epingle #panneau { transform: none; }
+  body.epingle #panneau { box-shadow: none; border-right: 1px solid rgba(255,255,255,.08); }
+  #voile { position: fixed; z-index: 35; inset: 0; background: rgba(0,0,0,.18); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  body.ouvert:not(.epingle) #voile { opacity: 1; pointer-events: auto; }
+  .tete { display: flex; align-items: center; gap: 8px; padding: 16px 14px 10px 18px; }
+  .tete h1 { flex: 1; margin: 0; font: 600 20px Georgia, "Times New Roman", serif; color: var(--or-clair); }
+  .outil { border: 0; background: none; color: rgba(245,239,228,.65); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+  .outil:hover { background: rgba(255,255,255,.08); color: var(--creme); }
+  .outil.on { color: var(--or-clair); background: rgba(165,125,47,.18); }
+  nav { flex: 1; overflow: auto; padding: 4px 10px; display: grid; gap: 4px; align-content: start; }
+  .appli { display: grid; grid-template-columns: 38px 1fr; gap: 2px 11px; align-items: center; padding: 9px 10px; border-radius: 12px;
+    border: 0; background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; position: relative; padding-right: 40px; }
+  .appli b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appli img { grid-row: span 2; width: 38px; height: 38px; border-radius: 10px; }
+  .appli b { font-weight: 600; font-size: 14px; }
+  .appli span { font-size: 11.5px; color: rgba(245,239,228,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appli kbd { position: absolute; right: 10px; top: 10px; font: 10.5px system-ui; color: rgba(245,239,228,.35); }
+  .appli:hover { background: rgba(255,255,255,.07); }
+  .appli.active { background: rgba(165,125,47,.22); box-shadow: inset 3px 0 0 var(--or); }
+  .appli.active b { color: var(--or-clair); }
+  .appli.chargee:not(.active)::after { content: ""; position: absolute; left: 4px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--or); }
+  .pied { padding: 10px 18px 14px; font-size: 11.5px; color: rgba(245,239,228,.45); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="voile"></div>
+<div id="bord" title=""></div>
+<button id="languette" title="Mes applis (Ctrl + Maj + A)" aria-label="Afficher la liste des applis">›</button>
+<aside id="panneau" aria-label="Mes applis">
+  <div class="tete">
+    <h1>Mes applis</h1>
+    <button class="outil" id="recharger" title="Recharger l’appli (Ctrl + R)" aria-label="Recharger">⟳</button>
+    <button class="outil" id="epingler" title="Garder la liste ouverte" aria-label="Garder la liste ouverte">📌</button>
+  </div>
+  <nav id="liste"></nav>
+  <div class="pied">Survolez le bord gauche ou touchez la flèche pour revenir ici.<br>Ctrl + 1 … 6 : passer d’une appli à l’autre.</div>
+</aside>
+<script>
+  const SITE = "https://yvanov40.github.io/public/";
+  const APPLIS = [
+    { id: "suivi", nom: "Suivi des dossiers", desc: "Dossiers, clients, agenda, notes", icone: "suivi/icone-192.png" },
+    { id: "audit", nom: "Audit civil et fiscal", desc: "Transmission, démembrement, assurance-vie", icone: "audit/icon-192.png" },
+    { id: "succession", nom: "Simulateur de succession", desc: "Options du conjoint survivant", icone: "succession/icone-192.png" },
+    { id: "pvi", nom: "Plus-value immobilière", desc: "Abattements, exonérations, surtaxe", icone: "pvi/icone-192.png" },
+    { id: "immo", nom: "Investissement immobilier", desc: "Nu, LMNP, SCI à l’IR ou à l’IS", icone: "immo/icone-192.png" },
+    { id: "revision", nom: "Révision de la base", desc: "QCM, vrai ou faux, fiches", icone: "revision/icons/icon-192.png" }
+  ];
+  const lire = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
+  const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const scene = document.getElementById("scene"), liste = document.getElementById("liste");
+  const vues = new Map();
+  let active = null;
+
+  // une vue par appli, créée à la première ouverture puis gardée (on retrouve l'appli là où on l'avait laissée)
+  function vue(id) {
+    if (vues.has(id)) return vues.get(id);
+    const w = document.createElement("webview");
+    w.setAttribute("src", SITE + id + "/");
+    w.setAttribute("allowpopups", "");
+    w.addEventListener("page-title-updated", (e) => { if (active === id) document.title = e.title; });
+    scene.append(w);
+    vues.set(id, w);
+    return w;
+  }
+  function ouvrir(id, url) {
+    if (!APPLIS.some((a) => a.id === id)) id = "suivi";
+    const w = vue(id);
+    if (url && w.getURL && w.isConnected) { try { if (w.getURL() !== url) w.loadURL(url); } catch (e) { w.setAttribute("src", url); } }
+    for (const [k, v] of vues) v.classList.toggle("active", k === id);
+    active = id; ecrire("appli-active", id);
+    try { document.title = w.getTitle() || "Mes applis"; } catch (e) { document.title = "Mes applis"; }
+    dessiner();
+    fermer();
+    setTimeout(() => w.focus(), 50);
+  }
+  function dessiner() {
+    liste.replaceChildren(...APPLIS.map((a, i) => {
+      const b = document.createElement("button");
+      b.className = "appli" + (a.id === active ? " active" : "") + (vues.has(a.id) ? " chargee" : "");
+      b.innerHTML = `<img alt=""><b></b><span></span><kbd>Ctrl ${i + 1}</kbd>`;
+      b.querySelector("img").src = SITE + a.icone;
+      b.querySelector("b").textContent = a.nom;
+      b.querySelector("span").textContent = a.desc;
+      b.title = a.desc;
+      b.addEventListener("click", () => ouvrir(a.id));
+      return b;
+    }));
+  }
+
+  // ouvrir / fermer le panneau : la flèche, le bord gauche (survol), Échap, un clic à côté
+  let minuteur = null;
+  const ouvrirPanneau = () => { clearTimeout(minuteur); document.body.classList.add("ouvert"); };
+  function fermer() { clearTimeout(minuteur); document.body.classList.remove("ouvert"); }
+  document.getElementById("languette").addEventListener("click", ouvrirPanneau);
+  document.getElementById("bord").addEventListener("mouseenter", () => { clearTimeout(minuteur); minuteur = setTimeout(ouvrirPanneau, 140); });
+  document.getElementById("bord").addEventListener("mouseleave", () => { if (!document.body.classList.contains("ouvert")) clearTimeout(minuteur); });
+  const panneau = document.getElementById("panneau");
+  panneau.addEventListener("mouseleave", () => { if (document.body.classList.contains("epingle")) return; clearTimeout(minuteur); minuteur = setTimeout(fermer, 380); });
+  panneau.addEventListener("mouseenter", () => clearTimeout(minuteur));
+  document.getElementById("voile").addEventListener("click", fermer);
+  document.getElementById("voile").addEventListener("mouseenter", () => { clearTimeout(minuteur); minuteur = setTimeout(fermer, 380); });
+
+  // épingler : la liste reste ouverte et l'appli se range à côté
+  const epingler = document.getElementById("epingler");
+  function majEpingle(v) { document.body.classList.toggle("epingle", v); epingler.classList.toggle("on", v); epingler.title = v ? "Ne plus garder la liste ouverte" : "Garder la liste ouverte"; ecrire("epingle", v ? "1" : ""); }
+  epingler.addEventListener("click", () => { majEpingle(!document.body.classList.contains("epingle")); fermer(); });
+  majEpingle(lire("epingle", "") === "1");
+  document.getElementById("recharger").addEventListener("click", () => { const w = vues.get(active); if (w) w.reload(); fermer(); });
+
+  // ce que demande la fenêtre (menu, raccourcis, liens entre applis)
+  const actuelle = () => vues.get(active);
+  window.cadre.surOrdre((ordre, arg) => {
+    const w = actuelle();
+    if (ordre === "appli") return ouvrir(arg.id, arg.url);
+    if (ordre === "panneau") return document.body.classList.contains("ouvert") ? fermer() : ouvrirPanneau();
+    if (ordre === "numero") { const a = APPLIS[arg]; if (a) ouvrir(a.id); return; }
+    if (!w) return;
+    if (ordre === "imprimer") w.print();
+    else if (ordre === "recharger") w.reload();
+    else if (ordre === "recharger-fort") w.reloadIgnoringCache();
+    else if (ordre === "retour") { if (w.canGoBack()) w.goBack(); }
+    else if (ordre === "zoom") w.setZoomLevel(arg === 0 ? 0 : w.getZoomLevel() + arg);
+    else if (ordre === "outils") w.isDevToolsOpened() ? w.closeDevTools() : w.openDevTools();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") fermer(); });
+
+  ouvrir(lire("appli-active", "suivi"));
+</script>
+</body>
+</html>
