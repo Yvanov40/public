@@ -977,12 +977,12 @@ function renderSelbar(){
     btn('✕',clearSel));
   b.lastChild.setAttribute('aria-label','Tout désélectionner');
 }
-function backspace(){
+function backspace(rep){
   const e=ensureActive(); const a=e.selectionStart, b=e.selectionEnd;
   if(a!==b) e.setRangeText('',a,b,'end');
   else if(a>0) e.setRangeText('',a-1,a,'end');
-  else { if(active>0) mergeUp(); return; }
-  cur().lines[active]=e.value; save(); refresh();
+  else { if(active>0 && !rep) mergeUp(); return false; }   // maintenu : on s'arrête au début de la ligne
+  cur().lines[active]=e.value; save(); refresh(); return true;
 }
 function newLine(){
   const e=ensureActive(), s=cur(), pos=e.selectionStart??e.value.length;
@@ -1238,7 +1238,7 @@ function kbFinish(){
     k.classList.add('down');
     const v=k.dataset.v;
     if(v==='clear'){ k.classList.add('hold'); kb.timer=setTimeout(()=>{ kb.done=true; k.classList.remove('hold','down'); buzz(25); clearAll(); },600); }
-    else if(v==='back'){ kb.timer=setTimeout(()=>{ kb.done=true; backspace(); kb.rep=setInterval(backspace,70); },420); }
+    else if(v==='back'){ kb.timer=setTimeout(()=>{ kb.done=true; if(backspace(true)) kb.rep=setInterval(()=>{ if(!backspace(true)){ clearInterval(kb.rep); kb.rep=null; } },70); },420); }
     else if(ACC[v]) kb.timer=setTimeout(()=>openPop(k),380);
   });
   K.addEventListener('pointermove',e=>{
