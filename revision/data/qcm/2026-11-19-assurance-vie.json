@@ -1,0 +1,651 @@
+{
+ "id": "2026-11-19-assurance-vie",
+ "titre": "Assurance-vie",
+ "fichier": "5 fiches : principes, clause bénéficiaire, 990 I, 757 B, rachat",
+ "fichiers": [
+  "Assurance-vie : Principes généraux",
+  "Assurance-vie : Clause bénéficiaire",
+  "Assurance-vie : Fiscalité en cas de décès : primes versées avant 70 ans (CGI. art. 990 I)",
+  "Assurance-vie : Fiscalité en cas de décès pour les primes versées après 70 ans (CGI. art. 757 B)",
+  "Assurance-vie : Fiscalité en cas de vie (rachat)"
+ ],
+ "date": "2026-11-19",
+ "questions": [
+  {
+   "theme": "Principes généraux",
+   "question": "Sur quel fondement la Cour de cassation a-t-elle confirmé que le capital d'assurance-vie échappe à la succession ?",
+   "choix": [
+    "Le contrat est un simple placement d'épargne",
+    "Les primes sont toujours inférieures à la quotité disponible",
+    "Le contrat comporte un aléa lié à la durée de la vie humaine (Cass. mixte, 23 nov. 2004)",
+    "Le bénéficiaire paie une contrepartie à l'assureur"
+   ],
+   "reponse": 2,
+   "explication": "Ch. mixte, 23 nov. 2004 : le contrat dont les effets dépendent de la durée de la vie humaine comporte un aléa ; c'est une assurance sur la vie, régie par le Code des assurances, hors succession (sauf primes manifestement exagérées)."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "Un créancier du souscripteur peut-il exiger le rachat d'un contrat d'assurance-vie en cours ?",
+   "choix": [
+    "Seulement si le contrat a plus de 8 ans",
+    "Oui, comme pour n'importe quel compte bancaire",
+    "Oui, dès que la dette dépasse 15 000 €",
+    "Non, en principe : le souscripteur n'a qu'une créance sur l'assureur et le rachat est un droit personnel"
+   ],
+   "reponse": 3,
+   "explication": "Principe d'insaisissabilité en cours de contrat (C. ass. L. 132-14) ; des exceptions existent (dettes fiscales et envers un comptable public, URSSAF, enquête pénale…) et les primes excessives restent attaquables."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "De quel délai dispose le souscripteur pour renoncer au contrat après en avoir été informé de la conclusion ?",
+   "choix": [
+    "2 mois",
+    "15 jours calendaires",
+    "14 jours ouvrés",
+    "30 jours calendaires"
+   ],
+   "reponse": 3,
+   "explication": "C. ass. L. 132-5-1 : 30 jours calendaires (week-ends et fériés compris). L'assureur rembourse alors toutes les sommes versées dans les 30 jours de la réception de la renonciation."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "En cas de rachat total, dans quel délai l'assureur doit-il verser les sommes ?",
+   "choix": [
+    "15 jours",
+    "2 mois à compter de la demande",
+    "1 mois après réception des pièces",
+    "6 mois"
+   ],
+   "reponse": 1,
+   "explication": "L'assureur ne peut refuser le rachat total et doit payer dans les 2 mois, faute de quoi des intérêts de retard courent. Le rachat total vaut révocation du bénéficiaire, sauf s'il avait accepté (son accord est alors requis)."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "Après combien d'années d'ancienneté l'assureur ne peut-il plus appliquer d'indemnité de rachat (en principe plafonnée à 5 %) ?",
+   "choix": [
+    "Jamais : elle est toujours possible",
+    "4 ans",
+    "10 ans",
+    "8 ans"
+   ],
+   "reponse": 2,
+   "explication": "C. ass. R. 132-5-3 : la valeur de rachat peut être diminuée d'une indemnité plafonnée à 5 %, qui ne peut plus être réclamée après 10 ans (sauf cas particuliers d'UC non cotées)."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "Quel est l'intérêt fiscal d'une avance sur police par rapport à un rachat partiel ?",
+   "choix": [
+    "Aucun : elle est imposée comme un rachat",
+    "L'avance n'est pas imposable (sauf abus de droit), même dans les 8 premières années",
+    "L'avance bénéficie d'un PFU réduit à 7,5 %",
+    "L'avance est exonérée seulement après 70 ans"
+   ],
+   "reponse": 1,
+   "explication": "L'avance est un prêt de l'assureur : ni impôt sur le revenu ni prélèvements sociaux, sauf si l'administration démontre un abus de droit. Son montant ne peut dépasser la valeur de rachat."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "Époux communs en biens, décès depuis le 1er janvier 2016 : comment est traité fiscalement le contrat non dénoué de l'époux survivant, financé par des fonds communs ?",
+   "choix": [
+    "Il est soumis à l'article 990 I",
+    "Sa totalité est taxée dans la succession du prédécédé",
+    "Il n'entre pas dans l'actif de succession imposable du prédécédé (RM Ciot), même s'il est commun civilement",
+    "La moitié de sa valeur de rachat est taxée dans la succession du prédécédé"
+   ],
+   "reponse": 2,
+   "explication": "RM Ciot (23 fév. 2016) : civilement la valeur de rachat est commune, mais fiscalement elle n'intègre pas la succession du premier décédé ; le contrat sera taxé au dénouement, au second décès."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "Quelle différence majeure distingue un contrat de capitalisation d'un contrat d'assurance-vie ?",
+   "choix": [
+    "Il n'est pas dénoué par le décès du souscripteur : il se transmet dans la succession",
+    "Il ne peut pas faire l'objet d'avances",
+    "Il ne peut pas être investi en unités de compte",
+    "Sa fiscalité en cas de rachat est différente"
+   ],
+   "reponse": 0,
+   "explication": "Même fiscalité des rachats, mais le contrat de capitalisation (pas d'aléa) n'est pas dénoué au décès : il fait partie de la succession et y est taxé intégralement."
+  },
+  {
+   "theme": "Principes généraux",
+   "question": "Contrats en déshérence : que deviennent les sommes non réclamées ?",
+   "choix": [
+    "Acquises à l'État dès le décès",
+    "Versées aux héritiers légaux au bout de 2 ans",
+    "Acquises à l'assureur au bout de 5 ans",
+    "Transférées à la Caisse des dépôts 10 ans après la connaissance du décès, puis acquises à l'État 20 ans plus tard"
+   ],
+   "reponse": 3,
+   "explication": "Loi Eckert : sans réclamation 10 ans après que l'assureur a eu connaissance du décès, transfert à la CDC ; à défaut de réclamation 20 ans après le dépôt, les sommes reviennent à l'État."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Que se passe-t-il s'il n'existe aucun bénéficiaire déterminé au décès de l'assuré ?",
+   "choix": [
+    "Le capital est versé à l'État",
+    "Le capital reste soumis au 990 I ou au 757 B",
+    "Le capital entre dans la succession et subit les droits de succession, quel que soit l'âge des versements",
+    "Le contrat est prorogé jusqu'à la désignation d'un bénéficiaire"
+   ],
+   "reponse": 2,
+   "explication": "C. ass. L. 132-11 : faute de bénéficiaire déterminé, le capital fait partie de la succession du souscripteur-assuré (réserve, droits de succession selon le barème), quels que soient la date des primes et l'âge."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "La représentation joue-t-elle automatiquement dans une clause bénéficiaire « mes enfants » ?",
+   "choix": [
+    "Oui, mais seulement en cas de renonciation",
+    "Non, elle est interdite en assurance-vie",
+    "Non : elle ne se présume pas et doit être prévue expressément (elle joue en revanche pour la clause « mes héritiers »)",
+    "Oui, comme en droit des successions"
+   ],
+   "reponse": 2,
+   "explication": "En droit des assurances la représentation ne se présume pas (Cass. civ. 2, 22 sept. 2005). Il faut l'écrire, en précisant si elle joue en cas de prédécès, de renonciation ou des deux."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Un petit-enfant reçoit un capital soumis au 757 B en représentation de son père prédécédé. Comment est-il taxé ?",
+   "choix": [
+    "Au taux forfaitaire de 20 %",
+    "Comme un enfant, grâce à la représentation",
+    "Selon son propre lien de parenté avec l'assuré : la représentation ne s'applique pas fiscalement",
+    "Il est exonéré"
+   ],
+   "reponse": 2,
+   "explication": "Fiscalement, pas de représentation pour les bénéficiaires d'assurance-vie (BOI-ENR-DMTG-10-10-20-20 § 240) : chaque bénéficiaire est taxé selon son lien avec l'assuré."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Le bénéficiaire peut-il accepter le bénéfice du contrat du vivant du souscripteur, et à quelles conditions (contrat à titre gratuit) ?",
+   "choix": [
+    "Oui, avec l'accord du souscripteur, par avenant ou acte notifié à l'assureur, au plus tôt 30 jours après l'information de la conclusion",
+    "Oui, tacitement, en payant une prime",
+    "Oui, seul, par simple lettre à l'assureur",
+    "Non, jamais avant le décès"
+   ],
+   "reponse": 0,
+   "explication": "C. ass. L. 132-9 II (depuis le 18 déc. 2007) : acceptation avec l'accord du souscripteur, par avenant tripartite ou acte authentique/sous seing privé notifié, pas avant 30 jours. L'acceptation tacite n'est plus possible du vivant du souscripteur."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Une fois le bénéficiaire acceptant, que ne peut plus faire seul le souscripteur ?",
+   "choix": [
+    "Arbitrer entre supports",
+    "Verser de nouvelles primes",
+    "Consulter la valeur de rachat",
+    "Racheter, demander une avance ou modifier la désignation sans l'accord du bénéficiaire"
+   ],
+   "reponse": 3,
+   "explication": "L'acceptation rend la désignation irrévocable (sauf exceptions : révocation des libéralités, inexécution des charges…) et bloque rachat et avance sans l'accord du bénéficiaire acceptant."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Le souscripteur modifie sa clause par testament sans en informer l'assureur. La modification est-elle valable ?",
+   "choix": [
+    "Non, l'assureur doit avoir été informé avant le décès",
+    "Oui (Cass. civ. 2e, 3 avr. 2025), mais l'assureur de bonne foi qui a payé le bénéficiaire apparent est libéré",
+    "Non, une désignation faite sur le bulletin ne peut être modifiée que par avenant",
+    "Oui, et l'assureur doit payer une seconde fois le vrai bénéficiaire"
+   ],
+   "reponse": 1,
+   "explication": "Aucun parallélisme des formes ni information de l'assureur n'est requis. Mais l'assureur de bonne foi qui paie le bénéficiaire apparent est libéré : le vrai bénéficiaire se retourne contre celui-ci."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Dans une clause « mon conjoint », qui est visé en principe ?",
+   "choix": [
+    "Le conjoint marié",
+    "L'époux au jour de la souscription, même divorcé ensuite",
+    "Le concubin notoire",
+    "Le conjoint marié ou le partenaire de PACS"
+   ],
+   "reponse": 0,
+   "explication": "La notion de conjoint s'entend en principe de l'époux marié (le juge peut rechercher une autre volonté). Mieux vaut désigner nommément le partenaire ou le concubin."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Les héritiers mettent en demeure le bénéficiaire de se prononcer. Que se passe-t-il s'il ne répond pas ?",
+   "choix": [
+    "Rien : il peut accepter pendant 10 ans",
+    "Après 3 mois, son silence vaut renonciation",
+    "Après 1 mois, il est réputé avoir accepté",
+    "Le capital est consigné indéfiniment"
+   ],
+   "reponse": 1,
+   "explication": "C. ass. L. 132-9 : les héritiers peuvent mettre le bénéficiaire en demeure ; il a 3 mois pour accepter, à défaut son silence équivaut à une renonciation."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Que dire de la renonciation du bénéficiaire au capital décès ?",
+   "choix": [
+    "Elle peut être partielle et vaut renonciation à la succession",
+    "Elle exige un acte notarié",
+    "Elle est pure et simple, ne peut être partielle et n'emporte pas renonciation à la succession",
+    "Elle est impossible une fois l'assuré décédé"
+   ],
+   "reponse": 2,
+   "explication": "La renonciation ne demande pas de forme particulière (courrier conseillé), ne peut être partielle, et est indépendante de la succession (C. ass. L. 132-8 al. 5). Pour un mineur : autorisation du juge."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Clause démembrée sans remploi prévu : comment l'usufruitier perçoit-il les fonds ?",
+   "choix": [
+    "En quasi-usufruit : il en dispose librement, le nu-propriétaire a une créance de restitution sur sa succession",
+    "Il les partage obligatoirement avec le nu-propriétaire",
+    "Les fonds sont consignés jusqu'à son décès",
+    "Il ne touche que les intérêts, le capital restant chez l'assureur"
+   ],
+   "reponse": 0,
+   "explication": "À défaut de précision, quasi-usufruit sur les capitaux nets de prélèvements sociaux. Au décès de l'usufruitier, la créance de restitution est un passif de sa succession : double transmission en franchise."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Comment apprécie-t-on le caractère « manifestement exagéré » des primes ?",
+   "choix": [
+    "Selon l'origine des fonds versés",
+    "Dès que les primes dépassent 50 % du patrimoine",
+    "Au jour du décès, selon la réserve héréditaire",
+    "Au jour de chaque versement, selon son importance au regard du patrimoine et son utilité pour le souscripteur"
+   ],
+   "reponse": 3,
+   "explication": "Critères jurisprudentiels (Cass. mixte 23 nov. 2004) : importance de la prime par rapport aux facultés (âge, patrimoine, revenus) et utilité de l'opération, appréciées à chaque versement. La réserve héréditaire n'est pas un critère."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "Quels intérêts de retard l'assureur doit-il quand il tarde à verser le capital décès au-delà des délais légaux ?",
+   "choix": [
+    "Le taux légal majoré de moitié",
+    "Rien : seul le capital est dû",
+    "Le taux du fonds en euros",
+    "Le double du taux légal pendant 2 mois, puis le triple"
+   ],
+   "reponse": 3,
+   "explication": "C. ass. L. 132-23-1 : intérêts de plein droit au double du taux légal pendant 2 mois, puis au triple. Ces intérêts ne sont imposables ni à l'IR, ni au 757 B, ni au 990 I."
+  },
+  {
+   "theme": "Clause bénéficiaire",
+   "question": "De combien de temps les bénéficiaires disposent-ils pour réclamer le capital à l'assureur ?",
+   "choix": [
+    "30 ans",
+    "2 ans",
+    "5 ans",
+    "10 ans"
+   ],
+   "reponse": 3,
+   "explication": "C. ass. L. 114-2 : prescription de 10 ans pour les bénéficiaires, interrompue par une lettre recommandée réclamant le paiement."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Quelles primes relèvent du prélèvement de l'article 990 I ?",
+   "choix": [
+    "Les primes versées avant le 20 novembre 1991",
+    "Seulement les primes des contrats souscrits depuis 1998",
+    "Celles versées avant les 70 ans de l'assuré, depuis le 13 octobre 1998",
+    "Toutes les primes versées après 70 ans"
+   ],
+   "reponse": 2,
+   "explication": "990 I : primes versées depuis le 13 oct. 1998 avant 70 ans (ou à tout âge sur un contrat souscrit avant le 20 nov. 1991). Les primes d'avant le 13 oct. 1998 versées avant 70 ans sont exonérées."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Quel abattement s'applique au titre de l'article 990 I ?",
+   "choix": [
+    "152 500 € par bénéficiaire, tous contrats confondus sur la tête d'un même assuré",
+    "30 500 € pour l'ensemble des bénéficiaires",
+    "152 500 € par contrat",
+    "100 000 € par bénéficiaire en ligne directe"
+   ],
+   "reponse": 0,
+   "explication": "Abattement fixe (non revalorisé) de 152 500 € par bénéficiaire et par assuré : on globalise les capitaux reçus du même assuré au titre de plusieurs contrats."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Décès depuis le 1er juillet 2014 : quel est le tarif du prélèvement 990 I ?",
+   "choix": [
+    "20 % jusqu'à 902 838 €, 25 % au-delà",
+    "35 % sur la totalité",
+    "20 % jusqu'à 700 000 € de part taxable, 31,25 % au-delà",
+    "Le barème des droits de succession selon le lien de parenté"
+   ],
+   "reponse": 2,
+   "explication": "Taux forfaitaires, indépendants du lien de parenté. Le tarif 20 % / 25 % (seuil 902 838 €) valait pour les décès jusqu'au 30 juin 2014."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Sur quelle assiette porte le prélèvement 990 I ?",
+   "choix": [
+    "Les capitaux bruts avant prélèvements sociaux",
+    "Les capitaux décès (valeur de rachat au décès) nets de prélèvements sociaux",
+    "Les seuls intérêts produits par le contrat",
+    "Les primes versées, pour leur montant brut"
+   ],
+   "reponse": 1,
+   "explication": "Assiette = valeur de rachat au jour du décès, nette de prélèvements sociaux (primes versées pour les contrats non rachetables). Si le contrat est en perte, l'assiette est limitée aux capitaux décès."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Un bénéficiaire reçoit 1 200 000 € nets de prélèvements sociaux (décès en 2025, 990 I). Quel est le prélèvement ?",
+   "choix": [
+    "248 594 €",
+    "209 500 €",
+    "216 000 €",
+    "327 344 €"
+   ],
+   "reponse": 0,
+   "explication": "Part taxable : 1 200 000 − 152 500 = 1 047 500 €. Prélèvement : 700 000 × 20 % + 347 500 × 31,25 % = 140 000 + 108 594 = 248 594 €."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Lequel de ces bénéficiaires est exonéré du prélèvement 990 I ?",
+   "choix": [
+    "L'enfant mineur de l'assuré",
+    "Le petit-enfant de l'assuré",
+    "Le partenaire de PACS survivant",
+    "Le concubin survivant"
+   ],
+   "reponse": 2,
+   "explication": "Sont exonérés ceux qui le sont de droits de succession : conjoint et partenaire de PACS (796-0 bis), certains organismes (795, 795-0 A), frère ou sœur remplissant les conditions du 796-0 ter."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Pour savoir si une prime relève du 990 I ou du 757 B, quel âge retient-on ?",
+   "choix": [
+    "L'âge de l'assuré au jour du versement de la prime",
+    "L'âge de l'assuré au jour du décès",
+    "L'âge du bénéficiaire",
+    "L'âge du souscripteur à la souscription"
+   ],
+   "reponse": 0,
+   "explication": "Critère : l'âge de l'assuré (et non du souscripteur) à la date de chaque versement ; en cas de pluralité d'assurés, celui dont le décès dénoue le contrat."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Clause démembrée, conjoint usufruitier de 77 ans (usufruit 30 %), un enfant nu-propriétaire. Quel abattement 990 I pour l'enfant ?",
+   "choix": [
+    "106 750 € (70 % de 152 500 €)",
+    "152 500 €",
+    "Aucun : le nu-propriétaire n'a pas d'abattement",
+    "45 750 €"
+   ],
+   "reponse": 0,
+   "explication": "L'abattement est réparti selon le barème de l'article 669 (âge de l'usufruitier à la création du démembrement) : 152 500 × 70 % = 106 750 € pour le nu-propriétaire."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Le conjoint usufruitier est exonéré. Sa quote-part d'abattement 990 I non utilisée profite-t-elle aux nus-propriétaires ?",
+   "choix": [
+    "Oui, elle s'ajoute à celle des nus-propriétaires",
+    "Non, elle est perdue",
+    "Oui, mais seulement à hauteur de 30 500 €",
+    "Oui, si la clause le prévoit"
+   ],
+   "reponse": 1,
+   "explication": "BOI-TCAS-AUT-60 § 290 : la fraction d'abattement non utilisée par un bénéficiaire exonéré (conjoint, partenaire) ne peut pas bénéficier aux autres bénéficiaires."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Dans quels cas le 990 I s'applique-t-il en matière internationale ?",
+   "choix": [
+    "Si le souscripteur était domicilié en France à la souscription",
+    "Uniquement si le bénéficiaire est français",
+    "Si l'assuré est domicilié fiscalement en France au décès, ou si le bénéficiaire l'est et l'a été 6 ans au cours des 10 dernières années",
+    "Uniquement si le contrat est souscrit en France"
+   ],
+   "reponse": 2,
+   "explication": "Critères appréciés au dénouement (et non plus à la souscription depuis le 1er août 2011). Le prélèvement étant « sui generis », les conventions fiscales ne s'appliquent en principe pas : risque de double imposition."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Contrat « vie-génération » soumis au 990 I : quel avantage supplémentaire ?",
+   "choix": [
+    "Un abattement de 30 500 € en plus",
+    "Un taux réduit de 10 %",
+    "Une exonération totale après 8 ans",
+    "Un abattement d'assiette de 20 % appliqué avant l'abattement de 152 500 €"
+   ],
+   "reponse": 3,
+   "explication": "Pour les contrats vie-génération (33 % au moins d'actifs éligibles : PME/ETI, logement intermédiaire, ESS), la base 990 I est réduite de 20 % avant l'abattement de 152 500 € par bénéficiaire."
+  },
+  {
+   "theme": "Décès · 990 I",
+   "question": "Client de 78 ans titulaire d'un contrat souscrit en 1989 : quel régime pour un nouveau versement sur ce contrat ?",
+   "choix": [
+    "Le 757 B, car il a plus de 70 ans",
+    "Le 990 I, quel que soit son âge : d'où l'intérêt de verser sur ce contrat plutôt que d'en ouvrir un nouveau",
+    "L'exonération totale",
+    "Les droits de succession de droit commun"
+   ],
+   "reponse": 1,
+   "explication": "Les contrats souscrits avant le 20 nov. 1991 échappent au 757 B : les primes versées depuis le 13 oct. 1998 relèvent du 990 I à tout âge. Ne pas le signaler peut constituer un défaut de conseil."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Quel abattement s'applique aux primes versées après 70 ans (article 757 B) ?",
+   "choix": [
+    "152 500 € par bénéficiaire",
+    "30 500 € global, pour l'ensemble des bénéficiaires et des contrats sur la tête d'un même assuré",
+    "30 500 € par bénéficiaire",
+    "30 500 € par contrat"
+   ],
+   "reponse": 1,
+   "explication": "Abattement global et fixe (jamais revalorisé), réparti entre les bénéficiaires taxables au prorata de leur part dans les primes taxables."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Qu'est-ce qui est taxé au titre de l'article 757 B ?",
+   "choix": [
+    "Les primes versées après 70 ans (montant brut) au-delà de 30 500 € ; les produits du contrat sont exonérés",
+    "Le capital décès total, intérêts compris",
+    "Les primes nettes de frais d'entrée",
+    "Les seuls intérêts produits après 70 ans"
+   ],
+   "reponse": 0,
+   "explication": "Assiette = primes brutes (frais d'entrée inclus) versées après le 70e anniversaire. Les intérêts et participations aux bénéfices, même attachés à ces primes, sont exonérés."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Patrick, 71 ans, verse 100 000 € et désigne son fils. Au décès, le contrat vaut 130 000 €. Quelle somme est soumise aux droits de succession ?",
+   "choix": [
+    "99 500 €",
+    "Rien : l'abattement de 100 000 € couvre le tout",
+    "69 500 €",
+    "130 000 €"
+   ],
+   "reponse": 2,
+   "explication": "Primes après 70 ans 100 000 € − abattement 757 B 30 500 € = 69 500 €, puis abattement personnel en ligne directe s'il est disponible et barème des droits de succession. Les 30 000 € de gains sont exonérés."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Comment sont taxées les sommes relevant du 757 B ?",
+   "choix": [
+    "Au taux forfaitaire de 20 %",
+    "Au PFU de 12,8 %",
+    "Aux droits de succession selon le lien de parenté entre l'assuré et le bénéficiaire, avec les abattements personnels",
+    "Au barème de l'impôt sur le revenu"
+   ],
+   "reponse": 2,
+   "explication": "On applique le droit commun des successions (abattements, exonérations, barème), que le bénéficiaire soit héritier ou non ; les abattements déjà utilisés dans la succession ne servent qu'une fois."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Contrat 757 B « en perte » (capitaux décès inférieurs aux primes après 70 ans) : quelle assiette ?",
+   "choix": [
+    "La moyenne entre primes et capitaux",
+    "Zéro : un contrat en perte n'est pas taxé",
+    "Les primes versées, sans changement",
+    "Les capitaux décès versés, sur lesquels s'impute l'abattement de 30 500 €"
+   ],
+   "reponse": 3,
+   "explication": "L'assiette est limitée aux capitaux décès (valeur de rachat au décès), contrat par contrat. La perte peut venir de rachats, d'avances non remboursées ou d'une baisse des UC."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Clause démembrée sous 757 B : conjoint usufruitier (exonéré), enfants nus-propriétaires. Qui profite de l'abattement de 30 500 € ?",
+   "choix": [
+    "Le conjoint seul",
+    "Le conjoint et les enfants selon le barème de l'article 669",
+    "Personne : l'abattement est perdu en cas de démembrement",
+    "Les seuls enfants, taxables, qui se le partagent"
+   ],
+   "reponse": 3,
+   "explication": "Seuls les bénéficiaires imposables se partagent l'abattement de 30 500 € au prorata de leurs droits ; on ne tient pas compte de la part des exonérés."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Le passif de la succession (par exemple une créance de restitution) réduit-il la base taxable au 757 B ?",
+   "choix": [
+    "Oui, mais seulement le passif fiscal",
+    "Non : les capitaux restent hors succession, ils sont seulement taxés au tarif des droits de succession",
+    "Oui, pour son montant total",
+    "Oui, si le bénéficiaire est héritier"
+   ],
+   "reponse": 1,
+   "explication": "Le passif ne s'impute que sur l'actif successoral : il faut donc assez d'actif dans la succession pour l'utiliser. Il ne diminue pas la base 757 B."
+  },
+  {
+   "theme": "Décès · 757 B",
+   "question": "Le titulaire d'un contrat souscrit avant 70 ans change de bénéficiaire après ses 70 ans. Conséquence fiscale ?",
+   "choix": [
+    "Aucune : le régime dépend de l'âge de l'assuré au versement des primes",
+    "Toutes les primes basculent au 757 B",
+    "Le nouveau bénéficiaire perd l'abattement de 152 500 €",
+    "Le contrat perd son antériorité"
+   ],
+   "reponse": 0,
+   "explication": "Le changement de bénéficiaire n'a aucune incidence fiscale ; seuls la date de souscription, la date des versements et l'âge de l'assuré à chaque versement comptent."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Lors d'un rachat partiel, comment calcule-t-on la part d'intérêts imposable ?",
+   "choix": [
+    "Les intérêts sont réputés rachetés en premier",
+    "Rachat − (primes versées non remboursées × rachat ÷ valeur de rachat totale)",
+    "Rachat − total des primes versées",
+    "Valeur de rachat − primes versées"
+   ],
+   "reponse": 1,
+   "explication": "Le rachat contient capital et intérêts dans la même proportion que le contrat. Exemple : primes 16 000 €, valeur 17 000 €, rachat 6 000 € → 6 000 − 16 000 × 6 000 / 17 000 = 352,94 € d'intérêts."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Quel abattement annuel s'applique aux produits d'un rachat sur un contrat de plus de 8 ans ?",
+   "choix": [
+    "152 500 € par bénéficiaire",
+    "4 600 € par contrat",
+    "4 600 € (personne seule) ou 9 200 € (couple soumis à imposition commune), par foyer fiscal et par an",
+    "9 200 € par personne"
+   ],
+   "reponse": 2,
+   "explication": "Abattement par foyer fiscal (y compris enfants rattachés), non reportable d'une année sur l'autre, réservé aux résidents fiscaux français ; il s'applique quel que soit le mode d'imposition."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Produits de primes versées depuis le 27 septembre 2017, contrat de plus de 8 ans, primes nettes totales inférieures à 150 000 € : taux du PFU (hors prélèvements sociaux) ?",
+   "choix": [
+    "15 %",
+    "Exonération totale",
+    "12,8 %",
+    "7,5 %"
+   ],
+   "reponse": 3,
+   "explication": "Après 8 ans : 7,5 % jusqu'à 150 000 € de primes nettes, 12,8 % pour la fraction attachée aux primes au-delà. Avant 8 ans : 12,8 %. Après abattement de 4 600 / 9 200 €."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Comment s'apprécie le seuil de 150 000 € de primes pour le taux de 7,5 % ?",
+   "choix": [
+    "Par souscripteur, sur tous ses contrats d'assurance-vie et de capitalisation, au 31 décembre de l'année précédant le rachat (primes non remboursées)",
+    "Contrat par contrat",
+    "Uniquement sur les primes versées depuis 2017",
+    "Par foyer fiscal, au jour du rachat"
+   ],
+   "reponse": 0,
+   "explication": "Le seuil est personnel (pas par foyer), toutes primes nettes confondues (avant et après 2017, en France et à l'étranger), appréciées au 31/12 de l'année précédente. Tolérance : moitié des primes pour chaque époux co-souscripteurs."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Quel est le taux des prélèvements sociaux sur les produits d'un rachat d'assurance-vie ?",
+   "choix": [
+    "18,6 %, comme les autres placements depuis 2026",
+    "15,5 %",
+    "9,2 %",
+    "17,2 % : l'assurance-vie est exclue de la hausse de CSG de la LFSS 2026"
+   ],
+   "reponse": 3,
+   "explication": "Les produits des contrats (art. 125-0 A) restent à 17,2 % (CSG 9,2 %). En revanche, les rentes viagères issues d'une sortie en rente sont soumises à 18,6 %."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Quand les prélèvements sociaux sont-ils prélevés ?",
+   "choix": [
+    "Chaque année sur le fonds en euros (inscription en compte) ; au rachat ou au dénouement sur les unités de compte",
+    "Uniquement au décès",
+    "Chaque année sur tous les supports",
+    "Uniquement au rachat, pour tous les supports"
+   ],
+   "reponse": 0,
+   "explication": "Fonds euros : « au fil de l'eau » à l'inscription des produits. UC : au rachat ou au dénouement. Si le contrat finit en perte, l'excédent de prélèvements sociaux payés est restitué."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Le souscripteur rachète son contrat dans l'année suivant son licenciement. Que dit la fiscalité ?",
+   "choix": [
+    "Les produits sont exonérés d'impôt sur le revenu, mais restent soumis aux prélèvements sociaux",
+    "Aucune exonération",
+    "Exonération d'impôt et de prélèvements sociaux",
+    "Imposition au PFU réduit de 7,5 %"
+   ],
+   "reponse": 0,
+   "explication": "Licenciement, retraite anticipée, liquidation judiciaire ou invalidité de 2e/3e catégorie (du souscripteur, conjoint ou partenaire) : exonération d'IR si le rachat intervient avant la fin de l'année suivante. Les prélèvements sociaux ne sont exonérés qu'en cas d'invalidité."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Rente viagère prévue dès l'origine : quelle fraction de la rente est imposable si le rentier a 65 ans à l'entrée en jouissance ?",
+   "choix": [
+    "40 %",
+    "50 %",
+    "70 %",
+    "30 %"
+   ],
+   "reponse": 0,
+   "explication": "Barème des rentes à titre onéreux : 70 % (moins de 50 ans), 50 % (50-59), 40 % (60-69), 30 % (plus de 69 ans), au barème de l'IR. Les produits capitalisés jusqu'à la sortie en rente prévue dès l'origine sont exonérés."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Un arbitrage entre fonds en euros et unités de compte est-il imposable ?",
+   "choix": [
+    "Oui, au PFU",
+    "Oui, aux prélèvements sociaux seulement",
+    "Non, ni à l'impôt sur le revenu ni aux prélèvements sociaux",
+    "Oui, s'il a lieu avant 8 ans"
+   ],
+   "reponse": 2,
+   "explication": "Le souscripteur ne détient qu'une créance sur l'assureur : l'arbitrage ne change pas la valeur de rachat et n'entraîne aucune imposition."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Rachat sur un contrat dont la valeur est inférieure aux primes versées : conséquence ?",
+   "choix": [
+    "Aucun intérêt dans le rachat, donc pas d'imposition ; la perte ne s'impute pas sur d'autres revenus",
+    "La perte s'impute sur les plus-values mobilières",
+    "La perte s'impute sur les intérêts d'un autre contrat",
+    "Imposition sur la totalité du rachat"
+   ],
+   "reponse": 0,
+   "explication": "Les primes rachetées sont plafonnées au montant du rachat. La perte n'est imputable ni sur un autre contrat ni sur d'autres revenus (CE 20 mars 2013). Mieux vaut souvent reverser que racheter un contrat en perte."
+  },
+  {
+   "theme": "Rachat",
+   "question": "Primes versées depuis le 27 septembre 2017 : l'option pour le barème progressif de l'IR à la place du PFU…",
+   "choix": [
+    "… se fait contrat par contrat",
+    "… doit être exercée lors du rachat auprès de l'assureur",
+    "… est irrévocable pour toujours",
+    "… est globale pour le foyer et, depuis les revenus 2026, révocable"
+   ],
+   "reponse": 3,
+   "explication": "L'option est exercée dans la déclaration de revenus, globale (tous les revenus soumis au PFU). Irrévocable jusqu'aux revenus 2025, elle devient révocable à compter des revenus 2026. Au rachat, l'assureur ne prélève qu'un acompte (12,8 % ou 7,5 %)."
+  }
+ ]
+}
