@@ -1,0 +1,14 @@
+{
+  "appId": "fr.yvanov.calculenlignes",
+  "appName": "Calcul en lignes",
+  "webDir": "www",
+  "server": {
+    "url": "https://yvanov40.github.io/public/calcul/",
+    "errorPath": "hors-ligne.html"
+  },
+  "android": {
+    "backgroundColor": "#E7EAE5",
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "force"
+  }
+}

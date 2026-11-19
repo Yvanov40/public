@@ -1,8 +1,0 @@
-{
-  "appId": "fr.yvanov.calculenlignes",
-  "appName": "Calcul en lignes",
-  "webDir": "www",
-  "android": {
-    "adjustMarginsForEdgeToEdge": "force"
-  }
-}

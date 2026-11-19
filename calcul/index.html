@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Calcul en lignes</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link id="fontLink" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1037,6 +1039,10 @@ function copy(text,msg){
 
 window.__calc={computeSheet,impotIR,ifiCalc,show};
 window.addEventListener('resize',fitBig);
+// Sur le site (et dans l'appli Android qui l'ouvre) : copie hors ligne et mises à jour automatiques
+if('serviceWorker' in navigator && /\.github\.io$/.test(location.hostname)){
+  try{ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}); }catch(e){}
+}
 applyPrefs();
 renderAll();
 initRemote();
