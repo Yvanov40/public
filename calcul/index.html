@@ -987,7 +987,32 @@ function renderRows(){
   });
   refresh();
 }
+// Renommer un titre (« # Résultat » → « # Résultat fiscal ») renomme les lignes de son bloc
+// qui commencent par l'ancien nom (« Résultat 2026 » → « Résultat fiscal 2026 »).
+let titleSnap=null;
+const escRe=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function syncTitle(){
+  const s=cur(), L=s.lines, i=active, now=i>=0?L[i]:undefined, snap=titleSnap;
+  titleSnap={id:s.id,i,val:now};
+  if(!snap || snap.id!==s.id || snap.i!==i || now===undefined || snap.val===now) return;
+  const t0=(snap.val||'').trim(), t1=now.trim();
+  if(!t0.startsWith('#') || !t1.startsWith('#')) return;
+  const avant=t0.replace(/^#+\s*/,'').trim(), apres=t1.replace(/^#+\s*/,'').trim();
+  if(!avant || !apres || avant===apres) return;
+  const re=new RegExp('^(\\s*)'+escRe(avant)+'(?=[\\s:(]|$)','i');
+  let changed=false;
+  for(let k=i+1;k<L.length;k++){
+    const v=L[k], tv=v.trim();
+    if(tv.startsWith('#')) break;   // titre suivant : fin du bloc
+    const m=tv.match(/^((?:[^:()=<>]|\([^()]*\))+?)\s*:\s*(.+)$/);
+    if(!m || !re.test(m[1])) continue;
+    L[k]=v.replace(re,(m,sp)=>sp+apres); changed=true;
+    const e=inputAt(k); if(e) e.value=L[k];
+  }
+  if(changed) save();
+}
 function refresh(){
+  syncTitle();
   results=computeSheet(cur().lines);
   sheetEl.querySelectorAll('.row').forEach((row,i)=>{
     const r=results[i], res=row.querySelector('.res');
