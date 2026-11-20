@@ -4744,10 +4744,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       const ca = ds.reduce((s, d) => s + (Number(d.ca) || 0), 0);
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       const aFaire = ds.filter((d) => etapeDe(d) === "2").length;
-      return el("button", { class: "m-client" + (aFaire ? " a-faire" : ""), type: "button", onclick: () => ouvrirClient(nom) },
+      return menuSurAppui(el("button", { class: "m-client" + (aFaire ? " a-faire" : ""), type: "button", onclick: (e) => { if (e.currentTarget.dataset.bloque) { delete e.currentTarget.dataset.bloque; return; } ouvrirClient(nom); } },
         el("b", null, nom, badgeTaches(nom)), el("span", { class: "r" }, p ? euros(p - ca) : ""),
         el("span", null, aFaire ? el("em", { class: "marque-a-faire" }, aFaire > 1 ? `${aFaire} à faire` : "À faire") : null,
-          ds.length ? `${aFaire ? " · " : ""}${ds.length} dossier${ds.length > 1 ? "s" : ""}${aFaire ? "" : " · " + etapes}` : "Sans dossier"), el("span", { class: "r or" }, ca ? euros(ca) : ""));
+          ds.length ? `${aFaire ? " · " : ""}${ds.length} dossier${ds.length > 1 ? "s" : ""}${aFaire ? "" : " · " + etapes}` : "Sans dossier"), el("span", { class: "r or" }, ca ? euros(ca) : "")), (x, y) => { clientsChoisis.clear(); clientsChoisis.add(nom); menuClients(x, y); });
     };
     $("mClients").replaceChildren(el("button", { class: "bouton-discret", type: "button", style: "margin:0 0 10px", onclick: nouveauClient }, "＋ Nouveau client"),
       ...decouperParDemandeur(tries.slice(0, max)).flatMap(([dem, clients]) => [dem ? el("h4", { class: "clients-groupe" }, ...titreDemandeur(dem, clients)) : null, ...clients.map(tuileClient)]),
@@ -4860,6 +4860,26 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // ---- sélection de clients : Ctrl/⌘+clic (un par un), Maj+clic (intervalle), clic droit (modifier) ----
   const clientsChoisis = new Set();
   let ancreClient = null;
+  // doigt : un appui long ouvre le menu du clic droit (la souris garde le clic droit)
+  function menuSurAppui(elt, ouvrir) {
+    let appui = null;
+    const annuler = () => { if (appui) { clearTimeout(appui.minuteur); appui = null; } };
+    elt.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse" || e.button) return;
+      const x = e.clientX, y = e.clientY;
+      appui = { x, y, minuteur: setTimeout(() => {
+        appui = null; elt.dataset.bloque = "1";
+        if (navigator.vibrate) try { navigator.vibrate(12); } catch (err) {}
+        avalerClic(); ouvrir(x, y);
+        setTimeout(() => { delete elt.dataset.bloque; }, 900);
+      }, 450) };
+    });
+    elt.addEventListener("pointermove", (e) => { if (appui && Math.hypot(e.clientX - appui.x, e.clientY - appui.y) > 10) annuler(); });
+    elt.addEventListener("pointerup", annuler);
+    elt.addEventListener("pointercancel", annuler);
+    elt.addEventListener("contextmenu", (e) => { if (estTel()) e.preventDefault(); });
+    return elt;
+  }
   function clicClient(e, nom) {
     if (e.target.closest("button")) return;
     if (e.shiftKey && !estTel()) {
@@ -4900,6 +4920,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       indices.length ? rangeeCollaborateurs(indices) : null,
       indices.length ? rangeeDemandeurs(indices) : null,
       indices.length ? action("🗄  Archiver leurs dossiers", () => { selectionMulti.clear(); indices.forEach((i) => selectionMulti.add(i)); archiverSelection(true); selectionMulti.clear(); }) : null,
+      noms.length === 1 ? action("⚡  Tâche rapide (aujourd’hui)", () => ajouterTacheRapide(noms[0])) : null,
       noms.length === 1 ? action("👤  Ouvrir la fiche", () => ouvrirClient(noms[0])) : null,
       noms.length > 1 ? [el("div", { class: "sep" }), action("✕  Tout désélectionner", () => { clientsChoisis.clear(); majChoixClients(); })] : null);
     document.body.append(menu);
@@ -5025,7 +5046,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       const etapes = [...new Set(ds.map(etapeDe))].sort().map((n) => ETAPES.find((e) => e[0] === n)[1]).join(", ");
       const notaires = [...new Set(ds.map((d) => d.notaire).filter(Boolean))];
       const aFaire = ds.filter((d) => etapeDe(d) === "2").length;
-      const tr = el("tr", { class: "ligne" + (clientsChoisis.has(nom) ? " multi" : "") + (aFaire ? " a-faire" : ""), "data-nom": nom, onclick: (e) => clicClient(e, nom),
+      const tr = el("tr", { class: "ligne" + (clientsChoisis.has(nom) ? " multi" : "") + (aFaire ? " a-faire" : ""), "data-nom": nom, onclick: (e) => { if (e.currentTarget.dataset.bloque) { delete e.currentTarget.dataset.bloque; return; } clicClient(e, nom); },
         oncontextmenu: (e) => { if (estTel()) return; e.preventDefault(); if (!clientsChoisis.has(nom)) { clientsChoisis.clear(); clientsChoisis.add(nom); majChoixClients(); } menuClients(e.clientX, e.clientY); } },
         el("td", null, el("b", null, nom), badgeTaches(nom),
           el("button", { type: "button", class: "renommer", title: "Renommer ce client", "aria-label": `Renommer ${nom}`,
@@ -5036,6 +5057,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         el("td", { class: "n cache-tel" }, p ? euros(p) : ""),
         el("td", { class: "n or" }, ca ? euros(ca) : ""),
         el("td", { class: "n" }, p ? euros(p - ca) : ""));
+      menuSurAppui(tr, (x, y) => { if (!clientsChoisis.has(nom)) { clientsChoisis.clear(); clientsChoisis.add(nom); majChoixClients(); } menuClients(x, y); });
       return tr;
     };
     $("clientsListe").replaceChildren(...decouperParDemandeur(tries.slice(0, max)).flatMap(([dem, clients]) => [
@@ -6954,6 +6976,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       action(`✎  Modifier${n > 1 ? ` les ${n}` : ""} (demandeur, société…)`, () => modifierEnLot([...selectionMulti])),
       rangeeCollaborateurs([...selectionMulti]),
       rangeeDemandeurs([...selectionMulti]),
+      n === 1 && tous[0] ? action("⚡  Tâche rapide (aujourd’hui)", () => ajouterTacheRapide(tous[0].client, tous[0])) : null,
       n === 1 ? action("↻  Relancé aujourd’hui (rappel dans 7 j)", () => noterRelance([...selectionMulti][0])) : null,
       tous.some((d) => !d.archives) ? action(`🗄  Archiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(true)) : null,
       tous.some((d) => d.archives) ? action(`↩  Désarchiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(false)) : null,
@@ -7860,6 +7883,14 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
   const libelleTache = (a) => `${a.perso ? "tâche perso" : "tâche pour " + a.nom} : « ${a.texte} »` +
     (a.pour ? ` · ${versDate(a.pour).toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" })}` : " · au prochain créneau libre") + (a.heure ? ` à ${a.heure}` : "");
+  // menu du clic droit / appui long (cartes de dossiers, clients) : une tâche rapide (sans durée) pour aujourd'hui
+  async function ajouterTacheRapide(nom, dos) {
+    const texte = await saisir(`Pour ${nom}${dos ? " · " + (dos.tache || sansNumero(dos.type)) : ""}\nElle s'ajoute à l'agenda d'aujourd'hui, sans durée : elle ne décale rien.`, "", { titre: "⚡ Tâche rapide", ok: "Ajouter" });
+    if (!texte || !texte.trim()) return;
+    creerTacheDeNote({ nom, texte: texte.trim(), pour: enIso(aujourdhui()), heure: "", dossier: dos ? dos.id : null });
+    afficherTout();
+    informer(`Tâche ajoutée à l'agenda d'aujourd'hui pour ${nom}.`);
+  }
   function creerTacheDeNote(a) {
     const id = nouvelId();
     const dos = a.dossier && donnees.dossiers.find((d) => d.id === a.dossier && cleClient(d.client) === cleClient(a.nom));
