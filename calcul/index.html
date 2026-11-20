@@ -1134,6 +1134,7 @@ function press(v){
   if(v==='clear') return clearLine();
   if(v==='back') return backspace();
   if(v==='enter') return newLine();
+  if(v==='#'){ const e=ensureActive(); return insert(e.value.trim()==='' ? '# ' : '#'); }   // en début de ligne : un titre
   if(v==='tiles') return setTiles(true);
   if(v==='abc') return setPage(1);
   if(v==='p0') return setPage(0);
@@ -1144,7 +1145,7 @@ function press(v){
 }
 
 /* Clavier lettres (AZERTY). Maintenir une voyelle ou le c : accents. */
-const ABC_BAS=[['123','p0','fn tl w15'],[',',','],['espace',' ','sp'],[':',':','op'],['=',' = ','op'],['↵','enter','go w15']];
+const ABC_BAS=[['123','p0','fn tl w15'],[',',','],['#','#','op'],['espace',' ','sp'],[':',':','op'],['=',' = ','op'],['↵','enter','go w15']];
 const ABC_LAYOUTS={
   azerty:['azertyuiop'.split(''),'qsdfghjklm'.split(''),[['⇧','shift','fn w15'],'w','x','c','v','b','n',["'","'"],['⌫','back','fn w15']],ABC_BAS],
   qwerty:['qwertyuiop'.split(''),'asdfghjkl'.split(''),[['⇧','shift','fn w15'],'z','x','c','v','b','n','m',['⌫','back','fn w15']],ABC_BAS]
