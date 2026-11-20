@@ -210,6 +210,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .preset i span{width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15)}
 .row .ln{touch-action:pan-y}
 .sheet.dragsel{user-select:none;-webkit-user-select:none}
+.over.typing{align-items:flex-start}
+.over.typing .sheetpanel{max-height:min(calc(var(--vvh,100vh) - 10px),56vh);border-radius:0 0 16px 16px;padding-top:var(--bandeau-haut,env(safe-area-inset-top,0px))}
 .over{position:fixed;inset:0;background:rgb(0 0 0 / .38);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .over.open{display:flex}
 .sheetpanel{background:var(--surface);color:var(--ink);width:100%;max-width:560px;max-height:86%;display:flex;flex-direction:column;
@@ -576,9 +578,15 @@ function evaluate(src, ctx){
     }
     return v;
   }
+  function lineAt(i){   // ligne au-dessus : déjà calculée ; au-dessous : valeur du passage précédent
+    const here=ctx.results.length;
+    if(i===here) throw new Error('Une ligne ne peut pas utiliser son propre résultat');
+    if(i<here) return ctx.results[i];
+    ctx.flags.fwd=true; return ctx.prev ? ctx.prev[i] : null;
+  }
   function lineVal(n){
-    const r=ctx.results[n-1];
-    if(!r || r.kind!=='value') throw new Error('L'+n+' n’a pas de résultat au-dessus');
+    const r=lineAt(n-1);
+    if(!r || r.kind!=='value') throw new Error(n>ctx.lines ? 'Il n’y a pas de ligne '+n : 'L'+n+' n’a pas de résultat');
     ctx.touch(r.cur); return r.isPct ? new Pct(r.display) : r.value;
   }
   function args(){
@@ -591,7 +599,7 @@ function evaluate(src, ctx){
     if(!t) throw new Error('Calcul incomplet');
     if(t.t==='num'){ p++; return t.v; }
     if(t.t==='range'){ p++; const a=Math.min(t.a,t.b), b=Math.max(t.a,t.b), out=[];
-      for(let n=a;n<=b;n++){ const r=ctx.results[n-1]; if(r&&r.kind==='value'&&!r.isPct){ out.push(r.value); ctx.touch(r.cur);} }
+      for(let n=a;n<=b;n++){ if(n-1===ctx.results.length) continue; const r=lineAt(n-1); if(r&&r.kind==='value'&&!r.isPct){ out.push(r.value); ctx.touch(r.cur);} }
       return out; }
     if(isOp('(')){ p++; const v=logic(); expect(')'); return v; }
     if(t.t==='id'){
@@ -614,7 +622,10 @@ function evaluate(src, ctx){
       }
       let m;
       if((m=t.v.match(/^l(\d+)$/))) return lineVal(+m[1]);
-      if(ctx.vars.has(t.v)){ const o=ctx.vars.get(t.v); ctx.touch(o.cur); return o.pct ? new Pct(o.v) : o.v; }
+      if(!ctx.vars.has(t.v) && ctx.declared.has(t.v)) ctx.flags.fwd=true;   // variable définie plus bas
+      if(ctx.vars.has(t.v)||(ctx.prevVars&&ctx.prevVars.has(t.v))){   // variable définie plus haut, ou plus bas (passage précédent)
+        if(!ctx.vars.has(t.v)) ctx.flags.fwd=true;
+        const o=ctx.vars.get(t.v)||ctx.prevVars.get(t.v); ctx.touch(o.cur); return o.pct ? new Pct(o.v) : o.v; }
       if(t.v==='pi') return Math.PI;
       if(t.v==='e') return Math.E;
       if(t.v==='ans'){ if(ctx.ans===undefined) throw new Error('Pas de résultat précédent'); ctx.touch(ctx.ansCur); return ctx.ans; }
@@ -630,8 +641,27 @@ function evaluate(src, ctx){
 }
 
 let lastFuncs=new Map();
+// Une ligne peut utiliser une ligne (ou une variable) située plus bas : on recalcule la feuille
+// tant que les résultats changent, comme un tableur. Au-delà de 25 passages, c'est une boucle.
 function computeSheet(lines){
+  let prev=null, prevVars=null, out=null;
+  for(let pass=0;pass<25;pass++){
+    const r=computeOnce(lines,prev,prevVars); out=r.results;
+    if(!r.fwd) return out;
+    if(prev && sameResults(out,prev)) return out;
+    prev=out; prevVars=r.vars;
+  }
+  out.forEach((x,i)=>{ if(x.kind==='value' && prev && (!prev[i] || prev[i].value!==x.value)){ x.kind='error'; x.msg='Calcul en boucle : des lignes s’utilisent entre elles'; } });
+  return out;
+}
+function sameResults(a,b){
+  if(a.length!==b.length) return false;
+  for(let i=0;i<a.length;i++){ const x=a[i], y=b[i]; if(x.kind!==y.kind || (x.kind==='value' && Math.abs(x.value-y.value)>1e-9*Math.max(1,Math.abs(x.value)))) return false; }
+  return true;
+}
+function computeOnce(lines,prev,prevVars){
   const ctx={vars:new Map(),funcs:new Map(),results:[],ans:undefined,ansCur:'',block:[],blockCur:'',lineCur:'',
+    prev,prevVars,flags:{fwd:false},lines:lines.length,declared:new Set(lines.map(l=>{ const m=l.trim().replace(/^((?:[^:()=<>]|\([^()]*\))+?)\s*:\s*/,'').match(/^([\p{L}_][\p{L}\d_]*)\s*=(?!=)/u); return m?m[1].toLowerCase():''; }).filter(Boolean)),
     touch(c){ if(c&&!this.lineCur) this.lineCur=c; }};
   // les fonctions perso sont connues partout dans la feuille
   for(const raw of lines){
@@ -681,7 +711,7 @@ function computeSheet(lines){
     ctx.results.push(res);
   }
   lastFuncs=ctx.funcs;
-  return ctx.results;
+  return {results:ctx.results,vars:ctx.vars,fwd:ctx.flags.fwd};
 }
 
 /* ===================== Format ===================== */
@@ -1161,7 +1191,7 @@ function combine(op){
   const out=['# Résultat'];
   idx.forEach(i=>{
     const L='L'+(i+1), lab=labelOf(i);
-    const name=lab ? (/^int[ée]r[êe]ts?\b/i.test(lab) ? lab.replace(/^int[ée]r[êe]ts?/i,'Résultat') : 'Résultat '+lab) : 'Résultat '+L;
+    const name=lab ? (/^int[ée]r[êe]ts?\b/i.test(lab) ? lab.replace(/^int[ée]r[êe]ts?/i,'Résultat') : /^r[ée]sultat\b/i.test(lab) ? lab : 'Résultat '+lab) : 'Résultat '+L;
     const expr={fm:fRef+' − '+L, mf:L+' − '+fRef, fp:fRef+' + '+L, mx:L+' × '+fRef, md:L+' / '+fRef}[op];
     out.push(name+' : '+expr);
   });
@@ -1624,7 +1654,13 @@ function renderSettings(){
 /* Panneaux */
 let openOver=null;
 function showOver(id){ openOver=$(id); openOver.classList.add('open'); }
-function closeOver(){ if(openOver){ openOver.classList.remove('open'); openOver=null; } }
+// Saisie dans un panneau (recherche, couleurs, formulaire) : le panneau monte en haut de l'écran,
+// au-dessus du clavier du téléphone, et la case reste visible.
+function vvh(){ const h=window.visualViewport?visualViewport.height:innerHeight; document.documentElement.style.setProperty('--vvh',h+'px'); }
+vvh(); if(window.visualViewport) visualViewport.addEventListener('resize',()=>{ vvh(); const a=document.activeElement; if(a&&a.closest&&a.closest('.over')) a.scrollIntoView({block:'nearest'}); });
+document.addEventListener('focusin',e=>{ const o=e.target.closest&&e.target.closest('.over'); if(o&&/^(INPUT|TEXTAREA)$/.test(e.target.tagName)){ o.classList.add('typing'); setTimeout(()=>e.target.scrollIntoView({block:'nearest'}),350); } });
+document.addEventListener('focusout',e=>{ const o=e.target.closest&&e.target.closest('.over'); if(o) setTimeout(()=>{ const a=document.activeElement; if(!(a&&o.contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName))) o.classList.remove('typing'); },50); });
+function closeOver(){ if(openOver){ openOver.classList.remove('open','typing'); openOver=null; } }
 $('fxBtn').addEventListener('click',()=>{ $('fxSearch').value=''; renderFx(''); showOver('fxOver'); });
 $('setBtn').addEventListener('click',()=>{ renderSettings(); showOver('setOver'); });
 document.querySelectorAll('.over').forEach(o=>{
