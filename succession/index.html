@@ -577,9 +577,10 @@ body.bg-cool{--bg:color-mix(in srgb,var(--blue) 6%,#f4f6f7)}
     + ".dlg-voile.on .dlg{transform:none}"
     + ".dlg h3{margin:0 0 6px;font-size:17px;font-weight:650;color:var(--bleu,#0c2d39)}"
     + ".dlg p{margin:0 0 6px;white-space:pre-wrap;overflow-wrap:anywhere}"
-    + ".dlg input{width:100%;box-sizing:border-box;margin:8px 0 2px;padding:9px 12px;border:1px solid var(--bordure,#d9d2c3);border-radius:10px;"
+    + ".dlg input,.dlg textarea{width:100%;box-sizing:border-box;margin:8px 0 2px;padding:9px 12px;border:1px solid var(--bordure,#d9d2c3);border-radius:10px;"
     + "background:var(--fond,#fff);color:inherit;font:inherit;outline:none}"
-    + ".dlg input:focus{border-color:var(--or,#a57d2f);box-shadow:0 0 0 3px rgba(165,125,47,.18)}"
+    + ".dlg textarea{resize:none;line-height:1.4;display:block}"
+    + ".dlg input:focus,.dlg textarea:focus{border-color:var(--or,#a57d2f);box-shadow:0 0 0 3px rgba(165,125,47,.18)}"
     + ".dlg-boutons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:14px}"
     + ".dlg-boutons button{border:0;border-radius:10px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}"
     + ".dlg-non{background:transparent;color:var(--bleu,#0c2d39);box-shadow:inset 0 0 0 1px var(--bordure,#d9d2c3)}"
@@ -604,7 +605,11 @@ body.bg-cool{--bg:color-mix(in srgb,var(--blue) 6%,#f4f6f7)}
       if (o.titre) { var h = document.createElement("h3"); h.textContent = o.titre; boite.appendChild(h); }
       var p = document.createElement("p"); p.textContent = String(message == null ? "" : message); boite.appendChild(p);
       var saisie = null;
-      if (champ) { saisie = document.createElement("input"); saisie.type = "text"; saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocapitalize", "sentences"); boite.appendChild(saisie); }   // (pas d’autocomplete="off" : sur Android, il coupe les suggestions et la saisie glissée du clavier)
+      if (champ) {
+        // zone: true → une zone de texte (textarea) : c'est le champ où les claviers Android acceptent toujours la saisie glissée
+        if (o.zone) { saisie = document.createElement("textarea"); saisie.rows = 2; saisie.className = "dlg-zone"; }
+        else { saisie = document.createElement("input"); saisie.type = "text"; }
+        saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocapitalize", "sentences"); boite.appendChild(saisie); }   // (pas d’autocomplete="off" : sur Android, il coupe les suggestions et la saisie glissée du clavier)
       var zone = document.createElement("div"); zone.className = "dlg-boutons";
       var non = null;
       if (o.annuler !== false) { non = document.createElement("button"); non.type = "button"; non.className = "dlg-non"; non.textContent = o.annuler || "Annuler"; zone.appendChild(non); }
@@ -614,7 +619,7 @@ body.bg-cool{--bg:color-mix(in srgb,var(--blue) 6%,#f4f6f7)}
       var fini = false;
       function fermer(r) {
         if (fini) return; fini = true;
-        if (saisie) champ.lu = saisie.value;
+        if (saisie) champ.lu = o.zone ? saisie.value.replace(/\s*\n\s*/g, " ") : saisie.value;
         document.removeEventListener("keydown", touche, true);
         voile.classList.remove("on");
         setTimeout(function () { voile.remove(); try { if (avant && avant.focus) avant.focus(); } catch (e) {} }, 140);

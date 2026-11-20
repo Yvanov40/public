@@ -1,5 +1,5 @@
 /* Service de l'« Audit civil et fiscal » (dossier audit/) : hors connexion */
-const VERSION = "audit-v5";
+const VERSION = "audit-v6";
 const LOCAL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "./logo.svg", "./vendor/jszip.min.js", "./vendor/exceljs.min.js"];
 const CDN = [
   "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
