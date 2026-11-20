@@ -1,6 +1,6 @@
 /* Service worker : Révision disponible hors connexion.
    Le réseau d'abord (les nouveaux QCM arrivent tout de suite), la copie gardée si pas de connexion. */
-const VERSION = 'revision-v12';
+const VERSION = 'revision-v13';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'data/qcm/index.json',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });

@@ -469,7 +469,7 @@ body.liste .card .pied{grid-row:1 / span 3;grid-column:2;margin:0;justify-conten
 //  et l'on ne clique jamais « derrière » les boutons du téléphone. Sur ordinateur ou dans un
 //  navigateur, ces zones mesurent 0 : rien ne change. (Module commun, recopié tel quel dans chaque
 //  appli, dans le <head>, entre les repères « bandeaux : début » et « bandeaux : fin ». Modifier ici, puis recopier.)
-//  La couleur suit celle de l'en-tête de l'appli (y compris quand on la personnalise).
+//  La couleur suit celle de l'en-tête de l'appli, tout de suite quand on la personnalise.
 // =====================================================================================
 (function () {
   "use strict";
@@ -493,15 +493,19 @@ body.liste .card .pied{grid-row:1 / span 3;grid-column:2;margin:0;justify-conten
     minuteur = setTimeout(function () {
       var h = document.querySelector(ENTETES), c = "";
       if (h) { c = getComputedStyle(h).backgroundColor; if (/rgba\(.*,\s*0\)$|transparent/.test(c)) c = ""; }
-      if (c) document.documentElement.style.setProperty("--bandeau", c);
-      else document.documentElement.style.removeProperty("--bandeau");
+      var r = document.documentElement.style, avant = r.getPropertyValue("--bandeau").trim();
+      if (c === avant) return;   // rien à changer (et pas de boucle avec l'observateur ci-dessous)
+      if (c) r.setProperty("--bandeau", c); else r.removeProperty("--bandeau");
     }, 60);
   }
   document.addEventListener("DOMContentLoaded", function () {
     maj();
     try {   // personnalisation (styles ajoutés, thème jour / nuit) : la couleur suit
       new MutationObserver(maj).observe(document.head, { childList: true, subtree: true, characterData: true });
-      new MutationObserver(maj).observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "data-mode", "data-nuit"] });
+      // couleurs posées dans l'attribut style de la page (Personnaliser), classes, thème…
+      new MutationObserver(maj).observe(document.documentElement, { attributes: true });
+      new MutationObserver(maj).observe(document.body, { attributes: true });
+      document.addEventListener("visibilitychange", maj);
       if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", maj);
     } catch (e) {}
   });
