@@ -2340,7 +2340,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       if (o.titre) { var h = document.createElement("h3"); h.textContent = o.titre; boite.appendChild(h); }
       var p = document.createElement("p"); p.textContent = String(message == null ? "" : message); boite.appendChild(p);
       var saisie = null;
-      if (champ) { saisie = document.createElement("input"); saisie.type = "text"; saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocomplete", "off"); boite.appendChild(saisie); }
+      if (champ) { saisie = document.createElement("input"); saisie.type = "text"; saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocapitalize", "sentences"); boite.appendChild(saisie); }   // (pas d’autocomplete="off" : sur Android, il coupe les suggestions et la saisie glissée du clavier)
       var zone = document.createElement("div"); zone.className = "dlg-boutons";
       var non = null;
       if (o.annuler !== false) { non = document.createElement("button"); non.type = "button"; non.className = "dlg-non"; non.textContent = o.annuler || "Annuler"; zone.appendChild(non); }
@@ -9585,7 +9585,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     $("titreTache").textContent = t.fait ? "Tâche faite" : "Tâche";
     const iDossier = t.dossier ? donnees.dossiers.findIndex((d) => d.id === t.dossier) : -1;
     $("corpsTache").replaceChildren(
-      champ("Tâche", el("input", { name: "texte", type: "text", value: t.texte || "", autocomplete: "off" })),
+      champ("Tâche", el("input", { name: "texte", type: "text", value: t.texte || "", autocapitalize: "sentences" })),
       el("div", { class: "tache-liens" },
         el("button", { type: "button", onclick: () => ouvrirClient(nom) }, "👤 ", nom),
         iDossier >= 0 ? el("button", { type: "button", onclick: () => ouvrirDossier(iDossier) }, "📄 ", t.dossier_libelle || "Dossier") : null),
@@ -9907,7 +9907,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       el("div", { class: "deux" }, champ("Durée", choixDuree("duree", r ? r.duree : "60")),
         champ("Dossier (facultatif)", el("select", { name: "dossier" }, el("option", { value: "" }, "— aucun —"),
           dossiers.map(([d]) => el("option", { value: d.id || "", selected: r ? r.dossier === d.id : !!proposition.dossier && proposition.dossier === d.id }, `${d.tache || sansNumero(d.type)}${d.exercice ? " · " + d.exercice : ""}`))))),
-      champ("Objet", el("input", { name: "objet", type: "text", value: r ? (r.objet || "") : (proposition.objet || ""), placeholder: "Signature, point annuel, bilan…", autocomplete: "off" })),
+      champ("Objet", el("input", { name: "objet", type: "text", value: r ? (r.objet || "") : (proposition.objet || ""), placeholder: "Signature, point annuel, bilan…", autocapitalize: "sentences" })),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Lieu, documents à apporter…" }, r ? (r.note || "") : ""))),
       el("div", { class: "actions-fiche" },
         r ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${nom}${r.objet ? " · " + r.objet : ""}`, r.date, r.note || "", r.heure, r.duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
@@ -9949,7 +9949,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     $("corpsTache").replaceChildren(
       champ("Client", [aideClient(el("input", { name: "client", type: "text", list: "liste-clients-tache", autocomplete: "off", placeholder: "Nom du client", value: proposition.perso ? NOM_PERSO : "" })), casePerso("corpsTache"),
         el("datalist", { id: "liste-clients-tache" }, nomsClients().map((n) => el("option", { value: n })))]),
-      champ("Tâche", el("input", { name: "texte", type: "text", autocomplete: "off", placeholder: "Appeler, relancer, envoyer…" })),
+      champ("Tâche", el("input", { name: "texte", type: "text", autocapitalize: "sentences", placeholder: "Appeler, relancer, envoyer…" })),
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: jourPropose })),
         champ("À", el("input", { name: "heure", type: "time", value: proposition.heure || "" }))),

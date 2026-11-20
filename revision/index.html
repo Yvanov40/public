@@ -410,7 +410,7 @@ body.liste .card .pied{grid-row:1 / span 3;grid-column:2;margin:0;justify-conten
       if (o.titre) { var h = document.createElement("h3"); h.textContent = o.titre; boite.appendChild(h); }
       var p = document.createElement("p"); p.textContent = String(message == null ? "" : message); boite.appendChild(p);
       var saisie = null;
-      if (champ) { saisie = document.createElement("input"); saisie.type = "text"; saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocomplete", "off"); boite.appendChild(saisie); }
+      if (champ) { saisie = document.createElement("input"); saisie.type = "text"; saisie.value = champ.valeur == null ? "" : String(champ.valeur); saisie.setAttribute("autocapitalize", "sentences"); boite.appendChild(saisie); }   // (pas d’autocomplete="off" : sur Android, il coupe les suggestions et la saisie glissée du clavier)
       var zone = document.createElement("div"); zone.className = "dlg-boutons";
       var non = null;
       if (o.annuler !== false) { non = document.createElement("button"); non.type = "button"; non.className = "dlg-non"; non.textContent = o.annuler || "Annuler"; zone.appendChild(non); }
