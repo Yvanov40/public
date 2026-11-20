@@ -37,7 +37,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .panel{display:flex;flex-direction:column}
 
 /* Onglets */
-.top{display:flex;align-items:center;gap:4px;padding:8px 8px 6px 10px}
+.top{display:flex;align-items:center;gap:4px;padding:8px 8px 6px 10px;background:var(--bg)}
 .tabs{display:flex;gap:4px;overflow-x:auto;flex:1;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{white-space:nowrap;padding:7px 12px;border-radius:999px;font-size:14px;color:var(--muted)}
@@ -105,6 +105,28 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .abc{display:flex;flex-direction:column;gap:var(--kg);padding:0 6px;height:var(--padh)}
 .abc .r{display:flex;gap:calc(var(--kg) * .67);flex:1;min-height:0}
 .k.down{filter:brightness(.9)}
+.rac{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--kg);padding:0 10px var(--kg)}
+.rac[hidden]{display:none}
+.app .kbd .rac .k{height:calc(var(--kh) * .72);font-size:calc(16px * var(--kf));background:var(--key-op);padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res.neg,.big.neg{color:var(--warn)!important}
+.sheet[data-lines="zebre"] .row{border-bottom-color:transparent}
+.sheet[data-lines="zebre"] .row:nth-child(even):not(.on):not(.sel){background:color-mix(in srgb, var(--ink) 4%, var(--surface))}
+.sheet[data-lines="aucune"] .row{border-bottom-color:transparent}
+.sheet[data-lines="aucune"] .row.head{border-bottom-color:var(--ink)}
+.app[data-big="m"][data-layout] .display .big{font-size:calc(26px * var(--z))}
+.app[data-big="m"] .display{min-height:48px}
+.app[data-big="s"][data-layout] .display .big{font-size:calc(19px * var(--z))}
+.app[data-big="s"] .display{min-height:34px;padding-top:4px;padding-bottom:2px}
+.app[data-big="off"] .display{display:none}
+.grp{border-bottom:1px solid var(--rule)}
+.grp>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:14px 0;font-size:16px;font-weight:600}
+.grp>summary::-webkit-details-marker{display:none}
+.grp>summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-right:6px;transition:transform .15s}
+.grp[open]>summary::after{transform:rotate(-135deg)}
+.grp>div{padding-bottom:16px}
+.grp>div>h3:first-child{margin-top:0}
+.racedit{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:8px}
+.racedit input{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:9px 4px;text-align:center}
 .k.on{background:var(--accent);color:var(--accent-ink)}
 .pop{position:fixed;z-index:25;display:flex;gap:3px;padding:4px;border-radius:12px;background:var(--surface);color:var(--ink);
   box-shadow:0 6px 22px rgb(0 0 0 / .28),inset 0 0 0 1px var(--rule);pointer-events:none}
@@ -280,6 +302,7 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
       <span class="big" id="dBig">0</span>
     </section>
     <div class="kbd" id="kbd">
+      <div class="rac" id="rac"></div>
       <div class="track" id="track"><div class="pad" id="pad"></div><div class="abc" id="abc"></div></div>
     </div>
     <div class="tiles" id="tiles" hidden></div>
@@ -361,7 +384,7 @@ const ALIAS = {somme:'sum',sum:'sum',moy:'avg',moyenne:'avg',avg:'avg',min:'min'
   succ:'succ',donation:'succ',succpe:'succpe',succfrere:'succfrere',succneveu:'succneveu',succtiers:'succtiers',
   usufruit:'usuf',np:'np'};
 const FISCAL = new Set(['cumint','crd','ir','ifi','pfu','ps','succ','succpe','succfrere','succneveu','succtiers','usuf','np','pmt','cost','cap']);
-let PREF_TVA = 20;
+let PREF_TVA = 20, PREF_PARTS = 1;
 const FN = {
   sum:a=>flat(a).reduce((s,x)=>s+x,0),
   avg:a=>{const f=flat(a); if(!f.length) throw new Error('Moyenne de rien'); return f.reduce((s,x)=>s+x,0)/f.length;},
@@ -389,8 +412,8 @@ const FN = {
     const m=r? C*r/(1-(1+r)**-N) : C/N; return r? Math.max(0,C*(1+r)**k-m*((1+r)**k-1)/r) : Math.max(0,C-m*k);},
   fv:a=>{need(a,3,'vf'); return num(a[0])*(1+pctArg(a[1])/100)**num(a[2]);},
   pv:a=>{need(a,3,'va'); return num(a[0])/(1+pctArg(a[1])/100)**num(a[2]);},
-  ir:a=>{need(a,1,'ir'); return impotIR(num(a[0]), a[1]===undefined?1:num(a[1]), a[2]===undefined?0:num(a[2]));},
-  tmi:a=>{need(a,1,'tmi'); return new Pct(tmiIR(num(a[0]), a[1]===undefined?1:num(a[1]))*100);},
+  ir:a=>{need(a,1,'ir'); return impotIR(num(a[0]), a[1]===undefined?PREF_PARTS:num(a[1]), a[2]===undefined?0:num(a[2]));},
+  tmi:a=>{need(a,1,'tmi'); return new Pct(tmiIR(num(a[0]), a[1]===undefined?PREF_PARTS:num(a[1]))*100);},
   parts:a=>{ const couple=num(a[0]??0)?2:1, e=Math.max(0,Math.floor(num(a[1]??0))); return couple+(e<=2?e*.5:1+(e-2)); },
   ifi:a=>{need(a,1,'ifi'); return ifiCalc(num(a[0]));},
   pfu:a=>{need(a,1,'pfu'); return num(a[0])*B.pfu;},
@@ -558,7 +581,7 @@ function evaluate(src, ctx){
         const name=ALIAS[t.v]; if(!name) throw new Error('Fonction inconnue : '+t.raw);
         if(FISCAL.has(name)) ctx.touch('€');
         const av=args();
-        if((name==='ir'||name==='tmi') && !ctx.note){ const pt=av[1]===undefined?1:num(av[1]); ctx.note=(name==='ir'?'Impôt':'TMI')+' pour '+fmt(pt)+' part'+(pt>1?'s':'')+(av[1]===undefined?' (ajoutez ; parts)':''); }
+        if((name==='ir'||name==='tmi') && !ctx.note){ const pt=av[1]===undefined?PREF_PARTS:num(av[1]); ctx.note=(name==='ir'?'Impôt':'TMI')+' pour '+fmt(pt)+' part'+(pt>1?'s':'')+(av[1]===undefined?' (par défaut, ajoutez ; parts)':''); }
         return FN[name](av);
       }
       let m;
@@ -638,7 +661,9 @@ let NF=null, DEC='auto';
 function setDecimals(d){ DEC=d; NF = d==='auto' ? new Intl.NumberFormat('fr-FR',{maximumFractionDigits:8}) : new Intl.NumberFormat('fr-FR',{minimumFractionDigits:+d,maximumFractionDigits:+d}); }
 setDecimals('auto');
 const NF_MONEY=new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
-function fmt(n,money){
+let SEP='\u202f';
+function fmt(n,money){ const t=fmt0(n,money); return SEP==='\u202f'?t:t.replace(/[\u202f\u00a0]/g,SEP); }
+function fmt0(n,money){
   if(!Number.isFinite(n)) return Number.isNaN(n)?'Erreur':(n>0?'∞':'−∞');
   const r=Number(n.toPrecision(12)), a=Math.abs(r);
   if(a!==0 && (a>=1e15 || (DEC==='auto' && a<1e-9 && !money))) return r.toExponential(6).replace(/\.?0+e/,'e').replace('.',',');
@@ -654,6 +679,8 @@ const AMB = {
   papier:{n:'Papier',dark:false,bg:'#EFEFEC',surface:'#FFFFFF',ink:'#161616',muted:'#6A6A6A',rule:'#E0E0DC',key:'#FFFFFF',keyop:'#E3E3DF',warn:'#B4532A'},
   sable:{n:'Sable',dark:false,bg:'#ECE6DA',surface:'#FAF7F1',ink:'#2A251D',muted:'#7A7162',rule:'#DDD4C3',key:'#FFFDF8',keyop:'#E1D8C6',warn:'#A8452A'},
   encre:{n:'Encre',dark:true,bg:'#121614',surface:'#1A1F1C',ink:'#E6ECE8',muted:'#8A968F',rule:'#2B332E',key:'#242B27',keyop:'#313A35',warn:'#E39069'},
+  ardoise:{n:'Ardoise',dark:true,bg:'#1C2025',surface:'#242A30',ink:'#E9EDF1',muted:'#97A2AD',rule:'#353D45',key:'#2E353C',keyop:'#3A424A',warn:'#EE9E78'},
+  blanc:{n:'Contraste fort',dark:false,bg:'#FFFFFF',surface:'#FFFFFF',ink:'#000000',muted:'#4A4A4A',rule:'#BDBDBD',key:'#F2F2F2',keyop:'#DCDCDC',warn:'#A3260B'},
   nuit:{n:'Nuit bleue',dark:true,bg:'#0C2D39',surface:'#103644',ink:'#E8EEF0',muted:'#93ABB4',rule:'#1E4A5A',key:'#164150',keyop:'#1F5062',warn:'#EE9E78'}
 };
 const ACCENTS=[['Bleu','#2557E8'],['Or','#A57D2F'],['Bleu profond','#0C2D39'],['Vert','#2F7D5B'],['Bordeaux','#9B2C3F'],['Violet','#6A4BC4']];
@@ -670,7 +697,12 @@ const KBG=[['serre','Serré'],['normal','Normal'],['large','Large']];
 const KBR=[['rond','Arrondies'],['doux','Peu arrondies'],['carre','Carrées']];
 const KBL=[['azerty','AZERTY'],['qwerty','QWERTY']];
 const DECS=[['auto','Auto'],['0','0'],['2','2'],['4','4']];
-const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',kbh:90,kbf:100,kbg:'normal',kbr:'rond',kbl:'azerty',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
+const BIGS=[['l','Grand'],['m','Moyen'],['s','Petit'],['off','Masqué']];
+const LINES=[['traits','Traits'],['zebre','Une sur deux'],['aucune','Aucun']];
+const RESCOL=[['couleur','En couleur'],['encre','Comme le texte']];
+const SEPS=[['espace','1 234'],['point','1.234'],['aucun','1234']];
+const RAC_DEF=['<','>','total','somme(','€'];
+const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',kbh:90,kbf:100,kbg:'normal',kbr:'rond',kbl:'azerty',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,big:'l',lines:'traits',rescol:'couleur',neg:false,sep:'espace',parts:1,rac:true,racKeys:['<','>','total','somme(','€'],favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
 
 function hexOk(h){ return /^#[0-9a-f]{6}$/i.test(h); }
 function lum(h){ const c=[1,3,5].map(i=>{ const v=parseInt(h.substr(i,2),16)/255; return v<=.03928?v/12.92:((v+.055)/1.055)**2.4; }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
@@ -688,7 +720,7 @@ function applyPrefs(){
   s.setProperty('--accent',acc);
   s.setProperty('--accent-ink',lum(acc)>.42?'#141414':'#FFFFFF');
   s.setProperty('--active',`color-mix(in srgb, ${acc} ${t.dark?18:9}%, ${t.surface})`);
-  s.setProperty('--res',`color-mix(in srgb, ${acc} ${t.dark?60:85}%, ${t.ink})`);
+  s.setProperty('--res',P.rescol==='encre'?t.ink:`color-mix(in srgb, ${acc} ${t.dark?60:85}%, ${t.ink})`);
   s.colorScheme=t.dark?'dark':'light';
   const f=FONTS[P.font]||FONTS.plex;
   s.setProperty('--font',(f.css?f.css+', ':'')+'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif');
@@ -702,7 +734,11 @@ function applyPrefs(){
   s.setProperty('--kr',{rond:'12px',doux:'6px',carre:'2px'}[P.kbr]);
   if(typeof renderPad==='function' && applyPrefs.kbl!==P.kbl){ const first=applyPrefs.kbl===undefined; applyPrefs.kbl=P.kbl; if(!first) renderPad(); }
   document.getElementById('app').dataset.layout=P.layout;
+  document.getElementById('app').dataset.big=P.big;
+  document.getElementById('sheet').dataset.lines=P.lines;
+  SEP={espace:'\u202f',point:'.',aucun:''}[P.sep]; PREF_PARTS=P.parts;
   setDecimals(P.decimals); PREF_TVA=+P.tva||20;
+  if(typeof renderRac==='function') renderRac();
   const meta=document.querySelector('meta[name="theme-color"]')||document.head.appendChild(Object.assign(document.createElement('meta'),{name:'theme-color'}));
   meta.content=t.bg;
 }
@@ -740,6 +776,13 @@ function sanitize(s){
   P.zoom=Math.min(1.5,Math.max(.8,+P.zoom||1));
   P.tva=Number.isFinite(+P.tva)?+P.tva:20;
   if(!hexOk(P.accent)) P.accent=DEF_PREFS.accent;
+  if(!BIGS.some(l=>l[0]===P.big)) P.big='l';
+  if(!LINES.some(l=>l[0]===P.lines)) P.lines='traits';
+  if(!RESCOL.some(l=>l[0]===P.rescol)) P.rescol='couleur';
+  if(!SEPS.some(l=>l[0]===P.sep)) P.sep='espace';
+  P.neg=!!P.neg; P.rac=P.rac!==false;
+  P.parts=Math.min(10,Math.max(1,Math.round((+P.parts||1)*4)/4));
+  P.racKeys=Array.from({length:5},(_,i)=>{ const k=Array.isArray(P.racKeys)?P.racKeys[i]:undefined; return typeof k==='string'?k.slice(0,12):RAC_DEF[i]; });
   P.favs=Array.isArray(P.favs)?P.favs.filter(x=>typeof x==='string').slice(0,24):DEF_PREFS.favs.slice();
   s.prefs=P; s.updatedAt=+s.updatedAt||0; return s;
 }
@@ -851,7 +894,7 @@ function refresh(){
   sheetEl.querySelectorAll('.row').forEach((row,i)=>{
     const r=results[i], res=row.querySelector('.res');
     row.classList.toggle('head',r.kind==='head'); row.classList.toggle('on',i===active); row.classList.toggle('sel',sel.has(i));
-    res.className='res'; res.removeAttribute('data-name'); res.title='';
+    res.className='res'+(state.prefs.neg&&r.kind==='value'&&r.value<0?' neg':''); res.removeAttribute('data-name'); res.title='';
     if(r.kind==='value'){
       res.textContent=show(r);
       if(r.name){ res.classList.add('var'); res.dataset.name=r.name; }
@@ -878,7 +921,8 @@ function renderDisplay0(){
   if(sel.size){ const v=[...sel].map(i=>results[i]).filter(r=>r&&r.kind==='value'&&!r.isPct), c=v.find(r=>r.cur);
     lab.textContent='Sélection ('+sel.size+')'; big.style.color=''; big.textContent=fmt(v.reduce((a,r)=>a+r.value,0),!!c)+(c?' '+c.cur:''); return; }
   const r=results[active];
-  if(r && r.kind==='value'){ lab.textContent=r.note||(r.name?r.name:'Ligne '+(active+1)); big.textContent=show(r); return; }
+  big.classList.remove('neg');
+  if(r && r.kind==='value'){ lab.textContent=r.note||(r.name?r.name:'Ligne '+(active+1)); big.textContent=show(r); if(state.prefs.neg&&r.value<0) big.classList.add('neg'); return; }
   if(r && r.kind==='error'){ lab.textContent='Ligne '+(active+1); big.textContent=r.msg; big.classList.add('err'); return; }
   if(r && r.kind==='fn'){ lab.textContent='Ligne '+(active+1); big.textContent=r.label; big.classList.add('err'); big.style.color='var(--muted)'; return; }
   big.style.color='';
@@ -1180,8 +1224,15 @@ function addInterets(){
   toast((out.length-7)+' années ajoutées');
 }
 const OPS=new Set(['+','*','/','^','%']);
+function renderRac(){
+  const R=$('rac'); if(!R) return;
+  R.hidden=!state.prefs.rac; R.innerHTML='';
+  state.prefs.racKeys.forEach(t=>{ if(!t) { R.append(el('span')); return; }
+    R.append(el('button',{className:'k',type:'button',textContent:(t.trim()||'espace').replace(/(.)\($/,'$1'),'data-v':'txt:'+t,'aria-label':'Raccourci '+t})); });
+}
 function press(v){
   if(state.prefs.vibrate) buzz(8);
+  if(v.startsWith('txt:')){ const t=v.slice(4); if(t==='#'||t==='# '){ const e=ensureActive(); return insert(e.value.trim()===''?'# ':'#'); } return insert(t); }
   if(v==='clear') return clearLine();
   if(v==='back') return backspace();
   if(v==='enter') return newLine();
@@ -1238,7 +1289,7 @@ function renderPad(){
   KEYS.forEach(([lab,v,cls])=>pad.appendChild(keyBtn(lab,v,cls)));
   const abc=$('abc'); abc.innerHTML='';
   (ABC_LAYOUTS[state.prefs.kbl]||ABC_LAYOUTS.azerty).forEach(row=>abc.appendChild(el('div',{className:'r'},...row.map(k=>Array.isArray(k)?keyBtn(k[0],k[1]??k[0],k[2]):keyBtn(k,k)))));
-  updShift(); setPage(kbPage,false);
+  updShift(); setPage(kbPage,false); renderRac();
 }
 
 /* Gestes du clavier : appui (la touche part au relâché), maintien (C, ⌫, accents) */
@@ -1349,9 +1400,13 @@ $('fxSearch').addEventListener('input',e=>renderFx(e.target.value));
 /* ===================== Panneau Réglages ===================== */
 function seg(opts,val,fn){ return el('div',{className:'seg'},...opts.map(([v,n])=>el('button',{type:'button',textContent:n,'aria-pressed':String(String(val)===String(v)),on:{click:()=>{ fn(v); }}}))); }
 function setPref(k,v){ state.prefs[k]=v; save(); applyPrefs(); refresh(); renderSettings(); }
+const setOpen=new Set(['Apparence']);
 function renderSettings(){
   const P=state.prefs, body=$('setBody'), y=body.scrollTop; body.innerHTML='';
-  body.append(
+  const grp=(titre,...kids)=>{ const d=el('details',{className:'grp'},el('summary',{textContent:titre}),el('div',null,...kids));
+    d.open=setOpen.has(titre); d.addEventListener('toggle',()=>{ d.open?setOpen.add(titre):setOpen.delete(titre); }); return d; };
+  const row=(lab,ctrl,mt)=>el('div',{className:'field',style:mt?'margin-top:10px':''},el('span',{textContent:lab,style:'min-width:7.5em'}),ctrl);
+  body.append(grp('Apparence',
     el('h3',{textContent:'Ambiance'}),
     seg([['auto','Auto'],...Object.entries(AMB).map(([k,a])=>[k,a.n])],P.ambiance,v=>setPref('ambiance',v)),
     el('h3',{textContent:'Couleur'}),
@@ -1364,7 +1419,20 @@ function renderSettings(){
       el('button',{type:'button',textContent:'A−','aria-label':'Réduire',on:{click:()=>setPref('zoom',Math.max(.8,Math.round((P.zoom-.1)*10)/10))}}),
       el('output',{textContent:Math.round(P.zoom*100)+' %'}),
       el('button',{type:'button',textContent:'A+','aria-label':'Agrandir',on:{click:()=>setPref('zoom',Math.min(1.5,Math.round((P.zoom+.1)*10)/10))}})),
-    el('h3',{textContent:'Clavier'}),
+    el('h3',{textContent:'Disposition'}),
+    seg(LAYOUTS,P.layout,v=>setPref('layout',v)),
+    el('p',{className:'note',textContent:{calc:'Grand résultat au-dessus du pavé.',tableur:'Lignes serrées, colonne des résultats, pavé compact : plus de lignes visibles.',cote:'La feuille à gauche et le pavé à droite, sur tablette ou téléphone en paysage. Sur un écran étroit, la feuille reste au-dessus.'}[P.layout]})),
+  grp('Feuille et résultats',
+    el('h3',{textContent:'Grand résultat'}),
+    seg(BIGS,P.big,v=>setPref('big',v)),
+    el('h3',{textContent:'Séparation des lignes'}),
+    seg(LINES,P.lines,v=>setPref('lines',v)),
+    el('h3',{textContent:'Résultats'}),
+    seg(RESCOL,P.rescol,v=>setPref('rescol',v)),
+    el('button',{className:'toggle',type:'button','aria-pressed':String(P.neg),on:{click:()=>setPref('neg',!P.neg)}},el('span',{textContent:'Nombres négatifs en rouge'}),el('i')),
+    el('h3',{textContent:'Milliers'}),
+    seg(SEPS,P.sep,v=>setPref('sep',v))),
+  grp('Clavier',
     el('div',{className:'field'},el('span',{textContent:'Hauteur',style:'min-width:7.5em'}),el('div',{className:'stepper'},
       el('button',{type:'button',textContent:'−','aria-label':'Clavier moins haut',on:{click:()=>setPref('kbh',Math.max(60,P.kbh-5))}}),
       el('output',{textContent:P.kbh+' %'}),
@@ -1377,29 +1445,40 @@ function renderSettings(){
     el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'Forme',style:'min-width:7.5em'}),seg(KBR,P.kbr,v=>setPref('kbr',v))),
     el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'Lettres',style:'min-width:7.5em'}),seg(KBL,P.kbl,v=>setPref('kbl',v))),
     el('button',{className:'toggle',type:'button','aria-pressed':String(!!P.vibrate),on:{click:()=>setPref('vibrate',!P.vibrate)}},el('span',{textContent:'Vibrer à chaque touche'}),el('i')),
-    el('p',{className:'note',textContent:'Les réglages s’appliquent tout de suite : fermez ce panneau pour voir le clavier.'}),
-    el('h3',{textContent:'Disposition'}),
-    seg(LAYOUTS,P.layout,v=>setPref('layout',v)),
-    el('p',{className:'note',textContent:{calc:'Grand résultat au-dessus du pavé.',tableur:'Lignes serrées, colonne des résultats, pavé compact : plus de lignes visibles.',cote:'La feuille à gauche et le pavé à droite, sur tablette ou téléphone en paysage. Sur un écran étroit, la feuille reste au-dessus.'}[P.layout]}),
-    el('h3',{textContent:'Calcul'}),
+    el('p',{className:'note',textContent:'Les réglages s’appliquent tout de suite : fermez ce panneau pour voir le clavier.'})),
+  grp('Raccourcis',
+    el('button',{className:'toggle',type:'button','aria-pressed':String(P.rac),on:{click:()=>setPref('rac',!P.rac)}},el('span',{textContent:'Rangée de raccourcis au-dessus du clavier'}),el('i')),
+    el('div',{className:'racedit'},...P.racKeys.map((t,i)=>el('input',{value:t,maxLength:12,autocomplete:'off',autocapitalize:'off',spellcheck:false,'aria-label':'Raccourci '+(i+1),
+      on:{change:e=>{ const k=P.racKeys.slice(); k[i]=e.target.value.slice(0,12); setPref('racKeys',k); }}}))),
+    el('p',{className:'note',textContent:'Cinq touches que vous choisissez : un signe (<, >, €), un mot (total), le début d’une formule (somme(, ir(), ou votre variable (loyer). Laissez une case vide pour une touche en moins.'}),
+    el('div',{className:'btnrow',style:'margin-top:8px'},el('button',{className:'btn',type:'button',textContent:'Raccourcis d’origine',on:{click:()=>setPref('racKeys',RAC_DEF.slice())}}))),
+  grp('Calcul',
     el('div',{className:'field'},el('span',{textContent:'Décimales'}),seg(DECS,P.decimals,v=>setPref('decimals',v))),
     el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'TVA par défaut'}),
       el('input',{inputMode:'decimal',value:String(P.tva).replace('.',','),'aria-label':'TVA par défaut en %',on:{change:e=>{ const v=parseFloat(e.target.value.replace(',','.')); if(Number.isFinite(v)&&v>=0&&v<100) setPref('tva',v); else { e.target.value=String(P.tva).replace('.',','); toast('Taux entre 0 et 99'); } }}}),el('span',{textContent:'%'})),
-    el('h3',{textContent:'Mes feuilles'}),
+    row('Parts fiscales par défaut',el('div',{className:'stepper'},
+      el('button',{type:'button',textContent:'−','aria-label':'Moins de parts',on:{click:()=>setPref('parts',Math.max(1,P.parts-.5))}}),
+      el('output',{textContent:String(P.parts).replace('.',',')}),
+      el('button',{type:'button',textContent:'+','aria-label':'Plus de parts',on:{click:()=>setPref('parts',Math.min(10,P.parts+.5))}})),true),
+    el('p',{className:'note',textContent:'Utilisées par ir(…) et tmi(…) quand vous n’indiquez pas le nombre de parts.'})),
+  grp('Mes feuilles et réglages',
     el('div',{className:'btnrow'},
       el('button',{className:'btn',type:'button',textContent:'Copier toutes les feuilles',on:{click:()=>copy(JSON.stringify({calculEnLignes:1,sheets:state.sheets}),'Feuilles copiées')}}),
-      el('button',{className:'btn',type:'button',textContent:'Remettre les réglages',on:{click:()=>{ state.prefs={...DEF_PREFS,pad:state.prefs.pad}; save(); applyPrefs(); refresh(); renderSettings(); toast('Réglages remis'); }}})),
-    el('p',{className:'note',textContent:'Pour garder vos feuilles avant de réinstaller l’appli ou les passer sur un autre appareil : copiez-les, puis collez-les ici et importez.'}),
+      el('button',{className:'btn',type:'button',textContent:'Copier mes réglages',on:{click:()=>copy(JSON.stringify({calculReglages:1,prefs:state.prefs}),'Réglages copiés')}}),
+      el('button',{className:'btn',type:'button',textContent:'Remettre les réglages',on:{click:()=>{ state.prefs=sanitize({sheets:[{lines:['']}],prefs:{favs:state.prefs.favs}}).prefs; save(); applyPrefs(); renderPad(); refresh(); renderSettings(); toast('Réglages remis'); }}})),
+    el('p',{className:'note',textContent:'Pour passer vos feuilles ou vos réglages sur un autre appareil : copiez-les, puis collez-les ici et importez.'}),
     (()=>{ const ta=el('textarea',{placeholder:'Collez ici des feuilles copiées…','aria-label':'Feuilles à importer'});
       return el('div',null,ta,el('div',{className:'btnrow',style:'margin-top:8px'},el('button',{className:'btn primary',type:'button',textContent:'Importer',on:{click:()=>{
         try{
-          const d=JSON.parse(ta.value), sh=Array.isArray(d)?d:d.sheets;
+          const d=JSON.parse(ta.value);
+          if(d&&d.calculReglages&&d.prefs){ state.prefs=sanitize({sheets:[{lines:['']}],prefs:d.prefs}).prefs; save(); applyPrefs(); renderPad(); refresh(); renderSettings(); ta.value=''; toast('Réglages importés'); return; }
+          const sh=Array.isArray(d)?d:d.sheets;
           if(!Array.isArray(sh)||!sh.length) throw 0;
           const ok=sanitize({sheets:sh}).sheets, ids=new Set(state.sheets.map(s=>s.id));
           ok.forEach(s=>{ if(ids.has(s.id)) s.id=uid(); state.sheets.push(s); });
           state.cur=ok[0].id; active=-1; save(); renderAll(); ta.value=''; toast(ok.length+' feuille'+(ok.length>1?'s':'')+' ajoutée'+(ok.length>1?'s':''));
-        }catch(e){ toast('Collez le texte obtenu avec « Copier toutes les feuilles »'); }
-      }}})))})()
+        }catch(e){ toast('Collez le texte obtenu avec « Copier toutes les feuilles » ou « Copier mes réglages »'); }
+      }}})))})())
   );
   body.scrollTop=y;
 }
