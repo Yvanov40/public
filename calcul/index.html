@@ -210,6 +210,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .preset i span{width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15)}
 .row .ln{touch-action:pan-y}
 .sheet.dragsel{user-select:none;-webkit-user-select:none}
+.exopt{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+.expbtns{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.expbtns .btn{min-height:48px;font-size:15px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px}
+.expbtns .btn small{font-size:12px;opacity:.8;font-weight:400}
 .over.typing{align-items:flex-start}
 .over.typing .sheetpanel{max-height:min(calc(var(--vvh,100vh) - 10px),56vh);border-radius:0 0 16px 16px;padding-top:var(--bandeau-haut,env(safe-area-inset-top,0px))}
 .over{position:fixed;inset:0;background:rgb(0 0 0 / .38);display:none;align-items:flex-end;justify-content:center;z-index:20}
@@ -312,11 +316,13 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
     <header class="top">
       <div class="tabs" id="tabs" role="tablist" aria-label="Feuilles"></div>
       <button class="icon" id="addSheet" aria-label="Nouvelle feuille"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon" id="expBtn" aria-label="Exporter en PDF ou envoyer"><svg viewBox="0 0 24 24"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       <button class="icon" id="fxBtn" aria-label="Formules et barèmes">fx</button>
       <button class="icon" id="setBtn" aria-label="Réglages"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
     </header>
     <div class="menu" id="menu">
       <button data-act="rename">Renommer</button>
+      <button data-act="export">PDF ou mail</button>
       <button data-act="copy">Copier avec résultats</button>
       <button data-act="dup">Dupliquer</button>
       <button data-act="clear">Vider</button>
@@ -959,6 +965,7 @@ menuEl.addEventListener('click',e=>{
   const s=cur();
   if(act==='rename'){ renaming=true; menuOpen=false; renderMenu(); renderTabs(); }
   if(act==='copy'){ copy(sheetText(s),'Feuille copiée'); menuOpen=false; renderMenu(); }
+  if(act==='export'){ menuOpen=false; renderMenu(); openExport(); }
   if(act==='dup'){ const id=uid(); state.sheets.splice(state.sheets.indexOf(s)+1,0,{id,name:s.name+' (copie)',lines:s.lines.slice()}); state.cur=id; menuOpen=false; save(); renderAll(); toast('Feuille dupliquée'); }
   if(act==='clear'){ menuOpen=false; renderMenu(); clearAll(); }
   if(act==='del'){
@@ -1706,7 +1713,145 @@ function copy(text,msg){
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok,fallback); else fallback();
 }
 
-window.__calc={computeSheet,impotIR,ifiCalc,show};
+/* ===================== Export : PDF, mail ===================== */
+const exportOpts={formules:true,numeros:false,selection:false};
+function openExport(){
+  const s=cur(), n=sel.size;
+  if(!n) exportOpts.selection=false;
+  $('formTitle').textContent='Exporter « '+s.name+' »';
+  const B=$('formBody'); B.innerHTML='';
+  const tg=(k,lab)=>el('button',{className:'toggle',type:'button','aria-pressed':String(exportOpts[k]),on:{click:e=>{ exportOpts[k]=!exportOpts[k]; e.currentTarget.setAttribute('aria-pressed',String(exportOpts[k])); }}},el('span',{textContent:lab}),el('i'));
+  const app=!!(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Share);
+  B.append(
+    el('div',{className:'exopt'},
+      tg('formules','Montrer les formules (sinon, seulement les libellés)'),
+      tg('numeros','Numéros de lignes'),
+      n?tg('selection','Seulement les '+n+' ligne'+(n>1?'s':'')+' sélectionnée'+(n>1?'s':'')):null),
+    el('div',{className:'expbtns'},
+      el('button',{className:'btn primary',type:'button',on:{click:()=>exportPDF()}},el('span',{textContent:'PDF'}),el('small',{textContent:app||navigator.canShare?'à enregistrer, ou à envoyer par mail, WhatsApp…':'téléchargé sur cet appareil'})),
+      el('button',{className:'btn',type:'button',on:{click:()=>mailTexte()}},el('span',{textContent:'Mail avec le texte'}),el('small',{textContent:'la feuille et ses résultats dans le corps du mail'})),
+      el('button',{className:'btn',type:'button',on:{click:()=>{ copy(exportTexte(),'Feuille copiée'); closeOver(); }}},el('span',{textContent:'Copier le texte'}),el('small',{textContent:'à coller dans un mail, un message, une note'})))
+  );
+  showOver('formOver');
+}
+function exportLignes(){
+  const s=cur(), r=computeSheet(s.lines);
+  const idx=s.lines.map((_,i)=>i).filter(i=>!(exportOpts.selection&&sel.size) || sel.has(i));
+  while(idx.length && s.lines[idx[idx.length-1]].trim()==='') idx.pop();
+  return {s,r,idx};
+}
+function libelle(line,res){
+  const t=line.trim(), m=t.match(/^((?:[^:()=<>]|\([^()]*\))+?)\s*:\s*(.+)$/);
+  if(m && /\p{L}/u.test(m[1])) return m[1].trim();
+  if(res && res.name) return res.name;
+  return t;
+}
+function exportTexte(){
+  const {s,r,idx}=exportLignes();
+  return [s.name,''].concat(idx.map(i=>{ const l=s.lines[i], x=r[i], g=exportOpts.formules?l.trim():libelle(l,x);
+    return (exportOpts.numeros?'L'+(i+1)+'  ':'')+(x.kind==='value'? g+'  →  '+show(x).replace(/[\u202f\u00a0]/g,' ') : g); })).join('\n');
+}
+function mailTexte(){
+  const s=cur(), a=document.createElement('a');
+  a.href='mailto:?subject='+encodeURIComponent(s.name)+'&body='+encodeURIComponent(exportTexte());
+  a.style.display='none'; document.body.appendChild(a); a.click(); a.remove(); closeOver();
+}
+function loadScript(src){ return new Promise((ok,ko)=>{ const sc=document.createElement('script'); sc.src=src; sc.onload=ok; sc.onerror=()=>{ sc.remove(); ko(new Error(src)); }; document.head.appendChild(sc); }); }
+async function getJsPDF(){
+  for(const src of ['vendor/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js']){
+    if(window.jspdf&&window.jspdf.jsPDF) break;
+    try{ await loadScript(src); }catch(e){}
+  }
+  if(!(window.jspdf&&window.jspdf.jsPDF)) throw new Error('le module PDF n’a pas pu se charger (connexion ?)');
+  return window.jspdf.jsPDF;
+}
+// Les polices standard du PDF ne connaissent que l'alphabet latin : on remplace le reste
+const WINANSI='€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+function pdfTxt(t){
+  return String(t).replace(/[\u202f\u00a0]/g,' ').replace(/−/g,'-').replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/≠/g,'<>').replace(/→/g,'->')
+    .replace(/[^\x00-\xff]/g,c=>WINANSI.includes(c)?c:'?');
+}
+const rgb=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+async function buildPDF(){
+  const jsPDF=await getJsPDF();
+  const {s,r,idx}=exportLignes();
+  const doc=new jsPDF({unit:'mm',format:'a4'}), W=210, H=297, M=16;
+  const P=state.prefs, acc=hexOk(P.accent)?P.accent:'#2557E8', hc=hexOk(P.headc)?P.headc:acc;
+  const INK=[27,34,30], MUT=[111,121,115], RULE=[213,219,212], ERR=[180,83,42];
+  const numW=exportOpts.numeros?9:0, resW=48, textX=M+numW, textW=W-2*M-numW-resW-4, resX=W-M;
+  const date=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  doc.setProperties({title:s.name,creator:'Calcul en lignes'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...INK);
+  const titre=doc.splitTextToSize(pdfTxt(s.name),W-2*M); doc.text(titre,M,22);
+  let y=22+(titre.length-1)*7+6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUT);
+  doc.text(pdfTxt(date+(exportOpts.selection&&sel.size?' · lignes sélectionnées':'')),M,y);
+  y+=3; doc.setDrawColor(...rgb(acc)); doc.setLineWidth(.6); doc.line(M,y,W-M,y); y+=8;
+  const page=()=>{ doc.addPage(); y=18; doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT); doc.text(pdfTxt(s.name),M,12); y=20; };
+  let prevEmpty=false;
+  for(const i of idx){
+    const line=s.lines[i], x=r[i], t=line.trim();
+    if(!t){ if(!prevEmpty) y+=3; prevEmpty=true; continue; } prevEmpty=false;
+    if(x.kind==='head'){
+      if(y>H-34) page();
+      y+=3; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...rgb(hc));
+      const h=doc.splitTextToSize(pdfTxt(t.replace(/^#+\s*/,'')),W-2*M-numW); doc.text(h,textX,y);
+      y+=(h.length-1)*5+2.2; doc.setDrawColor(...rgb(hc)); doc.setLineWidth(.35); doc.line(textX,y,W-M,y); y+=6; continue;
+    }
+    const gauche=exportOpts.formules?t:libelle(line,x);
+    doc.setFont('helvetica',x.isTotal?'bold':'normal'); doc.setFontSize(10);
+    const L=doc.splitTextToSize(pdfTxt(gauche),textW), h=Math.max(1,L.length)*4.5+2.6;
+    if(y+h>H-18) page();
+    if(exportOpts.numeros){ doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT); doc.text(String(i+1),M+numW-3,y,{align:'right'}); }
+    doc.setFont('helvetica',x.isTotal?'bold':'normal'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(L,textX,y);
+    let res='', col=INK;
+    if(x.kind==='value'){ res=show(x); if(P.neg&&x.value<0) col=ERR; }
+    else if(x.kind==='error'){ res='?'; col=ERR; }
+    if(res){ doc.setFont('helvetica',x.isTotal||P.resw==='gras'?'bold':'normal'); doc.setTextColor(...col); doc.text(pdfTxt(res),resX,y,{align:'right'}); }
+    if(x.isTotal){ doc.setDrawColor(...INK); doc.setLineWidth(.3); doc.line(resX-resW,y-4.4,resX,y-4.4); }
+    y+=h-2.6+1.2; doc.setDrawColor(...RULE); doc.setLineWidth(.15); doc.line(textX,y,W-M,y); y+=4.6;
+  }
+  const n=doc.getNumberOfPages();
+  for(let k=1;k<=n;k++){ doc.setPage(k); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT);
+    doc.text('Calcul en lignes',M,H-9); doc.text(k+' / '+n,W-M,H-9,{align:'right'}); }
+  const d=new Date(), nom=s.name.replace(/[\\/:*?"<>|]+/g,'-').trim()+' - '+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.pdf';
+  return {blob:doc.output('blob'),nom};
+}
+function blob64(b){ return new Promise((ok,ko)=>{ const f=new FileReader(); f.onload=()=>ok(String(f.result).split(',')[1]||''); f.onerror=ko; f.readAsDataURL(b); }); }
+async function deliver(blob,nom){
+  const C=window.Capacitor, Pl=C&&C.Plugins;
+  if(Pl&&Pl.Share&&Pl.Filesystem){   // appli Android : menu « Partager » du téléphone (Gmail, Drive, WhatsApp, Enregistrer…)
+    const f=await Pl.Filesystem.writeFile({path:nom,data:await blob64(blob),directory:'CACHE'});
+    try{ await Pl.Share.share({title:nom,files:[f.uri],dialogTitle:'Enregistrer ou envoyer « '+nom+' »'}); }catch(e){ if(!/cancel/i.test(String(e&&e.message))) throw e; }
+    return 'partage';
+  }
+  const file=new File([blob],nom,{type:'application/pdf'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){   // navigateur du téléphone
+    try{ await navigator.share({files:[file],title:nom}); }catch(e){ if(e&&e.name!=='AbortError') throw e; }
+    return 'partage';
+  }
+  if(window.claude && typeof window.claude.use==='function'){   // page dans Claude
+    const dl=await window.claude.use('downloads');
+    if(dl){ await dl.save({filename:nom,data:blob}); return 'telecharge'; }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nom; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+  return 'telecharge';
+}
+let exporting=false;
+async function exportPDF(){
+  if(exporting) return; exporting=true;
+  toast('Création du PDF…');
+  try{
+    const {blob,nom}=await buildPDF(); closeOver();
+    const how=await deliver(blob,nom);
+    if(how==='telecharge') toast('PDF enregistré : '+nom);
+  }catch(e){ toast('PDF impossible : '+(e&&e.message||e)); }
+  exporting=false;
+}
+$('expBtn').addEventListener('click',openExport);
+
+window.__calc={computeSheet,impotIR,ifiCalc,show,buildPDF,exportOpts};
 window.addEventListener('resize',fitBig);
 // Sur le site (et dans l'appli Android qui l'ouvre) : copie hors ligne et mises à jour automatiques
 if('serviceWorker' in navigator && /\.github\.io$/.test(location.hostname)){
