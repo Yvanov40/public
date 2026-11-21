@@ -8,13 +8,14 @@
     "android:sync": "cap sync android"
   },
   "dependencies": {
-    "@capacitor/android": "^7.6.10",
-    "@capacitor/core": "^7.6.10",
-    "@capacitor/filesystem": "^7.1.9",
-    "@capacitor/share": "^7.0.4"
+    "@capacitor/android": "8.6.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/status-bar": "8.0.4"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^7.6.10"
+    "@capacitor/assets": "4.0.0",
+    "@capacitor/cli": "8.6.2"
   }
 }

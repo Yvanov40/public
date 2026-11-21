@@ -24,4 +24,20 @@ const avant = g;
 g = g.replace(/    buildTypes \{\n        release \{/, signature);
 if (g === avant) { console.error("build.gradle : bloc buildTypes introuvable"); process.exit(1); }
 fs.writeFileSync(f, g);
+// La page garde la taille de texte de l'appli, même si le téléphone grossit les caractères (comme Mes applis)
+const act = "android/app/src/main/java/fr/yvanov/calculenlignes/MainActivity.java";
+fs.writeFileSync(act, `package fr.yvanov.calculenlignes;
+
+import android.os.Bundle;
+import com.getcapacitor.BridgeActivity;
+
+// Calcul en lignes : la page du site (GitHub Pages) dans une fenêtre Android.
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getBridge().getWebView().getSettings().setTextZoom(100);
+    }
+}
+`);
 console.log("build.gradle prêt, version 1.0." + n + (process.env.APPLI_KEYSTORE_FICHIER ? ", signé avec la clé de Mes applis" : ", clé de test"));
