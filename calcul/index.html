@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Calcul en lignes</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone-192.png">
@@ -251,7 +251,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .btn.primary{background:var(--accent);color:var(--accent-ink);box-shadow:none;font-weight:500}
 textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:10px;margin-top:8px}
 
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:90vw;
+.toast{position:fixed;left:50%;top:calc(var(--bandeau-haut,env(safe-area-inset-top,0px)) + 6px);transform:translateX(-50%);max-width:90vw;
   background:var(--ink);color:var(--surface);padding:9px 15px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
 .toast.show{opacity:1}
 .toast.act{pointer-events:auto;display:flex;gap:14px;align-items:center}
