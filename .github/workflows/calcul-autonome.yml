@@ -1,0 +1,56 @@
+# Construit « Calcul autonome » : la page calcul/ est copiée DANS l'APK (marche sans connexion, pas de mise à jour automatique).
+# À lancer à la main (Actions → Calcul autonome → Run workflow) pour emporter la dernière version de la page,
+# ou automatiquement quand le dossier calcul/autonome change. APK publié dans la version « calcul-autonome » :
+#   https://github.com/Yvanov40/public/releases/download/calcul-autonome/calcul-autonome.apk
+name: Calcul autonome
+on:
+  push:
+    branches: [main]
+    paths: ["calcul/autonome/**", ".github/workflows/calcul-autonome.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Clé de signature de Mes applis (secret APPLI_KEYSTORE_B64, si présent)
+        env: { CLE: "${{ secrets.APPLI_KEYSTORE_B64 }}" }
+        run: |
+          if [ -n "$CLE" ]; then echo "$CLE" | base64 -d > "$RUNNER_TEMP/appli.keystore"; echo "APPLI_KEYSTORE_FICHIER=$RUNNER_TEMP/appli.keystore" >> "$GITHUB_ENV"; fi
+      - name: Copier la page dans l'appli
+        working-directory: calcul
+        run: |
+          rm -rf autonome/www && mkdir -p autonome/www
+          cp index.html manifest.webmanifest icone-192.png icone-512.png icone-maskable-512.png autonome/www/
+          cp -r vendor autonome/www/
+          ls -la autonome/www
+      - name: Préparer Capacitor
+        working-directory: calcul/autonome
+        env: { NUMERO: "${{ github.run_number }}" }
+        run: |
+          npm ci
+          npx cap add android
+          npx @capacitor/assets generate --android
+          npx cap sync android
+          node preparer-android.js
+      - name: Construire l'APK
+        working-directory: calcul/autonome/android
+        env: { APPLI_KEYSTORE_MDP: "${{ secrets.APPLI_KEYSTORE_MDP }}", APPLI_KEYSTORE_ALIAS: "${{ secrets.APPLI_KEYSTORE_ALIAS }}" }
+        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+      - name: Renommer
+        run: cp calcul/autonome/android/app/build/outputs/apk/release/app-release.apk calcul-autonome.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: calcul-autonome
+          name: "Calcul autonome — Android"
+          body: |
+            Calcul avec la page à l'intérieur de l'appli : marche sans connexion dès la première ouverture, ne se met pas à jour toute seule.
+            Cohabite avec « Calcul en lignes ». Sur le téléphone : télécharger « calcul-autonome.apk », l'ouvrir, autoriser l'installation.
+          files: calcul-autonome.apk
+          make_latest: false

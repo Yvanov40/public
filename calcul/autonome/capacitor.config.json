@@ -1,0 +1,12 @@
+{
+  "appId": "fr.yvanov.calculautonome",
+  "appName": "Calcul autonome",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#E7EAE5",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "StatusBar": { "overlaysWebView": false, "style": "LIGHT", "backgroundColor": "#E7EAE5" }
+  }
+}
