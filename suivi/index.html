@@ -6454,6 +6454,39 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     enregistrerReglagesAgenda();
   }
 
+  // largeur du plus long titre possible de l'agenda (mesurée dans la police affichée, gardée en mémoire)
+  const memoTitreAgenda = {};
+  function largeurTitreAgenda(h2, semaineAffichee, annee) {
+    if (!h2) return;
+    // même largeur en mode Mois et en mode Semaine : les boutons ne bougent pas non plus quand on change de mode
+    const avait = h2.classList.contains("titre-semaine");
+    const l = [true, false].map((sem) => { h2.classList.toggle("titre-semaine", sem); return mesurerTitreAgenda(h2, sem, annee); });
+    h2.classList.toggle("titre-semaine", avait);
+    h2.style.minWidth = Math.max(...l) + "px";
+    h2.style.whiteSpace = "nowrap";
+  }
+  function mesurerTitreAgenda(h2, semaine, annee) {
+    const st = getComputedStyle(h2), police = `${st.fontStyle} ${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
+    const cle = [police, semaine, annee, st.textTransform].join("|");
+    if (!memoTitreAgenda[cle]) {
+      const ctx = (largeurTitreAgenda.toile || (largeurTitreAgenda.toile = document.createElement("canvas"))).getContext("2d");
+      ctx.font = police;
+      const textes = [];
+      if (semaine) {
+        for (let d = lundiDe(enIso(new Date(annee - 1, 11, 20))); d.getFullYear() <= annee + 1 && !(d.getFullYear() === annee + 1 && d.getMonth() > 0); d.setDate(d.getDate() + 7)) {
+          const f = new Date(d); f.setDate(f.getDate() + 6);
+          textes.push(`Semaine du ${d.getDate()}${d.getMonth() !== f.getMonth() ? " " + d.toLocaleDateString("fr-FR", { month: "long" }) : ""} au ${f.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`);
+        }
+      } else for (let m = 0; m < 12; m++) textes.push(new Date(annee, m, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }));
+      const maj = st.textTransform === "capitalize" ? (t) => t.replace(/(^|\s)\S/g, (x) => x.toUpperCase()) : (t) => t;
+      const l = Math.ceil(Math.max(...textes.map((t) => ctx.measureText(maj(t)).width))) + 2;
+      // police pas encore chargée : on mesure quand même, sans garder le résultat, et on recommence quand elle arrive
+      let prete = true; try { prete = !document.fonts || document.fonts.check(police); } catch (e) {}
+      if (!prete) { if (document.fonts && !mesurerTitreAgenda.attente) { mesurerTitreAgenda.attente = true; document.fonts.ready.then(() => { mesurerTitreAgenda.attente = false; if (vueCourante() === "calendrier") afficherCalendrier(); }); } return l; }
+      memoTitreAgenda[cle] = l;
+    }
+    return memoTitreAgenda[cle];
+  }
   function afficherCalendrier() {
     if (!$("calGrille")) return;
     const ev = evenementsCalendrier();
@@ -6487,6 +6520,9 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       el("div", { class: "cal-types" }, ["rdv", "tache", "dutreil"].map((t) => el("button", { type: "button", "aria-pressed": String(typesCalendrier.has(t)), title: NOMS_CAL[t], "aria-label": NOMS_CAL[t],
         onclick: () => { typesCalendrier.has(t) ? typesCalendrier.delete(t) : typesCalendrier.add(t); memoriserFiltres(); afficherCalendrier(); } },
         el("i", { style: `background:${COULEURS_CAL[t]}` }), NOMS_CAL[t]))));
+    // ordinateur : le titre prend toujours la largeur du plus long possible (semaine ou mois de l'année), pour que
+    // les flèches et « Aujourd'hui » ne bougent pas d'une semaine à l'autre
+    if (!tel) largeurTitreAgenda($("calEntete").querySelector("h2"), semaine, versDate(jourCalendrier).getFullYear());
     // grille : 6 semaines, lundi en premier
     const premier = new Date(moisCalendrier);
     const decalage = (premier.getDay() + 6) % 7;
