@@ -217,6 +217,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .row .ln{touch-action:pan-y}
 .sheet.dragsel{user-select:none;-webkit-user-select:none}
 .exopt{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+.exopt[hidden]{display:none}
 .expbtns{display:flex;flex-direction:column;gap:8px;margin-top:14px}
 .expbtns .btn{min-height:48px;font-size:15px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px}
 .expbtns .btn small{font-size:12px;opacity:.8;font-weight:400}
@@ -1012,16 +1013,20 @@ function renderRows(){
 }
 // Renommer un titre (« # Résultat » → « # Résultat fiscal ») renomme les lignes de son bloc
 // qui commencent par l'ancien nom (« Résultat 2026 » → « Résultat fiscal 2026 »).
-let titleSnap=null;
+let titleSnap=null, titreLien=null;   // titreLien : ancien nom d'un titre qu'on a entièrement effacé
 const escRe=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 function syncTitle(){
   const s=cur(), L=s.lines, i=active, now=i>=0?L[i]:undefined, snap=titleSnap;
   titleSnap={id:s.id,i,val:now};
   if(!snap || snap.id!==s.id || snap.i!==i || now===undefined || snap.val===now) return;
   const t0=(snap.val||'').trim(), t1=now.trim();
-  if(!t0.startsWith('#') || !t1.startsWith('#')) return;
-  const avant=t0.replace(/^#+\s*/,'').trim(), apres=t1.replace(/^#+\s*/,'').trim();
-  if(!avant || !apres || avant===apres) return;
+  const nom=t=>t.startsWith('#')?t.replace(/^#+\s*/,'').trim():'';
+  let avant=nom(t0); const apres=nom(t1);
+  const lien=titreLien&&titreLien.id===s.id&&titreLien.i===i?titreLien.nom:'';
+  if(!avant) avant=lien;
+  if(!apres){ if(avant) titreLien={id:s.id,i,nom:avant}; return; }   // titre vidé : on retient l'ancien nom pour la suite
+  titreLien=null;
+  if(!avant || avant===apres) return;
   const re=new RegExp('^(\\s*)'+escRe(avant)+'(?=[\\s:(]|$)','i');
   let changed=false;
   for(let k=i+1;k<L.length;k++){
@@ -1088,7 +1093,8 @@ function focusRow(i,pos){
   try{ e.setSelectionRange(p,p); }catch(_){}
   e.scrollIntoView({block:'nearest'});
 }
-function setActive(i){ if(active===i) return; active=i; sheetEl.querySelectorAll('.row').forEach((r,j)=>r.classList.toggle('on',j===i)); $('dBig').style.color=''; renderDisplay(); }
+function setActive(i){ if(active===i) return; active=i; titleSnap={id:cur().id,i,val:cur().lines[i]};   // nom du titre mémorisé dès qu'on touche la ligne
+  sheetEl.querySelectorAll('.row').forEach((r,j)=>r.classList.toggle('on',j===i)); $('dBig').style.color=''; renderDisplay(); }
 sheetEl.addEventListener('focusin',e=>{ if(e.target.classList.contains('ex')) setActive(+e.target.closest('.row').dataset.i); });
 sheetEl.addEventListener('input',e=>{
   if(!e.target.classList.contains('ex')) return;
@@ -1868,7 +1874,7 @@ function copy(text,msg){
 }
 
 /* ===================== Export : PDF, mail ===================== */
-const exportOpts={formules:true,numeros:false,selection:false};
+const exportOpts={formules:true,numeros:false,selection:false,mise:'tableau'};
 function openExport(){
   const s=cur(), n=sel.size;
   if(!n) exportOpts.selection=false;
@@ -1876,11 +1882,21 @@ function openExport(){
   const B=$('formBody'); B.innerHTML='';
   const tg=(k,lab)=>el('button',{className:'toggle',type:'button','aria-pressed':String(exportOpts[k]),on:{click:e=>{ exportOpts[k]=!exportOpts[k]; e.currentTarget.setAttribute('aria-pressed',String(exportOpts[k])); }}},el('span',{textContent:lab}),el('i'));
   const app=!!(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Share);
+  const ser=seriesDe(s,computeSheet(s.lines));
+  const optsFeuille=el('div',{className:'exopt'});
+  const majMise=()=>{ optsFeuille.hidden=!!ser && exportOpts.mise==='tableau'; };
   B.append(
-    el('div',{className:'exopt'},
+    ser?el('div',{style:'margin-bottom:10px'},
+      el('h3',{textContent:'Mise en page du PDF',style:'margin:0 0 8px'}),
+      seg([['tableau','Tableau par année'],['feuille','Feuille ligne par ligne']],exportOpts.mise,v=>{ exportOpts.mise=v; B.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===(v==='tableau'?'Tableau par année':'Feuille ligne par ligne')))); majMise(); }),
+      el('p',{className:'note',textContent:'Tableau par année : '+ser.cols.map(c=>c.nom).join(', ')+' de '+ser.annees[0]+' à '+ser.annees[ser.annees.length-1]+', avec les hypothèses en tête et les totaux, comme un prévisionnel.'})):null,
+    optsFeuille);
+  optsFeuille.append(
       tg('formules','Montrer les formules (sinon, seulement les libellés)'),
       tg('numeros','Numéros de lignes'),
-      n?tg('selection','Seulement les '+n+' ligne'+(n>1?'s':'')+' sélectionnée'+(n>1?'s':'')):null),
+      ...(n?[tg('selection','Seulement les '+n+' ligne'+(n>1?'s':'')+' sélectionnée'+(n>1?'s':''))]:[]));
+  majMise();
+  B.append(
     el('div',{className:'expbtns'},
       el('button',{className:'btn primary',type:'button',on:{click:()=>exportPDF()}},el('span',{textContent:'PDF'}),el('small',{textContent:app||navigator.canShare?'à enregistrer, ou à envoyer par mail, WhatsApp…':'téléchargé sur cet appareil'})),
       el('button',{className:'btn',type:'button',on:{click:()=>mailTexte()}},el('span',{textContent:'Mail avec le texte'}),el('small',{textContent:'la feuille et ses résultats dans le corps du mail'})),
@@ -1899,6 +1915,39 @@ function libelle(line,res){
   if(m && /\p{L}/u.test(m[1])) return m[1].trim();
   if(res && res.name) return res.name;
   return t;
+}
+// Lignes « Libellé 2026 », « Libellé 2027 »… : une série par libellé (ou par titre du bloc)
+function seriesDe(s,r){
+  const items=[]; let titre='';
+  s.lines.forEach((line,i)=>{
+    const t=line.trim();
+    if(t.startsWith('#')){ titre=t.replace(/^#+\s*/,'').trim(); return; }
+    const x=r[i]; if(!t || !x || x.kind!=='value') return;
+    const lab=libelle(line,x); if(lab===t) return;
+    const m=lab.match(/^(.*?)\s*\b((?:19|20)\d{2})\b\s*(?:\(([^)]*)\))?\s*$/u); if(!m) return;
+    items.push({i,stem:m[1].trim(),year:+m[2],note:(m[3]||'').trim(),titre,x});
+  });
+  const groupes=new Map();
+  items.forEach(it=>{ const k=it.titre+'|'+it.stem.toLowerCase(); if(!groupes.has(k)) groupes.set(k,[]); groupes.get(k).push(it); });
+  let cols=[...groupes.values()].filter(g=>new Set(g.map(x=>x.year)).size>=2);
+  const parTitre={}; cols.forEach(g=>{ parTitre[g[0].titre]=(parTitre[g[0].titre]||0)+1; });
+  cols=cols.map(g=>{ const t=g[0].titre, st=g[0].stem;
+    const nom=(t && parTitre[t]===1 && (st.length<3 || !st)) ? t : (st || t || 'Série');
+    const vals={}; g.forEach(it=>{ vals[it.year]=it; });
+    const argent=g.some(it=>it.x.cur==='€'), pct=g.every(it=>it.x.isPct);
+    return {nom,vals,argent,pct,premier:g[0].i}; }).sort((a,b)=>a.premier-b.premier);
+  const annees=[...new Set(cols.flatMap(c=>Object.keys(c.vals).map(Number)))].sort((a,b)=>a-b);
+  const notes={}; items.forEach(it=>{ if(it.note && !notes[it.year]) notes[it.year]=it.note; });
+  // hypothèses : lignes fixes utilisées par les séries (L5, loyer, taux…)
+  const dansSerie=new Set(cols.flatMap(c=>Object.values(c.vals).map(it=>it.i)));
+  const varIdx={}; r.forEach((x,k)=>{ if(x&&x.kind==='value'&&x.name) varIdx[x.name]=k; });
+  const hyp=new Set();
+  const refs=k=>{ const t=s.lines[k], f=t.replace(/^((?:[^:()=<>]|\([^()]*\))+?)\s*:\s*/,'');
+    (f.match(/\b[lL](\d+)\b/g)||[]).forEach(m=>{ const j=+m.slice(1)-1; if(j!==k && r[j] && r[j].kind==='value' && !dansSerie.has(j)) hyp.add(j); });
+    (f.match(/[\p{L}_][\p{L}\d_]*/gu)||[]).forEach(w=>{ const j=varIdx[w.toLowerCase()]; if(j!==undefined && j!==k && !dansSerie.has(j)) hyp.add(j); }); };
+  dansSerie.forEach(refs);
+  const hypo=[...hyp].sort((a,b)=>a-b).map(k=>{ const l=libelle(s.lines[k],r[k]); return {label:l.charAt(0).toUpperCase()+l.slice(1),valeur:show(r[k])}; });
+  return cols.length && annees.length>=2 ? {cols,annees,notes,hypo} : null;
 }
 function exportTexte(){
   const {s,r,idx}=exportLignes();
@@ -1926,7 +1975,83 @@ function pdfTxt(t){
     .replace(/[^\x00-\xff]/g,c=>WINANSI.includes(c)?c:'?');
 }
 const rgb=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+function pdfBandeau(doc,W,acc,titre,sous){
+  const fonce=lum(acc)<.45, txt=fonce?[255,255,255]:[27,34,30];
+  doc.setFillColor(...rgb(acc)); doc.rect(0,0,W,36,'F');
+  doc.setFillColor(...rgb(mixHex(acc,'#ffffff',.82))); doc.rect(0,36,W,1.4,'F');
+  doc.setTextColor(...txt); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text('Calcul en lignes',W-16,11,{align:'right'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(20);
+  const t=doc.splitTextToSize(pdfTxt(titre),W-32-40); doc.text(t[0],16,21);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(pdfTxt(sous),16,29);
+  return 48;
+}
+function pdfPied(doc,W,H,M,nom){
+  const n=doc.getNumberOfPages();
+  for(let k=1;k<=n;k++){ doc.setPage(k); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(111,121,115);
+    doc.setDrawColor(213,219,212); doc.setLineWidth(.2); doc.line(M,H-13,W-M,H-13);
+    doc.text(pdfTxt(nom),M,H-8.5); doc.text(k+' / '+n,W-M,H-8.5,{align:'right'}); }
+}
+function nomPDF(s,suffixe){ const d=new Date(); return s.name.replace(/[\\/:*?"<>|]+/g,'-').trim()+(suffixe?' - '+suffixe:'')+' - '+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.pdf'; }
+async function buildTableauPDF(){
+  const jsPDF=await getJsPDF();
+  const s=cur(), r=computeSheet(s.lines), S=seriesDe(s,r);
+  const doc=new jsPDF({unit:'mm',format:'a4'}), W=210, H=297, M=16;
+  const P=state.prefs, acc=hexOk(P.accent)?P.accent:'#2557E8';
+  const INK=[27,34,30], MUT=[111,121,115], ERR=[180,83,42], TEINTE=rgb(mixHex(acc,'#ffffff',.07)), CARTE=rgb(mixHex(acc,'#ffffff',.1));
+  const date=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  doc.setProperties({title:s.name+' - prévisionnel',creator:'Calcul en lignes'});
+  let y=pdfBandeau(doc,W,acc,s.name,'Prévisionnel '+S.annees[0]+' – '+S.annees[S.annees.length-1]+'  ·  '+date);
+  // hypothèses en cartes
+  if(S.hypo.length){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...rgb(acc)); doc.text('Hypothèses',M,y); y+=4;
+    const par=3, g=4, cw=(W-2*M-g*(par-1))/par, ch=17;
+    S.hypo.forEach((h,k)=>{ const cx=M+(k%par)*(cw+g), cy=y+Math.floor(k/par)*(ch+g);
+      doc.setFillColor(...CARTE); doc.roundedRect(cx,cy,cw,ch,2.5,2.5,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT); doc.text(doc.splitTextToSize(pdfTxt(h.label),cw-8)[0],cx+4,cy+6.2);
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...INK); doc.text(pdfTxt(h.valeur),cx+4,cy+13.2); });
+    y+=Math.ceil(S.hypo.length/par)*(ch+g)+6;
+  }
+  // tableau : une ligne par année, une colonne par série
+  const n=S.cols.length, yw=30, cwid=(W-2*M-yw)/n, fs=n>6?7.5:n>4?8.5:9.5;
+  const cell=(c,yr)=>{ const it=c.vals[yr]; if(!it) return {t:'–',v:null}; const x=it.x;
+    return {t:x.isPct?fmt(x.display)+' %':fmt(x.value,!!x.cur), v:x.isPct?null:x.value}; };
+  const entete=()=>{
+    doc.setFont('helvetica','bold'); doc.setFontSize(fs);
+    const lignes=S.cols.map(c=>doc.splitTextToSize(pdfTxt(c.nom+(c.argent?' (€)':'')),cwid-4));
+    const hh=Math.max(...lignes.map(l=>l.length))*3.8+5;
+    doc.setFillColor(...rgb(acc)); doc.roundedRect(M,y,W-2*M,hh,2,2,'F');
+    const blanc=lum(acc)<.45?[255,255,255]:INK; doc.setTextColor(...blanc);
+    doc.text('Année',M+3,y+5.4);
+    lignes.forEach((l,k)=>doc.text(l,M+yw+(k+1)*cwid-3,y+5.4,{align:'right'}));
+    y+=hh+1.5;
+  };
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...rgb(acc)); doc.text('Par année',M,y); y+=4;
+  entete();
+  // lignes resserrées si besoin pour que le tableau et son total tiennent sur la page
+  const rh=Math.max(5.4,Math.min(fs>9?7.4:6.6,(H-24-y-16)/S.annees.length));
+  S.annees.forEach((yr,k)=>{
+    if(y+rh>H-22){ doc.addPage(); y=18; entete(); }
+    if(k%2===0){ doc.setFillColor(...TEINTE); doc.rect(M,y-1,W-2*M,rh,'F'); }
+    doc.setFont('helvetica','bold'); doc.setFontSize(fs); doc.setTextColor(...INK); doc.text(String(yr),M+3,y+rh/2+1.3);
+    if(S.notes[yr]){ doc.setFont('helvetica','normal'); doc.setFontSize(fs-1.5); doc.setTextColor(...MUT); doc.text(pdfTxt(S.notes[yr]),M+3+doc.getTextWidth(String(yr))+8.5,y+rh/2+1.3); doc.setFontSize(fs); }
+    S.cols.forEach((c,j)=>{ const v=cell(c,yr); doc.setFont('helvetica','normal'); doc.setTextColor(...(v.v!==null&&v.v<0?ERR:INK)); doc.text(pdfTxt(v.t),M+yw+(j+1)*cwid-3,y+rh/2+1.3,{align:'right'}); });
+    y+=rh;
+  });
+  // totaux
+  if(y+12>H-22){ doc.addPage(); y=18; }
+  y+=1.5; doc.setDrawColor(...rgb(acc)); doc.setLineWidth(.6); doc.line(M,y,W-M,y); y+=1.2;
+  doc.setFont('helvetica','bold'); doc.setFontSize(fs+.5); doc.setTextColor(...INK); doc.text('Total',M+3,y+5);
+  S.cols.forEach((c,j)=>{ if(c.pct) return; const t=S.annees.reduce((a,yr)=>a+(c.vals[yr]&&!c.vals[yr].x.isPct?c.vals[yr].x.value:0),0);
+    doc.setTextColor(...(t<0?ERR:INK)); doc.text(pdfTxt(fmt(t,c.argent)),M+yw+(j+1)*cwid-3,y+5,{align:'right'}); });
+  y+=10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT);
+  doc.text(pdfTxt('Montants en euros. Calculs de la feuille « '+s.name+' », Calcul en lignes.'),M,Math.min(y+2,H-18));
+  pdfPied(doc,W,H,M,s.name+' - prévisionnel');
+  return {blob:doc.output('blob'),nom:nomPDF(s,'previsionnel')};
+}
 async function buildPDF(){
+  if(exportOpts.mise==='tableau'){ const s=cur(); if(seriesDe(s,computeSheet(s.lines))) return buildTableauPDF(); }
   const jsPDF=await getJsPDF();
   const {s,r,idx}=exportLignes();
   const doc=new jsPDF({unit:'mm',format:'a4'}), W=210, H=297, M=16;
@@ -1935,12 +2060,8 @@ async function buildPDF(){
   const numW=exportOpts.numeros?9:0, resW=48, textX=M+numW, textW=W-2*M-numW-resW-4, resX=W-M;
   const date=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   doc.setProperties({title:s.name,creator:'Calcul en lignes'});
-  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...INK);
-  const titre=doc.splitTextToSize(pdfTxt(s.name),W-2*M); doc.text(titre,M,22);
-  let y=22+(titre.length-1)*7+6;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUT);
-  doc.text(pdfTxt(date+(exportOpts.selection&&sel.size?' · lignes sélectionnées':'')),M,y);
-  y+=3; doc.setDrawColor(...rgb(acc)); doc.setLineWidth(.6); doc.line(M,y,W-M,y); y+=8;
+  let y=pdfBandeau(doc,W,acc,s.name,date+(exportOpts.selection&&sel.size?'  ·  lignes sélectionnées':''));
+  let zebre=0;
   const page=()=>{ doc.addPage(); y=18; doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT); doc.text(pdfTxt(s.name),M,12); y=20; };
   let prevEmpty=false;
   for(const i of idx){
@@ -1948,14 +2069,17 @@ async function buildPDF(){
     if(!t){ if(!prevEmpty) y+=3; prevEmpty=true; continue; } prevEmpty=false;
     if(x.kind==='head'){
       if(y>H-34) page();
-      y+=3; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...rgb(hc));
-      const h=doc.splitTextToSize(pdfTxt(t.replace(/^#+\s*/,'')),W-2*M-numW); doc.text(h,textX,y);
-      y+=(h.length-1)*5+2.2; doc.setDrawColor(...rgb(hc)); doc.setLineWidth(.35); doc.line(textX,y,W-M,y); y+=6; continue;
+      y+=4; const h=doc.splitTextToSize(pdfTxt(t.replace(/^#+\s*/,'')),W-2*M-numW-10), hh=h.length*5.2+3.4;
+      doc.setFillColor(...rgb(mixHex(hc,'#ffffff',.12))); doc.roundedRect(M,y-5.6,W-2*M,hh,2,2,'F');
+      doc.setFillColor(...rgb(hc)); doc.rect(M,y-5.6,1.4,hh,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(11.5); doc.setTextColor(...rgb(mixHex(hc,'#1B221E',.8))); doc.text(h,textX+4,y);
+      y+=hh-1; zebre=0; continue;
     }
     const gauche=exportOpts.formules?t:libelle(line,x);
     doc.setFont('helvetica',x.isTotal?'bold':'normal'); doc.setFontSize(10);
     const L=doc.splitTextToSize(pdfTxt(gauche),textW), h=Math.max(1,L.length)*4.5+2.6;
     if(y+h>H-18) page();
+    if(zebre++%2===1){ doc.setFillColor(...rgb(mixHex(acc,'#ffffff',.045))); doc.rect(M,y-4.2,W-2*M,h-.4,'F'); }
     if(exportOpts.numeros){ doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT); doc.text(String(i+1),M+numW-3,y,{align:'right'}); }
     doc.setFont('helvetica',x.isTotal?'bold':'normal'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(L,textX,y);
     let res='', col=INK;
@@ -1963,13 +2087,10 @@ async function buildPDF(){
     else if(x.kind==='error'){ res='?'; col=ERR; }
     if(res){ doc.setFont('helvetica',x.isTotal||P.resw==='gras'?'bold':'normal'); doc.setTextColor(...col); doc.text(pdfTxt(res),resX,y,{align:'right'}); }
     if(x.isTotal){ doc.setDrawColor(...INK); doc.setLineWidth(.3); doc.line(resX-resW,y-4.4,resX,y-4.4); }
-    y+=h-2.6+1.2; doc.setDrawColor(...RULE); doc.setLineWidth(.15); doc.line(textX,y,W-M,y); y+=4.6;
+    y+=h;
   }
-  const n=doc.getNumberOfPages();
-  for(let k=1;k<=n;k++){ doc.setPage(k); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUT);
-    doc.text('Calcul en lignes',M,H-9); doc.text(k+' / '+n,W-M,H-9,{align:'right'}); }
-  const d=new Date(), nom=s.name.replace(/[\\/:*?"<>|]+/g,'-').trim()+' - '+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.pdf';
-  return {blob:doc.output('blob'),nom};
+  pdfPied(doc,W,H,M,s.name);
+  return {blob:doc.output('blob'),nom:nomPDF(s,'')};
 }
 function blob64(b){ return new Promise((ok,ko)=>{ const f=new FileReader(); f.onload=()=>ok(String(f.result).split(',')[1]||''); f.onerror=ko; f.readAsDataURL(b); }); }
 async function deliver(blob,nom){
@@ -2005,7 +2126,7 @@ async function exportPDF(){
 }
 $('expBtn').addEventListener('click',openExport);
 
-window.__calc={computeSheet,impotIR,ifiCalc,show,buildPDF,exportOpts,devinerMots,loadDico,centresTouches};
+window.__calc={computeSheet,impotIR,ifiCalc,show,buildPDF,exportOpts,seriesDe,devinerMots,loadDico,centresTouches};
 window.addEventListener('resize',fitBig);
 // Sur le site (et dans l'appli Android qui l'ouvre) : copie hors ligne et mises à jour automatiques
 if('serviceWorker' in navigator && /\.github\.io$/.test(location.hostname)){
