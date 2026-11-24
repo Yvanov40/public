@@ -1000,7 +1000,7 @@ $('addSheet').addEventListener('click',()=>{
 });
 
 function renderRows(){
-  const s=cur(); sheetEl.innerHTML=''; sel.clear(); pickFor=null; pickedFixed=null;
+  const s=cur(); sheetEl.innerHTML=''; sel.clear(); pickFor=null; pickedFixed=null; pickedSerie=null;
   s.lines.forEach((line,i)=>{
     const row=el('div',{className:'row'}); row.dataset.i=i;
     const inp=el('input',{className:'ex',value:line,autocomplete:'off',autocorrect:'off',autocapitalize:'off',spellcheck:false,enterkeyhint:'next','aria-label':'Ligne '+(i+1)});
@@ -1140,6 +1140,7 @@ function dsAuto(){
 }
 function dsEnd(){ clearTimeout(ds.timer); ds.timer=null; cancelAnimationFrame(ds.raf); if(ds.on){ ds.on=false; ds.skipClick=true; sheetEl.classList.remove('dragsel'); } ds.id=null; }
 sheetEl.addEventListener('pointerdown',e=>{
+  ds.skipClick=false;   // un ancien glisser ne doit pas avaler ce toucher
   const ln=e.target.closest('.ln'); if(!ln || pickFor || e.button>0) return;
   const i=+ln.closest('.row').dataset.i;
   Object.assign(ds,{id:e.pointerId,start:i,last:-1,y:e.clientY,sy:e.clientY,on:false,skipClick:false});
@@ -1227,7 +1228,7 @@ function updateHint(){
 document.addEventListener('selectionchange',updateHint);
 ['keyup','click','focusin'].forEach(t=>sheetEl.addEventListener(t,()=>setTimeout(updateHint,0)));
 sheetEl.addEventListener('focusout',()=>setTimeout(updateHint,0));
-const sel=new Set(); let pickFor=null, pickedFixed=null;
+const sel=new Set(); let pickFor=null, pickedFixed=null, pickedSerie=null;
 function refOf(i){ const r=results[i]; return r&&r.kind==='value'&&r.name ? r.name : 'L'+(i+1); }
 function labelOf(i){
   const t=cur().lines[i].trim(), m=t.match(/^((?:[^:()=<>]|\([^()]*\))+?)\s*:\s*(.+)$/);
@@ -1235,12 +1236,43 @@ function labelOf(i){
   const v=t.match(/^([\p{L}_][\p{L}\d_]*)\s*=/u); return v?v[1]:'';
 }
 function lineTap(i){
+  if(pickFor==='serie'){ pickFor=null; sheetEl.classList.remove('picking'); if(!anneeDe(i)){ toast('Cette ligne n’a pas d’année : touchez une ligne comme « Impôt 2026 »'); renderSelbar(); return; } pickedSerie=i; renderSelbar(); return; }
   if(pickFor){ pickedFixed=i; pickFor=null; sheetEl.classList.remove('picking'); renderSelbar(); return; }
   if(sel.has(i)) sel.delete(i); else sel.add(i);
-  pickedFixed=null; if(state.prefs.vibrate) buzz(8);
+  pickedFixed=null; pickedSerie=null; if(state.prefs.vibrate) buzz(8);
   refresh();
 }
-function clearSel(){ sel.clear(); pickFor=null; pickedFixed=null; sheetEl.classList.remove('picking'); refresh(); }
+function clearSel(){ sel.clear(); pickFor=null; pickedFixed=null; pickedSerie=null; sheetEl.classList.remove('picking'); refresh(); }
+// Année d'une ligne (« Impôt 2026 (8 mois) : … ») et série à laquelle elle appartient
+function anneeDe(i){
+  const lab=labelOf(i); if(!lab) return null;
+  const m=lab.match(/^(.*?)\s*\b((?:19|20)\d{2})\b\s*(?:\(([^)]*)\))?\s*$/u); if(!m) return null;
+  return {stem:m[1].trim(),year:+m[2],note:(m[3]||'').trim()};
+}
+function titreDe(i){ const L=cur().lines; for(let k=i;k>=0;k--){ const t=L[k].trim(); if(t.startsWith('#')) return k; } return -1; }
+function serieDe(j){   // toutes les lignes du même bloc avec le même libellé (hors année)
+  const a=anneeDe(j); if(!a) return null;
+  const L=cur().lines, t=titreDe(j), map={};
+  for(let k=t+1;k<L.length;k++){ if(k>t && L[k].trim().startsWith('#')) break; const b=anneeDe(k); if(b && b.stem.toLowerCase()===a.stem.toLowerCase() && !(b.year in map)) map[b.year]=k; }
+  const titre=t>=0?L[t].trim().replace(/^#+\s*/,''):'';
+  return {nom:a.stem||titre||'Série',map};
+}
+function combineSeries(op){
+  const A={}, notes={}; [...sel].sort((a,b)=>a-b).forEach(i=>{ const a=anneeDe(i); if(a && !(a.year in A)){ A[a.year]=i; if(a.note) notes[a.year]=a.note; } });
+  const B=serieDe(pickedSerie).map, ans=Object.keys(A).map(Number).filter(y=>y in B).sort((a,b)=>a-b);
+  if(!ans.length){ toast('Aucune année en commun entre les deux séries'); return; }
+  ans.forEach(y=>{ const b=anneeDe(B[y]); if(b&&b.note&&!notes[y]) notes[y]=b.note; });
+  const nom={p:'Total',m:'Différence',r:'Différence',x:'Produit',d:'Rapport'}[op];
+  const out=['# '+nom];
+  ans.forEach(y=>{ const a='L'+(A[y]+1), b='L'+(B[y]+1);
+    out.push(nom+' '+y+(notes[y]?' ('+notes[y]+')':'')+' : '+{p:a+' + '+b,m:a+' − '+b,r:b+' − '+a,x:a+' × '+b,d:a+' / '+b}[op]); });
+  if(op==='p'||op==='m'||op==='r') out.push('Total : total');
+  const at=Math.max(blockEnd(Math.max(...Object.values(A))),blockEnd(Math.max(...Object.values(B))));
+  insertLines(at,out); active=at+out.length-1;
+  save(); renderRows(); focusRow(active);
+  const manque=Object.keys(A).length-ans.length;
+  toast(ans.length+' année'+(ans.length>1?'s':'')+' combinée'+(ans.length>1?'s':'')+(manque>0?' ('+manque+' sans correspondance)':''));
+}
 function blockEnd(i){ const L=cur().lines; let j=i+1; while(j<L.length && L[j].trim()!=='' && !L[j].trim().startsWith('#')) j++; return j; }
 function addAfterSel(newLines,msg){
   const at=blockEnd(Math.max(...sel)); insertLines(at,newLines); active=at+newLines.length-1;
@@ -1265,7 +1297,14 @@ function renderSelbar(){
   b.hidden=false; b.innerHTML='';
   const btn=(t,fn,cls)=>el('button',{type:'button',className:cls||'',textContent:t,on:{click:fn}});
   const n=sel.size, refs=[...sel].sort((a,c)=>a-c).map(i=>'L'+(i+1));
-  if(pickFor){ b.append(el('span',{className:'txt',textContent:'Touchez le numéro de la ligne fixe (par exemple le loyer net).'}),btn('Annuler',()=>{ pickFor=null; sheetEl.classList.remove('picking'); renderSelbar(); })); return; }
+  if(pickFor){ b.append(el('span',{className:'txt',textContent:pickFor==='serie'?'Touchez le numéro d’une ligne de l’autre série (par exemple Impôt 2026).':'Touchez le numéro de la ligne fixe (par exemple le loyer net).'}),btn('Annuler',()=>{ pickFor=null; sheetEl.classList.remove('picking'); renderSelbar(); })); return; }
+  if(pickedSerie!==null){
+    const premier=[...sel].map(anneeDe).find(Boolean), A=premier?(premier.stem||'série'):'série', B=serieDe(pickedSerie).nom;
+    b.append(el('span',{className:'txt',textContent:'Année par année, '+A+' avec '+B+' :'}),
+      btn(A+' + '+B,()=>combineSeries('p'),'go'),btn(A+' − '+B,()=>combineSeries('m')),btn(B+' − '+A,()=>combineSeries('r')),btn(A+' × '+B,()=>combineSeries('x')),btn(A+' ÷ '+B,()=>combineSeries('d')),
+      btn('Annuler',()=>{ pickedSerie=null; renderSelbar(); }));
+    return;
+  }
   if(pickedFixed!==null){
     const F=refOf(pickedFixed);
     b.append(el('span',{className:'txt',textContent:'Pour chaque ligne sélectionnée, avec '+F+' :'}),
@@ -1277,6 +1316,7 @@ function renderSelbar(){
     btn('Somme',()=>addAfterSel(['Somme : somme('+refs.join('; ')+')'],'Somme ajoutée')),
     btn('Moyenne',()=>addAfterSel(['Moyenne : moy('+refs.join('; ')+')'],'Moyenne ajoutée')),
     btn('Avec une ligne fixe…',()=>{ pickFor=true; sheetEl.classList.add('picking'); renderSelbar(); },'go'),
+    ...([...sel].some(i=>anneeDe(i))?[btn('Avec une autre série…',()=>{ pickFor='serie'; sheetEl.classList.add('picking'); renderSelbar(); },'go')]:[]),
     btn('✕',clearSel));
   b.lastChild.setAttribute('aria-label','Tout désélectionner');
 }
@@ -1881,7 +1921,7 @@ function copy(text,msg){
 }
 
 /* ===================== Export : PDF, mail ===================== */
-const exportOpts={formules:true,numeros:false,selection:false,mise:'tableau'};
+const exportOpts={formules:true,numeros:false,selection:false,mise:'tableau',totalAn:true};
 function openExport(){
   const s=cur(), n=sel.size;
   if(!n) exportOpts.selection=false;
@@ -1890,14 +1930,25 @@ function openExport(){
   const tg=(k,lab)=>el('button',{className:'toggle',type:'button','aria-pressed':String(exportOpts[k]),on:{click:e=>{ exportOpts[k]=!exportOpts[k]; e.currentTarget.setAttribute('aria-pressed',String(exportOpts[k])); }}},el('span',{textContent:lab}),el('i'));
   const app=!!(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Share);
   const ser=seriesDe(s,computeSheet(s.lines));
-  const optsFeuille=el('div',{className:'exopt'});
-  const majMise=()=>{ optsFeuille.hidden=!!ser && exportOpts.mise==='tableau'; };
+  const optsFeuille=el('div',{className:'exopt'}), optsTableau=el('div',{className:'exopt'});
+  const majMise=()=>{ const t=!!ser && exportOpts.mise==='tableau'; optsFeuille.hidden=t; optsTableau.hidden=!t; };
+  if(ser && ser.cols.filter(c=>!c.pct).length>=2){
+    const noms=ser.cols.filter(c=>!c.pct).map(c=>c.nom);
+    if(!exportOpts.inclus || !noms.some(n=>n in exportOpts.inclus)){ exportOpts.inclus={}; }
+    noms.forEach(n=>{ if(!(n in exportOpts.inclus)) exportOpts.inclus[n]=!/^(total|diff[ée]rence|produit|rapport)\b/i.test(n); });
+    const choix=el('div',{className:'seg',style:'margin:2px 0 8px'},...noms.map(n=>el('button',{type:'button',textContent:n,'aria-pressed':String(!!exportOpts.inclus[n]),
+      on:{click:e=>{ exportOpts.inclus[n]=!exportOpts.inclus[n]; e.currentTarget.setAttribute('aria-pressed',String(exportOpts.inclus[n])); }}})));
+    const lab=el('p',{className:'note',textContent:'Séries additionnées dans « Total de l’année » :'});
+    const maj=()=>{ choix.hidden=lab.hidden=!exportOpts.totalAn; };
+    const t=tg('totalAn','Colonne « Total de l’année »'); t.addEventListener('click',()=>setTimeout(maj));
+    optsTableau.append(t,lab,choix); maj();
+  }
   B.append(
     ser?el('div',{style:'margin-bottom:10px'},
       el('h3',{textContent:'Mise en page du PDF',style:'margin:0 0 8px'}),
       seg([['tableau','Tableau par année'],['feuille','Feuille ligne par ligne']],exportOpts.mise,v=>{ exportOpts.mise=v; B.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===(v==='tableau'?'Tableau par année':'Feuille ligne par ligne')))); majMise(); }),
       el('p',{className:'note',textContent:'Tableau par année : '+ser.cols.map(c=>c.nom).join(', ')+' de '+ser.annees[0]+' à '+ser.annees[ser.annees.length-1]+', avec les hypothèses en tête et les totaux, comme un prévisionnel.'})):null,
-    optsFeuille);
+    optsTableau, optsFeuille);
   optsFeuille.append(
       tg('formules','Montrer les formules (sinon, seulement les libellés)'),
       tg('numeros','Numéros de lignes'),
@@ -2019,8 +2070,14 @@ async function buildTableauPDF(){
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...INK); doc.text(pdfTxt(h.valeur),cx+4,cy+13.2); });
     y+=Math.ceil(S.hypo.length/par)*(ch+g)+6;
   }
-  // tableau : une ligne par année, une colonne par série
+  // tableau : une ligne par année, une colonne par série (+ « Total de l'année » si demandé)
+  const somCols=S.cols.filter(c=>!c.pct && (!exportOpts.inclus || exportOpts.inclus[c.nom]!==false));
+  if(exportOpts.totalAn && somCols.length>=1 && S.cols.filter(c=>!c.pct).length>=2){
+    const vals={}; S.annees.forEach(yr=>{ const it=somCols.filter(c=>c.vals[yr]); if(it.length) vals[yr]={x:{value:it.reduce((a,c)=>a+c.vals[yr].x.value,0),isPct:false,cur:'€'}}; });
+    S.cols=[...S.cols,{nom:'Total de l’année',vals,argent:somCols.some(c=>c.argent),pct:false,total:true}];
+  }
   const n=S.cols.length, yw=30, cwid=(W-2*M-yw)/n, fs=n>6?7.5:n>4?8.5:9.5;
+  const colTot=S.cols.findIndex(c=>c.total);
   const cell=(c,yr)=>{ const it=c.vals[yr]; if(!it) return {t:'–',v:null}; const x=it.x;
     return {t:x.isPct?fmt(x.display)+' %':fmt(x.value,!!x.cur), v:x.isPct?null:x.value}; };
   const entete=()=>{
@@ -2040,9 +2097,10 @@ async function buildTableauPDF(){
   S.annees.forEach((yr,k)=>{
     if(y+rh>H-22){ doc.addPage(); y=18; entete(); }
     if(k%2===0){ doc.setFillColor(...TEINTE); doc.rect(M,y-1,W-2*M,rh,'F'); }
+    if(colTot>=0){ doc.setFillColor(...rgb(mixHex(acc,'#ffffff',k%2===0?.17:.11))); doc.rect(M+yw+colTot*cwid+1,y-1,cwid-1,rh,'F'); }
     doc.setFont('helvetica','bold'); doc.setFontSize(fs); doc.setTextColor(...INK); doc.text(String(yr),M+3,y+rh/2+1.3);
     if(S.notes[yr]){ doc.setFont('helvetica','normal'); doc.setFontSize(fs-1.5); doc.setTextColor(...MUT); doc.text(pdfTxt(S.notes[yr]),M+3+doc.getTextWidth(String(yr))+8.5,y+rh/2+1.3); doc.setFontSize(fs); }
-    S.cols.forEach((c,j)=>{ const v=cell(c,yr); doc.setFont('helvetica','normal'); doc.setTextColor(...(v.v!==null&&v.v<0?ERR:INK)); doc.text(pdfTxt(v.t),M+yw+(j+1)*cwid-3,y+rh/2+1.3,{align:'right'}); });
+    S.cols.forEach((c,j)=>{ const v=cell(c,yr); doc.setFont('helvetica',c.total?'bold':'normal'); doc.setTextColor(...(v.v!==null&&v.v<0?ERR:INK)); doc.text(pdfTxt(v.t),M+yw+(j+1)*cwid-3,y+rh/2+1.3,{align:'right'}); });
     y+=rh;
   });
   // totaux
