@@ -1026,16 +1026,23 @@ function syncTitle(){
   if(!avant) avant=lien;
   if(!apres){ if(avant) titreLien={id:s.id,i,nom:avant}; return; }   // titre vidé : on retient l'ancien nom pour la suite
   titreLien=null;
-  if(!avant || avant===apres) return;
-  const re=new RegExp('^(\\s*)'+escRe(avant)+'(?=[\\s:(]|$)','i');
+  // lignes du bloc, jusqu'au titre suivant
+  const bloc=[]; for(let k=i+1;k<L.length;k++){ if(L[k].trim().startsWith('#')) break; bloc.push(k); }
+  const lab=k=>{ const m=L[k].match(/^(\s*)((?:[^:()=<>]|\([^()]*\))+?)(\s*:\s*.+)$/); return m && /\p{L}/u.test(m[2]) ? m : null; };
+  // 1. lignes avec une année (« Résultat fiscal 2026 (8 mois) ») : si elles forment une seule série,
+  //    elles prennent exactement le nom du titre, suivi de leur année
+  const an=/^(.*?)\s*\b((?:19|20)\d{2})\b(\s*\([^)]*\))?\s*$/u, serie=[];
+  bloc.forEach(k=>{ const m=lab(k); if(!m) return; const y=m[2].trim().match(an); if(y) serie.push({k,m,y}); });
+  const noms=new Set(serie.map(x=>x.y[1].trim().toLowerCase()));
   let changed=false;
-  for(let k=i+1;k<L.length;k++){
-    const v=L[k], tv=v.trim();
-    if(tv.startsWith('#')) break;   // titre suivant : fin du bloc
-    const m=tv.match(/^((?:[^:()=<>]|\([^()]*\))+?)\s*:\s*(.+)$/);
-    if(!m || !re.test(m[1])) continue;
-    L[k]=v.replace(re,(m,sp)=>sp+apres); changed=true;
-    const e=inputAt(k); if(e) e.value=L[k];
+  const poser=(k,v)=>{ if(L[k]===v) return; L[k]=v; changed=true; const e=inputAt(k); if(e) e.value=v; };
+  if(serie.length && noms.size===1){
+    serie.forEach(({k,m,y})=>poser(k,m[1]+apres+' '+y[2]+(y[3]||'')+m[3]));
+  }
+  // 2. autres lignes dont le libellé commence par l'ancien nom du titre
+  if(avant && avant!==apres){
+    const re=new RegExp('^(\\s*)'+escRe(avant)+'(?=[\\s:(]|$)','i'), dejaFait=new Set(noms.size===1?serie.map(x=>x.k):[]);
+    bloc.forEach(k=>{ if(dejaFait.has(k)) return; const m=lab(k); if(!m || !re.test(m[1]+m[2])) return; poser(k,L[k].replace(re,(x,sp)=>sp+apres)); });
   }
   if(changed) save();
 }
