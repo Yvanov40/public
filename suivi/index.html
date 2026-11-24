@@ -7122,6 +7122,37 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     }
     doigt = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
   }, { passive: true });
+  // ---- trackpad (Mac) : glisser deux doigts vers la gauche ou la droite dans l'agenda et dans « Ma journée » ----
+  //  (molette de côté ou Maj + molette avec une souris). Un geste = un pas, même avec l'élan du trackpad.
+  const roue = { x: 0, dernier: 0, bloque: false };
+  document.addEventListener("wheel", (e) => {
+    if (e.ctrlKey || estTel()) return;                 // pincer pour zoomer : on laisse faire
+    const dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX, dy = e.deltaY;
+    const c = e.target instanceof Element ? e.target : null;
+    if (!c) return;
+    let agir = null;
+    if (vueCourante() === "accueil" && c.closest(".acc-journee")) agir = (sens) => changerJourJournee(sens);
+    else if (vueCourante() === "calendrier" && c.closest("#calPanneau")) agir = (sens) => changerJourCalendrier(sens);
+    else if (vueCourante() === "calendrier" && c.closest("#vue-calendrier .cal")) agir = (sens) => {
+      const b = [...$("calEntete").querySelectorAll("button")].find((x) => x.textContent === (sens > 0 ? "›" : "‹"));
+      if (b) b.click();
+    };
+    if (!agir || document.querySelector(".feuille.ouverte, .menu-contextuel, .dlg-voile")) return;
+    // une zone qui défile elle-même de côté (et peut encore défiler dans ce sens) garde le geste
+    for (let n = c; n && n !== document.body; n = n.parentElement) {
+      const ox = getComputedStyle(n).overflowX;
+      if ((ox === "auto" || ox === "scroll") && n.scrollWidth > n.clientWidth + 2 &&
+          ((dx > 0 && n.scrollLeft + n.clientWidth < n.scrollWidth - 1) || (dx < 0 && n.scrollLeft > 0))) return;
+    }
+    const maintenant = Date.now(), pause = maintenant - roue.dernier;
+    roue.dernier = maintenant;
+    if (pause > 220) { roue.x = 0; roue.bloque = false; }   // nouveau geste
+    if (roue.bloque) { if (Math.abs(dx) > Math.abs(dy)) e.preventDefault(); return; }   // l'élan du geste déjà compté
+    if (Math.abs(dx) <= Math.abs(dy) * 1.2) { roue.x = 0; return; }   // surtout vertical : on fait défiler normalement
+    e.preventDefault();   // pas de « page précédente » du navigateur
+    roue.x += dx;
+    if (Math.abs(roue.x) >= 70) { agir(roue.x > 0 ? 1 : -1); roue.x = 0; roue.bloque = true; }
+  }, { passive: false });
   let doigtCible = null;
   document.addEventListener("touchstart", (e) => { doigtCible = e.target instanceof Element ? e.target : null; }, { passive: true, capture: true });
   document.addEventListener("touchend", (e) => {
