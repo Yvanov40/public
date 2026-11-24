@@ -7124,11 +7124,15 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }, { passive: true });
   // ---- trackpad (Mac) : glisser deux doigts vers la gauche ou la droite dans l'agenda et dans « Ma journée » ----
   //  (molette de côté ou Maj + molette avec une souris). Un geste = un pas, même avec l'élan du trackpad.
-  const roue = { x: 0, dernier: 0, bloque: false };
-  document.addEventListener("wheel", (e) => {
+  const roue = { x: 0, dernier: 0, bloque: false, mini: Infinity, pas: 0 };
+  const surRoue = (e) => {
     if (e.ctrlKey || estTel()) return;                 // pincer pour zoomer : on laisse faire
     const dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX, dy = e.deltaY;
-    const c = e.target instanceof Element ? e.target : null;
+    // l'élément sous le pointeur, relu à chaque fois : après un changement de jour, la zone a été redessinée et
+    // le navigateur continue d'envoyer le geste à l'ancien élément (disparu) tant que la souris ne bouge pas
+    let c = e.target instanceof Element && e.target.isConnected ? e.target : null;
+    const sous = document.elementFromPoint(e.clientX, e.clientY);
+    if (sous && (!c || !c.isConnected || sous !== c)) c = sous;
     if (!c) return;
     let agir = null;
     if (vueCourante() === "accueil" && c.closest(".acc-journee")) agir = (sens) => changerJourJournee(sens);
@@ -7144,15 +7148,25 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       if ((ox === "auto" || ox === "scroll") && n.scrollWidth > n.clientWidth + 2 &&
           ((dx > 0 && n.scrollLeft + n.clientWidth < n.scrollWidth - 1) || (dx < 0 && n.scrollLeft > 0))) return;
     }
-    const maintenant = Date.now(), pause = maintenant - roue.dernier;
+    const maintenant = Date.now(), pause = maintenant - roue.dernier, ax = Math.abs(dx);
     roue.dernier = maintenant;
-    if (pause > 220) { roue.x = 0; roue.bloque = false; }   // nouveau geste
+    // nouveau geste : une pause, ou (pendant l'élan qui ralentit) des doigts qui relancent nettement le mouvement
+    if (pause > 180 || (roue.bloque && maintenant - roue.pas > 250 && ax >= 6 && ax >= roue.mini * 2 + 4)) { roue.x = 0; roue.bloque = false; }
+    if (roue.bloque) roue.mini = Math.min(roue.mini, ax);
     if (roue.bloque) { if (Math.abs(dx) > Math.abs(dy)) e.preventDefault(); return; }   // l'élan du geste déjà compté
     if (Math.abs(dx) <= Math.abs(dy) * 1.2) { roue.x = 0; return; }   // surtout vertical : on fait défiler normalement
     e.preventDefault();   // pas de « page précédente » du navigateur
     roue.x += dx;
-    if (Math.abs(roue.x) >= 70) { agir(roue.x > 0 ? 1 : -1); roue.x = 0; roue.bloque = true; }
-  }, { passive: false });
+    if (Math.abs(roue.x) >= 70) {
+      agir(roue.x > 0 ? 1 : -1); roue.x = 0; roue.bloque = true; roue.pas = maintenant; roue.mini = Infinity;
+      // la zone vient d'être redessinée : sur Mac, les gestes suivants restent adressés à l'élément disparu tant que la
+      // souris ne bouge pas, et n'arrivent donc plus jusqu'à la page. On écoute aussi ce morceau détaché.
+      let r = e.target instanceof Element ? e.target : null;
+      while (r && r.parentElement) r = r.parentElement;
+      if (r && !r.isConnected && !r.__roue) { r.__roue = true; r.addEventListener("wheel", surRoue, { passive: false }); }
+    }
+  };
+  document.addEventListener("wheel", surRoue, { passive: false });
   let doigtCible = null;
   document.addEventListener("touchstart", (e) => { doigtCible = e.target instanceof Element ? e.target : null; }, { passive: true, capture: true });
   document.addEventListener("touchend", (e) => {
