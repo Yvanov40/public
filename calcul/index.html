@@ -105,6 +105,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .abc{display:flex;flex-direction:column;gap:var(--kg);padding:0 6px;height:var(--padh)}
 .abc .r{display:flex;gap:calc(var(--kg) * .67);flex:1;min-height:0}
 .k.down{filter:brightness(.9)}
+.trail{position:absolute;inset:0;pointer-events:none;z-index:5}
+.sugg{display:flex;gap:6px;padding:0 10px var(--kg);overflow-x:auto;scrollbar-width:none}
+.sugg[hidden]{display:none}
+.sugg::-webkit-scrollbar{display:none}
+.sugg button{flex:1 1 0;min-width:0;height:calc(var(--kh) * .72);border-radius:var(--kr);background:var(--surface);box-shadow:inset 0 0 0 1px var(--rule);font-size:calc(16px * var(--kf));color:var(--key-ink,var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px}
+.sugg button.first{font-weight:600;box-shadow:inset 0 0 0 1.5px var(--accent)}
 .rac{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--kg);padding:0 10px var(--kg)}
 .rac[hidden]{display:none}
 .app .kbd .rac .k{height:calc(var(--kh) * .72);font-size:calc(16px * var(--kf));background:var(--key-op);padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -338,7 +344,9 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
       <span class="big" id="dBig">0</span>
     </section>
     <div class="kbd" id="kbd">
+      <div class="sugg" id="sugg" hidden></div>
       <div class="rac" id="rac"></div>
+      <canvas class="trail" id="trail" aria-hidden="true"></canvas>
       <div class="track" id="track"><div class="pad" id="pad"></div><div class="abc" id="abc"></div></div>
     </div>
     <div class="tiles" id="tiles" hidden></div>
@@ -785,7 +793,7 @@ const LINES=[['traits','Traits'],['zebre','Une sur deux'],['aucune','Aucun']];
 const RESCOL=[['couleur','En couleur'],['encre','Comme le texte']];
 const SEPS=[['espace','1 234'],['point','1.234'],['aucun','1234']];
 const RAC_DEF=['<','>',':','#','€'];
-const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',kbh:90,kbf:100,kbg:'normal',kbr:'rond',kbl:'azerty',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,big:'l',lines:'traits',rescol:'couleur',neg:false,sep:'espace',parts:1,rac:true,racKeys:['<','>',':','#','€'],bgc:'',paper:'uni',heads:'souligne',dens:'normale',resw:'normal',keyc:'clair',enter:'couleur',sheetr:'droit',headc:'',favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
+const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',kbh:90,kbf:100,kbg:'normal',kbr:'rond',kbl:'azerty',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,glisse:true,big:'l',lines:'traits',rescol:'couleur',neg:false,sep:'espace',parts:1,rac:true,racKeys:['<','>',':','#','€'],bgc:'',paper:'uni',heads:'souligne',dens:'normale',resw:'normal',keyc:'clair',enter:'couleur',sheetr:'droit',headc:'',favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
 
 function mixHex(a,b,w){ // w = part de a
   const pa=[1,3,5].map(i=>parseInt(a.substr(i,2),16)), pb=[1,3,5].map(i=>parseInt(b.substr(i,2),16));
@@ -1456,6 +1464,7 @@ function setPage(p,anim=true){
   tr.style.transform='translateX('+(-p*50)+'%)';
   if(!anim){ void tr.offsetWidth; tr.classList.remove('drag'); }
   $('pad').inert=p!==0; $('abc').inert=p!==1;
+  if(p===1 && state.prefs.glisse!==false) loadDico();
   if(changed && anim && state.prefs.vibrate) buzz(6);
 }
 function keyBtn(lab,v,cls){
@@ -1471,7 +1480,129 @@ function renderPad(){
   updShift(); setPage(kbPage,false); renderRac();
 }
 
-/* Gestes du clavier : appui (la touche part au relâché), maintien (C, ⌫, accents) */
+/* ===================== Écriture glissée (clavier lettres) =====================
+   On glisse le doigt de lettre en lettre sans le lever : au lâcher, on compare le tracé
+   à celui des mots du dictionnaire (30 000 mots français les plus courants, plus les mots
+   de l'appli et de vos feuilles) et on écrit le plus proche ; les autres sont proposés au-dessus. */
+let DICO=null, dicoP=null;
+const normMot=w=>w.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/œ/g,'oe').replace(/æ/g,'ae');
+const VOCAB_APP=['abattement','abattements','usufruit','nue','propriété','donation','donations','succession','successions','loyer','loyers','charges','foncier','fonciers','revenus','revenu','impôt','impôts','intérêts','emprunt','emprunts','mensualité','mensualités','capital','taux','durée','total','somme','moyenne','résultat','résultats','fiscal','fiscale','net','brut','notaire','frais','travaux','amortissement','déficit','location','meublé','assurance','taxe','prélèvements','sociaux','plus','value','parts','enfant','enfants','conjoint','héritier','héritiers','barème','tranche','marginale','budget','épargne','placement','rendement','apport','prix','achat','vente','acquisition','cession','vf','va','crd','tmi','ifi','pfu','ttc','ht','tva','si','evol','ans','pi'];
+function loadDico(){
+  if(dicoP) return dicoP;
+  dicoP=fetch('vendor/mots-fr.txt').then(r=>r.ok?r.text():Promise.reject()).then(t=>{
+    DICO=t.split('\n').filter(Boolean).map((w,i)=>({w,n:normMot(w),r:i})).filter(x=>/^[a-z]+$/.test(x.n));
+    return DICO;
+  }).catch(()=>{ dicoP=null; return null; });
+  return dicoP;
+}
+function motsPerso(){   // mots de vos feuilles et noms de formules : favorisés
+  const m=new Map();
+  const add=(w,b)=>{ const n=normMot(w); if(/^[a-z]{2,}$/.test(n) && !(m.has(n) && m.get(n).b>=b)) m.set(n,{w,n,r:0,b}); };
+  VOCAB_APP.forEach(w=>add(w,.35));
+  Object.keys(ALIAS).forEach(w=>add(w,.35));
+  state.sheets.forEach(sh=>sh.lines.forEach(l=>(l.match(/[\p{L}]{2,}/gu)||[]).forEach(w=>add(/^[A-ZÀ-Ý]/.test(w)&&w.slice(1)===w.slice(1).toLowerCase()?w.toLowerCase():w,.6))));
+  return m;
+}
+function centresTouches(){
+  const c={}, k=[...$('abc').querySelectorAll('.k')].filter(b=>/^[a-z]$/i.test(b.dataset.v));
+  k.forEach(b=>{ const r=b.getBoundingClientRect(); c[b.dataset.v.toLowerCase()]={x:r.left+r.width/2,y:r.top+r.height/2}; });
+  const r0=k[0].getBoundingClientRect(); return {c,kw:r0.width,kh:r0.height};
+}
+function reech(pts,N){   // rééchantillonne un tracé en N points également espacés
+  if(pts.length===1) return Array(N).fill(pts[0]);
+  let L=0; for(let i=1;i<pts.length;i++) L+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+  if(L===0) return Array(N).fill(pts[0]);
+  const step=L/(N-1), out=[pts[0]]; let acc=0, prev=pts[0];
+  for(let i=1;i<pts.length && out.length<N;i++){
+    let cur=pts[i], d=Math.hypot(cur.x-prev.x,cur.y-prev.y);
+    while(acc+d>=step && out.length<N){ const t=(step-acc)/d, q={x:prev.x+t*(cur.x-prev.x),y:prev.y+t*(cur.y-prev.y)}; out.push(q); prev=q; d=Math.hypot(cur.x-prev.x,cur.y-prev.y); acc=0; }
+    acc+=d; prev=cur;
+  }
+  while(out.length<N) out.push(pts[pts.length-1]);
+  return out;
+}
+function longueur(p){ let L=0; for(let i=1;i<p.length;i++) L+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y); return L; }
+function devinerMots(pts){
+  if(!DICO || pts.length<2) return [];
+  const {c,kw}=centresTouches(), N=32, U=reech(pts,N), UL=longueur(pts), dense=reech(pts,96);
+  const pres=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const debut=pts[0], fin=pts[pts.length-1], tol=kw*1.25;
+  const okDebut=new Set(Object.keys(c).filter(l=>pres(c[l],debut)<tol)), okFin=new Set(Object.keys(c).filter(l=>pres(c[l],fin)<tol));
+  const perso=motsPerso(), vus=new Set(), res=[];
+  const essai=(x,bonus)=>{
+    if(vus.has(x.n)) return; const n=x.n;
+    if(!okDebut.has(n[0]) || !okFin.has(n[n.length-1])) return;
+    const lettres=[]; for(const ch of n){ if(!c[ch]) return; if(lettres[lettres.length-1]!==ch) lettres.push(ch); }
+    if(lettres.length<2) return;
+    const T=lettres.map(l=>c[l]), TL=longueur(T);
+    if(TL<UL*.45 || TL>UL*1.9) return;
+    const R=reech(T,N); let forme=0; for(let i=0;i<N;i++) forme+=pres(R[i],U[i]); forme/=N*kw;
+    let lieu=0; for(const t of T){ let m=1e9; for(const q of dense){ const d=pres(t,q); if(d<m) m=d; } lieu+=Math.max(0,m-.55*kw)/kw; }
+    const score=forme+1.6*lieu+.11*Math.log2(x.r+2)-bonus;
+    vus.add(n); res.push({w:x.w,n,score});
+  };
+  perso.forEach(x=>essai(x,x.b));
+  DICO.forEach(x=>essai(x,0));
+  return res.sort((a,b)=>a.score-b.score).slice(0,4);
+}
+let dernierGlisse=null;   // {i, avant, texte, choix} : pour remplacer le mot par une suggestion
+function formeMot(w){ if(shift===2) return w.toUpperCase(); if(shift===1) return w[0].toUpperCase()+w.slice(1); return w; }
+function versionFormule(w){   // « somme » tapé là où une formule est attendue : « somme( »
+  const e=inputAt(active); const avant=e?e.value.slice(0,e.selectionStart??e.value.length):'';
+  const ctxFormule=/[=:(;+\-*\/^<>×÷−]$/.test(avant.trimEnd());
+  return ALIAS[normMot(w)] && ctxFormule ? w+'(' : w;
+}
+function ecrireMot(texte,choix){
+  const e=ensureActive(), pos=e.selectionStart??e.value.length, avant=e.value.slice(0,pos);
+  const sep=/[\p{L}\d)]$/u.test(avant)?' ':'';
+  insert(sep+texte);
+  dernierGlisse={i:active,id:cur().id,debut:pos,texte:sep+texte,choix};
+  if(shift===1){ shift=0; updShift(); }
+  montrerSugg();
+}
+function montrerSugg(){
+  const S=$('sugg'); S.innerHTML='';
+  const g=dernierGlisse; if(!g || !g.choix.length){ S.hidden=true; return; }
+  S.hidden=false;
+  g.choix.forEach((w,k)=>S.append(el('button',{type:'button',className:k===0?'first':'',textContent:w,on:{click:()=>remplacerMot(w)}})));
+}
+function cacherSugg(){ dernierGlisse=null; const S=$('sugg'); if(S){ S.hidden=true; S.innerHTML=''; } }
+function remplacerMot(w){
+  const g=dernierGlisse, s=cur(); if(!g || g.id!==s.id || g.i!==active) return cacherSugg();
+  const e=inputAt(active), v=e.value;
+  if(v.slice(g.debut,g.debut+g.texte.length)!==g.texte) return cacherSugg();
+  const sep=g.texte.startsWith(' ')?' ':'', nouveau=sep+w;
+  e.value=v.slice(0,g.debut)+nouveau+v.slice(g.debut+g.texte.length);
+  const p=g.debut+nouveau.length; try{ e.setSelectionRange(p,p); }catch(_){}
+  s.lines[active]=e.value; save(); refresh();
+  g.texte=nouveau; g.choix=g.choix.filter(x=>x!==w); g.choix.unshift(w); montrerSugg();
+}
+function finGlisse(pts){
+  if(!DICO){ toast(dicoP?'Dictionnaire en cours de chargement…':'Écriture glissée indisponible ici (dictionnaire introuvable)'); loadDico(); return; }
+  const r=devinerMots(pts);
+  if(!r.length){ toast('Mot non reconnu, réessayez ou tapez-le'); return; }
+  const choix=[]; r.forEach(x=>{ const f=formeMot(x.w); if(!choix.includes(f)) choix.push(f); });
+  const premier=versionFormule(choix[0]); if(premier!==choix[0]) choix.unshift(premier);
+  ecrireMot(choix[0],choix);
+}
+// tracé du doigt
+const trace={pts:[],on:false,ctx:null};
+function traceDebut(){
+  const cv=$('trail'), K=$('kbd'), r=K.getBoundingClientRect(), d=devicePixelRatio||1;
+  cv.width=r.width*d; cv.height=r.height*d; cv.style.width=r.width+'px'; cv.style.height=r.height+'px';
+  trace.ctx=cv.getContext('2d'); trace.ctx.setTransform(d,0,0,d,-r.left*d,-r.top*d); trace.r=r;
+}
+function traceDessin(){
+  const g=trace.ctx; if(!g) return; const r=trace.r, P=trace.pts;
+  g.save(); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,g.canvas.width,g.canvas.height); g.restore();
+  if(P.length<2) return;
+  g.lineCap='round'; g.lineJoin='round'; g.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#2557E8';
+  g.globalAlpha=.55; g.lineWidth=Math.max(6,(r.width/40));
+  g.beginPath(); g.moveTo(P[0].x,P[0].y); for(let i=1;i<P.length;i++) g.lineTo(P[i].x,P[i].y); g.stroke();
+}
+function traceFin(){ const g=trace.ctx; if(g){ g.save(); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,g.canvas.width,g.canvas.height); g.restore(); } trace.ctx=null; trace.pts=[]; trace.on=false; }
+
+/* Gestes du clavier : appui (la touche part au relâché), maintien (C, ⌫, accents), glisser sur les lettres (écriture glissée) */
 const kb={id:null,key:null,sx:0,sy:0,x:0,done:false,timer:null,rep:null,pop:null,hi:null};
 function closePop(){ if(kb.pop){ kb.pop.remove(); kb.pop=null; kb.hi=null; } }
 function kbStop(){
@@ -1496,12 +1627,14 @@ function popHi(x,y){
 }
 function kbFinish(){
   const k=kb.key, v=k&&k.dataset.v;
+  if(trace.on){ const pts=trace.pts.slice(); kbStop(); traceFin(); kb.id=null; kb.key=null; finGlisse(pts); return; }
+  trace.pts=[];
   if(kb.pop){
     const c=kb.hi&&kb.hi.textContent; kbStop();
     if(c){ insert(c); if(shift===1){ shift=0; updShift(); } }
   } else {
     const fire=!kb.done&&k; kbStop();
-    if(fire) press(v);
+    if(fire){ cacherSugg(); press(v); }
   }
   kb.id=null; kb.key=null;
 }
@@ -1510,6 +1643,7 @@ function kbFinish(){
   K.addEventListener('pointerdown',e=>{
     if(e.button>0) return;
     e.preventDefault();                       // la ligne garde le curseur
+    if(e.target.closest('#sugg')) return;     // suggestions de l'écriture glissée : simple bouton
     if(kb.id!==null) kbFinish();  // frappe à deux pouces : la touche précédente part tout de suite
     const k=e.target.closest('.k');
     Object.assign(kb,{id:e.pointerId,key:k,sx:e.clientX,sy:e.clientY,x:e.clientX,done:false});
@@ -1517,6 +1651,8 @@ function kbFinish(){
     if(!k) return;
     k.classList.add('down');
     const v=k.dataset.v;
+    trace.pts = kbPage===1 && state.prefs.glisse!==false && /^[a-z]$/i.test(v) ? [{x:e.clientX,y:e.clientY}] : [];
+    if(trace.pts.length) loadDico();
     if(v==='clear'){ k.classList.add('hold'); kb.timer=setTimeout(()=>{ kb.done=true; k.classList.remove('hold','down'); buzz(25); clearAll(); },600); }
     else if(v==='back'){ kb.timer=setTimeout(()=>{ kb.done=true; if(backspace(true)) kb.rep=setInterval(()=>{ if(!backspace(true)){ clearInterval(kb.rep); kb.rep=null; } },70); },420); }
     else if(ACC[v]) kb.timer=setTimeout(()=>openPop(k),380);
@@ -1525,13 +1661,21 @@ function kbFinish(){
     if(e.pointerId!==kb.id) return;
     kb.x=e.clientX;
     if(kb.pop){ popHi(e.clientX,e.clientY); return; }
+    if(trace.pts.length){
+      const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+      (evs.length?evs:[e]).forEach(v=>trace.pts.push({x:v.clientX,y:v.clientY}));
+      if(!trace.on && Math.hypot(e.clientX-kb.sx,e.clientY-kb.sy)>Math.max(24,(kb.key?kb.key.offsetWidth:30)*.7)){
+        trace.on=true; kb.done=true; clearTimeout(kb.timer); kb.timer=null; if(kb.key) kb.key.classList.remove('hold','down'); traceDebut();
+      }
+      if(trace.on){ traceDessin(); return; }
+    }
     // le doigt a glissé loin de la touche : on annule (rien n'est tapé)
     if(!kb.done && Math.hypot(e.clientX-kb.sx,e.clientY-kb.sy)>28){ kb.done=true; clearTimeout(kb.timer); kb.timer=null; if(kb.key) kb.key.classList.remove('hold','down'); }
   });
   K.addEventListener('pointerup',e=>{ if(e.pointerId===kb.id) kbFinish(); });
   K.addEventListener('pointercancel',e=>{
     if(e.pointerId!==kb.id) return;
-    kbStop(); kb.id=null; kb.key=null;
+    kbStop(); traceFin(); kb.id=null; kb.key=null;
   });
   // touches activées au clavier physique (Tab puis Entrée) : pas de pointeur
   K.addEventListener('click',e=>{ if(e.detail!==0) return; const k=e.target.closest('.k'); if(k) press(k.dataset.v); });
@@ -1653,6 +1797,8 @@ function renderSettings(){
     el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'Forme',style:'min-width:7.5em'}),seg(KBR,P.kbr,v=>setPref('kbr',v))),
     el('div',{className:'field',style:'margin-top:10px'},el('span',{textContent:'Lettres',style:'min-width:7.5em'}),seg(KBL,P.kbl,v=>setPref('kbl',v))),
     el('button',{className:'toggle',type:'button','aria-pressed':String(!!P.vibrate),on:{click:()=>setPref('vibrate',!P.vibrate)}},el('span',{textContent:'Vibrer à chaque touche'}),el('i')),
+    el('button',{className:'toggle',type:'button','aria-pressed':String(P.glisse!==false),on:{click:()=>setPref('glisse',P.glisse===false)}},el('span',{textContent:'Écriture glissée sur les lettres'}),el('i')),
+    el('p',{className:'note',textContent:'Écriture glissée : sans lever le doigt, passez sur les lettres du mot ; il s’écrit au lâcher, et d’autres mots sont proposés au-dessus du clavier. Les mots de vos feuilles et les noms de formules sont reconnus en priorité.'}),
     el('p',{className:'note',textContent:'Les réglages s’appliquent tout de suite : fermez ce panneau pour voir le clavier.'})),
   grp('Raccourcis',
     el('button',{className:'toggle',type:'button','aria-pressed':String(P.rac),on:{click:()=>setPref('rac',!P.rac)}},el('span',{textContent:'Rangée de raccourcis au-dessus du clavier'}),el('i')),
@@ -1859,7 +2005,7 @@ async function exportPDF(){
 }
 $('expBtn').addEventListener('click',openExport);
 
-window.__calc={computeSheet,impotIR,ifiCalc,show,buildPDF,exportOpts};
+window.__calc={computeSheet,impotIR,ifiCalc,show,buildPDF,exportOpts,devinerMots,loadDico,centresTouches};
 window.addEventListener('resize',fitBig);
 // Sur le site (et dans l'appli Android qui l'ouvre) : copie hors ligne et mises à jour automatiques
 if('serviceWorker' in navigator && /\.github\.io$/.test(location.hostname)){
