@@ -242,6 +242,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .etat-sync i { width: 8px; height: 8px; border-radius: 4px; background: #7fb08a; }
 .etat-sync.envoi i { background: var(--barre-discret); }
 .etat-sync.erreur i { background: #e08a76; }
+.etat-sync.erreur { cursor: pointer; }
 .etat-sync.local i { background: #9aa7a9; }
 .vues { display: flex; gap: 4px; margin-left: auto; }
 .vues a { color: var(--barre-texte); text-decoration: none; padding: 8px 14px; border-radius: 8px; opacity: .75; }
@@ -3799,15 +3800,38 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       donnees.modifie = null;
       localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
       etatSync("", "Enregistré sur GitHub · " + heure());
+      clearTimeout(minuteurReessai); essaisEnvoi = 0;
       majAlerte();
       githubJoint();
     } catch (e) {
-      etatSync("erreur", "Pas envoyé : nouvel essai à la prochaine connexion");
-      if (e && e.statut) informer(messageErreur(e.statut));
+      // la raison reste affichée (avant, seul un message passager la donnait), et l'appli réessaie toute seule
+      const statut = e && e.statut;
+      const raison = statut === 401 ? "clé GitHub refusée ou expirée" : statut === 403 ? "clé sans droit d’écriture"
+        : statut === 404 ? "dépôt ou fichier introuvable" : statut ? "GitHub a répondu " + statut
+        : navigator.onLine === false ? "pas de connexion" : "GitHub injoignable";
+      const corrigible = statut === 401 || statut === 403 || statut === 404;   // il faut agir dans les réglages
+      if (corrigible) { clearTimeout(minuteurReessai); essaisEnvoi = 0; etatSync("erreur", `Pas envoyé : ${raison} (Réglages › GitHub)`); }
+      else {
+        const minutes = [1, 2, 5, 10, 15][Math.min(essaisEnvoi, 4)];
+        essaisEnvoi++;
+        clearTimeout(minuteurReessai);
+        minuteurReessai = setTimeout(() => { if (donnees && donnees.modifie) envoyerGithub(); }, minutes * 60000);
+        etatSync("erreur", `Pas envoyé (${raison}) · nouvel essai dans ${minutes} min · cliquer pour réessayer`);
+      }
+      if (statut) informer(messageErreur(statut));
+      console.warn("Envoi GitHub échoué", e);
     } finally {
       envoiEnCours = false;
     }
   }
+  var minuteurReessai = 0, essaisEnvoi = 0;
+  // cliquer sur l'état « Pas envoyé » : nouvel essai tout de suite
+  document.addEventListener("click", (e) => {
+    const t = e.target instanceof Element && e.target.closest("#etatSync");
+    if (!t || !t.classList.contains("erreur") || !github || !donnees || !donnees.modifie) return;
+    clearTimeout(minuteurReessai);
+    envoyerGithub();
+  });
 
   // ---- expiration de la clé GitHub : GitHub l'indique à chaque réponse ----
   function noterExpiration(reponse) {
