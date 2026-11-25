@@ -2091,6 +2091,8 @@ html.relief-ombres :is(.acc-carte, .d-carte, .t-tuile, .m-client, .nature-tuile,
 .nr-place.a-ranger { cursor: pointer; color: var(--or); border-color: var(--or); font-weight: 600; }
 .journal-tete .nr-ag { font-size: 12px; }
 .cmd-unique { margin-top: 3px; justify-self: start; border: 0; background: none; color: var(--bleu); font: inherit; font-size: 11.5px; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 0; }
+.cmd-choix { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 3px; }
+.cmd-choix .cmd-unique { margin-top: 0; }
 .cmd-apercu { font-size: 12px; color: var(--or); background: var(--or-doux); border-radius: 8px; padding: 5px 9px; margin-top: 4px; display: grid; gap: 2px; }
 .nr-place.rdv { background: #e6efe5; color: #4d6b4c; } .nr-place.cl { background: var(--bleu-doux); }
 .journal-note.nr-cl { border-left-color: var(--bleu); }
@@ -7869,7 +7871,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const ajouter = () => {
       const brut = saisieNote.value.trim(); if (!brut) return;
       saisieNote.value = "";
-      const groupes = saisieNote.dataset.unique === "1" ? [{ client: (decouperParClient(brut).find((g) => g.client) || {}).client || "", texte: brut }] : decouperParClient(brut);
+      const groupes = saisieNote.dataset.unique === "libre" ? [{ client: "", texte: brut }] : saisieNote.dataset.unique === "1" ? [{ client: (decouperParClient(brut).find((g) => g.client) || {}).client || "", texte: brut }] : decouperParClient(brut);
       delete saisieNote.dataset.unique;
       const faites = groupes.map((g) => creerNote(g.texte, g.client)).filter(Boolean);
       const qui = faites.filter((n) => n.client).map((n) => n.client);
@@ -8024,7 +8026,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const v = z.value, lignes = [];
     let groupes = [];
     if (z.dataset.repartir && donnees && v.trim()) {
-      groupes = z.dataset.unique === "1" ? [] : decouperParClient(v);
+      groupes = z.dataset.unique ? [] : decouperParClient(v);
       if (groupes.length > 1 || (groupes[0] && groupes[0].client)) lignes.push(groupes.length > 1
         ? `→ ${groupes.length} notes : ${groupes.map((g) => g.client ? "👤 " + g.client : "non affectée").join(" · ")}`
         : `→ rangée chez 👤 ${groupes[0].client}`);
@@ -8036,13 +8038,20 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       }
     } else if (/(^|\s)\/[a-zâ]{0,4}$/i.test(v.slice(0, z.selectionStart || v.length))) lignes.push("/tache texte jour heure  →  crée une tâche (ex. « /tache relancer le notaire vendredi 10h »)");
     if (RE_RDV.test(v)) lignes.push("→ à l’ajout, la fiche du rendez-vous s’ouvre, déjà remplie");
-    if (!lignes.length && z.dataset.unique !== "1") { if (ap) ap.remove(); return; }
+    if (!lignes.length && !z.dataset.unique) { if (ap) ap.remove(); return; }
     if (!ap) { ap = el("div", { class: "cmd-apercu" }); ap._z = z; ancre.after(ap); }
-    const bascule = z.dataset.repartir && (groupes.length > 1 || z.dataset.unique === "1")
-      ? el("button", { type: "button", class: "cmd-unique", onclick: () => { if (z.dataset.unique === "1") delete z.dataset.unique; else z.dataset.unique = "1"; z.dispatchEvent(new Event("input", { bubbles: true })); z.focus(); } },
-          z.dataset.unique === "1" ? "Répartir par client" : "Garder en une seule note") : null;
-    if (z.dataset.unique === "1") lignes.unshift("→ une seule note");
-    ap.replaceChildren(...lignes.map((t) => el("div", null, t)), bascule);
+    // choix du rangement : répartir par client (par défaut), une seule note, ou non affectée
+    const choisir = (u) => () => { if (u) z.dataset.unique = u; else delete z.dataset.unique; z.dispatchEvent(new Event("input", { bubbles: true })); z.focus(); };
+    const u = z.dataset.unique || "";
+    const auMoinsUn = groupes.some((g) => g.client);
+    const boutons = !z.dataset.repartir ? [] : [
+      u && el("button", { type: "button", class: "cmd-unique", onclick: choisir("") }, "Répartir par client"),
+      u !== "1" && (groupes.length > 1 || u) && el("button", { type: "button", class: "cmd-unique", onclick: choisir("1") }, "Garder en une seule note"),
+      u !== "libre" && (auMoinsUn || u) && el("button", { type: "button", class: "cmd-unique", onclick: choisir("libre") }, "Non affectée"),
+    ].filter(Boolean);
+    if (u === "1") lignes.unshift("→ une seule note");
+    if (u === "libre") lignes.unshift("→ une seule note, non affectée (rattachée à aucun client)");
+    ap.replaceChildren(...lignes.map((t) => el("div", null, t)), ...(boutons.length ? [el("div", { class: "cmd-choix" }, ...boutons)] : []));
   });
   // retire l'aperçu quand la note est enregistrée (la zone est vidée)
   document.addEventListener("click", () => setTimeout(() => document.querySelectorAll(".cmd-apercu").forEach((a) => { const z = a._z; if (!z || !z.value || !z.isConnected) a.remove(); }), 120), true);
