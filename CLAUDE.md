@@ -30,6 +30,14 @@ chargent ces pages depuis le site. Voir aussi le README.
   y compris quand un autre appareil a encore l'ancienne version et synchronise entre-temps.
 - Commits au nom de `Yvanov40` (`git -c user.name=Yvanov40 -c user.email=Yvanov40@users.noreply.github.com commit …`).
 
+## Suivi : l'équipe (plusieurs collaborateurs dans le même fichier)
+
+- Liste dans `reglagesAgenda.equipe` (section « agenda » du fichier, que les anciennes versions recopient). Le premier (Yvan) est le titulaire :
+  tout ce qui n'a pas de propriétaire lui revient (tout l'existant). Seul dans l'équipe : aucun filtre, aucun champ ajouté.
+- Propriétaire : dossier `d.responsable`, tâche / rendez-vous / note `x.qui` (fonctions `responsableDe`, `qui`). Horaires des autres :
+  `reglagesAgenda.personnes[nom]`. Chaque appareil retient « je suis » (`suivi-gp-moi`) et ce qu'il affiche (`suivi-gp-perimetre`).
+- Agenda : chacun le sien. Les calculs passent par `pourPersonne(nom, …)` / `aLaPersonne` ; `apresAgenda` replanifie pour chaque personne.
+
 ## Révision : QCM à la demande
 
 Quand Yvan envoie une fiche en demandant un QCM : lire toute la fiche, écrire autant de questions qu'il faut pour la couvrir

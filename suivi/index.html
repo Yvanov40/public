@@ -1391,6 +1391,26 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .etat-client.nouveau { color: #6e5220; }
 /* ---------- collaborateur en cases ---------- */
 .collabs { display: flex; flex-wrap: wrap; gap: 6px; }
+/* équipe : qui je suis, ce que j'affiche */
+.btn-qui { display: block; margin-top: 6px; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.08); color: inherit; border-radius: 14px; padding: 3px 10px; font: inherit; font-size: 12.5px; cursor: pointer; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn-qui:hover { background: rgba(255,255,255,.16); }
+.btn-qui b { color: var(--or); font-weight: 600; }
+.eq-voile { position: fixed; inset: 0; z-index: 2147482500; display: grid; place-items: center; padding: 16px; background: rgba(8,24,31,.42); }
+.eq-boite { width: min(460px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--carte); color: var(--texte); border-radius: 16px; box-shadow: 0 18px 50px rgba(0,0,0,.28); padding: 20px 22px 16px; }
+.eq-boite h3 { margin: 0 0 6px; font: 600 19px/1.2 var(--titre); color: var(--bleu); }
+.eq-boite .aide { margin: 0 0 12px; }
+.eq-ligne { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--bordure); }
+.eq-ligne b { flex: 1; }
+.eq-ligne small { color: var(--discret); font-weight: 400; display: block; }
+.eq-ligne button, .eq-pied button { border: 1px solid var(--bordure); background: none; color: var(--bleu); border-radius: 10px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.eq-ajout { display: flex; gap: 8px; margin: 12px 0 4px; }
+.eq-ajout input { flex: 1; min-width: 0; border: 1px solid var(--bordure); border-radius: 10px; padding: 8px 11px; font: inherit; background: var(--fond, #fff); color: inherit; }
+.eq-ajout input:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 3px rgba(165,125,47,.18); }
+.eq-ajout button, .eq-pied .principal { border: 0; background: var(--bleu); color: #fff; border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+.eq-pied { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.eq-choix { display: grid; gap: 8px; margin-top: 10px; }
+.eq-choix button { border: 1px solid var(--bordure); background: var(--carte); color: var(--texte); border-radius: 12px; padding: 11px 14px; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.eq-choix button:hover { border-color: var(--or); }
 .collab { border: 1px solid var(--bordure); background: var(--carte); color: var(--texte); border-radius: 16px; padding: 6px 12px; font-size: 13.5px; cursor: pointer; }
 .collab.choisi { background: var(--bleu); color: var(--carte); border-color: var(--bleu); font-weight: 600; }
 .collab.ajout { border-style: dashed; color: var(--discret); }
@@ -2453,6 +2473,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     <div>
       <h1>Suivi des dossiers</h1>
       <span class="etat-sync local" id="etatSync"><i></i><span id="etatSyncTexte">Pas encore connecté à GitHub</span></span>
+      <button type="button" class="btn-qui" id="btnQui" hidden></button>
     </div>
     <nav class="onglets-haut" aria-label="Vue">
       <a href="#accueil" data-vue="accueil">◉ Accueil</a>
@@ -2842,6 +2863,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     <h4>Réglages</h4>
     <div class="menu-grille">
       <button class="menu-tuile" id="btnHoraires"><span>🕘</span>Horaires et congés</button>
+      <button class="menu-tuile" id="btnEquipe"><span>👥</span>Équipe : collaborateurs</button>
       <button class="menu-tuile" id="btnDemandeurs"><span>🏛</span>Demandeurs et sociétés</button>
       <button class="menu-tuile" id="btnModeles"><span>☑</span>Modèles de tâches</button>
       <button class="menu-tuile" id="btnTheme"><span>🌓</span>Thème : automatique</button>
@@ -3056,10 +3078,43 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (cle === "statut") return (ETAPES.find(([n]) => n === etapeDe(d)) || ["", ""])[1];
     return String(d[cle] ?? "").trim() || "(vide)";
   }
+  // ================================================================ équipe : plusieurs collaborateurs dans le même fichier
+  // La liste est rangée dans la section « agenda » du fichier (reglagesAgenda.equipe), que les anciennes versions
+  // recopient telle quelle. Le premier de la liste (Yvan) est le titulaire : tout ce qui n'a pas de propriétaire lui revient
+  // (c'est le cas de tout ce qui a été créé avant l'équipe). Chaque appareil retient qui l'utilise (« Je suis »).
+  //   dossier : d.responsable · tâche, rendez-vous, note : x.qui · horaires des autres : reglagesAgenda.personnes[nom]
+  // Seul dans l'équipe : rien ne change (aucun filtre, aucun champ ajouté).
+  const CLE_MOI = "suivi-gp-moi", CLE_PERIMETRE = "suivi-gp-perimetre";
+  let memoEquipe = null, sourceEquipe;   // (appelé des milliers de fois par les calculs d'agenda : gardé en mémoire)
+  function equipe() {
+    let src; try { src = reglagesAgenda.equipe; } catch (e) {}
+    if (!memoEquipe || src !== sourceEquipe) { sourceEquipe = src; const l = Array.isArray(src) ? src.filter(Boolean) : []; memoEquipe = l.length ? l : ["Yvan"]; }
+    return memoEquipe;
+  }
+  const titulaire = () => equipe()[0];
+  const enEquipe = () => equipe().length > 1;
+  var memoMoi = null;
+  function moi() {
+    if (memoMoi === null) { memoMoi = ""; try { memoMoi = localStorage.getItem(CLE_MOI) || ""; } catch (e) {} }
+    return equipe().includes(memoMoi) ? memoMoi : titulaire();
+  }
+  var perimetre = (() => { try { return localStorage.getItem(CLE_PERIMETRE) || "moi"; } catch (e) { return "moi"; } })();   // "moi", "tous" ou un nom
+  const qui = (x) => (x && x.qui) || titulaire();
+  const responsableDe = (d) => (d && d.responsable) || titulaire();
+  // la personne dont on regarde l'espace (soi-même, ou un collègue choisi dans « Afficher »)
+  const personneAffichee = () => (perimetre !== "moi" && perimetre !== "tous" && equipe().includes(perimetre) ? perimetre : moi());
+  const voit = (nom) => !enEquipe() || perimetre === "tous" || nom === personneAffichee();
+  // l'agenda dont on calcule les créneaux (horaires, congés, tâches à recaler) : celui qu'on regarde,
+  // sauf pendant un calcul fait pour quelqu'un d'autre (pourPersonne)
+  var agendaDe = null;
+  const personneCalcul = () => agendaDe || personneAffichee();
+  function pourPersonne(p, faire) { const avant = agendaDe; agendaDe = p; try { return faire(); } finally { agendaDe = avant; } }
+  const aLaPersonne = (nom) => !enEquipe() || nom === personneCalcul();
   // les collaborateurs d'un dossier : « Laura, Hugo » → ["Laura", "Hugo"]
   const collabsDe = (d) => String(d.collaborateur || "").split(/\s*,\s*/).filter(Boolean);
   const tousCollabs = () => [...new Set(donnees.dossiers.flatMap(collabsDe))].sort((a, b) => a.localeCompare(b, "fr"));
   function correspond(d, saufSegment) {
+    if (!voit(responsableDe(d))) return false;
     if (!correspondRecherche(d)) return false;
     if ($("masquerArchives").checked && d.archives) return false;
     for (const [cle, choix] of Object.entries(selections)) {
@@ -3755,6 +3810,13 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const ici = sectionsAnnexes();
     const pris = {};
     for (const k of ["dutreil", "agenda", "societes", "modeles", "emoluments"]) pris[k] = !pareil(ici[k], base[k]) || !contenu[k] ? ici[k] : contenu[k];
+    // agenda : réglage par réglage, et les horaires de chaque collaborateur à part (deux personnes peuvent changer les leurs en même temps)
+    const parCle = (b, i, d) => { b = b || {}; i = i || {}; const r = { ...(d || {}) }; for (const k of new Set([...Object.keys(i), ...Object.keys(b)])) if (!pareil(i[k], b[k])) { if (k in i) r[k] = i[k]; else delete r[k]; } return r; };
+    if (contenu.agenda && base.agenda) {
+      pris.agenda = parCle(base.agenda, ici.agenda, contenu.agenda);
+      const pers = parCle(base.agenda.personnes, (ici.agenda || {}).personnes, contenu.agenda.personnes);
+      if (Object.keys(pers).length) pris.agenda.personnes = pers; else delete pris.agenda.personnes;
+    }
     pris.audits = fusionnerAudits(base.audits, ici.audits, contenu.audits);
     // notes non affectées : fusionnées note par note (avant, la liste de cet appareil écrasait celle des autres)
     pris.notes = Array.isArray(contenu.notes) ? fusionnerListes(base.notes, ici.notes, contenu.notes) : ici.notes;
@@ -4434,7 +4496,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       .map(([d, i]) => [Math.round((versDate(d.rdv) - auj) / 86400000), d, i]);
     // rendez-vous des clients hors dossier, présentés comme ceux des dossiers
     for (const f of Object.values(donnees.clients)) for (const r of f.rdvs || []) {
-      if (!estIso(r.date || "")) continue;
+      if (!estIso(r.date || "") || !voit(qui(r))) continue;
       rdv.push([Math.round((versDate(r.date) - auj) / 86400000), { client: f.nom, rdv: r.date, rdv_heure: r.heure, tache: r.objet || "Rendez-vous", type: "", _rdvClient: r.id }, -1]);
     }
     rdv.splice(0, rdv.length, ...rdv.filter(([e, d]) => e >= 0 && e <= 30 && !rdvPasse({ date: d.rdv, heure: d.rdv_heure, duree: d.rdv_duree })).sort((a, b) => a[0] - b[0] || (a[1].rdv_heure || "99").localeCompare(b[1].rdv_heure || "99")));
@@ -5537,26 +5599,32 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // tous les événements, par date : { iso: [ { type, titre, sous, ouvrir, retard } ] }
   function evenementsCalendrier(tous = false) {  // tous : sans tenir compte des cases Rendez-vous / Tâches / Dutreil de l'agenda
     const parJour = {};
-    const ajouter = (iso, ev) => { if (estIso(iso) && (tous || typesCalendrier.has(ev.type))) (parJour[iso] ||= []).push(ev); };
+    const avecNoms = enEquipe() && perimetre === "tous";
+    const ajouter = (iso, ev) => {
+      if (!estIso(iso) || !(tous || typesCalendrier.has(ev.type))) return;
+      if (avecNoms && ev.qui) ev.sous = [ev.sous, "👤 " + ev.qui].filter(Boolean).join(" · ");
+      (parJour[iso] ||= []).push(ev);
+    };
     // l'agenda ignore les filtres (ils restent actifs pour les autres onglets) : seule la recherche compte
     const recherche = texteRecherche();
     const retenus = recherche && donnees ? new Set(donnees.dossiers.filter(correspondRecherche).map((d) => cleClient(d.client))) : null;
     if (donnees) {
       donnees.dossiers.forEach((d, i) => {
         if (retenus && !correspondRecherche(d)) return;
-        if (d.rdv && !d.archives) ajouter(d.rdv, { type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.rdv_objet, d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i, null, "Rendez-vous"),
+        if (d.rdv && !d.archives && voit(responsableDe(d))) ajouter(d.rdv, { qui: responsableDe(d), type: "rdv", titre: (d.rdv_heure ? plage(d.rdv_heure, d.rdv_duree || DUREE_RDV) + " " : "") + d.client, duree: d.rdv_duree || DUREE_RDV, heure: d.rdv_heure || "", sous: [d.rdv_objet, d.tache, sansNumero(d.type)].filter(Boolean).join(" · "), ouvrir: () => ouvrirDossier(i, null, "Rendez-vous"),
           date: d.rdv, ref: { dossier: d.id || i } });
       });
       for (const f of Object.values(donnees.clients)) {
         // rendez-vous du client (hors dossier)
         for (const r of f.rdvs || []) {
+          if (!voit(qui(r))) continue;
           if (recherche && !sansAccents(`${f.nom} ${r.objet || ""}`).includes(sansAccents(recherche))) continue;
-          ajouter(r.date, { perso: estPerso(f.nom), type: "rdv", titre: (r.heure ? plage(r.heure, r.duree || DUREE_RDV) + " " : "") + (estPerso(f.nom) && r.objet ? r.objet : f.nom), duree: r.duree || DUREE_RDV, heure: r.heure || "",
+          ajouter(r.date, { qui: qui(r), perso: estPerso(f.nom), type: "rdv", titre: (r.heure ? plage(r.heure, r.duree || DUREE_RDV) + " " : "") + (estPerso(f.nom) && r.objet ? r.objet : f.nom), duree: r.duree || DUREE_RDV, heure: r.heure || "",
             sous: estPerso(f.nom) ? "Rendez-vous perso" : ["RDV client", r.objet].filter(Boolean).join(" · "), ouvrir: () => ouvrirRdv(f.nom, r.id), date: r.date, ref: { client: f.nom, rdvClient: r.id } });
         }
         for (const t of f.taches || []) {
           if (!t.pour || !tacheRetenue(f.nom, t, retenus)) continue;   // les tâches faites restent, raturées
-          ajouter(t.pour, { fait: !!t.fait, perso: estPerso(f.nom), prio: !!t.prio, type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + (t.prio ? "⚡ " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
+          ajouter(t.pour, { qui: qui(t), fait: !!t.fait, perso: estPerso(f.nom), prio: !!t.prio, type: "tache", titre: (t.heure ? plage(t.heure, t.duree || DUREE_TACHE) + " " : "") + (t.prio ? "⚡ " : "") + t.texte, duree: t.duree || DUREE_TACHE, fixe: !!t.fixe, heure: t.heure || "", sous: f.nom + (t.dossier_libelle ? " · " + t.dossier_libelle : ""), ouvrir: () => ouvrirTache(f.nom, t.id),
             retard: !t.fait && tacheEnRetard(t), id: t.id, client: f.nom, date: t.pour, ref: { client: f.nom, tache: t.id } });
         }
       }
@@ -6382,10 +6450,13 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   let moisTel = (() => { try { return localStorage.getItem("suivi-gp-cal-mois-tel") === "1"; } catch (e) { return false; } })();
 
   // ---- fenêtre des horaires et congés ----
-  let brouillonAgenda = null;
-  function ouvrirReglagesAgenda() {
+  let brouillonAgenda = null, horairesPour = null;
+  function ouvrirReglagesAgenda(pers) {
     fermerMenu();
-    brouillonAgenda = JSON.parse(JSON.stringify(reglagesAgenda));
+    // équipe : chacun ses horaires, congés et réglages (ceux de la personne regardée, ou celle choisie ici)
+    horairesPour = typeof pers === "string" && equipe().includes(pers) ? pers : personneCalcul();
+    const { equipe: _e, personnes: _p, sha: _s, ...h } = horairesDe(horairesPour);
+    brouillonAgenda = JSON.parse(JSON.stringify(h));
     const dessiner = () => {
       const b = brouillonAgenda;
       const jours = [[1, "Lun"], [2, "Mar"], [3, "Mer"], [4, "Jeu"], [5, "Ven"], [6, "Sam"], [0, "Dim"]];
@@ -6398,6 +6469,9 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       };
       const du = el("input", { type: "date" }), au = el("input", { type: "date" }), lib = el("input", { type: "text", placeholder: "Vacances, formation…" });
       $("corpsAgenda").replaceChildren(
+        enEquipe() ? el("div", null, el("h4", { class: "rubrique" }, "Horaires de"),
+          el("div", { class: "collabs" }, equipe().map((n) => el("button", { type: "button", class: "collab" + (n === horairesPour ? " choisi" : ""),
+            onclick: () => { if (n !== horairesPour) { if (JSON.stringify(brouillonAgenda) !== JSON.stringify((({ equipe: _a, personnes: _b, sha: _c, ...x }) => x)(horairesDe(horairesPour)))) informer("Enregistrez d’abord ces horaires."); else ouvrirReglagesAgenda(n); } } }, n)))) : "",
         el("h4", { class: "rubrique" }, "Jours travaillés"),
         el("div", { class: "agenda-jours" }, jours.map(([n, nom]) => el("button", { type: "button", "aria-pressed": String(b.jours.includes(n)),
           onclick: () => { b.jours = b.jours.includes(n) ? b.jours.filter((x) => x !== n) : [...b.jours, n]; dessiner(); } }, nom))),
@@ -6466,10 +6540,13 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
           } }, "＋ Ajouter")));
     };
     dessiner();
-    ouvrirFeuille("feuilleAgenda", ouvrirReglagesAgenda);
+    ouvrirFeuille("feuilleAgenda", () => ouvrirReglagesAgenda(horairesPour));
   }
   async function validerReglagesAgenda() {
-    reglagesAgenda = { ...reglagesAgenda, ...brouillonAgenda };
+    if (enEquipe() && horairesPour && horairesPour !== titulaire()) {
+      const { jours, plages, conges, auto: a } = brouillonAgenda;
+      reglagesAgenda = { ...reglagesAgenda, personnes: { ...(reglagesAgenda.personnes || {}), [horairesPour]: { jours, plages, conges, ...(a ? { auto: a } : {}) } } };
+    } else reglagesAgenda = { ...reglagesAgenda, ...brouillonAgenda };
     // les tâches qui tombent sur un jour devenu non travaillé partent au jour travaillé suivant
     const jours = [];
     for (let k = 0; k < 90; k++) { const d = aujourdhui(); d.setDate(d.getDate() + k); jours.push(enIso(d)); }
@@ -6645,8 +6722,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (!autres) return null;
     return new Set(donnees.dossiers.filter((d) => correspond(d, "exercice")).map((d) => cleClient(d.client)));
   }
-  const tacheRetenue = (nom, t, clients) => !clients || clients.has(cleClient(nom))
-    || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche()));
+  const tacheRetenue = (nom, t, clients) => voit(qui(t)) && (!clients || clients.has(cleClient(nom))
+    || (texteRecherche() && String(t.texte || "").toLocaleLowerCase("fr").includes(texteRecherche())));
 
   let premierePlanif = false;
   // relié à GitHub : les automatismes (tâches des dossiers, replacement) attendent d'avoir la version la plus récente,
@@ -6683,10 +6760,11 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) {
       const m = enMinutes(t.heure);
       if (t.fait || !t.pour || t.pour < auj || m === null || tacheRapide(t)) continue;
-      (parJour.get(t.pour) || parJour.set(t.pour, []).get(t.pour)).push([m, m + dureeTache(t)]);
+      const k = qui(t) + "|" + t.pour;   // chacun son agenda
+      (parJour.get(k) || parJour.set(k, []).get(k)).push([m, m + pourPersonne(qui(t), () => dureeTache(t))]);
     }
-    for (const d of donnees.dossiers) { const m = enMinutes(d.rdv_heure); if (d.rdv && d.rdv >= auj && m !== null && !d.archives && parJour.has(d.rdv)) parJour.get(d.rdv).push([m, m + (Number(d.rdv_duree) || dureeRdvDefaut())]); }
-    const jours = [...parJour.entries()].filter(([, l]) => { l.sort((a, b) => a[0] - b[0]); return l.some((x, k) => k && x[0] < l[k - 1][1]); }).map(([j]) => j).sort();
+    for (const d of donnees.dossiers) { const m = enMinutes(d.rdv_heure); if (d.rdv && d.rdv >= auj && m !== null && !d.archives && parJour.has(responsableDe(d) + "|" + d.rdv)) parJour.get(responsableDe(d) + "|" + d.rdv).push([m, m + (Number(d.rdv_duree) || dureeRdvDefaut())]); }
+    const jours = [...parJour.entries()].filter(([, l]) => { l.sort((a, b) => a[0] - b[0]); return l.some((x, k) => k && x[0] < l[k - 1][1]); }).map(([j]) => j.split("|").pop()).sort();
     if (retirees || jours.length) {
       if (jours.length && auto().actif) apresAgenda(jours);
       else sauver();
@@ -6707,6 +6785,11 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (!premierePlanif && donnees && (pretPourAuto || !github)) { premierePlanif = true; setTimeout(() => { depuisToutesApps(); const r = reparerAgenda(); const a = planifierDossiersAFaire(); const b = replacerSansHeure(); if (a || b || r) afficherTout(); }, 400); }
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
+    majQui();
+    if (donnees && enEquipe() && !choisirQui.fait) {   // appareil d'une équipe qui ne sait pas encore qui l'utilise
+      let connu = true; try { connu = !!localStorage.getItem(CLE_MOI); } catch (e) {}
+      if (!connu) { choisirQui.fait = true; setTimeout(choisirQui, 500); }
+    }
     const vide = !donnees;
     $("accueilVide").hidden = !vide;
     $("contenu").hidden = vide;
@@ -6742,7 +6825,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     if (vueCourante() === "calendrier") afficherCalendrier();
     if ($("mTaches")) {
       const taches = tachesAVenir(7, true);
-      const toutes = Object.values(donnees.clients).reduce((n, f) => n + (f.taches || []).filter((t) => !t.fait).length, 0);
+      const toutes = Object.values(donnees.clients).reduce((n, f) => n + (f.taches || []).filter((t) => !t.fait && voit(qui(t))).length, 0);
       afficherMaJournee();
       afficherAvantRdv();
       // tuiles : la tâche, le client, l'échéance ; un toucher ouvre la fiche, le ✓ la marque faite
@@ -7037,6 +7120,12 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     } });
   }
   // menu du clic droit
+  function confierDossiers(liste, p) {
+    const avant = liste.map((d) => ({ ...d }));
+    liste.forEach((d) => { d.responsable = p; });
+    sauver(); afficherTout();
+    informer(`${liste.length > 1 ? liste.length + " dossiers confiés" : "Dossier confié"} à ${p}.`, { texte: "Annuler", faire: () => { liste.forEach((d, k) => { if (avant[k].responsable) d.responsable = avant[k].responsable; else delete d.responsable; }); sauver(); afficherTout(); } });
+  }
   function menuSelection(x, y) {
     fermerMenuSelection();
     const n = selectionMulti.size;
@@ -7047,6 +7136,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       action(`✎  Modifier${n > 1 ? ` les ${n}` : ""} (demandeur, société…)`, () => modifierEnLot([...selectionMulti])),
       rangeeCollaborateurs([...selectionMulti]),
       rangeeDemandeurs([...selectionMulti]),
+      // équipe : confier les dossiers sélectionnés à un collaborateur
+      ...(enEquipe() ? equipe().filter((p) => tous.some((d) => responsableDe(d) !== p)).map((p) => action(`👤  Confier à ${p}${n > 1 ? ` (${n})` : ""}`, () => confierDossiers(tous, p))) : []),
       n === 1 && tous[0] ? action("⚡  Tâche rapide (aujourd’hui)", () => ajouterTacheRapide(tous[0].client, tous[0])) : null,
       n === 1 ? action("↻  Relancé aujourd’hui (rappel dans 7 j)", () => noterRelance([...selectionMulti][0])) : null,
       tous.some((d) => !d.archives) ? action(`🗄  Archiver${n > 1 ? ` les ${n}` : ""}`, () => archiverSelection(true)) : null,
@@ -7111,6 +7202,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   const nomEtape = (t) => (ETAPES.find(([k]) => k === String(t || "").charAt(0)) || [, ""])[1];
   function differences(avant, apres) {
     const l = [];
+    if (enEquipe() && avant && responsableDe(avant) !== responsableDe(apres)) l.push(`Responsable : ${responsableDe(avant)} → ${responsableDe(apres)}`);
     for (const [cle, lib] of Object.entries(SUIVIS)) {
       const a = avant ? avant[cle] ?? "" : "", b = apres[cle] ?? "";
       if (String(a) === String(b) || (a === "" && (b === null || b === false)) || ((a === null || a === false) && b === "")) continue;
@@ -7654,6 +7746,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const t = commandesNote(String(texte || "").trim(), client || "", id, dossier);
     if (!t) return null;
     const n = { id, le: new Date().toISOString(), texte: t };
+    if (enEquipe()) n.qui = moi();
     if (client) n.client = client;
     if (dossier) n.dossier = dossier;
     notesLibres = [n, ...notesLibres];
@@ -7883,7 +7976,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     reprendrePostits();
     reparerNotes();
     const t = sansAccents(filtreNotes.texte);
-    const tous = toutesNotes();
+    // équipe : les notes de la personne regardée (ou de toute l'équipe) ; celles des rendez-vous suivent leur propriétaire
+    const tous = toutesNotes().filter((x) => voit(x.r ? qui(x.r) : x.ou === "rdvd" ? responsableDe(x.d) : qui(x.n)));
     const liste = tous.filter((x) => (!filtreNotes.aff || (filtreNotes.aff === "oui") === (x.ou !== "libre"))
       && (!t || sansAccents(x.nom || "").includes(t)));   // la recherche ne porte que sur le client
     const nbLibres = tous.filter((x) => x.ou === "libre").length;
@@ -8539,6 +8633,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     let ouverte = null;
     const rangee = el("div", { class: "tuiles" });
     for (const c of champs) {
+      if (!c) continue;
       const zone = c.contenu || c.choix[0];
       const cache = c.choix ? c.choix[1] : null;
       const page = el("div", { class: "tuile-page", hidden: true },
@@ -8935,6 +9030,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
           { libelle: "Nature", choix: choixNature(sansNumero(d.type) === "Sans type" ? "" : sansNumero(d.type)) },
           { libelle: "Précision", choix: choixPrecision(d.precision) },
           { libelle: "Collaborateurs", choix: choixCollaborateur(d.collaborateur) },
+          enEquipe() ? { libelle: "Responsable", choix: choixCases({ nom: "responsable", valeur: d.responsable || (i >= 0 ? titulaire() : personneCalcul()), valeurs: equipe }) } : null,
           { libelle: "Demandeur", commun: true, choix: choixDemandeur(d.notaire) },
           { libelle: "Société", choix: choixSociete(d.notaire && etudeDe(d.notaire) !== AUTRES_ETUDES ? etudeDe(d.notaire) : "") },
           { libelle: "Partenaire", commun: true, choix: choixPartenaire(d.partenaire) },
@@ -9201,7 +9297,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function majTaches(nom, modifier) {
     const cle = cleClient(nom);
     const f = { ...fiche(nom), nom: fiche(nom).nom || nom };
+    const avant = new Set((f.taches || []).map((t) => t.id));
     f.taches = modifier([...(f.taches || [])]);
+    // une tâche qui vient d'être créée appartient à la personne dont on gère l'agenda (soi-même en général)
+    if (enEquipe()) for (const t of f.taches) if (t && !t.qui && !avant.has(t.id)) t.qui = personneCalcul();
     donnees.clients[cle] = f;
     sauver();
   }
@@ -9210,7 +9309,9 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function majRdvs(nom, modifier) {
     const cle = cleClient(nom);
     const f = { ...fiche(nom), nom: fiche(nom).nom || nom };
+    const avant = new Set((f.rdvs || []).map((r) => r.id));
     f.rdvs = modifier([...(f.rdvs || [])]);
+    if (enEquipe()) for (const r of f.rdvs) if (r && !r.qui && !avant.has(r.id)) r.qui = personneCalcul();
     donnees.clients[cle] = f;
     sauver();
   }
@@ -9233,9 +9334,130 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return l.filter((r) => estIso(r.date || "")).sort((a, b) => (a.date + (a.heure || "99")).localeCompare(b.date + (b.heure || "99")));
   }
   // tous les rendez-vous « client » d'une journée (pour l'agenda dynamique)
+  // ================================================================ équipe : interface
+  function majQui() {
+    const b = $("btnQui");
+    if (!b) return;
+    b.hidden = !enEquipe() || !donnees;
+    if (b.hidden) return;
+    const vue = perimetre === "tous" ? " · toute l’équipe" : personneAffichee() !== moi() ? " · espace de " + personneAffichee() : "";
+    b.replaceChildren("👤 ", el("b", null, moi()), vue, " ▾");
+    b.title = "Qui utilise cet appareil, et quel espace afficher";
+  }
+  function changerPerimetre(v) {
+    perimetre = v;
+    try { localStorage.setItem(CLE_PERIMETRE, v); } catch (e) {}
+    afficherTout();
+    if (vueCourante() === "notes") afficherNotes();
+  }
+  function devenir(nom) {
+    try { localStorage.setItem(CLE_MOI, nom); } catch (e) {} memoMoi = null;
+    perimetre = "moi"; try { localStorage.setItem(CLE_PERIMETRE, "moi"); } catch (e) {}
+    afficherTout();
+    if (vueCourante() === "notes") afficherNotes();
+  }
+  function menuQui(x, y) {
+    fermerMenuSelection();
+    const action = (texte, faire, choisi) => el("button", { type: "button", onclick: () => { fermerMenuSelection(); faire(); } }, (choisi ? "✓  " : "      ") + texte);
+    const vue = perimetre === "tous" ? "tous" : personneAffichee();
+    const menu = el("div", { class: "menu-contextuel", role: "menu" },
+      el("div", { class: "titre" }, "Afficher"),
+      ...equipe().map((n) => action(n === moi() ? `Mon espace (${n})` : `Espace de ${n}`, () => changerPerimetre(n === moi() ? "moi" : n), vue === n)),
+      action("Toute l’équipe", () => changerPerimetre("tous"), vue === "tous"),
+      el("div", { class: "sep" }),
+      el("div", { class: "titre" }, "Sur cet appareil, je suis"),
+      ...equipe().map((n) => action(n, () => devenir(n), n === moi())),
+      el("div", { class: "sep" }),
+      action("👥  Gérer l’équipe…", gererEquipe));
+    document.body.append(menu);
+    const b = menu.getBoundingClientRect();
+    menu.style.left = Math.max(8, Math.min(x, window.innerWidth - b.width - 8)) + "px";
+    menu.style.top = Math.max(8, Math.min(y, window.innerHeight - b.height - 8)) + "px";
+    setTimeout(() => document.addEventListener("pointerdown", fermerSiDehors, true), 0);
+  }
+  function fenetreEquipe(contenu) {
+    const voile = el("div", { class: "eq-voile" }), boite = el("div", { class: "eq-boite", role: "dialog", "aria-modal": "true" });
+    voile.append(boite); document.body.append(voile);
+    const fermer = () => { voile.remove(); document.removeEventListener("keydown", clavier, true); };
+    const clavier = (e) => { if (e.key === "Escape") { e.stopPropagation(); fermer(); } };
+    document.addEventListener("keydown", clavier, true);
+    voile.addEventListener("mousedown", (e) => { if (e.target === voile) fermer(); });
+    contenu(boite, fermer);
+    return fermer;
+  }
+  // remplace un nom par un autre partout (dossiers, tâches, rendez-vous, notes, horaires) ; vers = "" : rendu au titulaire
+  function reattribuer(de, vers) {
+    const poser = (x, champ) => { if (x && x[champ] === de) { if (vers) x[champ] = vers; else delete x[champ]; } };
+    for (const d of donnees.dossiers) poser(d, "responsable");
+    for (const f of Object.values(donnees.clients)) { (f.taches || []).forEach((t) => poser(t, "qui")); (f.rdvs || []).forEach((r) => poser(r, "qui")); }
+    notesLibres.forEach((n) => poser(n, "qui"));
+    garderNotesLibres();
+    sauver();
+  }
+  function enregistrerEquipe(liste, personnes) {
+    reglagesAgenda = { ...reglagesAgenda, equipe: liste };
+    if (personnes) { if (Object.keys(personnes).length) reglagesAgenda.personnes = personnes; else delete reglagesAgenda.personnes; }
+    enregistrerReglagesAgenda();
+    afficherTout();
+  }
+  function gererEquipe() {
+    fermerMenu();
+    if (!donnees) { informer("Ouvrez d’abord votre fichier."); return; }
+    fenetreEquipe((boite, fermer) => {
+      const dessiner = () => {
+        const l = equipe();
+        const saisie = el("input", { type: "text", placeholder: "Prénom du collaborateur", autocapitalize: "words", "aria-label": "Nouveau collaborateur" });
+        const ajouter = () => {
+          const nom = saisie.value.replace(/\s+/g, " ").trim();
+          if (!nom) return;
+          if (l.some((x) => sansAccents(x) === sansAccents(nom))) { informer(`${nom} fait déjà partie de l’équipe.`); return; }
+          // première personne ajoutée : cet appareil est celui du titulaire
+          if (!enEquipe()) { try { if (!localStorage.getItem(CLE_MOI)) localStorage.setItem(CLE_MOI, l[0]); } catch (e) {} memoMoi = null; }
+          enregistrerEquipe([...l, nom]);
+          informer(`${nom} ajouté(e) à l’équipe.`);
+          dessiner();
+        };
+        saisie.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); ajouter(); } });
+        boite.replaceChildren(
+          el("h3", null, "Équipe"),
+          el("p", { class: "aide" }, "Chacun son espace dans le même fichier : ses dossiers (il en est responsable), son agenda, ses tâches, ses rendez-vous, ses notes et ses honoraires. Tout le monde peut afficher l’espace des autres. Sur son téléphone ou son ordinateur, chacun choisit « Je suis » une fois."),
+          ...l.map((n, k) => el("div", { class: "eq-ligne" },
+            el("b", null, n, el("small", null, (k === 0 ? "titulaire · tout ce qui a été créé avant l’équipe" : "") + (n === moi() ? (k === 0 ? " · " : "") + "cet appareil" : ""))),
+            el("button", { type: "button", onclick: async () => {
+              const nouveau = ((await saisir(`Nouveau nom pour ${n} :`, n, { titre: "Renommer", ok: "Renommer" })) || "").replace(/\s+/g, " ").trim();
+              if (!nouveau || nouveau === n) return;
+              if (l.some((x) => x !== n && sansAccents(x) === sansAccents(nouveau))) { informer(`${nouveau} fait déjà partie de l’équipe.`); return; }
+              reattribuer(n, nouveau);
+              const pers = { ...(reglagesAgenda.personnes || {}) };
+              if (pers[n]) { pers[nouveau] = pers[n]; delete pers[n]; }
+              try { if (localStorage.getItem(CLE_MOI) === n) localStorage.setItem(CLE_MOI, nouveau); memoMoi = null; if (perimetre === n) changerPerimetre(nouveau); } catch (e) {}
+              enregistrerEquipe(l.map((x) => (x === n ? nouveau : x)), pers);
+              dessiner();
+            } }, "Renommer"),
+            k > 0 ? el("button", { type: "button", onclick: async () => {
+              if (!(await demander(`Retirer ${n} de l’équipe ?\n\nSes dossiers, tâches, rendez-vous et notes reviennent à ${l[0]}.`, { ok: "Retirer", danger: true }))) return;
+              reattribuer(n, "");
+              const pers = { ...(reglagesAgenda.personnes || {}) }; delete pers[n];
+              try { if (localStorage.getItem(CLE_MOI) === n) localStorage.removeItem(CLE_MOI); memoMoi = null; if (perimetre === n) changerPerimetre("moi"); } catch (e) {}
+              enregistrerEquipe(l.filter((x) => x !== n), pers);
+              dessiner();
+            } }, "Retirer") : null)),
+          el("div", { class: "eq-ajout" }, saisie, el("button", { type: "button", onclick: ajouter }, "＋ Ajouter")),
+          el("div", { class: "eq-pied" }, el("button", { type: "button", class: "principal", onclick: fermer }, "Fermer")));
+      };
+      dessiner();
+    });
+  }
+  // nouvel appareil d'une équipe : on demande une fois qui l'utilise
+  function choisirQui() {
+    fenetreEquipe((boite, fermer) => boite.replaceChildren(
+      el("h3", null, "Qui utilise cet appareil ?"),
+      el("p", { class: "aide" }, "Suivi affichera votre espace : vos dossiers, votre agenda, vos notes. Vous pourrez toujours regarder celui des autres, ou changer, en haut à gauche."),
+      el("div", { class: "eq-choix" }, equipe().map((n) => el("button", { type: "button", onclick: () => { fermer(); devenir(n); informer(`Bonjour ${n} !`); } }, n)))));
+  }
   function rdvsClientsDuJour(iso) {
     const l = [];
-    for (const f of Object.values(donnees ? donnees.clients : {})) for (const r of f.rdvs || []) if (r.date === iso) l.push(r);
+    for (const f of Object.values(donnees ? donnees.clients : {})) for (const r of f.rdvs || []) if (r.date === iso && aLaPersonne(qui(r))) l.push(r);
     return l;
   }
 
@@ -9389,18 +9611,25 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     effacerSortie: true   // un dossier qui quitte « À faire » : sa tâche automatique (non faite) est effacée de l'agenda
   };
   const auto = () => {
-    const a = { ...AUTO_DEFAUT, ...((reglagesAgenda && reglagesAgenda.auto) || {}) };
-    if (!(reglagesAgenda && reglagesAgenda.auto && reglagesAgenda.auto.regles) && Number(a.dureeDossier) && Number(a.dureeDossier) !== 120)
+    const H = horaires(), p = personneCalcul();
+    const a = { ...AUTO_DEFAUT, ...(enEquipe() && p !== titulaire() ? { moi: p } : {}), ...((H && H.auto) || {}) };
+    if (!(H && H.auto && H.auto.regles) && Number(a.dureeDossier) && Number(a.dureeDossier) !== 120)
       a.regles = AUTO_DEFAUT.regles.map((r) => ({ ...r, duree: Number(a.dureeDossier) }));
     return a;
   };
   let reglagesAgenda = (() => { try { return { ...AGENDA_DEFAUT, ...JSON.parse(localStorage.getItem(CLE_AGENDA) || "{}") }; } catch (e) { return { ...AGENDA_DEFAUT }; } })();
-  const congeDu = (iso) => (reglagesAgenda.conges || []).find((c) => c.du && c.du <= iso && iso <= (c.au || c.du));
-  const jourTravaille = (iso) => (reglagesAgenda.jours || []).includes(versDate(iso).getDay()) && !congeDu(iso);
+  // horaires, congés et réglages de chacun : le titulaire garde ceux d'avant (en haut de reglagesAgenda), les autres ont les leurs
+  function horairesDe(p) {
+    if (!enEquipe() || !p || p === titulaire()) return reglagesAgenda;
+    return { ...AGENDA_DEFAUT, ...(((reglagesAgenda.personnes || {})[p]) || {}) };
+  }
+  const horaires = () => horairesDe(personneCalcul());
+  const congeDu = (iso) => (horaires().conges || []).find((c) => c.du && c.du <= iso && iso <= (c.au || c.du));
+  const jourTravaille = (iso) => (horaires().jours || []).includes(versDate(iso).getDay()) && !congeDu(iso);
   function plagesDu(iso) {
     if (!jourTravaille(iso)) return [];
     const mn = (h) => { const m = /^(\d{1,2}):(\d{2})$/.exec(h || ""); return m ? +m[1] * 60 + +m[2] : null; };
-    return (reglagesAgenda.plages || []).map(([a, b]) => [mn(a), mn(b)]).filter(([a, b]) => a !== null && b !== null && a < b).sort((x, y) => x[0] - y[0]);
+    return (horaires().plages || []).map(([a, b]) => [mn(a), mn(b)]).filter(([a, b]) => a !== null && b !== null && a < b).sort((x, y) => x[0] - y[0]);
   }
   const enMinutes = (h) => { const m = /^(\d{1,2}):(\d{2})$/.exec(h || ""); return m ? +m[1] * 60 + +m[2] : null; };
   const enHeure = (min) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
@@ -9415,13 +9644,13 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function occupations(iso, sauf) {
     const liste = [];
     for (const d of donnees ? donnees.dossiers : []) {
-      if (d.rdv !== iso || d.archives) continue;
+      if (d.rdv !== iso || d.archives || !aLaPersonne(responsableDe(d))) continue;
       const m = enMinutes(d.rdv_heure);
       if (m !== null) liste.push([m, m + (Number(d.rdv_duree) || DUREE_RDV)]);
     }
     for (const r of rdvsClientsDuJour(iso)) { const m = enMinutes(r.heure); if (m !== null) liste.push([m, m + (Number(r.duree) || DUREE_RDV)]); }
     for (const f of Object.values(donnees ? donnees.clients : {})) for (const t of f.taches || []) {
-      if (t.fait || t.pour !== iso || t.id === sauf || tacheRapide(t)) continue;
+      if (t.fait || t.pour !== iso || t.id === sauf || tacheRapide(t) || !aLaPersonne(qui(t))) continue;
       const m = enMinutes(t.heure);
       if (m !== null) liste.push([m, m + (Number(t.duree) || DUREE_TACHE)]);
     }
@@ -9483,7 +9712,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
   function tachesDuJour(iso) {
     const l = [];
-    for (const f of Object.values(donnees ? donnees.clients : {})) for (const t of f.taches || []) if (!t.fait && t.pour === iso) l.push(t);
+    for (const f of Object.values(donnees ? donnees.clients : {})) for (const t of f.taches || []) if (!t.fait && t.pour === iso && aLaPersonne(qui(t))) l.push(t);
     return l;
   }
   // replanifie une journée ; renvoie { deplacees, reportees: [ { t, vers } ] }
@@ -9496,7 +9725,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const maintenant = iso === enIso(aujourdhui()) ? Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / pas) * pas : -1;
     const fixes = [];
     for (const d of donnees.dossiers) {
-      if (d.rdv !== iso || d.archives) continue;
+      if (d.rdv !== iso || d.archives || !aLaPersonne(responsableDe(d))) continue;
       const m = enMinutes(d.rdv_heure);
       if (m !== null) fixes.push([m, m + (Number(d.rdv_duree) || dureeRdvDefaut()) + marge]);
     }
@@ -9562,6 +9791,12 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return n;
   }
   function planifierDossiersAFaire(silencieux) {
+    if (!enEquipe()) return planifierDossiersPour(silencieux);
+    let n = 0;
+    for (const p of equipe()) n += pourPersonne(p, () => planifierDossiersPour(silencieux || p !== moi())) || 0;
+    return n;
+  }
+  function planifierDossiersPour(silencieux) {
     const A = auto();
     if (!planifEnCours && donnees) {
       planifEnCours = true;
@@ -9659,8 +9894,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   function apresAgenda(jours, ancre, aCaser = []) {
     let deplacees = 0;
     const reportees = [];
-    for (const iso of [...new Set(jours.filter(Boolean))]) {
-      const b = replanifier(iso, ancre, aCaser);
+    for (const iso of [...new Set(jours.filter(Boolean))]) for (const p of (enEquipe() ? equipe() : [agendaDe])) {
+      const b = pourPersonne(p, () => replanifier(iso, ancre, aCaser));   // chacun son agenda : les tâches des uns ne poussent pas celles des autres
       deplacees += b.deplacees; reportees.push(...b.reportees);
     }
     if (deplacees || reportees.length) sauver();
@@ -9671,15 +9906,15 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     // la tâche qu'on vient de poser empiète sur un rendez-vous ou une tâche 📌 : on le signale
     const t = ancre && trouverTache(ancre);
     const debut = t && enMinutes(t.heure);
-    if (debut !== null && debut !== undefined && t) {
+    if (debut !== null && debut !== undefined && t) pourPersonne(qui(t), () => {
       const fin = debut + dureeTache(t);
-      const rdv = donnees.dossiers.find((d) => d.rdv === t.pour && !d.archives && enMinutes(d.rdv_heure) !== null
+      const rdv = donnees.dossiers.find((d) => d.rdv === t.pour && !d.archives && aLaPersonne(responsableDe(d)) && enMinutes(d.rdv_heure) !== null
         && enMinutes(d.rdv_heure) < fin && enMinutes(d.rdv_heure) + (Number(d.rdv_duree) || DUREE_RDV) > debut);
       const fixe = !rdv && tachesDuJour(t.pour).find((x) => x !== t && x.fixe && enMinutes(x.heure) !== null
         && enMinutes(x.heure) < fin && enMinutes(x.heure) + dureeTache(x) > debut);
       if (rdv) morceaux.push(`⚠ empiète sur le rendez-vous ${rdv.client} (${plage(rdv.rdv_heure, rdv.rdv_duree || DUREE_RDV)})`);
       else if (fixe) morceaux.push(`⚠ empiète sur « ${fixe.texte} » 📌`);
-    }
+    });
     return morceaux.length ? " · " + morceaux.join(" · ") : "";
   }
   const trouverTache = (id) => { for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (t.id === id) return t; return null; };
@@ -9702,6 +9937,15 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
 
   // ---- fiche d'une tâche : s'ouvre d'un clic partout où la tâche apparaît ----
   let tacheEnCours = null;  // { nom, id }
+  // équipe : pour qui est la tâche ou le rendez-vous (rien quand on est seul)
+  function choixQui(valeur) {
+    if (!enEquipe()) return "";
+    const v = equipe().includes(valeur) ? valeur : personneCalcul();
+    const cache = el("input", { type: "hidden", name: "qui", value: v });
+    const boutons = equipe().map((n) => el("button", { type: "button", class: "collab" + (n === v ? " choisi" : ""),
+      onclick: (e) => { cache.value = n; boutons.forEach((b) => b.classList.toggle("choisi", b === e.currentTarget)); } }, n));
+    return champ("Pour", el("div", { class: "collabs" }, ...boutons, cache));
+  }
   function ouvrirTache(nom, id) {
     const t = tachesDe(nom).find((x) => x.id === id);
     if (!t) { informer("Cette tâche n’existe plus."); return; }
@@ -9710,6 +9954,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const iDossier = t.dossier ? donnees.dossiers.findIndex((d) => d.id === t.dossier) : -1;
     $("corpsTache").replaceChildren(
       champ("Tâche", el("input", { name: "texte", type: "text", value: t.texte || "", autocapitalize: "sentences" })),
+      choixQui(qui(t)),
       el("div", { class: "tache-liens" },
         el("button", { type: "button", onclick: () => ouvrirClient(nom) }, "👤 ", nom),
         iDossier >= 0 ? el("button", { type: "button", onclick: () => ouvrirDossier(iDossier) }, "📄 ", t.dossier_libelle || "Dossier") : null),
@@ -9905,7 +10150,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const elements = (evenementsCalendrier(true)[jour] || []).filter((e) => e.type !== "dutreil");
     // tâches en retard (date passée, non faites)
     const retard = [];
-    for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (!t.fait && t.pour && t.pour < auj) retard.push([t, f.nom]);
+    for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (!t.fait && t.pour && t.pour < auj && voit(qui(t))) retard.push([t, f.nom]);
     const ligne = (e) => {
       const estTache = e.type === "tache";
       const client = estTache ? e.client : e.ref && e.ref.client ? e.ref.client : e.titre.replace(/^\d\d:\d\d(–\d\d:\d\d)? /, "");
@@ -10032,6 +10277,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         champ("Dossier (facultatif)", el("select", { name: "dossier" }, el("option", { value: "" }, "— aucun —"),
           dossiers.map(([d]) => el("option", { value: d.id || "", selected: r ? r.dossier === d.id : !!proposition.dossier && proposition.dossier === d.id }, `${d.tache || sansNumero(d.type)}${d.exercice ? " · " + d.exercice : ""}`))))),
       champ("Objet", el("input", { name: "objet", type: "text", value: r ? (r.objet || "") : (proposition.objet || ""), placeholder: "Signature, point annuel, bilan…", autocapitalize: "sentences" })),
+      choixQui(r ? qui(r) : personneCalcul()),
       champ("Note", avecLiens(el("textarea", { name: "note", style: "min-height:80px", placeholder: "Lieu, documents à apporter…" }, r ? (r.note || "") : ""))),
       el("div", { class: "actions-fiche" },
         r ? el("button", { type: "button", onclick: () => menuAgenda(`RDV ${nom}${r.objet ? " · " + r.objet : ""}`, r.date, r.note || "", r.heure, r.duree || DUREE_RDV) }, "📅 Ajouter à l’agenda") : null,
@@ -10058,6 +10304,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const d = donnees.dossiers.find((x) => x.id && x.id === v.dossier);
     const rdv = { id: id || nouvelId(), date: v.date, heure: v.heure || "", duree: v.duree || "", objet: (v.objet || "").trim(), note: v.note || "",
       dossier: v.dossier || "", dossier_libelle: d ? (d.tache || sansNumero(d.type)) : "",
+      ...(enEquipe() && equipe().includes(v.qui) ? { qui: v.qui } : ancien && ancien.qui ? { qui: ancien.qui } : {}),
       ...((ancien && ancien.depuisNote) || rdvEnCours.depuisNote ? { depuisNote: (ancien && ancien.depuisNote) || rdvEnCours.depuisNote } : {}) };
     majRdvs(nom, (l) => id ? l.map((x) => (x.id === id ? rdv : x)) : [...l, rdv]);
     const resume = apresAgenda([ancien && ancien.date, rdv.date]);  // les tâches s'écartent autour du rendez-vous
@@ -10074,6 +10321,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       champ("Client", [aideClient(el("input", { name: "client", type: "text", list: "liste-clients-tache", autocomplete: "off", placeholder: "Nom du client", value: proposition.perso ? NOM_PERSO : "" })), casePerso("corpsTache"),
         el("datalist", { id: "liste-clients-tache" }, nomsClients().map((n) => el("option", { value: n })))]),
       champ("Tâche", el("input", { name: "texte", type: "text", autocapitalize: "sentences", placeholder: "Appeler, relancer, envoyer…" })),
+      choixQui(personneCalcul()),
       el("div", { class: "deux" },
         champ("Pour le", el("input", { name: "pour", type: "date", value: jourPropose })),
         champ("À", el("input", { name: "heure", type: "time", value: proposition.heure || "" }))),
@@ -10097,9 +10345,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       const nom = estPerso(saisi) ? NOM_PERSO : (nomsClients().find((n) => cleClient(n) === cleClient(saisi)) || saisi);
       const existe = estPerso(saisi) || nomsClients().some((n) => cleClient(n) === cleClient(saisi));
       const id = nouvelId();
+      const pourQui = enEquipe() && equipe().includes(v.qui) ? v.qui : personneCalcul();   // dans l'agenda de qui
       // ni date ni heure : la tâche se range à la suite (ou, prioritaire, au premier créneau libre devant les autres)
-      if (!v.pour) { if (v.prio || !Number(v.duree)) { v.pour = premierJourTravaille(); v.heure = ""; } else { const [jour, h] = premierCreneau(v.duree); if (jour) { v.pour = jour; v.heure = h; } } }
-      majTaches(nom, (l) => [...l, { id, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", fixe: !!v.fixe, repete: v.repete || "", prio: !!v.prio,
+      if (!v.pour) pourPersonne(pourQui, () => { if (v.prio || !Number(v.duree)) { v.pour = premierJourTravaille(); v.heure = ""; } else { const [jour, h] = premierCreneau(v.duree); if (jour) { v.pour = jour; v.heure = h; } } });
+      majTaches(nom, (l) => [...l, { id, ...(enEquipe() ? { qui: pourQui } : {}), texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", fixe: !!v.fixe, repete: v.repete || "", prio: !!v.prio,
         note: v.note || "", fait: null, cree: new Date().toISOString() }]);
       const resume = apresAgenda([v.pour], v.heure ? id : null, v.heure ? [] : [id]);
       const t = trouverTache(id);
@@ -10112,8 +10361,10 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const avant = { ...(trouverTache(id) || {}) };
     majTaches(nom, (l) => l.map((t) => t.id !== id ? t : {
       ...t, texte: v.texte, pour: v.pour || "", heure: v.pour ? (v.heure || "") : "", duree: v.duree || "", note: v.note || "",
-      fait: v.fait ? (t.fait || new Date().toISOString()) : null, fixe: !!v.fixe, repete: v.repete || "", prio: !!v.prio
+      fait: v.fait ? (t.fait || new Date().toISOString()) : null, fixe: !!v.fixe, repete: v.repete || "", prio: !!v.prio,
+      ...(enEquipe() && equipe().includes(v.qui) ? { qui: v.qui } : {})
     }));
+    const changeDeQui = enEquipe() && equipe().includes(v.qui) && v.qui !== qui(avant);
     const suite = v.fait && !avant.fait ? prochaineOccurrence(nom, trouverTache(id)) : "";
     let resume = "";
     // vient d'être passée prioritaire : elle part au premier créneau libre (sauf si on vient de lui donner une heure à la main)
@@ -10122,7 +10373,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       terminerFeuille(); afficherTout(); informer("Tâche prioritaire : placée au premier créneau libre." + r);
       return;
     }
-    if (avant.pour !== (v.pour || "") || (avant.heure || "") !== (v.heure || "") || String(avant.duree || "") !== String(v.duree || "") || !!avant.fait !== !!v.fait) {
+    if (changeDeQui || avant.pour !== (v.pour || "") || (avant.heure || "") !== (v.heure || "") || String(avant.duree || "") !== String(v.duree || "") || !!avant.fait !== !!v.fait) {
       resume = apresAgenda([avant.pour, v.pour], v.heure ? id : null, v.pour && !v.heure ? [id] : []);
     }
     terminerFeuille(); afficherTout(); informer("Tâche enregistrée." + resume + suite);
@@ -10212,6 +10463,12 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       a_vie: "a_vie" in v ? v.a_vie : (d.a_vie ?? fiche(v.client).a_vie ?? ""), millionnaire: "millionnaire" in v ? v.millionnaire : (d.millionnaire ?? fiche(v.client).millionnaire ?? ""),
       archives: v.archives, commentaire: v.commentaire
     });
+    // équipe : le dossier appartient à son responsable (par défaut, celui qui le crée)
+    //   (un dossier d'avant l'équipe reste sans responsable écrit tant qu'on ne le change pas : il revient au titulaire)
+    if (enEquipe()) {
+      if (!avant) d.responsable = equipe().includes(v.responsable) ? v.responsable : personneCalcul();
+      else if (equipe().includes(v.responsable) && v.responsable !== responsableDe(d)) d.responsable = v.responsable;
+    }
     if (!d.id) d.id = nouvelId();
     if (!(await validerDossiers([[avant, d]], { titre: avant ? "Enregistrer les modifications ?" : "Créer ce dossier ?", ok: avant ? "Enregistrer" : "Créer", annuler: enFermeture ? "Ne pas enregistrer" : "Revenir" }))) {
       if (enFermeture) terminerFeuille();
@@ -10758,6 +11015,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("enregistrerAgenda").addEventListener("click", validerReglagesAgenda);
   $("enregistrerLot").addEventListener("click", enregistrerLot);
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
+  $("btnEquipe").addEventListener("click", gererEquipe);
+  $("btnQui").addEventListener("click", (e) => { const r = e.currentTarget.getBoundingClientRect(); menuQui(r.left, r.bottom + 6); });
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
   $("btnPersoEmol").addEventListener("click", () => { fermerMenu(); ouvrirPersoEmol(); });
   $("btnAudit").addEventListener("click", () => { fermerMenu(); location.hash = "#simulations"; });
