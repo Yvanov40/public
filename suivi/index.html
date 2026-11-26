@@ -10397,7 +10397,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // revient à la fiche précédente, ou à l'affichage d'avant s'il n'y en a pas
   function retourFiche(frais) {
     const precedente = pile.pop();
-    if (!precedente) { cacherFeuilles(); return; }
+    if (!precedente) { cacherFeuilles(); toutFermer = false; return; }
     restauration = true;
     try {
       if (!frais && precedente.rendu === rendus[precedente.id]) {
@@ -10409,7 +10409,17 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         precedente.rouvrir();          // remplie à nouveau avec les données à jour
       } else cacherFeuilles();
     } finally { restauration = false; }
+    // « tout fermer » en cours : la fiche d'avant réapparue est enregistrée si besoin puis fermée à son tour,
+    // jusqu'à revenir à l'onglet de départ
+    if (toutFermer) {
+      if (document.querySelector(".feuille.ouverte")) setTimeout(fermerFeuilles, 60);   // après la photo des champs (30 ms)
+      else toutFermer = false;
+    }
   }
+  // Fermer, Enregistrer et le clic à côté ramènent directement à l'onglet (et pas à la fiche ouverte avant) ;
+  // le geste « retour », Échap et le glissement reviennent, eux, d'une fiche en arrière
+  var toutFermer = false;
+  function fermerTout() { toutFermer = pile.length > 0; fermerFeuilles(); }
   window.addEventListener("popstate", () => {
     if (ignorerRetour > 0) { ignorerRetour--; return; }
     if (document.querySelector(".menu-contextuel")) { fermerMenuSelection(true); return; }  // touche retour : le menu se ferme
@@ -10427,6 +10437,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const r = enregistrerAvantFermeture();
     if (r === true) return;      // enregistrée : elle s'est fermée toute seule
     if (r === null) {            // il manque quelque chose (le message le dit) : on reste dans la fiche, avec de quoi abandonner
+      toutFermer = false;
       informer($("messageTexte").textContent, { texte: "Abandonner", faire: () => quitterFeuille() });
       return;
     }
@@ -10449,6 +10460,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // après un enregistrement : retour à la fiche d'avant, remise à jour avec les nouvelles données
   function terminerFeuille() {
     finFeuilleDemandee = true;
+    if (!fermetureEnCours) toutFermer = pile.length > 0;   // bouton Enregistrer : retour direct à l'onglet
     retourFrais = true;
     if (history.state && history.state.fiche) history.back(); else { retourFrais = false; retourFiche(true); }
   }
@@ -10459,7 +10471,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     cacherFeuilles();
     if (n && history.state && history.state.fiche) { ignorerRetour = 1; history.go(-n); }
   }
-  document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerFeuilles));
+  document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerTout));
   // chaque fiche enregistrée automatiquement reçoit un bouton « Abandonner », pour pouvoir sortir sans rien garder
   Object.keys(FICHES_AUTO).forEach((id) => {
     const f = $(id), fermer = f && f.querySelector(".feuille-entete [data-fermer]");
@@ -10468,7 +10480,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     fermer.after(b);
   });
   // toucher le fond assombri referme la fenêtre : sur ordinateur, et sur téléphone pour les petites fenêtres (qui ne couvrent pas tout l'écran)
-  document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && (window.innerWidth > 900 || f.classList.contains("feuille-petite"))) fermerFeuilles(); }));
+  document.querySelectorAll(".feuille").forEach((f) => f.addEventListener("click", (e) => { if (e.target === f && (window.innerWidth > 900 || f.classList.contains("feuille-petite"))) fermerTout(); }));
   // téléphone : toutes les feuilles qui montent du bas (menu d'une carte, choix d'un acte ou d'une liste, calendrier, horloge)
   // redescendent quand on les tire vers le bas. Un seul guetteur pour toutes, où qu'elles soient créées.
   (() => {
