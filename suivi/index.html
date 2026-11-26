@@ -661,6 +661,32 @@ body.vue-calendrier #indicateurs, body.vue-calendrier #rdv { display: none !impo
 .cal-entete { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .cal-entete h2 { margin: 0 8px 0 0; font: 600 24px/1.1 var(--titre); color: var(--bleu); text-transform: capitalize; min-width: 180px; font-variant-numeric: lining-nums; }
 .cal-entete button { border: 1px solid var(--bordure); background: var(--carte); color: var(--bleu); border-radius: 8px; padding: 6px 12px; }
+/* agenda : retrouver les tâches et rendez-vous d'un client */
+.ra-panneau { position: fixed; z-index: 96; width: min(460px, calc(100vw - 16px)); max-height: min(70vh, 620px); display: flex; flex-direction: column;
+  background: var(--carte); color: var(--texte); border: 1px solid var(--bordure); border-radius: 14px; box-shadow: 0 18px 46px rgba(0,0,0,.22); }
+.ra-tete { display: flex; gap: 6px; padding: 10px; border-bottom: 1px solid var(--bordure); }
+.ra-champ { flex: 1; min-width: 0; border: 1px solid var(--bordure); border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 15px; background: var(--fond, #fff); color: inherit; }
+.ra-champ:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 3px rgba(165,125,47,.18); }
+.ra-fermer { border: 0; background: none; color: var(--discret); font-size: 16px; padding: 0 8px; cursor: pointer; }
+.ra-resultats { overflow-y: auto; padding: 4px 10px 10px; }
+.ra-resultats h4 { margin: 10px 2px 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--discret); font-weight: 600; }
+.ra-aide { margin: 10px 2px; color: var(--discret); font-size: 13px; }
+.ra-ligne { display: flex; align-items: stretch; gap: 4px; border-radius: 10px; }
+.ra-ligne:hover { background: rgba(165,125,47,.08); }
+.ra-aller { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: baseline; border: 0; background: none; color: inherit; font: inherit; text-align: left; padding: 7px 6px; cursor: pointer; }
+.ra-date { flex: none; width: 92px; font-size: 13px; color: var(--bleu); font-weight: 600; }
+.ra-date small, .ra-texte small { display: block; font-weight: 400; color: var(--discret); font-size: 12px; }
+.ra-texte { min-width: 0; }
+.ra-texte b { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.ra-ligne.faite .ra-texte b { text-decoration: line-through; color: var(--discret); }
+.ra-ligne.passee .ra-date { color: var(--discret); }
+.ra-ouvrir { flex: none; border: 0; background: none; color: var(--discret); padding: 0 10px; cursor: pointer; font-size: 15px; }
+.ra-ouvrir:hover { color: var(--bleu); }
+.ra-filtrer { display: block; width: 100%; margin: 8px 0 2px; border: 1px dashed var(--or); background: none; color: var(--bleu); border-radius: 10px; padding: 8px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+@media (max-width: 900px) {
+  .ra-panneau { left: 8px !important; right: 8px; top: calc(8px + env(safe-area-inset-top, 0px)) !important; width: auto; max-height: calc(100vh - 120px); }
+  .cal-entete .btn-cherche-agenda { display: inline-block !important; }
+}
 .cal-types { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 .cal-types button { border-radius: 16px; font-size: 13px; padding: 5px 11px; }
 .cal-types button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
@@ -5647,6 +5673,77 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     return parJour;
   }
 
+  // ---- agenda : retrouver les tâches et rendez-vous d'un client (toutes dates, passées et à venir) ----
+  let texteChercheAgenda = "";
+  function elementsCherches(q) {
+    const mots = sansAccents(q).split(/\s+/).filter(Boolean);
+    if (!mots.length || !donnees) return [];
+    const va = (texte) => { const t = sansAccents(texte); return mots.every((m) => t.includes(m)); };
+    const l = [];
+    for (const f of Object.values(donnees.clients)) {
+      for (const t of f.taches || []) if (voit(qui(t)) && va(`${f.nom} ${t.texte || ""} ${t.dossier_libelle || ""}`))
+        l.push({ type: "tache", date: t.pour || "", heure: t.heure || "", duree: t.duree, titre: t.texte, client: f.nom, fait: !!t.fait, ouvrir: () => ouvrirTache(f.nom, t.id) });
+      for (const r of f.rdvs || []) if (voit(qui(r)) && va(`${f.nom} ${r.objet || ""}`))
+        l.push({ type: "rdv", date: r.date || "", heure: r.heure || "", duree: r.duree || DUREE_RDV, titre: r.objet || "Rendez-vous", client: f.nom, ouvrir: () => ouvrirRdv(f.nom, r.id) });
+    }
+    donnees.dossiers.forEach((d, i) => {
+      if (d.rdv && !d.archives && voit(responsableDe(d)) && va(`${d.client} ${d.rdv_objet || ""} ${d.tache || ""}`))
+        l.push({ type: "rdv", date: d.rdv, heure: d.rdv_heure || "", duree: d.rdv_duree || DUREE_RDV, titre: d.rdv_objet || "Rendez-vous " + (d.tache || sansNumero(d.type)), client: d.client, ouvrir: () => ouvrirDossier(i) });
+    });
+    return l;
+  }
+  function chercherDansAgenda(bouton) {
+    document.querySelectorAll(".ra-panneau").forEach((x) => x.remove());
+    const champ = el("input", { type: "search", class: "ra-champ", placeholder: "Nom du client, tâche, objet du rendez-vous…", value: texteChercheAgenda, autocomplete: "off", enterkeyhint: "search", "aria-label": "Rechercher dans l’agenda" });
+    const resultats = el("div", { class: "ra-resultats" });
+    const panneau = el("div", { class: "ra-panneau", role: "dialog", "aria-label": "Rechercher dans l’agenda" },
+      el("div", { class: "ra-tete" }, champ, el("button", { type: "button", class: "ra-fermer", "aria-label": "Fermer", onclick: () => fermer() }, "✕")), resultats);
+    const fermer = () => { panneau.remove(); document.removeEventListener("pointerdown", dehors, true); document.removeEventListener("keydown", clavier, true); };
+    const dehors = (e) => { if (!panneau.contains(e.target) && e.target !== bouton) fermer(); };
+    const clavier = (e) => { if (e.key === "Escape") { e.stopPropagation(); fermer(); } };
+    const aller = (x) => {
+      fermer();
+      const d = versDate(x.date);
+      jourCalendrier = x.date; moisCalendrier = new Date(d.getFullYear(), d.getMonth(), 1);
+      afficherCalendrier();
+      informer(`${x.client} : ${x.type === "rdv" ? "rendez-vous" : "tâche"} du ${fmtDate(x.date)}${x.heure ? " à " + x.heure : ""}.`, { texte: "Ouvrir", faire: x.ouvrir });
+    };
+    const dessiner = () => {
+      texteChercheAgenda = champ.value;
+      const q = champ.value.trim();
+      if (q.length < 2) { resultats.replaceChildren(el("p", { class: "ra-aide" }, "Tapez le nom d’un client (ou un mot de la tâche) : ses tâches et rendez-vous, passés et à venir, apparaissent ici. Un clic amène l’agenda à la bonne date.")); return; }
+      const l = elementsCherches(q), auj = enIso(aujourdhui());
+      const avenir = l.filter((x) => x.date && x.date >= auj && !(x.type === "tache" && x.fait)).sort((a, b) => (a.date + (a.heure || "99")).localeCompare(b.date + (b.heure || "99")));
+      const passes = l.filter((x) => x.date && (x.date < auj || (x.type === "tache" && x.fait && x.date >= auj))).sort((a, b) => (b.date + (b.heure || "")).localeCompare(a.date + (a.heure || "")));
+      const sansDate = l.filter((x) => !x.date && !x.fait);
+      const clients = [...new Set(l.map((x) => x.client))];
+      const ligne = (x) => el("div", { class: "ra-ligne" + (x.fait ? " faite" : "") + (x.date && x.date < auj ? " passee" : "") },
+        el("button", { type: "button", class: "ra-aller", title: x.date ? "Aller à cette date dans l’agenda" : "Ouvrir", onclick: () => (x.date ? aller(x) : (fermer(), x.ouvrir())) },
+          el("span", { class: "ra-date" }, x.date ? versDate(x.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", ...(x.date.slice(0, 4) !== auj.slice(0, 4) ? { year: "numeric" } : {}) }) : "sans date",
+            el("small", null, x.heure ? plage(x.heure, x.duree) : "")),
+          el("span", { class: "ra-texte" }, el("b", null, (x.type === "rdv" ? "📅 " : x.fait ? "✓ " : "☐ ") + x.titre), el("small", null, x.client))),
+        el("button", { type: "button", class: "ra-ouvrir", title: "Ouvrir la fiche", "aria-label": "Ouvrir", onclick: () => { fermer(); x.ouvrir(); } }, "↗"));
+      const groupe = (titre, liste, max) => liste.length ? [el("h4", null, `${titre} (${liste.length})`), ...liste.slice(0, max).map(ligne), liste.length > max ? el("p", { class: "ra-aide" }, `… et ${liste.length - max} de plus`) : null] : [];
+      resultats.replaceChildren(
+        ...(clients.length === 1 ? [el("button", { type: "button", class: "ra-filtrer", onclick: () => {
+          fermer(); $("recherche").value = clients[0]; $("recherche").dispatchEvent(new Event("input", { bubbles: true }));
+          informer(`L’agenda n’affiche que ${clients[0]} : videz la recherche pour tout revoir.`);
+        } }, `Afficher seulement ${clients[0]} dans l’agenda`)] : []),
+        ...groupe("À venir", avenir, 40), ...groupe("Sans date", sansDate, 15), ...groupe("Passés", passes, 25),
+        !l.length ? el("p", { class: "ra-aide" }, "Aucune tâche ni aucun rendez-vous trouvé.") : "");
+    };
+    champ.addEventListener("input", dessiner);
+    champ.addEventListener("keydown", (e) => { if (e.key === "Enter") { const b = resultats.querySelector(".ra-aller"); if (b) { e.preventDefault(); b.click(); } } });
+    document.body.append(panneau);
+    if (!estTel()) {
+      const r = bouton.getBoundingClientRect();
+      panneau.style.left = Math.max(8, Math.min(r.left, window.innerWidth - panneau.offsetWidth - 8)) + "px";
+      panneau.style.top = (r.bottom + 6) + "px";
+    }
+    dessiner();
+    setTimeout(() => { champ.focus(); champ.select(); document.addEventListener("pointerdown", dehors, true); document.addEventListener("keydown", clavier, true); }, 30);
+  }
+
   // ---- déplacer un élément à une autre date (glisser dans la grille, ou choisir la date dans le détail du jour) ----
   const indexEvenements = new Map();  // clé -> événement, pour retrouver ce qu'on glisse
   // modifie un rendez-vous client depuis l'agenda (glisser, roue, heure, durée)
@@ -6398,6 +6495,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const auj = enIso(aujourdhui());
     const menu = el("div", { class: "menu-contextuel menu-agenda-tel", role: "menu" },
       el("div", { class: "titre" }, "Agenda"),
+      action("🔍  Rechercher un client", () => chercherDansAgenda(null)),
       jourCalendrier !== auj ? action("↺  Revenir à aujourd’hui", () => { const d = aujourdhui(); d.setDate(1); moisCalendrier = d; jourCalendrier = auj; afficherCalendrier(); }) : null,
       action(moisTel ? "📅  Masquer le mois" : "📅  Afficher le mois", () => { moisTel = !moisTel; try { localStorage.setItem("suivi-gp-cal-mois-tel", moisTel ? "1" : "0"); } catch (e) {} afficherCalendrier(); }),
       el("div", { class: "sep" }),
@@ -6617,6 +6715,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         moisTel = !moisTel; try { localStorage.setItem("suivi-gp-cal-mois-tel", moisTel ? "1" : "0"); } catch (e) {}
         afficherCalendrier();
       }, title: moisTel ? "Masquer le mois" : "Afficher le mois", "aria-label": moisTel ? "Masquer le mois" : "Afficher le mois" }, "📅") : null,
+      el("button", { type: "button", class: "btn-cherche-agenda", title: "Retrouver les tâches et rendez-vous d’un client", "aria-label": "Rechercher dans l’agenda",
+        onclick: (e) => chercherDansAgenda(e.currentTarget) }, tel ? "🔍" : "🔍 Rechercher"),
       el("button", { type: "button", class: "btn-horaires", title: "Horaires et congés", "aria-label": "Horaires et congés", onclick: ouvrirReglagesAgenda }, estTel() ? "⚙" : "⚙ Horaires"),
       el("div", { class: "cal-modes ordi" }, [["mois", "Mois"], ["semaine", "Semaine"]].map(([m, lib]) =>
         el("button", { type: "button", "aria-pressed": String(modeCalendrier === m), onclick: () => { modeCalendrier = m; memoriserFiltres(); afficherCalendrier(); } }, lib))),
