@@ -1435,6 +1435,8 @@ html, body { overscroll-behavior-y: none; }  /* pas de « tirer pour recharger �
 .eq-ajout button, .eq-pied .principal { border: 0; background: var(--bleu); color: #fff; border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
 .eq-pied { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .eq-choix { display: grid; gap: 8px; margin-top: 10px; }
+.eq-boite .nn-texte { width: 100%; box-sizing: border-box; min-height: 130px; }
+.eq-boite .champ, .eq-boite label { display: block; }
 .eq-choix button { border: 1px solid var(--bordure); background: var(--carte); color: var(--texte); border-radius: 12px; padding: 11px 14px; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
 .eq-choix button:hover { border-color: var(--or); }
 .collab { border: 1px solid var(--bordure); background: var(--carte); color: var(--texte); border-radius: 16px; padding: 6px 12px; font-size: 13.5px; cursor: pointer; }
@@ -2509,7 +2511,6 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       <a href="#dutreil" data-vue="dutreil">⚖ Dutreil</a>
       <a href="#activite" data-vue="activite">📊 Activité</a>
       <a href="#simulations" data-vue="simulations">🧮 Simulations</a>
-      <a href="#notes" data-vue="notes">🗒 Notes</a>
     </nav>
     <button class="btn-eclair" id="btnEclair" aria-label="Recherche éclair" title="Recherche éclair">🔍</button>
     <button class="icone" id="btnActualiserTel" aria-label="Actualiser" title="Actualiser">↻</button>
@@ -2676,6 +2677,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     <button type="button" role="menuitem" data-action="client" aria-label="Nouveau client"><span>Client</span><i>👤</i></button>
     <button type="button" role="menuitem" data-action="dossier" aria-label="Nouveau dossier"><span>Dossier</span><i>📄</i></button>
     <button type="button" role="menuitem" data-action="tache" aria-label="Nouvelle tâche"><span>Tâche</span><i>☐</i></button>
+    <button type="button" role="menuitem" data-action="note" aria-label="Nouvelle note"><span>Note</span><i>🗒</i></button>
   </div>
   <button class="flottant" id="btnNouveau" aria-label="Créer ou chercher" aria-haspopup="menu" aria-expanded="false">+</button>
 </div>
@@ -2686,7 +2688,6 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   <a href="#calendrier" data-vue="calendrier"><span>📅</span>Agenda</a>
   <a href="#dutreil" data-vue="dutreil"><span>⚖</span>Dutreil</a>
   <a href="#activite" data-vue="activite"><span>📊</span>Activité</a>
-  <a href="#notes" data-vue="notes"><span>🗒</span>Notes</a>
 </nav>
 
 <div class="barre-selection" id="barreSelection" hidden><span id="barreSelectionTexte"></span>
@@ -2905,6 +2906,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       <button class="menu-tuile" id="btnPrenoms"><span>✂</span>Retirer les prénoms des clients</button>
       <button class="menu-tuile" id="btnDoublons"><span>⇄</span>Fusionner les clients en double</button>
       <button class="menu-tuile" id="btnNotesPerdues"><span>🗒</span>Retrouver des notes disparues</button>
+      <button class="menu-tuile" id="btnNotesARanger" hidden><span>↪</span>Notes sans client à rattacher</button>
       <button class="menu-tuile" id="btnImporter"><span>📂</span>Ouvrir un autre fichier</button>
       <button class="menu-tuile" id="btnNouveauFichier"><span>＋</span>Créer un nouveau fichier</button>
       <button class="menu-tuile" id="btnFichierLie" hidden><span>💾</span>Ouvrir et enregistrer dans un fichier</button>
@@ -6596,7 +6598,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
             interrupteur("dossiers", "Mettre dans l’agenda les dossiers « À faire » qui me sont attribués", "Selon les règles ci-dessous, nature par nature. Les rendez-vous et les tâches 📌 ne bougent jamais."),
             interrupteur("effacerSortie", "Effacer la tâche quand le dossier quitte « À faire »", "Passé en attente, terminé, sans suite ou archivé : sa tâche automatique (si elle n’est pas faite) disparaît, et l’agenda se resserre. Les tâches créées à la main sont gardées."),
             el("label", { class: "auto-choix" }, el("span", null, "Mon nom dans les collaborateurs"),
-              el("input", { type: "text", value: A.moi, onchange: (e) => poser("moi", e.target.value.trim() || "Moi") })),
+              el("input", { type: "text", value: /^moi$/i.test(String(A.moi || "").trim()) || !A.moi ? horairesPour || titulaire() : A.moi, onchange: (e) => poser("moi", e.target.value.trim()) })),
             // les règles, une par nature
             el("div", { class: "regles" }, ...(A.regles || []).map((r, k) => {
               const majRegle = (champ, val) => { const l = (A.regles || []).map((x, j) => (j === k ? { ...x, [champ]: val } : x)); poser("regles", l); };
@@ -6886,6 +6888,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     cacheTachesOuvertes = null;  // les tâches ont pu changer
     memoriserFiltres();
     majQui();
+    if (donnees && afficherTout.moiRemplace !== donnees) { afficherTout.moiRemplace = donnees; remplacerMoi(); }
+    $("btnNotesARanger").hidden = !donnees || !notesLibres.some((n) => !n.client && !n.dossier && String(n.texte || "").trim());
     if (donnees && enEquipe() && !choisirQui.fait) {   // appareil d'une équipe qui ne sait pas encore qui l'utilise
       let connu = true; try { connu = !!localStorage.getItem(CLE_MOI); } catch (e) {}
       if (!connu) { choisirQui.fait = true; setTimeout(choisirQui, 500); }
@@ -7837,8 +7841,40 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         l.push({ n: { id: "rdv-" + r.id, le: leRdv(r.date, r.heure), texte: String(r.note).trim() }, ou: "rdv", nom: f.nom, r, objet: r.objet || "Rendez-vous" });
       for (const d of donnees.dossiers) if (estIso(d.rdv || "") && String(d.rdv_note || "").trim())
         l.push({ n: { id: "rdvd-" + (d.id || d.client), le: leRdv(d.rdv, d.rdv_heure), texte: String(d.rdv_note).trim() }, ou: "rdvd", nom: d.client, d, objet: d.rdv_objet || "Rendez-vous" });
+      // les notes écrites dans les tâches
+      for (const f of Object.values(donnees.clients)) for (const t of f.taches || []) if (String(t.note || "").trim())
+        l.push({ n: { id: "tache-" + t.id, le: t.pour ? leRdv(t.pour, t.heure) : String(t.cree || ""), texte: String(t.note).trim() }, ou: "tache", nom: f.nom, t, objet: t.texte || "Tâche" });
     }
     return l.sort((a, b) => String(b.n.le || "").localeCompare(String(a.n.le || "")));
+  }
+  // « + » › Note : une note, toujours pour un client ; elle se range dans sa fiche (rubrique Notes)
+  function nouvelleNote(client) {
+    if (!donnees) return;
+    // une fiche client ouverte : la note est pour lui
+    const ouverte = document.querySelector("#feuilleClient.ouverte") && ficheCourante && ficheCourante.id === "feuilleClient" ? ($("titreClient") || {}).textContent : "";
+    fenetreEquipe((boite, fermer) => {
+      const champClient = el("input", { type: "text", placeholder: "Nom du client", autocomplete: "off", value: client || (ouverte && nomsClients().some((n) => n === ouverte) ? ouverte : "") });
+      const texte = el("textarea", { class: "journal-saisie nn-texte", placeholder: "La note… (« /tache vendredi 10h » crée la tâche, « /rdv » le rendez-vous)", rows: 6 });
+      const valider = () => {
+        const saisi = champClient.value.replace(/\s+/g, " ").trim();
+        const nom = estPerso(saisi) ? NOM_PERSO : nomsClients().find((n) => cleClient(n) === cleClient(saisi));
+        if (!saisi) { informer("Indiquez le client : une note est toujours rangée dans la fiche d’un client."); champClient.focus(); return; }
+        if (!nom) { informer(`Client « ${saisi} » introuvable : choisissez-le dans la liste (ou créez-le d’abord).`); champClient.focus(); return; }
+        if (!texte.value.trim()) { informer("La note est vide."); texte.focus(); return; }
+        const n = creerNote(texte.value, nom);
+        fermer();
+        if (!n) return;
+        sauver(); afficherTout();
+        informer(`Note rangée dans la fiche de ${nom}.`, { texte: "Ouvrir", faire: () => ouvrirClient(nom, "Notes") });
+      };
+      texte.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); valider(); } });
+      boite.replaceChildren(
+        el("h3", null, "Nouvelle note"),
+        champ("Client", aideClient(champClient)),
+        champ("Note", texte),
+        el("div", { class: "eq-pied" }, el("button", { type: "button", onclick: fermer }, "Annuler"), el("button", { type: "button", class: "principal", onclick: valider }, "Enregistrer")));
+      setTimeout(() => (champClient.value ? texte : champClient).focus(), 40);
+    });
   }
   // une note nouvelle : { texte, client, dossier } ; les commandes /tache et /rdv sont traitées ici
   function creerNote(texte, client, dossier) {
@@ -7877,12 +7913,14 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   // retire une note de sa place actuelle
   function retirerNote(x) {
     if (x.ou === "rdv") { majRdvs(x.nom, (l) => l.map((r) => (r.id === x.r.id ? { ...r, note: "" } : r))); return; }
+    if (x.ou === "tache") { majTaches(x.nom, (l) => l.map((t) => (t.id === x.t.id ? { ...t, note: "" } : t))); return; }
     if (x.ou === "rdvd") { x.d.rdv_note = ""; return; }
     notesLibres = notesLibres.filter((n) => n.id !== x.n.id);
     localStorage.setItem(CLE_NOTES, JSON.stringify(notesLibres));
   }
   function corrigerNote(x, texte) {
     if (x.ou === "rdv") { majRdvs(x.nom, (l) => l.map((r) => (r.id === x.r.id ? { ...r, note: texte } : r))); sauver(); return; }
+    if (x.ou === "tache") { majTaches(x.nom, (l) => l.map((t) => (t.id === x.t.id ? { ...t, note: texte } : t))); return; }
     if (x.ou === "rdvd") { x.d.rdv_note = texte; sauver(); return; }
     notesLibres = notesLibres.map((n) => (n.id === x.n.id ? { ...n, texte, maj: new Date().toISOString() } : n)).filter((n) => String(n.texte || "").trim());
     garderNotesLibres();
@@ -7964,17 +8002,19 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
   // une note. opts : { ici : le dossier ouvert (étiquette « Ce dossier »), enLecture : note du rendez-vous de ce dossier (modifiable dans sa rubrique), client : la fiche ouverte }
   function carteNote(x, redessiner, opts = {}) {
-    const estRdv = x.ou === "rdv" || x.ou === "rdvd", dansFiche = "ici" in opts;
-    const corps = el("div", { class: "journal-texte" }, ...(estRdv ? [el("b", { class: "nr-objet" }, "📅 " + x.objet), "\n"] : []), ...texteAvecLiens(x.n.texte));
+    const estTache = x.ou === "tache";
+    const estRdv = x.ou === "rdv" || x.ou === "rdvd" || estTache, dansFiche = "ici" in opts;   // (note de tâche : comme celle d'un rendez-vous)
+    const corps = el("div", { class: "journal-texte" }, ...(estRdv ? [el("b", { class: "nr-objet" }, (estTache ? (x.t.fait ? "✓ " : "☐ ") : "📅 ") + x.objet), "\n"] : []), ...texteAvecLiens(x.n.texte));
     const etiquette = () => {
       const dos = x.d ? (x.d === opts.ici ? "📁 Ce dossier" : "📁 " + libelleDossier(x.d)) : "";
       const qui = dansFiche ? "" : x.nom;
       if (x.ou === "client") return "👤 " + (dansFiche ? "Fiche client" : x.nom);
       if (x.ou === "dossier") return [qui && "👤 " + qui, dos].filter(Boolean).join(" · ");
-      return [qui && "👤 " + qui, x.ou === "rdvd" ? dos : "", "rendez-vous"].filter(Boolean).join(" · ");
+      return [qui && "👤 " + qui, x.ou === "rdvd" ? dos : "", estTache ? "tâche" : "rendez-vous"].filter(Boolean).join(" · ");
     };
     const ouvrir = () => {
       if (x.ou === "rdv") return ouvrirRdv(x.nom, x.r.id);
+      if (estTache) return ouvrirTache(x.nom, x.t.id);
       if (x.ou === "rdvd" || x.ou === "dossier") { if (x.d === opts.ici) return; const i = donnees.dossiers.indexOf(x.d); if (i >= 0) ouvrirDossier(i, null, x.ou === "rdvd" ? "Rendez-vous" : "Notes"); return; }
       if (!dansFiche) ouvrirClient(x.nom, "Notes");
     };
@@ -7982,7 +8022,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const changer = () => pied.replaceChildren(formulaireRattacher(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner, opts).querySelector(".nr-pied")); }));
     const place = x.ou === "libre" ? el("button", { type: "button", class: "nr-place libre a-ranger", title: "Rattacher à un client", onclick: changer }, "↪ À rattacher")
       : el("button", { type: "button", class: "nr-place" + (estRdv ? " rdv" : x.ou === "client" ? " cl" : ""), title: "Ouvrir", onclick: ouvrir }, etiquette());
-    const quand = estRdv ? "Rendez-vous du " + fmtDate(x.ou === "rdv" ? x.r.date : x.d.rdv) + ((x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) ? " " + (x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) : "") : dateNote(x.n.le);
+    const quand = estTache ? (x.t.pour ? "Tâche du " + fmtDate(x.t.pour) + (x.t.heure ? " " + x.t.heure : "") : "Tâche sans date") : estRdv ? "Rendez-vous du " + fmtDate(x.ou === "rdv" ? x.r.date : x.d.rdv) + ((x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) ? " " + (x.ou === "rdv" ? x.r.heure : x.d.rdv_heure) : "") : dateNote(x.n.le);
     // ce que la note a mis dans l'agenda
     const liens = estRdv ? [] : liensNote(x.n.id).map((l) => l.type === "tache"
       ? el("button", { type: "button", class: "nr-lien" + (l.t.fait ? " fait" : ""), title: "Ouvrir la tâche", onclick: () => ouvrirTache(l.nom, l.t.id) },
@@ -7992,6 +8032,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       !estRdv && x.ou !== "libre" ? el("button", { type: "button", class: "bouton-discret nr-ranger", onclick: changer }, "↪ Déplacer") : null,
       !estRdv && morceauxNote(x.n.texte).length > 1 ? el("button", { type: "button", class: "bouton-discret nr-ranger", title: "Envoyer chaque passage chez son client", onclick: () => { pied.replaceChildren(formulaireRepartir(x, (fait) => { if (fait) redessiner(); else pied.replaceWith(carteNote(x, redessiner, opts).querySelector(".nr-pied")); })); } }, "✂ Répartir") : null,
       opts.enLecture ? el("span", { class: "nr-astuce" }, "modifiable dans la rubrique Rendez-vous") : null);
+    if (estTache) place.title = "Ouvrir la tâche";
     const outils = opts.enLecture ? [] : [
       !estRdv ? el("button", { type: "button", class: "nr-ag", title: "Ajouter à l’agenda comme tâche", "aria-label": "Ajouter une tâche", onclick: () => { noteVersTache(x); redessiner(); } }, "☐＋") : null,
       !estRdv ? el("button", { type: "button", class: "nr-ag", title: "Prendre un rendez-vous", "aria-label": "Prendre un rendez-vous", onclick: () => noteVersRdv(x) }, "🤝") : null,
@@ -8003,8 +8044,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
         edit.focus();
       } }, "✎"),
       el("button", { type: "button", title: estRdv ? "Effacer la note (le rendez-vous reste)" : "Effacer", "aria-label": "Effacer la note", onclick: async () => {
-        if (!(await demander(estRdv ? "Effacer la note de ce rendez-vous ?\n\nLe rendez-vous, lui, reste dans l’agenda." : "Effacer cette note ?"))) return;
-        retirerNote(x); sauver(); redessiner(); informer((estRdv ? "Note du rendez-vous effacée" : "Note effacée") + " (Annuler : menu ⋯ ou Ctrl + Z).");
+        if (!(await demander(estTache ? "Effacer la note de cette tâche ?\n\nLa tâche, elle, reste." : estRdv ? "Effacer la note de ce rendez-vous ?\n\nLe rendez-vous, lui, reste dans l’agenda." : "Effacer cette note ?"))) return;
+        retirerNote(x); sauver(); redessiner(); informer((estTache ? "Note de la tâche effacée" : estRdv ? "Note du rendez-vous effacée" : "Note effacée") + " (Annuler : menu ⋯ ou Ctrl + Z).");
       } }, "✕")];
     return el("div", { class: "journal-note" + (x.ou === "libre" ? " nr-libre" : estRdv ? " nr-rdv" : x.ou === "client" ? " nr-cl" : "") },
       el("div", { class: "journal-tete" }, el("span", null, quand), ...outils), corps, pied);
@@ -8036,8 +8077,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     const liste = el("div", { class: "journal-liste" });
     function dessiner() {
       const tout = nom ? notesDuClient(nom) : toutesNotes().filter((x) => x.d === d);
-      const de = { client: (x) => x.ou === "client", ce: (x) => x.ou === "dossier" && x.d === d, autres: (x) => x.ou === "dossier" && x.d !== d, rdv: (x) => x.ou === "rdv" || x.ou === "rdvd" };
-      const puces = [["", "Toutes"], ["client", "Fiche client"], ...(d ? [["ce", "Ce dossier"]] : []), ["autres", d ? "Autres dossiers" : "Dossiers"], ["rdv", "Rendez-vous"]]
+      const de = { client: (x) => x.ou === "client", ce: (x) => x.ou === "dossier" && x.d === d, autres: (x) => x.ou === "dossier" && x.d !== d, rdv: (x) => x.ou === "rdv" || x.ou === "rdvd", taches: (x) => x.ou === "tache" };
+      const puces = [["", "Toutes"], ["client", "Fiche client"], ...(d ? [["ce", "Ce dossier"]] : []), ["autres", d ? "Autres dossiers" : "Dossiers"], ["rdv", "Rendez-vous"], ["taches", "Tâches"]]
         .map(([k, lib]) => [k, lib, k ? tout.filter(de[k]).length : tout.length]).filter(([k, , n]) => !k || n);
       if (filtre && !puces.some(([k]) => k === filtre)) filtre = "";
       filtres.replaceChildren(...(tout.length > 1 && nom ? puces.map(([k, lib, n]) => el("button", { type: "button", class: "collab" + (filtre === k ? " choisi" : ""), onclick: () => { filtre = k; dessiner(); } }, `${lib} (${n})`)) : []));
@@ -9435,6 +9476,23 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   }
   // tous les rendez-vous « client » d'une journée (pour l'agenda dynamique)
   // ================================================================ équipe : interface
+  // « Moi » dans les collaborateurs des dossiers devient le prénom du titulaire (Yvan) — refait à chaque chargement,
+  // au cas où un appareil resté sur une ancienne version remettrait « Moi »
+  function remplacerMoi() {
+    const nom = titulaire();
+    let n = 0;
+    for (const d of donnees.dossiers) {
+      const l = collabsDe(d);
+      if (!l.some((c) => /^moi$/i.test(c))) continue;
+      d.collaborateur = [...new Set(l.map((c) => (/^moi$/i.test(c) ? nom : c)))].join(", ");
+      n++;
+    }
+    if (selections.collaborateur && [...selections.collaborateur].some((c) => /^moi$/i.test(c))) {
+      for (const c of [...selections.collaborateur]) if (/^moi$/i.test(c)) { selections.collaborateur.delete(c); selections.collaborateur.add(nom); }
+    }
+    if (n) { sauver(); setTimeout(afficherTout, 0); }
+    return n;
+  }
   function majQui() {
     const b = $("btnQui");
     if (!b) return;
@@ -9698,7 +9756,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     pas: 15,              // arrondi des heures proposées (minutes)
     dureeTache: 30, dureeRdv: 60,
     dossiers: true,       // un dossier « À faire » qui m'est attribué devient une tâche dans l'agenda
-    moi: "Moi",           // mon nom dans les collaborateurs
+    moi: "",              // mon nom dans les collaborateurs (vide : mon nom dans l'équipe, Yvan pour le titulaire)
     dureeDossier: 120,    // (ancien réglage, repris dans les règles)
     // règles par nature : quelle tâche, quelle durée, prioritaire ou non
     //   texte : "tache" (la tâche du dossier, sinon « Nature à faire ») ou "libelle" (le libellé indiqué)
@@ -9712,7 +9770,8 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   };
   const auto = () => {
     const H = horaires(), p = personneCalcul();
-    const a = { ...AUTO_DEFAUT, ...(enEquipe() && p !== titulaire() ? { moi: p } : {}), ...((H && H.auto) || {}) };
+    const a = { ...AUTO_DEFAUT, ...((H && H.auto) || {}) };
+    if (!String(a.moi || "").trim() || /^moi$/i.test(String(a.moi).trim())) a.moi = p;   // « Moi » d'avant : le prénom
     if (!(H && H.auto && H.auto.regles) && Number(a.dureeDossier) && Number(a.dureeDossier) !== 120)
       a.regles = AUTO_DEFAUT.regles.map((r) => ({ ...r, duree: Number(a.dureeDossier) }));
     return a;
@@ -11026,7 +11085,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   //      on glisse le doigt sur le choix et on lâche pour valider ----
   const ACTIONS_FAB = {
     eclair: () => ouvrirEclair(), client: () => nouveauClient(), dossier: () => ouvrirDossier(-1),
-    tache: () => nouvelleTache(), pacte: () => ouvrirPacte(-1)
+    tache: () => nouvelleTache(), pacte: () => ouvrirPacte(-1), note: () => nouvelleNote()
   };
   let fabOuvert = false, fabAppui = null, dernierToucherFab = 0;
   function ouvrirFab() {
@@ -11116,6 +11175,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
   $("enregistrerLot").addEventListener("click", enregistrerLot);
   $("btnHoraires").addEventListener("click", ouvrirReglagesAgenda);
   $("btnEquipe").addEventListener("click", gererEquipe);
+  $("btnNotesARanger").addEventListener("click", () => { fermerMenu(); filtreNotes.aff = "non"; location.hash = "#notes"; });
   $("btnQui").addEventListener("click", (e) => { const r = e.currentTarget.getBoundingClientRect(); menuQui(r.left, r.bottom + 6); });
   $("btnDemandeurs").addEventListener("click", ouvrirDemandeurs);
   $("btnPersoEmol").addEventListener("click", () => { fermerMenu(); ouvrirPersoEmol(); });
