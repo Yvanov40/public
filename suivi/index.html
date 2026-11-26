@@ -4564,13 +4564,24 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
     for (const [cle, f] of Object.entries(donnees ? donnees.clients : {})) if (f.nom && !noms.has(cle) && !estPerso(f.nom)) noms.set(cle, f.nom);
     return [...noms.values()].sort((a, b) => a.localeCompare(b, "fr"));
   }
+  // équipe : un client sans dossier est à celui qui l'a créé, sinon à ceux qui y ont une tâche, un rendez-vous ou une note ;
+  // à défaut (tous les clients d'avant l'équipe), au titulaire
+  function voitClient(f) {
+    if (!enEquipe() || perimetre === "tous") return true;
+    const p = personneAffichee();
+    if (f.responsable && equipe().includes(f.responsable)) return f.responsable === p;
+    const k = cleClient(f.nom);
+    const qui = new Set([...(f.taches || []), ...(f.rdvs || [])].map((x) => x.qui).filter(Boolean));
+    for (const n of notesLibres) if (n.qui && cleClient(n.client || "") === k) qui.add(n.qui);
+    return qui.size ? qui.has(p) : p === titulaire();
+  }
   function clientsSansDossier() {
     // seulement sans filtre de dossier (type, notaire…) : ces clients n'ont pas de dossier à filtrer
     if (Object.values(selections).some((x) => x.size)) return [];
     const avecDossier = new Set(donnees.dossiers.map((d) => cleClient(d.client)));
     const t = texteRecherche();
     return Object.entries(donnees.clients)
-      .filter(([cle, f]) => f.nom && !avecDossier.has(cle) && !f.supprime && !estPerso(f.nom))
+      .filter(([cle, f]) => f.nom && !avecDossier.has(cle) && !f.supprime && !estPerso(f.nom) && voitClient(f))
       .filter(([, f]) => !t || [f.nom, f.commentaire, f.notes, ...(f.taches || []).map((x) => x.texte)].join(" ").toLocaleLowerCase("fr").includes(t))
       .map(([, f]) => f.nom);
   }
@@ -10732,7 +10743,7 @@ html.paysage-agenda main { padding: 2px 6px calc(4px + env(safe-area-inset-botto
       const existant = nomsClients().find((x) => cleClient(x) === cleNouveau);
       if (existant) { informer(`« ${existant} » existe déjà : voici sa fiche.`); terminerFeuille(); setTimeout(() => ouvrirClient(existant), 200); return; }
       donnees.clients[cleNouveau] = { nom, commentaire: v.commentaire || "", notaire: v.notaire || "", partenaire: v.partenaire || "",
-        millionnaire: v.millionnaire || "", a_vie: v.a_vie || "", taches: [], cree: new Date().toISOString() };
+        millionnaire: v.millionnaire || "", a_vie: v.a_vie || "", taches: [], cree: new Date().toISOString(), ...(enEquipe() ? { responsable: personneCalcul() } : {}) };
       if (String(v.notes || "").trim()) creerNote(v.notes, nom);   // la première note du client
       sauver(); terminerFeuille(); afficherTout();
       informer(`Client « ${nom} » créé : ajoutez-lui des tâches ou un dossier.`);
