@@ -2065,7 +2065,7 @@ function renderTableau(){
   const {T,cache}=tabInfo, first=Math.min(...cache), row0=sheetEl.querySelector('.row[data-i="'+first+'"]');
   const neg=v=>state.prefs.neg&&v<0;
   const tb=el('table',null,
-    el('thead',null,el('tr',null,el('th',{textContent:'Année'}),...T.cols.map(c=>el('th',{textContent:c.nom})),
+    el('thead',null,el('tr',null,el('th',{textContent:'Année'}),...T.cols.map((c,k)=>el('th',{textContent:c.nom,'data-col':k,title:'Maintenir pour renommer'})),
       el('th',{className:'plus'},el('button',{type:'button',className:'addcol',textContent:'+ Colonne','aria-label':'Ajouter une colonne calculée'})))),
     el('tbody',null,...T.annees.map(y=>el('tr',null,el('td',null,String(y),T.notes[y]?el('small',{textContent:T.notes[y]}):null),
       ...T.cols.map(c=>{ const it=c.vals[y]; if(!it) return el('td');
@@ -2115,6 +2115,38 @@ function choixTuiles(met){
   return {btn,box};
 }
 function inserer(fIn){ return t=>{ const a=fIn.selectionStart??fIn.value.length, b=fIn.selectionEnd??a; fIn.setRangeText(t,a,b,'end'); fIn.focus(); }; }
+// Renommer une colonne : doigt maintenu (ou toucher) sur son titre ; le titre du bloc et les lignes suivent
+(()=>{ let t=null;
+  const stop=()=>{ clearTimeout(t); t=null; };
+  sheetEl.addEventListener('pointerdown',e=>{ const th=e.target.closest('.tbl th[data-col]'); if(!th) return; e.preventDefault(); stop(); t=setTimeout(()=>{ t=null; buzz(20); openRenommer(+th.dataset.col); },500); });
+  ['pointerup','pointercancel','pointerleave'].forEach(n=>sheetEl.addEventListener(n,stop));
+  sheetEl.addEventListener('pointermove',e=>{ if(t&&e.target.closest&&!e.target.closest('.tbl th[data-col]')) stop(); });
+  sheetEl.addEventListener('click',e=>{ const th=e.target.closest('.tbl th[data-col]'); if(th&&!document.getElementById('formOver').classList.contains('open')) openRenommer(+th.dataset.col); });
+})();
+function openRenommer(k){
+  const c=tabInfo&&tabInfo.T.cols[k]; if(!c) return;
+  if(document.getElementById('formOver').classList.contains('open')) return;
+  $('formTitle').textContent='Renommer la colonne';
+  const B=$('formBody'); B.innerHTML='';
+  const inp=el('input',{id:'rnN',value:c.nom,autocomplete:'off',style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
+  B.append(el('label',{style:'flex-wrap:wrap'},el('span',null,'Nouveau nom',el('small',{textContent:'le titre du bloc et chaque ligne de la colonne changent'})),inp),
+    el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Renommer',on:{click:()=>renommerColonne(k,inp.value)}})));
+  showOver('formOver'); setTimeout(()=>{ inp.focus(); inp.select(); },50);
+}
+function renommerColonne(k,nv){
+  const c=tabInfo&&tabInfo.T.cols[k]; nv=String(nv||'').trim().replace(/^#+\s*/,'').replace(/[:=]/g,'');
+  if(!c||!nv){ closeOver(); return; }
+  const L=cur().lines, items=Object.values(c.vals), titres=new Set();
+  items.forEach(it=>{
+    const re=new RegExp('^(\\s*)'+escRe(it.stem||c.nom)+'(?=\\s*(?:19|20)\\d{2})','i');
+    if(it.stem) L[it.i]=L[it.i].replace(re,(m,sp)=>sp+nv);
+    else L[it.i]=L[it.i].replace(/^(\s*)/,'$1'+nv+' ');
+    const h=titreDe(it.i); if(h>=0) titres.add(h);
+  });
+  titres.forEach(h=>{ const ancien=L[h].replace(/^#+\s*/,'').trim().toLowerCase();
+    if(ancien===c.nom.toLowerCase()||items.some(it=>(it.stem||'').toLowerCase()===ancien)) L[h]='# '+nv; });
+  closeOver(); titleSnap=null; save(); renderRows(); toast('Colonne renommée « '+nv+' »');
+}
 // Nouvelle colonne : une formule sur les autres colonnes, calculée année par année
 let colOpts={nom:'Impôt',f:''};
 function openColonne(){
