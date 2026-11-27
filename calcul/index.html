@@ -2251,6 +2251,7 @@ function modifierColonne(k,nv,f,f0){
 function renommerColonne(k,nv){
   const c=tabInfo&&tabInfo.T.cols[k]; nv=String(nv||'').trim().replace(/^#+\s*/,'').replace(/[:=]/g,'');
   if(!c||!nv){ closeOver(); return; }
+  if(tabInfo.T.cols.some(x=>x!==c&&x.nom.toLowerCase()===nv.toLowerCase())){ toast('Une colonne s’appelle déjà « '+nv+' »'); return; }
   const L=cur().lines, items=Object.values(c.vals), titres=new Set();
   items.forEach(it=>{
     const re=new RegExp('^(\\s*)'+escRe(it.stem||c.nom)+'(?=\\s*(?:19|20)\\d{2})','i');
@@ -2291,6 +2292,7 @@ function addColonne(){
   const inconnu=noms.find(n=>!col(n)); if(inconnu){ toast('Colonne inconnue : '+inconnu); return; }
   const ans=T.annees.filter(y=>noms.every(n=>col(n).vals[y]));
   if(!ans.length){ toast('Aucune année commune à ces colonnes'); return; }
+  if(T.cols.some(c=>c.nom.toLowerCase()===nom.toLowerCase())){ toast('Une colonne s’appelle déjà « '+nom+' » : choisissez un autre nom'); return; }
   colOpts={nom,f};
   const out=['# '+nom];
   ans.forEach(y=>{ const note=T.notes[y]; out.push(nom+' '+y+(note?' ('+note+')':'')+' : '+f.replace(/\[([^\]]+)\]/g,(m,n)=>'L'+(col(n).vals[y].i+1))); });
@@ -2410,17 +2412,17 @@ function libelle(line,res){
 }
 // Lignes « Libellé 2026 », « Libellé 2027 »… : une série par libellé (ou par titre du bloc)
 function seriesDe(s,r){
-  const items=[]; let titre='';
+  const items=[]; let titre='', bloc=-1;
   s.lines.forEach((line,i)=>{
     const t=line.trim();
-    if(t.startsWith('#')){ titre=t.replace(/^#+\s*/,'').trim(); return; }
+    if(t.startsWith('#')){ titre=t.replace(/^#+\s*/,'').trim(); bloc=i; return; }
     const x=r[i]; if(!t || !x || x.kind!=='value') return;
     const lab=libelle(line,x); if(lab===t) return;
     const m=lab.match(/^(.*?)\s*\b((?:19|20)\d{2})\b\s*(?:\(([^)]*)\))?\s*$/u); if(!m) return;
-    items.push({i,stem:m[1].trim(),year:+m[2],note:(m[3]||'').trim(),titre,x});
+    items.push({i,stem:m[1].trim(),year:+m[2],note:(m[3]||'').trim(),titre,bloc,x});
   });
   const groupes=new Map();
-  items.forEach(it=>{ const k=it.titre+'|'+it.stem.toLowerCase(); if(!groupes.has(k)) groupes.set(k,[]); groupes.get(k).push(it); });
+  items.forEach(it=>{ const k=it.bloc+'|'+it.stem.toLowerCase(); if(!groupes.has(k)) groupes.set(k,[]); groupes.get(k).push(it); });
   let cols=[...groupes.values()].filter(g=>new Set(g.map(x=>x.year)).size>=2);
   const parTitre={}; cols.forEach(g=>{ parTitre[g[0].titre]=(parTitre[g[0].titre]||0)+1; });
   cols=cols.map(g=>{ const t=g[0].titre, st=g[0].stem;
@@ -2428,6 +2430,8 @@ function seriesDe(s,r){
     const vals={}; g.forEach(it=>{ vals[it.year]=it; });
     const argent=g.some(it=>it.x.cur==='€'), pct=g.every(it=>it.x.isPct);
     return {nom,vals,argent,pct,premier:g[0].i}; }).sort((a,b)=>a.premier-b.premier);
+  // deux séries du même nom (deux blocs « # Impôt ») : Impôt, Impôt (2)…
+  const vus={}; cols.forEach(c=>{ const k=c.nom.toLowerCase(); vus[k]=(vus[k]||0)+1; if(vus[k]>1) c.nom+=' ('+vus[k]+')'; });
   const annees=[...new Set(cols.flatMap(c=>Object.keys(c.vals).map(Number)))].sort((a,b)=>a-b);
   const notes={}; items.forEach(it=>{ if(it.note && !notes[it.year]) notes[it.year]=it.note; });
   // hypothèses : lignes fixes utilisées par les séries (L5, loyer, taux…)
