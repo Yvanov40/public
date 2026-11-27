@@ -71,6 +71,9 @@ body.kbcache:not(.clavform) #kbRetour{display:flex}
 .selbar button{padding:7px 11px;border-radius:8px;background:color-mix(in srgb, var(--surface) 16%, transparent);color:var(--surface);font-size:14px;min-height:36px}
 .selbar button.go{background:var(--accent);color:var(--accent-ink);font-weight:500}
 .selbar button.del{background:var(--warn);color:#fff}
+.form .champ{position:relative;display:inline-block;width:8.5em;flex:0 0 auto}
+.form .champ .vider{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:var(--key-op);color:var(--muted);font-size:13px;display:grid;place-items:center}
+.form .champ .vider[hidden]{display:none}
 .btn.danger{background:transparent;color:var(--warn);box-shadow:inset 0 0 0 1.5px var(--warn)}
 .tbar{display:flex;align-items:center;gap:8px;margin:0 0 8px}
 .tbar button{padding:8px 12px;border-radius:9px;background:var(--key-op);font-size:14px;font-weight:500}
@@ -1378,6 +1381,7 @@ function openChaque(){
     ...(()=>{ const tu=choixTuiles(inserer(fIn)); return [el('div',{className:'chips'},el('small',{textContent:'Formules'}),tu.btn),tu.box]; })(),
     el('p',{className:'note',textContent:'max(x; 0) garde le résultat s’il est positif et met 0 sinon. Le taux peut être un nombre (30 %) ou une variable écrite plus haut dans la feuille (ex. une ligne « imposition = 30 % », puis max(x; 0) × imposition) : changez-la une fois, toutes les lignes suivent.'}),
     el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Ajouter les lignes',on:{click:addChaque}})));
+  ajouterCroix(B);
   showOver('formOver');
 }
 function addChaque(){
@@ -2168,7 +2172,20 @@ function choixTuiles(met){
   const btn=el('button',{className:'btn',type:'button',textContent:'Tuiles…',on:{click:()=>{ box.hidden=!box.hidden; theme=null; if(!box.hidden) dessine(); }}});
   return {btn,box};
 }
-function inserer(fIn){ return t=>{ const a=fIn.selectionStart??fIn.value.length, b=fIn.selectionEnd??a; fIn.setRangeText(t,a,b,'end'); fIn.focus(); }; }
+function inserer(fIn){ return t=>{ const a=fIn.selectionStart??fIn.value.length, b=fIn.selectionEnd??a; fIn.setRangeText(t,a,b,'end'); fIn.focus(); fIn.dispatchEvent(new Event('input',{bubbles:true})); }; }
+// Croix pour vider un champ d'un coup (contenu proposé par défaut…)
+function ajouterCroix(B){
+  B.querySelectorAll('input.clav').forEach(inp=>{
+    if(inp.parentNode.classList.contains('champ')) return;
+    const w=el('span',{className:'champ'}); w.style.cssText=inp.style.cssText; w.style.textAlign='';
+    inp.style.cssText='width:100%;margin:0;padding-right:38px;text-align:'+(inp.style.textAlign||'left');
+    const x=el('button',{type:'button',className:'vider',textContent:'✕','aria-label':'Effacer le champ',tabIndex:-1});
+    x.addEventListener('pointerdown',e=>e.preventDefault());
+    x.addEventListener('click',()=>{ inp.value=''; inp.focus(); inp.dispatchEvent(new Event('input',{bubbles:true})); });
+    const maj=()=>{ x.hidden=!inp.value; }; inp.addEventListener('input',maj); maj();
+    inp.replaceWith(w); w.append(inp,x);
+  });
+}
 // Renommer une colonne : doigt maintenu (ou toucher) sur son titre ; le titre du bloc et les lignes suivent
 (()=>{ let t=null;
   const stop=()=>{ clearTimeout(t); t=null; };
@@ -2207,6 +2224,7 @@ function openRenommer(k){
     el('div',{className:'btnrow',style:'margin-top:12px;justify-content:space-between'},
       el('button',{className:'btn primary',type:'button',textContent:'Enregistrer',on:{click:()=>modifierColonne(k,inp.value,fIn.value.trim(),F.f)}}),
       el('button',{className:'btn danger',type:'button',textContent:'Supprimer la colonne',on:{click:()=>supprimerColonne(k)}})));
+  ajouterCroix(B);
   showOver('formOver'); setTimeout(()=>{ inp.focus(); },50);
 }
 // Supprimer une colonne : ses lignes (et son bloc « # Titre … Total » s'il ne contient qu'elle), avec Annuler
@@ -2281,6 +2299,7 @@ function openColonne(){
     tu.box,
     el('p',{className:'note',textContent:'Exemples : max([Résultat]; 0) × 30 % (0 si négatif, sinon × taux), [Loyer] − [Intérêts], [Impôt] + [Prélèvements]. Le taux peut être une variable de la feuille (ex. une ligne « imposition = 30 % », puis × imposition). Une ligne est créée pour chaque année ; tout reste lié.'}),
     el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Ajouter la colonne',on:{click:addColonne}})));
+  ajouterCroix(B);
   showOver('formOver');
 }
 function addColonne(){
