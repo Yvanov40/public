@@ -1,7 +1,7 @@
 // Service de l'appli Calcul (service worker) : garde une copie des fichiers pour que l'appli
 // s'ouvre sans connexion, et la rend installable. Les feuilles restent dans l'appareil (localStorage).
 // Changer VERSION (calcul-v2, calcul-v3…) à chaque modification : c'est ce qui met à jour les appareils.
-const VERSION = "calcul-v29";
+const VERSION = "calcul-v30";
 const LOCAL = ["./", "./index.html", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png", "./vendor/jspdf.umd.min.js", "./vendor/mots-fr.txt"];
 
 self.addEventListener("install", (e) => {
@@ -26,10 +26,15 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   e.respondWith((async () => {
-    try {
-      const res = await fetch(req, { cache: "no-cache" });
+    // Réseau qui ne répond pas (Wi-Fi sans Internet, signal faible) : après 3 s, la copie gardée
+    const reseau = fetch(req, { cache: "no-cache" }).then(async (res) => {
       if (res.ok) (await caches.open(VERSION)).put(req, res.clone());
       return res;
+    });
+    try {
+      const garde = await caches.match(req, { ignoreSearch: true });
+      if (!garde) return await reseau;
+      return await Promise.race([reseau, new Promise((ok) => setTimeout(() => ok(garde), 3000))]);
     } catch (err) {
       return (await caches.match(req, { ignoreSearch: true })) || (req.mode === "navigate" ? await caches.match("./index.html") : null) || Response.error();
     }
