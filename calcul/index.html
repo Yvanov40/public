@@ -1487,9 +1487,9 @@ function holdable(b,onHold,onTap){
   ['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,stop));
   b.addEventListener('click',()=>{ if(fired){ fired=false; return; } onTap(); });
 }
-let tilesTheme=null;
+let tilesTheme=null, tilesDepuis=0;
 function setTiles(open){
-  if(open) tilesTheme=null;
+  if(open){ tilesTheme=null; tilesDepuis=Date.now(); }
   tilesOpen=open;
   renderPad();
 }
@@ -1835,6 +1835,8 @@ function kbFinish(){
   K.addEventListener('click',e=>{ if(e.detail!==0) return; const k=e.target.closest('.k'); if(k) press(k.dataset.v); });
   K.addEventListener('contextmenu',e=>e.preventDefault());
 })();
+// Le doigt qui vient de toucher « Tuiles » ne doit pas ouvrir la tuile qui apparaît sous lui
+$('tiles').addEventListener('click',e=>{ if(Date.now()-tilesDepuis<450){ e.stopPropagation(); e.preventDefault(); } },true);
 ['tiles','selbar'].forEach(id=>{ $(id).addEventListener('pointerdown',e=>{ if(e.target.closest('button')) e.preventDefault(); });
   $(id).addEventListener('contextmenu',e=>e.preventDefault()); });
 
