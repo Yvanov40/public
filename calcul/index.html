@@ -67,7 +67,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .selbar button.del{background:var(--warn);color:#fff}
 .tbar{display:flex;align-items:center;gap:8px;margin:0 0 8px}
 .tbar button{padding:8px 12px;border-radius:9px;background:var(--key-op);font-size:14px;font-weight:500}
-.tbar span{font-size:14px;font-weight:600}
+.tbar span{font-size:14px;font-weight:600;flex:1}
+.tbar button.ferme{padding:8px 13px;font-size:15px}
+.fpick{margin-top:8px;padding:8px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--rule)}
+.fpick .tile{min-height:50px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips small{flex:1 1 100%;font-size:12px;color:var(--muted)}
+.chips .btn.var{box-shadow:inset 0 0 0 1.5px var(--accent)}
 .tile.theme{min-height:74px;background:color-mix(in srgb, var(--accent) 7%, var(--key))}
 .tile.special{box-shadow:inset 0 0 0 1.5px var(--accent)}
 .form label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:15px}
@@ -1349,7 +1355,9 @@ function openChaque(){
     el('label',null,el('span',null,'Nom des nouvelles lignes',el('small',{textContent:'suivi de l’année de chaque ligne'})),el('input',{id:'chN',value:chaqueOpts.nom,autocomplete:'off'})),
     el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'x = la ligne sélectionnée'})),fIn),
     el('div',{className:'btnrow',style:'margin-top:4px'},chip('max(x; 0) × 30 %','0 si négatif, sinon × taux'),chip('max(x; 0)','0 si négatif'),chip('x × 17,2 %','× taux'),chip('min(x; 0)','déficit seul')),
-    el('p',{className:'note',textContent:'max(x; 0) garde le résultat s’il est positif et met 0 sinon. Le taux peut être un nombre (30 %) ou une variable écrite plus haut dans la feuille (ex. une ligne « tmi = 30 % », puis max(x; 0) × tmi) : changez-la une fois, toutes les lignes suivent.'}),
+    chipsVariables(inserer(fIn)),
+    ...(()=>{ const tu=choixTuiles(inserer(fIn)); return [el('div',{className:'chips'},el('small',{textContent:'Formules'}),tu.btn),tu.box]; })(),
+    el('p',{className:'note',textContent:'max(x; 0) garde le résultat s’il est positif et met 0 sinon. Le taux peut être un nombre (30 %) ou une variable écrite plus haut dans la feuille (ex. une ligne « imposition = 30 % », puis max(x; 0) × imposition) : changez-la une fois, toutes les lignes suivent.'}),
     el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Ajouter les lignes',on:{click:addChaque}})));
   showOver('formOver');
 }
@@ -1506,7 +1514,8 @@ function renderTiles(){
     return;
   }
   const th=themes.find(t=>t[0]===tilesTheme); if(!th){ tilesTheme=null; return renderTiles(); }
-  bar.append(el('button',{type:'button',textContent:'← Thèmes',on:{click:()=>{ tilesTheme=null; renderTiles(); }}}),el('span',{textContent:th[0]}));
+  bar.append(el('button',{type:'button',textContent:'← Thèmes',on:{click:()=>{ tilesTheme=null; renderTiles(); }}}),el('span',{textContent:th[0]}),
+    el('button',{type:'button',className:'ferme',textContent:'✕','aria-label':'Fermer les tuiles',on:{click:()=>setTiles(false)}}));
   th[2].forEach(t=>{
     const [nom,ins,aide]=t, special=ins.startsWith('@');
     const b=el('button',{className:'tile'+(favs.includes(ins)?' fav':'')+(special?' special':''),type:'button','aria-label':nom+', '+aide+'. Maintenir pour les favoris'},el('b',{textContent:nom}),el('small',{textContent:aide}));
@@ -2075,6 +2084,35 @@ sheetEl.addEventListener('click',e=>{
   setActive(j); refresh(); focusRow(j);
 });
 $('tabBtn').addEventListener('click',()=>{ setPref('tableau',state.prefs.tableau===false); toast(state.prefs.tableau===false?'Séries affichées en lignes':'Séries affichées en tableau'); });
+
+// Dans les formulaires de formule : variables de la feuille (imposition = 30 %) et tuiles de formules
+function chipsVariables(met){
+  const vs=[]; results.forEach(r=>{ if(r&&r.kind==='value'&&r.name&&!vs.some(v=>v.n===r.name)) vs.push({n:r.name,v:show(r)}); });
+  if(!vs.length) return el('div',{className:'chips'},el('small',{textContent:'Variables : écrivez une ligne comme « imposition = 30 % » dans la feuille pour l’utiliser ici.'}));
+  return el('div',{className:'chips'},el('small',{textContent:'Variables de la feuille'}),
+    ...vs.map(v=>el('button',{className:'btn var',type:'button',title:v.v,textContent:v.n,on:{click:()=>met(v.n)}})));
+}
+function choixTuiles(met){
+  const box=el('div',{className:'fpick',hidden:true});
+  let theme=null;
+  const dessine=()=>{
+    box.innerHTML='';
+    const bar=el('div',{className:'tbar'}), grid=el('div',{className:'tgrid'});
+    box.append(bar,grid);
+    const fermer=el('button',{type:'button',className:'ferme',textContent:'✕','aria-label':'Fermer les tuiles',on:{click:()=>{ box.hidden=true; theme=null; }}});
+    if(theme===null){
+      bar.append(el('span',{textContent:'Thèmes'}),fermer);
+      TILES.forEach(([nom,aide])=>grid.append(el('button',{className:'tile theme',type:'button',on:{click:()=>{ theme=nom; dessine(); }}},el('b',{textContent:nom}),el('small',{textContent:aide}))));
+      return;
+    }
+    const th=TILES.find(t=>t[0]===theme);
+    bar.append(el('button',{type:'button',textContent:'← Thèmes',on:{click:()=>{ theme=null; dessine(); }}}),el('span',{textContent:theme}),fermer);
+    th[2].filter(t=>!t[1].startsWith('@')).forEach(([nom,ins,aide])=>grid.append(el('button',{className:'tile',type:'button',on:{click:()=>{ met(ins); box.hidden=true; theme=null; }}},el('b',{textContent:nom}),el('small',{textContent:aide}))));
+  };
+  const btn=el('button',{className:'btn',type:'button',textContent:'Tuiles…',on:{click:()=>{ box.hidden=!box.hidden; theme=null; if(!box.hidden) dessine(); }}});
+  return {btn,box};
+}
+function inserer(fIn){ return t=>{ const a=fIn.selectionStart??fIn.value.length, b=fIn.selectionEnd??a; fIn.setRangeText(t,a,b,'end'); fIn.focus(); }; }
 // Nouvelle colonne : une formule sur les autres colonnes, calculée année par année
 let colOpts={nom:'Impôt',f:''};
 function openColonne(){
@@ -2083,13 +2121,15 @@ function openColonne(){
   const B=$('formBody'); B.innerHTML='';
   const dern=T.cols.find(c=>/r[ée]sultat/i.test(c.nom))||T.cols[T.cols.length-1];
   const fIn=el('input',{id:'coF',value:colOpts.f||('max(['+dern.nom+']; 0) × 30 %'),autocomplete:'off',autocapitalize:'off',spellcheck:false,style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
-  const met=t=>{ const a=fIn.selectionStart??fIn.value.length, b=fIn.selectionEnd??a; fIn.setRangeText(t,a,b,'end'); fIn.focus(); };
+  const met=inserer(fIn), tu=choixTuiles(met);
   B.append(
     el('label',null,el('span',null,'Titre de la colonne'),el('input',{id:'coN',value:colOpts.nom,autocomplete:'off'})),
     el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'touchez une colonne pour l’ajouter'})),fIn),
-    el('div',{className:'btnrow',style:'margin-top:6px'},...T.cols.map(c=>el('button',{className:'btn',type:'button',textContent:c.nom,on:{click:()=>met('['+c.nom+']')}})),
-      ...['+','−','×','÷','max(…; 0)'].map(o=>el('button',{className:'btn',type:'button',textContent:o,on:{click:()=>met(o==='max(…; 0)'?'max(':' '+o+' ')}}))),
-    el('p',{className:'note',textContent:'Exemples : max([Résultat]; 0) × 30 % (0 si négatif, sinon × taux), [Loyer] − [Intérêts], [Impôt] + [Prélèvements]. Le taux peut être une variable de la feuille (tmi). Une ligne est créée pour chaque année ; tout reste lié.'}),
+    el('div',{className:'chips'},el('small',{textContent:'Colonnes'}),...T.cols.map(c=>el('button',{className:'btn',type:'button',textContent:c.nom,on:{click:()=>met('['+c.nom+']')}}))),
+    chipsVariables(met),
+    el('div',{className:'chips'},el('small',{textContent:'Opérations et formules'}),...['+','−','×','÷','max(…; 0)'].map(o=>el('button',{className:'btn',type:'button',textContent:o,on:{click:()=>met(o==='max(…; 0)'?'max(':' '+o+' ')}})),tu.btn),
+    tu.box,
+    el('p',{className:'note',textContent:'Exemples : max([Résultat]; 0) × 30 % (0 si négatif, sinon × taux), [Loyer] − [Intérêts], [Impôt] + [Prélèvements]. Le taux peut être une variable de la feuille (ex. une ligne « imposition = 30 % », puis × imposition). Une ligne est créée pour chaque année ; tout reste lié.'}),
     el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Ajouter la colonne',on:{click:addColonne}})));
   showOver('formOver');
 }
