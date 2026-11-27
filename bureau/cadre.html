@@ -14,6 +14,7 @@
   body.epingle #scene { left: var(--largeur); }
   webview { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; visibility: hidden; background: #fff; }
   webview.active { visibility: visible; }
+  body.seul #languette, body.seul #bord, body.seul #panneau { display: none !important; }
 
   /* la languette (flèche) et la bande sensible au bord gauche */
   #languette { position: fixed; z-index: 30; top: 10px; left: 0; width: 16px; height: 34px; border: 0; padding: 0; cursor: pointer;
@@ -184,7 +185,20 @@
     if (a) document.getElementById("titreBarre").append(document.title && document.title !== "Mes applis" ? document.title : a.nom);
   }).observe(document.querySelector("title"), { childList: true });
 
+  // Équipe de Suivi : un collaborateur (pas le titulaire) n'a que Suivi. On le lit dans Suivi lui-même (qui retient qui
+  // utilise l'appareil) ; la réponse est gardée pour le prochain lancement.
+  function seulementSuivi(oui) {
+    ecrire("seulement-suivi", oui ? "1" : "");
+    document.body.classList.toggle("seul", oui);
+    if (oui) { APPLIS.splice(1); if (active !== "suivi") ouvrir("suivi"); else dessiner(); }
+  }
+  if (lire("seulement-suivi", "") === "1") seulementSuivi(true);
   ouvrir(lire("appli-active", "suivi"));
+  const wSuivi = vue("suivi");
+  const verifierEquipe = () => wSuivi.executeJavaScript(`(function(){try{var m=localStorage.getItem("suivi-gp-moi")||"";var a=JSON.parse(localStorage.getItem("suivi-gp-donnees-agenda")||"{}")||{};var e=Array.isArray(a.equipe)?a.equipe.filter(Boolean):[];return !!m&&e.length>1&&e.indexOf(m)>0;}catch(x){return false;}})()`)
+    .then((oui) => { if (!!oui !== (lire("seulement-suivi", "") === "1")) { if (oui) seulementSuivi(true); else { ecrire("seulement-suivi", ""); location.reload(); } } }).catch(() => {});
+  wSuivi.addEventListener("dom-ready", () => setTimeout(verifierEquipe, 1500));
+  setInterval(verifierEquipe, 60000);   // « Je suis » a pu changer dans Suivi
 </script>
 </body>
 </html>
