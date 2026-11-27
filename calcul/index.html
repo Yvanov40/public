@@ -390,7 +390,12 @@ const B = {
   qfDemiPart:1807, decote:{seul:[1982,897],couple:[3277,1483],taux:.4525},
   ld:[[8072,.05],[12109,.10],[15932,.15],[552324,.20],[902838,.30],[1805677,.40],[Infinity,.45]],
   fs:[[24430,.35],[Infinity,.45]],
-  abat:{enfant:100000,pe:31865,frere:15932,neveu:7967,tiers:1594},
+  conj:[[8072,.05],[15932,.10],[31865,.15],[552324,.20],[902838,.30],[1805677,.40],[Infinity,.45]],   // donation entre époux / Pacs (art. 777, tableau II)
+  // Successions (art. 779, 788) : conjoint et Pacs exonérés ; petit-enfant qui hérite directement : 1 594 €
+  abatS:{enfant:100000,pe:1594,ape:1594,frere:15932,neveu:7967,tiers:1594},
+  // Donations (art. 779, 790 B, 790 D, 790 E, 790 F) : pas d'abattement entre personnes sans lien
+  abatD:{enfant:100000,pe:31865,ape:5310,conj:80724,frere:15932,neveu:7967,tiers:0},
+  handicap:159325,
   ifi:[[800000,0],[1300000,.005],[2570000,.007],[5000000,.01],[10000000,.0125],[Infinity,.015]],
   usuf:[[20,.9],[30,.8],[40,.7],[50,.6],[60,.5],[70,.4],[80,.3],[90,.2],[Infinity,.1]],
   pfu:.314, ps:.186
@@ -426,9 +431,10 @@ const ALIAS = {somme:'sum',sum:'sum',moy:'avg',moyenne:'avg',avg:'avg',min:'min'
   mensualite:'pmt','mensualité':'pmt',cout:'cost','coût':'cost',capital:'cap',vf:'fv',va:'pv',
   interets:'cumint','intérêts':'cumint',crd:'crd',
   ir:'ir',tmi:'tmi',parts:'parts',ifi:'ifi',pfu:'pfu',ps:'ps',
-  succ:'succ',donation:'succ',succpe:'succpe',succfrere:'succfrere',succneveu:'succneveu',succtiers:'succtiers',
+  succ:'succ',succpe:'succpe',succape:'succape',succfrere:'succfrere',succneveu:'succneveu',succtiers:'succtiers',succconjoint:'succconj',
+  don:'don',donation:'don',donpe:'donpe',donape:'donape',donconjoint:'donconj',donfrere:'donfrere',donneveu:'donneveu',dontiers:'dontiers',
   usufruit:'usuf',np:'np'};
-const FISCAL = new Set(['cumint','crd','ir','ifi','pfu','ps','succ','succpe','succfrere','succneveu','succtiers','usuf','np','pmt','cost','cap']);
+const FISCAL = new Set(['cumint','crd','ir','ifi','pfu','ps','succ','succpe','succape','succfrere','succneveu','succtiers','succconj','don','donpe','donape','donconj','donfrere','donneveu','dontiers','usuf','np','pmt','cost','cap']);
 let PREF_TVA = 20, PREF_PARTS = 1;
 const FN = {
   sum:a=>flat(a).reduce((s,x)=>s+x,0),
@@ -463,11 +469,22 @@ const FN = {
   ifi:a=>{need(a,1,'ifi'); return ifiCalc(num(a[0]));},
   pfu:a=>{need(a,1,'pfu'); return num(a[0])*B.pfu;},
   ps:a=>{need(a,1,'ps'); return num(a[0])*(a[1]===undefined?B.ps:pctArg(a[1])/100);},
-  succ:a=>{need(a,1,'succ'); return droits(num(a[0]), a[1]===undefined?B.abat.enfant:num(a[1]), B.ld);},
-  succpe:a=>{need(a,1,'succpe'); return droits(num(a[0]), a[1]===undefined?B.abat.pe:num(a[1]), B.ld);},
-  succfrere:a=>{need(a,1,'succfrere'); return droits(num(a[0]), a[1]===undefined?B.abat.frere:num(a[1]), B.fs);},
-  succneveu:a=>{need(a,1,'succneveu'); return droits(num(a[0]), a[1]===undefined?B.abat.neveu:num(a[1]), [[Infinity,.55]]);},
-  succtiers:a=>{need(a,1,'succtiers'); return droits(num(a[0]), a[1]===undefined?B.abat.tiers:num(a[1]), [[Infinity,.60]]);},
+  // Successions
+  succ:a=>{need(a,1,'succ'); return droits(num(a[0]), a[1]===undefined?B.abatS.enfant:num(a[1]), B.ld);},
+  succpe:a=>{need(a,1,'succpe'); return droits(num(a[0]), a[1]===undefined?B.abatS.pe:num(a[1]), B.ld);},
+  succape:a=>{need(a,1,'succape'); return droits(num(a[0]), a[1]===undefined?B.abatS.ape:num(a[1]), B.ld);},
+  succfrere:a=>{need(a,1,'succfrere'); return droits(num(a[0]), a[1]===undefined?B.abatS.frere:num(a[1]), B.fs);},
+  succneveu:a=>{need(a,1,'succneveu'); return droits(num(a[0]), a[1]===undefined?B.abatS.neveu:num(a[1]), [[Infinity,.55]]);},
+  succtiers:a=>{need(a,1,'succtiers'); return droits(num(a[0]), a[1]===undefined?B.abatS.tiers:num(a[1]), [[Infinity,.60]]);},
+  succconj:a=>{need(a,1,'succconjoint'); return 0;},
+  // Donations
+  don:a=>{need(a,1,'donation'); return droits(num(a[0]), a[1]===undefined?B.abatD.enfant:num(a[1]), B.ld);},
+  donpe:a=>{need(a,1,'donpe'); return droits(num(a[0]), a[1]===undefined?B.abatD.pe:num(a[1]), B.ld);},
+  donape:a=>{need(a,1,'donape'); return droits(num(a[0]), a[1]===undefined?B.abatD.ape:num(a[1]), B.ld);},
+  donconj:a=>{need(a,1,'donconjoint'); return droits(num(a[0]), a[1]===undefined?B.abatD.conj:num(a[1]), B.conj);},
+  donfrere:a=>{need(a,1,'donfrere'); return droits(num(a[0]), a[1]===undefined?B.abatD.frere:num(a[1]), B.fs);},
+  donneveu:a=>{need(a,1,'donneveu'); return droits(num(a[0]), a[1]===undefined?B.abatD.neveu:num(a[1]), [[Infinity,.55]]);},
+  dontiers:a=>{need(a,1,'dontiers'); return droits(num(a[0]), a[1]===undefined?B.abatD.tiers:num(a[1]), [[Infinity,.60]]);},
   usuf:a=>{need(a,2,'usufruit'); return num(a[0])*usufTaux(num(a[1]));},
   np:a=>{need(a,2,'np'); return num(a[0])*(1-usufTaux(num(a[1])));}
 };
@@ -482,11 +499,20 @@ const SIG={
   crd:[['capital emprunté','taux annuel en %','durée en années','après le mois n°'],'crd(250 000; 3,4%; 20; 60) : reste dû après 5 ans'],
   fv:[['capital placé','taux annuel en %','durée en années'],'vf(10 000; 3%; 8)'],
   pv:[['montant futur','taux annuel en %','durée en années'],'va(15 000; 3%; 8)'],
-  succ:[['part reçue','abattement restant (facultatif, 100 000 €)'],'succ(400 000)'],
-  succpe:[['part reçue','abattement restant (facultatif, 31 865 €)'],'succpe(80 000)'],
-  succfrere:[['part reçue','abattement restant (facultatif, 15 932 €)'],'succfrere(200 000)'],
-  succneveu:[['part reçue','abattement restant (facultatif, 7 967 €)'],'succneveu(100 000)'],
-  succtiers:[['part reçue','abattement restant (facultatif, 1 594 €)'],'succtiers(50 000)'],
+  succ:[['part reçue','abattement restant (facultatif, 100 000 €)'],'succ(400 000) : succession, enfant'],
+  succpe:[['part reçue','abattement restant (facultatif, 1 594 €)'],'succpe(80 000) : succession, petit-enfant qui hérite directement'],
+  succape:[['part reçue','abattement restant (facultatif, 1 594 €)'],'succape(50 000) : succession, arrière-petit-enfant'],
+  succfrere:[['part reçue','abattement restant (facultatif, 15 932 €)'],'succfrere(200 000) : succession, frère ou sœur'],
+  succneveu:[['part reçue','abattement restant (facultatif, 7 967 €)'],'succneveu(100 000) : succession, neveu ou nièce'],
+  succtiers:[['part reçue','abattement restant (facultatif, 1 594 €)'],'succtiers(50 000) : succession, sans lien de parenté'],
+  succconj:[['part reçue'],'succconjoint(500 000) : succession, conjoint ou Pacs : exonéré'],
+  don:[['montant donné','abattement restant (facultatif, 100 000 €)'],'donation(150 000) : donation à un enfant'],
+  donpe:[['montant donné','abattement restant (facultatif, 31 865 €)'],'donpe(50 000) : donation à un petit-enfant'],
+  donape:[['montant donné','abattement restant (facultatif, 5 310 €)'],'donape(20 000) : donation à un arrière-petit-enfant'],
+  donconj:[['montant donné','abattement restant (facultatif, 80 724 €)'],'donconjoint(150 000) : donation au conjoint ou partenaire de Pacs'],
+  donfrere:[['montant donné','abattement restant (facultatif, 15 932 €)'],'donfrere(50 000) : donation à un frère ou une sœur'],
+  donneveu:[['montant donné','abattement restant (facultatif, 7 967 €)'],'donneveu(30 000) : donation à un neveu ou une nièce'],
+  dontiers:[['montant donné','abattement (aucun en donation)'],'dontiers(20 000) : donation sans lien de parenté, 60 %'],
   np:[['valeur en pleine propriété','âge de l’usufruitier'],'np(300 000; 72)'],
   usuf:[['valeur en pleine propriété','âge de l’usufruitier'],'usufruit(300 000; 72)'],
   ifi:[['patrimoine immobilier net taxable'],'ifi(2 000 000)'],
@@ -1373,7 +1399,8 @@ const KEYS=[
 ];
 const TILES=[
   ['Impôt et fiscalité','IR, TMI, IFI, flat tax',[['Impôt sur le revenu','ir(','revenu ; parts'],['Taux marginal','tmi(','revenu ; parts'],['Nombre de parts','parts(','couple 1/0 ; enfants'],['IFI','ifi(','patrimoine net'],['Flat tax 31,4 %','pfu(','montant'],['Prélèv. sociaux','ps(','montant ; taux']]],
-  ['Successions et donations','droits, usufruit',[['Enfant','succ(','part ; abattement'],['Petit-enfant','succpe(','part ; abattement'],['Frère, sœur','succfrere(','part ; abattement'],['Neveu, nièce','succneveu(','part ; abattement'],['Sans lien','succtiers(','part ; abattement'],['Nue-propriété','np(','valeur ; âge'],['Usufruit','usufruit(','valeur ; âge']]],
+  ['Successions','abattements, usufruit',[['Enfant','succ(','abattement 100 000 €'],['Petit-enfant','succpe(','qui hérite directement : 1 594 €'],['Arrière-petit-enfant','succape(','abattement 1 594 €'],['Conjoint, Pacs','succconjoint(','exonéré'],['Frère, sœur','succfrere(','abattement 15 932 €'],['Neveu, nièce','succneveu(','abattement 7 967 €'],['Sans lien','succtiers(','1 594 €, puis 60 %'],['Nue-propriété','np(','valeur ; âge'],['Usufruit','usufruit(','valeur ; âge']]],
+  ['Donations','enfants, conjoint, autres',[['Enfant','donation(','abattement 100 000 €'],['Petit-enfant','donpe(','abattement 31 865 €'],['Arrière-petit-enfant','donape(','abattement 5 310 €'],['Conjoint, Pacs','donconjoint(','abattement 80 724 €'],['Frère, sœur','donfrere(','abattement 15 932 €'],['Neveu, nièce','donneveu(','abattement 7 967 €'],['Sans lien','dontiers(','aucun abattement, 60 %'],['Nue-propriété','np(','valeur ; âge']]],
   ['Crédit et placement','mensualité, intérêts',[['Intérêts par année','@interets','remplit une ligne par année'],['Mensualité','mensualite(','capital ; taux ; années'],['Intérêts sur une période','interets(','capital ; taux ; années ; mois'],['Capital restant dû','crd(','capital ; taux ; années ; mois'],['Coût du crédit','cout(','capital ; taux ; années'],['Capacité d’emprunt','capital(','mensualité ; taux ; années'],['Valeur future','vf(','capital ; taux ; années'],['Valeur actuelle','va(','montant ; taux ; années']]],
   ['Pourcentages et TVA','TTC, HT, évolution',[['Prix TTC','ttc(','HT ; taux'],['Prix HT','ht(','TTC ; taux'],['Montant de TVA','tva(','HT ; taux'],['Évolution en %','evol(','départ ; arrivée'],['Pourcentage de','% de ','15% de 80']]],
   ['Tableur','somme, total, si',[['Somme','somme(','valeurs ou L1:L5'],['Moyenne','moy(','valeurs ou L1:L5'],['Minimum','min(','valeurs'],['Maximum','max(','valeurs'],['Total du bloc','total','lignes au-dessus'],['Condition','si(','test ; oui ; non'],['Arrondi','arrondi(','nombre ; décimales'],['Titre','# ','coupe les totaux']]],
@@ -1746,7 +1773,8 @@ const FX=[
   ['Mes fonctions',[['marge(x) = x × 1,35','crée une fonction'],['marge(200)','utilise-la partout dans la feuille'],['prix(ht; remise) = ttc(ht − remise%)','plusieurs paramètres']]],
   ['Crédit et placement',[['mensualite(250 000; 3,4%; 20)','mensualite(capital; taux annuel %; durée en années)'],['interets(250 000; 3,4%; 20; 1; 12)','interets(capital; taux %; années; du mois; au mois) : intérêts payés'],['crd(250 000; 3,4%; 20; 60)','crd(capital; taux %; années; mois) : capital restant dû'],['cout(250 000; 3,4%; 20)','cout(capital; taux %; années) : total des intérêts'],['capital(1 200; 3,4%; 25)','capital(mensualité; taux %; années) : somme empruntable'],['vf(10 000; 3%; 8)','vf(capital; taux %; années) : valeur future'],['va(15 000; 3%; 8)','va(montant futur; taux %; années) : valeur actuelle']]],
   ['Impôt sur le revenu 2026',[['ir(45 000; 1)','ir(revenu; parts) : personne seule, 1 part'],['ir(90 000; 3)','couple avec 2 enfants : 3 parts'],['ir(40 000; 2; 1)','3e valeur 1 : personne seule (base 1 part)'],['tmi(90 000; 3)','tmi(revenu; parts) : tranche marginale'],['parts(1; 3)','parts : couple (1) ou seul (0), nombre d’enfants'],['pfu(10 000)','flat tax 31,4 % (12,8 % + 18,6 %)'],['ps(10 000)','prélèvements sociaux 18,6 % ; ps(x; 17,2%) pour le foncier']]],
-  ['Successions et donations',[['succ(400 000)','enfant : abattement 100 000 €, barème 5 à 45 %'],['succ(400 000; 0)','2e valeur : abattement encore disponible'],['donation(150 000)','même barème en ligne directe'],['succpe(80 000)','petit-enfant (donation : abattement 31 865 €)'],['succfrere(200 000)','frère ou sœur : 15 932 €, 35 % puis 45 %'],['succneveu(100 000)','neveu ou nièce : 7 967 €, 55 %'],['succtiers(50 000)','sans lien : 1 594 €, 60 %'],['np(300 000; 72)','nue-propriété selon l’âge de l’usufruitier'],['usufruit(300 000; 72)','valeur de l’usufruit (art. 669)']]],
+  ['Successions',[['succ(400 000)','enfant : abattement 100 000 €, barème 5 à 45 %'],['succ(400 000; 0)','2e valeur : abattement encore disponible'],['succpe(80 000)','petit-enfant qui hérite directement : 1 594 € (s’il remplace son parent décédé : succ avec sa part des 100 000 €)'],['succape(50 000)','arrière-petit-enfant : 1 594 €'],['succconjoint(500 000)','conjoint ou partenaire de Pacs : exonéré'],['succfrere(200 000)','frère ou sœur : 15 932 €, 35 % puis 45 %'],['succneveu(100 000)','neveu ou nièce : 7 967 €, 55 %'],['succtiers(50 000)','sans lien : 1 594 €, 60 %'],['np(300 000; 72)','nue-propriété selon l’âge de l’usufruitier'],['usufruit(300 000; 72)','valeur de l’usufruit (art. 669)']]],
+  ['Donations',[['donation(150 000)','enfant : abattement 100 000 €, barème 5 à 45 %'],['donation(150 000; 40 000)','2e valeur : abattement encore disponible (donations de moins de 15 ans)'],['donpe(50 000)','petit-enfant : 31 865 €'],['donape(20 000)','arrière-petit-enfant : 5 310 €'],['donconjoint(150 000)','conjoint ou Pacs : 80 724 €, barème entre époux'],['donfrere(50 000)','frère ou sœur : 15 932 €, 35 % puis 45 %'],['donneveu(30 000)','neveu ou nièce : 7 967 €, 55 %'],['dontiers(20 000)','sans lien : aucun abattement, 60 %']]],
   ['IFI 2026',[['ifi(2 000 000)','patrimoine immobilier net taxable'],['ifi(1 350 000)','décote entre 1,3 et 1,4 M€'],['ifi(1 500 000 × 0,7)','résidence principale : abattement 30 %']]]
 ];
 const NOTE_FISC='Barèmes 2026 : impôt sur les revenus 2025 (loi de finances 2026), plafonnement du quotient familial 1 807 € par demi-part et décote (897 € / 1 483 €). Calcul simplifié : pas de cas des parents isolés (case T), réductions, crédits ni contribution sur les hauts revenus. Le conjoint ou partenaire de Pacs est exonéré de droits de succession.';
@@ -1766,7 +1794,7 @@ function renderFx(q){
         save(); closeOver(); renderRows(); focusRow(active);
       }}},el('code',{textContent:code}),el('span',{textContent:desc})));
     });
-    if(/Impôt|Successions/.test(title) && !nq) L.appendChild(el('p',{className:'note',textContent:title.startsWith('Impôt')?NOTE_FISC:'Barème en ligne directe (CGI art. 777) et abattements (art. 779) ; usufruit selon l’art. 669. Les donations de moins de 15 ans réduisent l’abattement : indiquez le reste en 2e valeur.'}));
+    if(/Impôt|Successions|Donations/.test(title) && !nq) L.appendChild(el('p',{className:'note',textContent:title.startsWith('Impôt')?NOTE_FISC:title==='Successions'?'Barèmes de l’art. 777 du CGI, abattements des art. 779 et 788 ; usufruit selon l’art. 669. Les donations de moins de 15 ans réduisent l’abattement : indiquez le reste en 2e valeur. Personne handicapée : ajoutez 159 325 € à l’abattement (ex. succ(x; 100 000 + 159 325)).':'Abattements des donations (art. 779, 790 B, 790 D, 790 E et 790 F du CGI), renouvelables tous les 15 ans ; barème spécifique entre époux. Personne handicapée : ajoutez 159 325 € à l’abattement. Dons familiaux de sommes d’argent (31 865 €, art. 790 G) non compris.'}));
   });
   if(!any) L.appendChild(el('p',{className:'note',textContent:'Aucune formule ne correspond. Essayez « impôt », « crédit » ou « % ».'}));
   L.appendChild(el('p',{className:'note',textContent:'Touchez une ligne pour l’ajouter à la feuille. Pendant la saisie, touchez le résultat d’une autre ligne pour y faire référence. Maintenez C pour effacer toute la feuille.'}));
