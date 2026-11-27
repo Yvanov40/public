@@ -251,6 +251,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .over.typing .sheetpanel{max-height:min(calc(var(--vvh,100vh) - 10px),56vh);border-radius:0 0 16px 16px;padding-top:var(--bandeau-haut,env(safe-area-inset-top,0px))}
 .over{position:fixed;inset:0;background:rgb(0 0 0 / .38);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .over.open{display:flex}
+/* Fenêtre avec le clavier de l'appli : la fenêtre au-dessus, le clavier en dessous, sans voile */
+body.clavform .over.open{bottom:var(--panelH,45vh)}
+body.clavform .panel{position:relative;z-index:21;background:var(--bg)}
+body.clavform .panel .display,body.clavform .panel .hint,body.clavform .panel .selbar{display:none}
+body.clavform .over .sheetpanel{border-radius:16px 16px 0 0;max-height:calc(100% - 8px)}
 .sheetpanel{background:var(--surface);color:var(--ink);width:100%;max-width:560px;max-height:86%;display:flex;flex-direction:column;
   border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
 .ph{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 8px 18px;gap:8px}
@@ -1236,7 +1241,11 @@ function shiftRefs(lines,at,delta){
 function insertLines(at,newLines){
   const s=cur(); shiftRefs(s.lines,at,newLines.length); s.lines.splice(at,0,...newLines);
 }
+// Champ d'une fenêtre (formule d'une colonne…) qui utilise le clavier de l'appli au lieu de celui du téléphone
+let cible=null;
+function cibleSaisie(){ if(cible){ cible.dispatchEvent(new Event('input',{bubbles:true})); } }
 function ensureActive(){
+  if(cible){ if(document.activeElement!==cible) cible.focus({preventScroll:true}); return cible; }
   if(active<0 || !inputAt(active)) active=cur().lines.length-1;
   const e=inputAt(active);
   if(document.activeElement!==e) e.focus({preventScroll:true});
@@ -1246,6 +1255,7 @@ function insert(text){
   const e=ensureActive();
   const a=e.selectionStart??e.value.length, b=e.selectionEnd??e.value.length;
   e.setRangeText(text,a,b,'end');
+  if(cible){ cibleSaisie(); return; }
   cur().lines[active]=e.value; save(); refresh();
   e.scrollIntoView({block:'nearest'});
 }
@@ -1350,10 +1360,10 @@ let chaqueOpts={nom:'Impôt',f:'max(x; 0) × 30 %'};
 function openChaque(){
   $('formTitle').textContent='Formule sur chaque ligne';
   const B=$('formBody'); B.innerHTML='';
-  const fIn=el('input',{id:'chF',value:chaqueOpts.f,autocomplete:'off',autocapitalize:'off',spellcheck:false,style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
+  const fIn=el('input',{id:'chF',className:'clav',inputMode:'none',value:chaqueOpts.f,autocomplete:'off',autocapitalize:'off',spellcheck:false,style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
   const chip=(t,lab)=>el('button',{className:'btn',type:'button',textContent:lab,on:{click:()=>{ fIn.value=t; fIn.focus(); }}});
   B.append(
-    el('label',null,el('span',null,'Nom des nouvelles lignes',el('small',{textContent:'suivi de l’année de chaque ligne'})),el('input',{id:'chN',value:chaqueOpts.nom,autocomplete:'off'})),
+    el('label',null,el('span',null,'Nom des nouvelles lignes',el('small',{textContent:'suivi de l’année de chaque ligne'})),el('input',{id:'chN',className:'clav',inputMode:'none',value:chaqueOpts.nom,autocomplete:'off'})),
     el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'x = la ligne sélectionnée'})),fIn),
     el('div',{className:'btnrow',style:'margin-top:4px'},chip('max(x; 0) × 30 %','0 si négatif, sinon × taux'),chip('max(x; 0)','0 si négatif'),chip('x × 17,2 %','× taux'),chip('min(x; 0)','déficit seul')),
     chipsVariables(inserer(fIn)),
@@ -1424,10 +1434,12 @@ function backspace(rep){
   const e=ensureActive(); const a=e.selectionStart, b=e.selectionEnd;
   if(a!==b) e.setRangeText('',a,b,'end');
   else if(a>0) e.setRangeText('',a-1,a,'end');
-  else { if(active>0 && !rep) mergeUp(); return false; }   // maintenu : on s'arrête au début de la ligne
+  else { if(!cible && active>0 && !rep) mergeUp(); return false; }
+  if(cible){ cibleSaisie(); return true; }   // maintenu : on s'arrête au début de la ligne
   cur().lines[active]=e.value; save(); refresh(); return true;
 }
 function newLine(){
+  if(cible){ const b=cible.closest('.sheetpanel')&&cible.closest('.sheetpanel').querySelector('.btn.primary'); if(b) b.click(); else cible.blur(); return; }
   const e=ensureActive(), s=cur(), pos=e.selectionStart??e.value.length;
   s.lines[active]=e.value;
   const v=s.lines[active], cut=Math.min(pos,v.length);
@@ -1440,6 +1452,7 @@ function mergeUp(){
   s.lines[i-1]=prev+s.lines[i]; s.lines.splice(i,1); shiftRefs(s.lines,i,-1); active=i-1; save(); renderRows(); focusRow(active,p);
 }
 function clearLine(){
+  if(cible){ cible.value=''; cibleSaisie(); return; }
   const e=ensureActive(), s=cur();
   if(e.value===''){ if(s.lines.length>1){ s.lines.splice(active,1); shiftRefs(s.lines,active,-1); active=Math.max(0,active-1); save(); renderRows(); focusRow(active); } return; }
   e.value=''; s.lines[active]=''; save(); refresh();
@@ -1457,6 +1470,7 @@ function clearAll(){
   }});
 }
 function operator(op){
+  if(cible) return insert({'*':' × ','-':' − ','/':' ÷ ','+':' + '}[op]||op);
   const e=ensureActive();
   if(e.value.trim()==='' && op!=='-' && active>0 && results.slice(0,active).some(r=>r.kind==='value')) insert('ans'+op);
   else insert(op);
@@ -1703,7 +1717,7 @@ function devinerMots(pts){
 let dernierGlisse=null;   // {i, avant, texte, choix} : pour remplacer le mot par une suggestion
 function formeMot(w){ if(shift===2) return w.toUpperCase(); if(shift===1) return w[0].toUpperCase()+w.slice(1); return w; }
 function versionFormule(w){   // « somme » tapé là où une formule est attendue : « somme( »
-  const e=inputAt(active); const avant=e?e.value.slice(0,e.selectionStart??e.value.length):'';
+  const e=cible||inputAt(active); const avant=e?e.value.slice(0,e.selectionStart??e.value.length):'';
   const ctxFormule=/[=:(;+\-*\/^<>×÷−]$/.test(avant.trimEnd());
   return ALIAS[normMot(w)] && ctxFormule ? w+'(' : w;
 }
@@ -1711,7 +1725,7 @@ function ecrireMot(texte,choix){
   const e=ensureActive(), pos=e.selectionStart??e.value.length, avant=e.value.slice(0,pos);
   const sep=/[\p{L}\d)]$/u.test(avant)?' ':'';
   insert(sep+texte);
-  dernierGlisse={i:active,id:cur().id,debut:pos,texte:sep+texte,choix};
+  dernierGlisse={i:active,id:cur().id,cible,debut:pos,texte:sep+texte,choix};
   if(shift===1){ shift=0; updShift(); }
   montrerSugg();
 }
@@ -1723,13 +1737,13 @@ function montrerSugg(){
 }
 function cacherSugg(){ dernierGlisse=null; const S=$('sugg'); if(S){ S.hidden=true; S.innerHTML=''; } }
 function remplacerMot(w){
-  const g=dernierGlisse, s=cur(); if(!g || g.id!==s.id || g.i!==active) return cacherSugg();
-  const e=inputAt(active), v=e.value;
+  const g=dernierGlisse, s=cur(); if(!g || (g.cible||null)!==cible || (!cible && (g.id!==s.id || g.i!==active))) return cacherSugg();
+  const e=cible||inputAt(active), v=e.value;
   if(v.slice(g.debut,g.debut+g.texte.length)!==g.texte) return cacherSugg();
   const sep=g.texte.startsWith(' ')?' ':'', nouveau=sep+w;
   e.value=v.slice(0,g.debut)+nouveau+v.slice(g.debut+g.texte.length);
   const p=g.debut+nouveau.length; try{ e.setSelectionRange(p,p); }catch(_){}
-  s.lines[active]=e.value; save(); refresh();
+  if(cible) cibleSaisie(); else { s.lines[active]=e.value; save(); refresh(); }
   g.texte=nouveau; g.choix=g.choix.filter(x=>x!==w); g.choix.unshift(w); montrerSugg();
 }
 function finGlisse(pts){
@@ -2011,9 +2025,20 @@ function showOver(id){ openOver=$(id); openOver.classList.add('open'); }
 // au-dessus du clavier du téléphone, et la case reste visible.
 function vvh(){ const h=window.visualViewport?visualViewport.height:innerHeight; document.documentElement.style.setProperty('--vvh',h+'px'); }
 vvh(); if(window.visualViewport) visualViewport.addEventListener('resize',()=>{ vvh(); const a=document.activeElement; if(a&&a.closest&&a.closest('.over')) a.scrollIntoView({block:'nearest'}); });
-document.addEventListener('focusin',e=>{ const o=e.target.closest&&e.target.closest('.over'); if(o&&/^(INPUT|TEXTAREA)$/.test(e.target.tagName)){ o.classList.add('typing'); setTimeout(()=>e.target.scrollIntoView({block:'nearest'}),350); } });
+function poserCible(c){
+  if(cible===c) return;
+  cible=c; cacherSugg(); document.body.classList.toggle('clavform',!!c);
+  if(c){ const P=document.querySelector('.panel'); document.documentElement.style.setProperty('--panelH',P.offsetHeight+'px'); setTimeout(()=>c.scrollIntoView({block:'nearest'}),60); }
+}
+document.addEventListener('focusin',e=>{
+  if(e.target.classList&&e.target.classList.contains('clav')){ poserCible(e.target); return; }
+  if(!cible || e.target.closest('#kbd,#tiles')) return;
+  const dansFenetre=cible.closest('.over')&&cible.closest('.over').contains(e.target);
+  if(!dansFenetre || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) poserCible(null);
+});
+document.addEventListener('focusin',e=>{ if(e.target.classList&&e.target.classList.contains('clav')) return; const o=e.target.closest&&e.target.closest('.over'); if(o&&/^(INPUT|TEXTAREA)$/.test(e.target.tagName)){ o.classList.add('typing'); setTimeout(()=>e.target.scrollIntoView({block:'nearest'}),350); } });
 document.addEventListener('focusout',e=>{ const o=e.target.closest&&e.target.closest('.over'); if(o) setTimeout(()=>{ const a=document.activeElement; if(!(a&&o.contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName))) o.classList.remove('typing'); },50); });
-function closeOver(){ if(openOver){ openOver.classList.remove('open','typing'); openOver=null; } }
+function closeOver(){ poserCible(null); if(openOver){ openOver.classList.remove('open','typing'); openOver=null; } }
 $('fxBtn').addEventListener('click',()=>{ $('fxSearch').value=''; renderFx(''); showOver('fxOver'); });
 $('setBtn').addEventListener('click',()=>{ renderSettings(); showOver('setOver'); });
 document.querySelectorAll('.over').forEach(o=>{
@@ -2129,7 +2154,7 @@ function openRenommer(k){
   if(document.getElementById('formOver').classList.contains('open')) return;
   $('formTitle').textContent='Renommer la colonne';
   const B=$('formBody'); B.innerHTML='';
-  const inp=el('input',{id:'rnN',value:c.nom,autocomplete:'off',style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
+  const inp=el('input',{id:'rnN',className:'clav',inputMode:'none',value:c.nom,autocomplete:'off',style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
   B.append(el('label',{style:'flex-wrap:wrap'},el('span',null,'Nouveau nom',el('small',{textContent:'le titre du bloc et chaque ligne de la colonne changent'})),inp),
     el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Renommer',on:{click:()=>renommerColonne(k,inp.value)}})));
   showOver('formOver'); setTimeout(()=>{ inp.focus(); inp.select(); },50);
@@ -2155,10 +2180,10 @@ function openColonne(){
   $('formTitle').textContent='Nouvelle colonne';
   const B=$('formBody'); B.innerHTML='';
   const dern=T.cols.find(c=>/r[ée]sultat/i.test(c.nom))||T.cols[T.cols.length-1];
-  const fIn=el('input',{id:'coF',value:colOpts.f||('max(['+dern.nom+']; 0) × 30 %'),autocomplete:'off',autocapitalize:'off',spellcheck:false,style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
+  const fIn=el('input',{id:'coF',className:'clav',inputMode:'none',value:colOpts.f||('max(['+dern.nom+']; 0) × 30 %'),autocomplete:'off',autocapitalize:'off',spellcheck:false,style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
   const met=inserer(fIn), tu=choixTuiles(met);
   B.append(
-    el('label',null,el('span',null,'Titre de la colonne'),el('input',{id:'coN',value:colOpts.nom,autocomplete:'off'})),
+    el('label',null,el('span',null,'Titre de la colonne'),el('input',{id:'coN',className:'clav',inputMode:'none',value:colOpts.nom,autocomplete:'off'})),
     el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'touchez une colonne pour l’ajouter'})),fIn),
     el('div',{className:'chips'},el('small',{textContent:'Colonnes'}),...T.cols.map(c=>el('button',{className:'btn',type:'button',textContent:c.nom,on:{click:()=>met('['+c.nom+']')}}))),
     chipsVariables(met),
