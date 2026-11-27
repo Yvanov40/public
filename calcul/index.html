@@ -258,7 +258,7 @@ body.kbcache:not(.clavform) #kbRetour{display:flex}
 .over{position:fixed;inset:0;background:rgb(0 0 0 / .38);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .over.open{display:flex}
 /* Fenêtre avec le clavier de l'appli : la fenêtre au-dessus, le clavier en dessous, sans voile */
-body.clavform .over.open{bottom:var(--panelH,45vh)}
+body.clavform .over.open{bottom:var(--panelH,45vh);top:calc(var(--bandeau-haut,env(safe-area-inset-top,0px)) + 6px)}
 body.clavform .panel{position:relative;z-index:21;background:var(--bg)}
 body.clavform .panel .display,body.clavform .panel .hint,body.clavform .panel .selbar{display:none}
 body.clavform .over .sheetpanel{border-radius:16px 16px 0 0;max-height:calc(100% - 8px)}
@@ -2199,7 +2199,7 @@ function openRenommer(k){
   B.append(
     el('label',{style:'flex-wrap:wrap'},el('span',null,'Nom',el('small',{textContent:'le titre du bloc et chaque ligne de la colonne changent'})),inp),
     el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'appliquée à chaque année ; touchez une colonne pour l’ajouter'})),fIn),
-    F.pareil?null:el('p',{className:'note',textContent:'Les années n’ont pas toutes la même formule (celle de la 1re année est affichée). Si vous la modifiez, elle remplacera celle de chaque année.'}),
+    ...(F.pareil?[]:[el('p',{className:'note',textContent:'Les années n’ont pas toutes la même formule (celle de la 1re année est affichée). Si vous la modifiez, elle remplacera celle de chaque année.'})]),
     el('div',{className:'chips'},el('small',{textContent:'Colonnes'}),...T.cols.filter(x=>x!==c).map(x=>el('button',{className:'btn',type:'button',textContent:x.nom,on:{click:()=>met('['+x.nom+']')}}))),
     chipsVariables(met),
     el('div',{className:'chips'},el('small',{textContent:'Opérations et formules'}),...['+','−','×','÷','max(…; 0)'].map(o=>el('button',{className:'btn',type:'button',textContent:o,on:{click:()=>met(o==='max(…; 0)'?'max(':' '+o+' ')}})),tu.btn),
