@@ -1318,6 +1318,35 @@ function combine(op){
   out.push('Total : total');
   addAfterSel(out,idx.length+' ligne'+(idx.length>1?'s':'')+' de résultat ajoutée'+(idx.length>1?'s':''));
 }
+// Même formule appliquée à chaque ligne sélectionnée : x = la ligne (ex. max(x; 0) × 30 % : 0 si négatif, sinon × taux)
+let chaqueOpts={nom:'Impôt',f:'max(x; 0) × 30 %'};
+function openChaque(){
+  $('formTitle').textContent='Formule sur chaque ligne';
+  const B=$('formBody'); B.innerHTML='';
+  const fIn=el('input',{id:'chF',value:chaqueOpts.f,autocomplete:'off',autocapitalize:'off',spellcheck:false,style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
+  const chip=(t,lab)=>el('button',{className:'btn',type:'button',textContent:lab,on:{click:()=>{ fIn.value=t; fIn.focus(); }}});
+  B.append(
+    el('label',null,el('span',null,'Nom des nouvelles lignes',el('small',{textContent:'suivi de l’année de chaque ligne'})),el('input',{id:'chN',value:chaqueOpts.nom,autocomplete:'off'})),
+    el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'x = la ligne sélectionnée'})),fIn),
+    el('div',{className:'btnrow',style:'margin-top:4px'},chip('max(x; 0) × 30 %','0 si négatif, sinon × taux'),chip('max(x; 0)','0 si négatif'),chip('x × 17,2 %','× taux'),chip('min(x; 0)','déficit seul')),
+    el('p',{className:'note',textContent:'max(x; 0) garde le résultat s’il est positif et met 0 sinon. Le taux peut être un nombre (30 %) ou une variable écrite plus haut dans la feuille (ex. une ligne « tmi = 30 % », puis max(x; 0) × tmi) : changez-la une fois, toutes les lignes suivent.'}),
+    el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Ajouter les lignes',on:{click:addChaque}})));
+  showOver('formOver');
+}
+function addChaque(){
+  const nom=$('chN').value.trim()||'Résultat', f=$('chF').value.trim();
+  if(!/\bx\b/i.test(f)){ toast('Écrivez x dans la formule à la place de la ligne'); return; }
+  chaqueOpts={nom,f};
+  const idx=[...sel].sort((a,b)=>a-b), out=['# '+nom];
+  idx.forEach(i=>{
+    const an=anneeDe(i), lab=labelOf(i);
+    const name=an ? nom+' '+an.year+(an.note?' ('+an.note+')':'') : nom+' '+(lab||'L'+(i+1));
+    out.push(name+' : '+f.replace(/\bx\b/gi,'L'+(i+1)));
+  });
+  out.push('Total : total');
+  closeOver(); addAfterSel(out,idx.length+' ligne'+(idx.length>1?'s':'')+' ajoutée'+(idx.length>1?'s':''));
+  clearSel();
+}
 // Supprimer les lignes sélectionnées (du bas vers le haut, les références L… suivent), avec Annuler
 function deleteSel(){
   const s=cur(), idx=[...sel].filter(i=>i<s.lines.length).sort((a,b)=>b-a); if(!idx.length) return;
@@ -1357,6 +1386,7 @@ function renderSelbar(){
     btn('Moyenne',()=>addAfterSel(['Moyenne : moy('+refs.join('; ')+')'],'Moyenne ajoutée')),
     btn('Avec une ligne fixe…',()=>{ pickFor=true; sheetEl.classList.add('picking'); renderSelbar(); },'go'),
     ...([...sel].some(i=>anneeDe(i))?[btn('Avec une autre série…',()=>{ pickFor='serie'; sheetEl.classList.add('picking'); renderSelbar(); },'go')]:[]),
+    btn('Formule sur chaque…',openChaque,'go'),
     btn('Supprimer',deleteSel,'del'),
     btn('✕',clearSel));
   b.lastChild.setAttribute('aria-label','Tout désélectionner');
