@@ -84,6 +84,24 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .res.err{color:var(--warn);font-weight:400;font-size:13px}
 .res.fn{color:var(--muted);font-weight:400;font-size:13px}
 .res:empty{padding:0}
+/* Séries en tableau : années en lignes, séries en colonnes */
+.row.entab{display:none}
+.tbl{overflow-x:auto;border-bottom:1px solid var(--rule);background:var(--surface)}
+.tbl table{border-collapse:collapse;min-width:100%;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{text-align:right;white-space:nowrap;border-bottom:1px solid var(--rule);padding:0}
+.tbl th{font-weight:600;font-size:calc(12.5px * var(--z));color:var(--ink);padding:10px 10px 8px;white-space:normal;vertical-align:bottom;min-width:6em;line-height:1.2;border-bottom:1px solid var(--ink)}
+.tbl th:first-child,.tbl td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;padding-left:12px;min-width:4.2em}
+.tbl td:first-child{font-size:calc(13px * var(--z));color:var(--muted);padding-right:8px}
+.tbl td:first-child small{display:block;font-size:11px}
+.tbl .cell{display:block;width:100%;text-align:right;padding:10px 10px;font:inherit;font-size:calc(15px * var(--z));font-weight:500;color:var(--res);border-radius:0}
+.tbl .cell.on{background:var(--active);box-shadow:inset 0 -2px 0 var(--accent)}
+.tbl .cell.neg,.tbl td.neg{color:var(--warn)}
+.tbl tr.tot td{font-weight:600;border-top:1px solid var(--ink);border-bottom:0;padding:10px;font-size:calc(15px * var(--z));color:var(--ink)}
+.tbl tr.tot td:first-child{font-size:calc(13px * var(--z))}
+.tbl th.plus{min-width:0;padding:6px 8px;vertical-align:middle}
+.tbl th.plus button{padding:7px 10px;border-radius:8px;background:var(--key-op);font-size:13px;font-weight:600;white-space:nowrap}
+.tbl.pointe .cell{box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent)}
+#tabBtn[aria-pressed="true"]{color:var(--accent)}
 
 /* Écran */
 .hint{margin:8px 10px 0;padding:8px 12px;border-radius:10px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--rule);font-size:14px;line-height:1.4}
@@ -325,6 +343,7 @@ textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;c
       <div class="tabs" id="tabs" role="tablist" aria-label="Feuilles"></div>
       <button class="icon" id="addSheet" aria-label="Nouvelle feuille"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="icon" id="expBtn" aria-label="Exporter en PDF ou envoyer"><svg viewBox="0 0 24 24"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
+      <button class="icon" id="tabBtn" aria-label="Séries en tableau" aria-pressed="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15"/></svg></button>
       <button class="icon" id="fxBtn" aria-label="Formules et barèmes">fx</button>
       <button class="icon" id="setBtn" aria-label="Réglages"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
     </header>
@@ -821,7 +840,7 @@ const LINES=[['traits','Traits'],['zebre','Une sur deux'],['aucune','Aucun']];
 const RESCOL=[['couleur','En couleur'],['encre','Comme le texte']];
 const SEPS=[['espace','1 234'],['point','1.234'],['aucun','1234']];
 const RAC_DEF=['<','>',':','#','€'];
-const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',kbh:90,kbf:100,kbg:'normal',kbr:'rond',kbl:'azerty',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,glisse:true,big:'l',lines:'traits',rescol:'couleur',neg:false,sep:'espace',parts:1,rac:true,racKeys:['<','>',':','#','€'],bgc:'',paper:'uni',heads:'souligne',dens:'normale',resw:'normal',keyc:'clair',enter:'couleur',sheetr:'droit',headc:'',favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
+const DEF_PREFS={ambiance:'auto',accent:'#2557E8',font:'plex',zoom:1,keys:'normal',kbh:90,kbf:100,kbg:'normal',kbr:'rond',kbl:'azerty',layout:'calc',decimals:'auto',vibrate:false,tva:20,pad:true,glisse:true,big:'l',lines:'traits',rescol:'couleur',neg:false,sep:'espace',parts:1,rac:true,racKeys:['<','>',':','#','€'],bgc:'',paper:'uni',heads:'souligne',dens:'normale',resw:'normal',keyc:'clair',enter:'couleur',sheetr:'droit',headc:'',tableau:true,favs:['ir(','tmi(','succ(','ifi(','mensualite(','ttc(','evol(','somme(']};
 
 function mixHex(a,b,w){ // w = part de a
   const pa=[1,3,5].map(i=>parseInt(a.substr(i,2),16)), pb=[1,3,5].map(i=>parseInt(b.substr(i,2),16));
@@ -1089,6 +1108,7 @@ function refresh(){
     else if(r.kind==='fn'){ res.textContent='fonction'; res.classList.add('fn'); res.title=r.label; }
     else { res.textContent=''; res.removeAttribute('aria-label'); }
   });
+  renderTableau();
   renderDisplay();
   renderSelbar();
   if(typeof updateHint==='function') updateHint();
@@ -2000,6 +2020,95 @@ function copy(text,msg){
   const ok=()=>toast(msg||('Copié : '+text));
   const fallback=()=>{ try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); ok(); }catch(e){ toast('Copie impossible ici'); } };
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok,fallback); else fallback();
+}
+
+
+/* ===================== Séries en tableau ===================== */
+// Les lignes « Intérêts 2026 », « Résultat 2026 »… s'affichent en tableau (années en lignes, séries en colonnes) ;
+// les lignes uniques (loyer, taux, emprunt…) restent des lignes. Rien ne change dans la feuille elle-même.
+function tableauInfo(){
+  const s=cur(), L=s.lines, T=seriesDe(s,results); if(!T) return null;
+  const inSerie=new Set(T.cols.flatMap(c=>Object.values(c.vals).map(it=>it.i))), cache=new Set(inSerie);
+  for(let k=0;k<L.length;k++){
+    if(!L[k].trim().startsWith('#')) continue;
+    const bloc=[]; for(let j=k+1;j<L.length && !L[j].trim().startsWith('#');j++) bloc.push(j);
+    const utiles=bloc.filter(b=>L[b].trim()!=='');
+    if(utiles.some(b=>inSerie.has(b)) && utiles.every(b=>inSerie.has(b)||(results[b]&&results[b].isTotal))){ cache.add(k); bloc.forEach(b=>cache.add(b)); }
+  }
+  cache.delete(L.length-1);
+  return {T,cache};
+}
+let tabInfo=null;
+// En cours de formule (après +, −, ×, (, ; …), toucher une case insère sa référence, comme dans un tableur
+function attendValeur(){
+  const e=active>=0?inputAt(active):null; if(!e||document.activeElement!==e) return false;
+  const avant=e.value.slice(0,e.selectionStart??e.value.length).trimEnd();
+  return /[+\-−×*\/÷^(;=<>≤≥]$/.test(avant) || /^[^:#]*\p{L}[^:]*:$/u.test(avant);
+}
+function renderTableau(){
+  sheetEl.querySelectorAll('.tbl').forEach(x=>x.remove());
+  tabInfo=state.prefs.tableau!==false&&!sel.size?tableauInfo():null;
+  $('tabBtn').setAttribute('aria-pressed',String(state.prefs.tableau!==false));
+  sheetEl.querySelectorAll('.row').forEach(row=>{ const i=+row.dataset.i; row.classList.toggle('entab',!!tabInfo&&tabInfo.cache.has(i)&&i!==active); });
+  if(!tabInfo) return;
+  const {T,cache}=tabInfo, first=Math.min(...cache), row0=sheetEl.querySelector('.row[data-i="'+first+'"]');
+  const neg=v=>state.prefs.neg&&v<0;
+  const tb=el('table',null,
+    el('thead',null,el('tr',null,el('th',{textContent:'Année'}),...T.cols.map(c=>el('th',{textContent:c.nom})),
+      el('th',{className:'plus'},el('button',{type:'button',className:'addcol',textContent:'+ Colonne','aria-label':'Ajouter une colonne calculée'})))),
+    el('tbody',null,...T.annees.map(y=>el('tr',null,el('td',null,String(y),T.notes[y]?el('small',{textContent:T.notes[y]}):null),
+      ...T.cols.map(c=>{ const it=c.vals[y]; if(!it) return el('td');
+        return el('td',null,el('button',{type:'button',className:'cell'+(it.i===active?' on':'')+(neg(it.x.value)?' neg':''),textContent:show(it.x),'data-i':it.i,'aria-label':c.nom+' '+y+' : '+show(it.x)})); }),el('td'))),
+      el('tr',{className:'tot'},el('td',{textContent:'Total'}),...T.cols.map(c=>{
+        if(c.pct) return el('td');
+        const v=Object.values(c.vals).reduce((a,it)=>a+(it.x.isPct?0:it.x.value),0);
+        return el('td',{className:neg(v)?'neg':'',textContent:fmt(v,c.argent)+(c.argent?' €':'')}); }),el('td'))));
+  const w=el('div',{className:'tbl'+(attendValeur()?' pointe':'')},tb);
+  if(row0) sheetEl.insertBefore(w,row0); else sheetEl.appendChild(w);
+}
+sheetEl.addEventListener('pointerdown',e=>{ if(e.target.closest('.tbl button')) e.preventDefault(); });
+sheetEl.addEventListener('click',e=>{
+  if(e.target.closest('.addcol')){ openColonne(); return; }
+  const c=e.target.closest('.tbl .cell'); if(!c) return;
+  const j=+c.dataset.i;
+  if(active!==j && attendValeur()){ insert('L'+(j+1)); return; }
+  setActive(j); refresh(); focusRow(j);
+});
+$('tabBtn').addEventListener('click',()=>{ setPref('tableau',state.prefs.tableau===false); toast(state.prefs.tableau===false?'Séries affichées en lignes':'Séries affichées en tableau'); });
+// Nouvelle colonne : une formule sur les autres colonnes, calculée année par année
+let colOpts={nom:'Impôt',f:''};
+function openColonne(){
+  const T=tabInfo&&tabInfo.T; if(!T) return;
+  $('formTitle').textContent='Nouvelle colonne';
+  const B=$('formBody'); B.innerHTML='';
+  const dern=T.cols.find(c=>/r[ée]sultat/i.test(c.nom))||T.cols[T.cols.length-1];
+  const fIn=el('input',{id:'coF',value:colOpts.f||('max(['+dern.nom+']; 0) × 30 %'),autocomplete:'off',autocapitalize:'off',spellcheck:false,style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
+  const met=t=>{ const a=fIn.selectionStart??fIn.value.length, b=fIn.selectionEnd??a; fIn.setRangeText(t,a,b,'end'); fIn.focus(); };
+  B.append(
+    el('label',null,el('span',null,'Titre de la colonne'),el('input',{id:'coN',value:colOpts.nom,autocomplete:'off'})),
+    el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'touchez une colonne pour l’ajouter'})),fIn),
+    el('div',{className:'btnrow',style:'margin-top:6px'},...T.cols.map(c=>el('button',{className:'btn',type:'button',textContent:c.nom,on:{click:()=>met('['+c.nom+']')}})),
+      ...['+','−','×','÷','max(…; 0)'].map(o=>el('button',{className:'btn',type:'button',textContent:o,on:{click:()=>met(o==='max(…; 0)'?'max(':' '+o+' ')}}))),
+    el('p',{className:'note',textContent:'Exemples : max([Résultat]; 0) × 30 % (0 si négatif, sinon × taux), [Loyer] − [Intérêts], [Impôt] + [Prélèvements]. Le taux peut être une variable de la feuille (tmi). Une ligne est créée pour chaque année ; tout reste lié.'}),
+    el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Ajouter la colonne',on:{click:addColonne}})));
+  showOver('formOver');
+}
+function addColonne(){
+  const T=tabInfo&&tabInfo.T; if(!T) return;
+  const nom=$('coN').value.trim()||'Calcul', f=$('coF').value.trim();
+  const noms=[...f.matchAll(/\[([^\]]+)\]/g)].map(m=>m[1]);
+  if(!noms.length){ toast('Touchez une colonne pour l’ajouter à la formule'); return; }
+  const col=n=>T.cols.find(c=>c.nom.toLowerCase()===n.trim().toLowerCase());
+  const inconnu=noms.find(n=>!col(n)); if(inconnu){ toast('Colonne inconnue : '+inconnu); return; }
+  const ans=T.annees.filter(y=>noms.every(n=>col(n).vals[y]));
+  if(!ans.length){ toast('Aucune année commune à ces colonnes'); return; }
+  colOpts={nom,f};
+  const out=['# '+nom];
+  ans.forEach(y=>{ const note=T.notes[y]; out.push(nom+' '+y+(note?' ('+note+')':'')+' : '+f.replace(/\[([^\]]+)\]/g,(m,n)=>'L'+(col(n).vals[y].i+1))); });
+  out.push('Total : total');
+  const at=Math.max(...tabInfo.cache)+1;
+  closeOver(); insertLines(at,out); active=cur().lines.length-1; save(); renderRows(); focusRow(active);
+  toast('Colonne « '+nom+' » ajoutée');
 }
 
 /* ===================== Appli autonome : mise à jour depuis le site ===================== */
