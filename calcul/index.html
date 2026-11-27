@@ -71,6 +71,7 @@ body.kbcache:not(.clavform) #kbRetour{display:flex}
 .selbar button{padding:7px 11px;border-radius:8px;background:color-mix(in srgb, var(--surface) 16%, transparent);color:var(--surface);font-size:14px;min-height:36px}
 .selbar button.go{background:var(--accent);color:var(--accent-ink);font-weight:500}
 .selbar button.del{background:var(--warn);color:#fff}
+.btn.danger{background:transparent;color:var(--warn);box-shadow:inset 0 0 0 1.5px var(--warn)}
 .tbar{display:flex;align-items:center;gap:8px;margin:0 0 8px}
 .tbar button{padding:8px 12px;border-radius:9px;background:var(--key-op);font-size:14px;font-weight:500}
 .tbar span{font-size:14px;font-weight:600;flex:1}
@@ -2203,8 +2204,31 @@ function openRenommer(k){
     chipsVariables(met),
     el('div',{className:'chips'},el('small',{textContent:'Opérations et formules'}),...['+','−','×','÷','max(…; 0)'].map(o=>el('button',{className:'btn',type:'button',textContent:o,on:{click:()=>met(o==='max(…; 0)'?'max(':' '+o+' ')}})),tu.btn),
     tu.box,
-    el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Enregistrer',on:{click:()=>modifierColonne(k,inp.value,fIn.value.trim(),F.f)}})));
+    el('div',{className:'btnrow',style:'margin-top:12px;justify-content:space-between'},
+      el('button',{className:'btn primary',type:'button',textContent:'Enregistrer',on:{click:()=>modifierColonne(k,inp.value,fIn.value.trim(),F.f)}}),
+      el('button',{className:'btn danger',type:'button',textContent:'Supprimer la colonne',on:{click:()=>supprimerColonne(k)}})));
   showOver('formOver'); setTimeout(()=>{ inp.focus(); },50);
+}
+// Supprimer une colonne : ses lignes (et son bloc « # Titre … Total » s'il ne contient qu'elle), avec Annuler
+function supprimerColonne(k){
+  const T=tabInfo&&tabInfo.T, c=T&&T.cols[k]; if(!c) return closeOver();
+  const s=cur(), L=s.lines, sup=new Set(Object.values(c.vals).map(it=>it.i));
+  new Set([...sup].map(i=>titreDe(i)).filter(h=>h>=0)).forEach(h=>{
+    const bloc=[]; for(let j=h+1;j<L.length&&!L[j].trim().startsWith('#');j++) bloc.push(j);
+    if(bloc.every(j=>sup.has(j)||L[j].trim()===''||(results[j]&&results[j].isTotal))){ sup.add(h); bloc.forEach(j=>{ if(j<L.length-1) sup.add(j); }); }
+  });
+  // une autre ligne qui s'en sert ? on ne supprime pas
+  const refs=t=>{ const r=[]; t.replace(/\b[lL](\d+)\s*:\s*[lL](\d+)\b/g,(m,a,b)=>{ for(let x=+a;x<=+b;x++) r.push(x-1); return ''; }).replace(/\b[lL](\d+)\b/g,(m,a)=>{ r.push(+a-1); return m; }); return r; };
+  const lit=L.findIndex((t,i)=>!sup.has(i)&&!(results[i]&&results[i].isTotal)&&refs(t).some(j=>sup.has(j)&&!(results[j]&&results[j].isTotal)));
+  if(lit>=0){ const lab=labelOf(lit)||('ligne '+(lit+1)); toast('« '+lab+' » utilise cette colonne : modifiez-la d’abord'); return; }
+  undoLines={id:s.id,lines:L.slice()};
+  [...sup].sort((a,b)=>b-a).forEach(i=>{ L.splice(i,1); shiftRefs(L,i,-1); });
+  if(!L.length) L.push('');
+  closeOver(); active=L.length-1; save(); renderRows();
+  toast('Colonne « '+c.nom+' » supprimée',{label:'Annuler',fn:()=>{
+    const t=state.sheets.find(x=>x.id===undoLines.id); if(!t) return;
+    t.lines=undoLines.lines; undoLines=null; state.cur=t.id; active=-1; save(); renderAll(); toast('Colonne remise');
+  }});
 }
 function modifierColonne(k,nv,f,f0){
   const T=tabInfo&&tabInfo.T, c=T&&T.cols[k]; if(!c) return closeOver();
