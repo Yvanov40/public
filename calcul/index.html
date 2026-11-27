@@ -64,6 +64,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .selbar .txt{flex:1 1 100%;font-size:13px;opacity:.85}
 .selbar button{padding:7px 11px;border-radius:8px;background:color-mix(in srgb, var(--surface) 16%, transparent);color:var(--surface);font-size:14px;min-height:36px}
 .selbar button.go{background:var(--accent);color:var(--accent-ink);font-weight:500}
+.selbar button.del{background:var(--warn);color:#fff}
 .tbar{display:flex;align-items:center;gap:8px;margin:0 0 8px}
 .tbar button{padding:8px 12px;border-radius:9px;background:var(--key-op);font-size:14px;font-weight:500}
 .tbar span{font-size:14px;font-weight:600}
@@ -1317,6 +1318,19 @@ function combine(op){
   out.push('Total : total');
   addAfterSel(out,idx.length+' ligne'+(idx.length>1?'s':'')+' de résultat ajoutée'+(idx.length>1?'s':''));
 }
+// Supprimer les lignes sélectionnées (du bas vers le haut, les références L… suivent), avec Annuler
+function deleteSel(){
+  const s=cur(), idx=[...sel].filter(i=>i<s.lines.length).sort((a,b)=>b-a); if(!idx.length) return;
+  undoLines={id:s.id,lines:s.lines.slice()};
+  idx.forEach(i=>{ s.lines.splice(i,1); shiftRefs(s.lines,i,-1); });
+  if(!s.lines.length) s.lines=[''];
+  const n=idx.length; sel.clear(); pickFor=null; pickedFixed=null; pickedSerie=null; sheetEl.classList.remove('picking');
+  active=Math.min(idx[idx.length-1],s.lines.length-1); save(); renderRows(); focusRow(active); buzz(20);
+  toast(n+' ligne'+(n>1?'s':'')+' supprimée'+(n>1?'s':''),{label:'Annuler',fn:()=>{
+    const t=state.sheets.find(x=>x.id===undoLines.id); if(!t) return;
+    t.lines=undoLines.lines; undoLines=null; state.cur=t.id; active=-1; save(); renderAll(); toast('Lignes remises');
+  }});
+}
 function renderSelbar(){
   const b=$('selbar'); if(!b) return;
   if(!sel.size){ b.hidden=true; return; }
@@ -1343,6 +1357,7 @@ function renderSelbar(){
     btn('Moyenne',()=>addAfterSel(['Moyenne : moy('+refs.join('; ')+')'],'Moyenne ajoutée')),
     btn('Avec une ligne fixe…',()=>{ pickFor=true; sheetEl.classList.add('picking'); renderSelbar(); },'go'),
     ...([...sel].some(i=>anneeDe(i))?[btn('Avec une autre série…',()=>{ pickFor='serie'; sheetEl.classList.add('picking'); renderSelbar(); },'go')]:[]),
+    btn('Supprimer',deleteSel,'del'),
     btn('✕',clearSel));
   b.lastChild.setAttribute('aria-label','Tout désélectionner');
 }
