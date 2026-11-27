@@ -2176,15 +2176,53 @@ function inserer(fIn){ return t=>{ const a=fIn.selectionStart??fIn.value.length,
   sheetEl.addEventListener('pointermove',e=>{ if(t&&e.target.closest&&!e.target.closest('.tbl th[data-col]')) stop(); });
   sheetEl.addEventListener('click',e=>{ const th=e.target.closest('.tbl th[data-col]'); if(th&&!document.getElementById('formOver').classList.contains('open')) openRenommer(+th.dataset.col); });
 })();
+// Formule d'une colonne, écrite avec les noms des autres colonnes ([Intérêts]…), lue sur ses lignes
+function formuleColonne(c,T){
+  const L=cur().lines, g=[];
+  T.annees.forEach(y=>{ const it=c.vals[y]; if(!it) return;
+    const t=L[it.i], p=t.indexOf(':'); if(p<0) return;
+    g.push(t.slice(p+1).trim().replace(/\b[lL](\d+)\b/g,(m,n)=>{ const j=+n-1, col=T.cols.find(x=>x.vals[y]&&x.vals[y].i===j); return col?'['+col.nom+']':m; }));
+  });
+  return {f:g[0]||'',pareil:g.every(x=>x===g[0])};
+}
 function openRenommer(k){
-  const c=tabInfo&&tabInfo.T.cols[k]; if(!c) return;
+  const T=tabInfo&&tabInfo.T, c=T&&T.cols[k]; if(!c) return;
   if(document.getElementById('formOver').classList.contains('open')) return;
-  $('formTitle').textContent='Renommer la colonne';
+  const F=formuleColonne(c,T);
+  $('formTitle').textContent='Modifier la colonne';
   const B=$('formBody'); B.innerHTML='';
-  const inp=el('input',{id:'rnN',className:'clav',inputMode:'none',value:c.nom,autocomplete:'off',style:'flex:1 1 100%;width:100%;text-align:left;margin-top:6px'});
-  B.append(el('label',{style:'flex-wrap:wrap'},el('span',null,'Nouveau nom',el('small',{textContent:'le titre du bloc et chaque ligne de la colonne changent'})),inp),
-    el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Renommer',on:{click:()=>renommerColonne(k,inp.value)}})));
-  showOver('formOver'); setTimeout(()=>{ inp.focus(); inp.select(); },50);
+  const st='flex:1 1 100%;width:100%;text-align:left;margin-top:6px';
+  const inp=el('input',{id:'rnN',className:'clav',inputMode:'none',value:c.nom,autocomplete:'off',style:st});
+  const fIn=el('input',{id:'rnF',className:'clav',inputMode:'none',value:F.f,autocomplete:'off',autocapitalize:'off',spellcheck:false,style:st});
+  const met=inserer(fIn), tu=choixTuiles(met);
+  B.append(
+    el('label',{style:'flex-wrap:wrap'},el('span',null,'Nom',el('small',{textContent:'le titre du bloc et chaque ligne de la colonne changent'})),inp),
+    el('label',{style:'flex-wrap:wrap'},el('span',null,'Formule',el('small',{textContent:'appliquée à chaque année ; touchez une colonne pour l’ajouter'})),fIn),
+    F.pareil?null:el('p',{className:'note',textContent:'Les années n’ont pas toutes la même formule (celle de la 1re année est affichée). Si vous la modifiez, elle remplacera celle de chaque année.'}),
+    el('div',{className:'chips'},el('small',{textContent:'Colonnes'}),...T.cols.filter(x=>x!==c).map(x=>el('button',{className:'btn',type:'button',textContent:x.nom,on:{click:()=>met('['+x.nom+']')}}))),
+    chipsVariables(met),
+    el('div',{className:'chips'},el('small',{textContent:'Opérations et formules'}),...['+','−','×','÷','max(…; 0)'].map(o=>el('button',{className:'btn',type:'button',textContent:o,on:{click:()=>met(o==='max(…; 0)'?'max(':' '+o+' ')}})),tu.btn),
+    tu.box,
+    el('div',{className:'btnrow',style:'margin-top:12px'},el('button',{className:'btn primary',type:'button',textContent:'Enregistrer',on:{click:()=>modifierColonne(k,inp.value,fIn.value.trim(),F.f)}})));
+  showOver('formOver'); setTimeout(()=>{ inp.focus(); },50);
+}
+function modifierColonne(k,nv,f,f0){
+  const T=tabInfo&&tabInfo.T, c=T&&T.cols[k]; if(!c) return closeOver();
+  if(f && f!==f0){
+    const noms=[...f.matchAll(/\[([^\]]+)\]/g)].map(m=>m[1].trim().toLowerCase());
+    const col=n=>T.cols.find(x=>x.nom.toLowerCase()===n);
+    const inconnu=noms.find(n=>!col(n)); if(inconnu){ toast('Colonne inconnue : '+inconnu); return; }
+    if(noms.includes(c.nom.toLowerCase())){ toast('La colonne ne peut pas se calculer avec elle-même'); return; }
+    const L=cur().lines; let saute=0;
+    T.annees.forEach(y=>{ const it=c.vals[y]; if(!it) return;
+      if(noms.some(n=>!col(n).vals[y])){ saute++; return; }
+      const t=L[it.i], p=t.indexOf(':'); if(p<0) return;
+      L[it.i]=t.slice(0,p).trimEnd()+' : '+f.replace(/\[([^\]]+)\]/g,(m,n)=>'L'+(col(n.trim().toLowerCase()).vals[y].i+1));
+    });
+    if(saute) setTimeout(()=>toast(saute+' année'+(saute>1?'s':'')+' sans valeur dans une colonne utilisée : formule inchangée'),1800);
+  }
+  if(String(nv||'').trim() && String(nv).trim()!==c.nom) return renommerColonne(k,nv);
+  closeOver(); save(); renderRows(); toast('Colonne modifiée');
 }
 function renommerColonne(k,nv){
   const c=tabInfo&&tabInfo.T.cols[k]; nv=String(nv||'').trim().replace(/^#+\s*/,'').replace(/[:=]/g,'');
