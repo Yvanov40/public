@@ -1896,6 +1896,15 @@ function renderSettings(){
       el('output',{textContent:String(P.parts).replace('.',',')}),
       el('button',{type:'button',textContent:'+','aria-label':'Plus de parts',on:{click:()=>setPref('parts',Math.min(10,P.parts+.5))}})),true),
     el('p',{className:'note',textContent:'Utilisées par ir(…) et tmi(…) quand vous n’indiquez pas le nombre de parts.'})),
+  ...(AUTONOME?[grp('Mise à jour',
+    (()=>{ const info=el('p',{className:'note',textContent:'Version installée : …'});
+      versionDe('sw.js').then(r=>{ info.textContent='Version installée : '+r.v.replace('calcul-v','n° '); },()=>{ info.textContent='Version installée : d’origine'; });
+      return el('div',null,
+        el('div',{className:'btnrow'},el('button',{className:'btn primary',type:'button',textContent:'Rechercher une mise à jour',on:{click:async()=>{
+          const r=await majVerifier(true); if(r&&majDispo&&numV(r.site)>numV(r.ici)) info.textContent='Version installée : '+(r.ici||'?').replace('calcul-v','n° ')+' · disponible : '+r.site.replace('calcul-v','n° ');
+        }}})),
+        info,
+        el('p',{className:'note',textContent:'L’appli cherche toute seule une nouvelle version à chaque ouverture quand il y a du réseau, et propose de l’installer. Vos feuilles et réglages restent en place ; sans réseau, l’appli marche comme avant.'})); })())]:[]),
   grp('Mes feuilles et réglages',
     el('div',{className:'btnrow'},
       el('button',{className:'btn',type:'button',textContent:'Copier toutes les feuilles',on:{click:()=>copy(JSON.stringify({calculEnLignes:1,sheets:state.sheets}),'Feuilles copiées')}}),
@@ -1946,6 +1955,60 @@ function copy(text,msg){
   const ok=()=>toast(msg||('Copié : '+text));
   const fallback=()=>{ try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); ok(); }catch(e){ toast('Copie impossible ici'); } };
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok,fallback); else fallback();
+}
+
+/* ===================== Appli autonome : mise à jour depuis le site ===================== */
+// La page est dans l'appli ; sur demande, la dernière version est téléchargée depuis le site,
+// rangée dans l'appli et utilisée à la place (feuilles et réglages gardés : même adresse locale).
+const MAJ_SITE='https://yvanov40.github.io/public/calcul/';
+const AUTONOME=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()&&location.hostname==='localhost');
+const majPl=()=>(window.Capacitor&&window.Capacitor.Plugins)||{};
+const numV=v=>parseInt(String(v||'').replace(/\D+/g,''),10)||0;
+async function versionDe(url){
+  const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status);
+  const t=await r.text(), v=(t.match(/const VERSION\s*=\s*"([^"]+)"/)||[])[1], l=(t.match(/const LOCAL\s*=\s*(\[[^\]]*\])/)||[])[1];
+  if(!v) throw new Error('version');
+  return {v,fichiers:l?JSON.parse(l).filter(f=>f!=='./').map(f=>f.replace(/^\.\//,'')):[]};
+}
+let majDispo=null, majEnCours=false;
+async function majVerifier(manuel){
+  if(!AUTONOME) return;
+  try{
+    const [ici,site]=await Promise.all([versionDe('sw.js').catch(()=>({v:''})),versionDe(MAJ_SITE+'sw.js?'+Date.now())]);
+    if(numV(site.v)>numV(ici.v)){ majDispo=site; toast('Nouvelle version de Calcul disponible',{label:'Installer',fn:majInstaller}); }
+    else if(manuel) toast('Calcul est à jour');
+    return {ici:ici.v,site:site.v};
+  }catch(e){ if(manuel) toast('Site injoignable : vérifiez la connexion'); }
+}
+const blobB64=b=>new Promise((ok,ko)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result).split(',')[1]||''); r.onerror=ko; r.readAsDataURL(b); });
+async function majInstaller(){
+  const s=majDispo, P=majPl(); if(!s||majEnCours) return;
+  if(!P.Filesystem||!P.WebView){ toast('Cette version de l’appli ne sait pas se mettre à jour'); return; }
+  majEnCours=true; toast('Téléchargement de la mise à jour…');
+  try{
+    const dossier='maj/'+s.v.replace(/[^\w.-]/g,'');
+    for(const f of [...new Set(['index.html','sw.js',...s.fichiers])]){
+      const r=await fetch(MAJ_SITE+f+'?v='+encodeURIComponent(s.v),{cache:'no-store'}); if(!r.ok) throw new Error(f);
+      await P.Filesystem.writeFile({path:dossier+'/'+f,data:await blobB64(await r.blob()),directory:'DATA',recursive:true});
+    }
+    const {uri}=await P.Filesystem.getUri({path:dossier,directory:'DATA'});
+    save(); localStorage.setItem('calc-maj-attente',s.v);
+    await P.WebView.setServerBasePath({path:decodeURI(String(uri).replace(/^file:\/\//,''))});
+  }catch(e){ majEnCours=false; localStorage.removeItem('calc-maj-attente'); toast('Mise à jour interrompue : réessayez'); }
+}
+if(AUTONOME){
+  // Nouvelle version bien ouverte : on la garde pour les prochains lancements, et on range les anciennes
+  const att=localStorage.getItem('calc-maj-attente');
+  if(att){
+    localStorage.removeItem('calc-maj-attente');
+    const P=majPl();
+    Promise.resolve().then(()=>P.WebView.persistServerBasePath()).then(()=>{
+      setTimeout(()=>toast('Mise à jour installée'),500);
+      return P.Filesystem.readdir({path:'maj',directory:'DATA'}).then(r=>Promise.all((r.files||[]).map(x=>x.name||x)
+        .filter(n=>n!==att.replace(/[^\w.-]/g,'')).map(n=>P.Filesystem.rmdir({path:'maj/'+n,directory:'DATA',recursive:true}).catch(()=>{}))));
+    }).catch(()=>{});
+  }
+  setTimeout(()=>majVerifier(false),3000);
 }
 
 /* ===================== Export : PDF, mail ===================== */

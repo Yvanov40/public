@@ -27,7 +27,7 @@ jobs:
         working-directory: calcul
         run: |
           rm -rf autonome/www && mkdir -p autonome/www
-          cp index.html manifest.webmanifest icone-192.png icone-512.png icone-maskable-512.png autonome/www/
+          cp index.html sw.js manifest.webmanifest icone-192.png icone-512.png icone-maskable-512.png autonome/www/
           cp -r vendor autonome/www/
           ls -la autonome/www
       - name: Préparer Capacitor
