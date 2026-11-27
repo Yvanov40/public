@@ -44,6 +44,18 @@
   #pc a { color: #a57d2f; font-weight: 600; }
   .aide { margin-top: 26px; font-size: 13.5px; color: var(--discret); background: var(--carte); border: 1px dashed var(--bordure); border-radius: 12px; padding: 12px 14px; }
 </style>
+<script>
+  // Équipe de Suivi : un collaborateur (pas le titulaire) n'a que Suivi. Sur cet appareil, Suivi a retenu qui l'utilise
+  // (même site, donc même mémoire du navigateur) : on l'y emmène directement, sans passer par la liste des applis.
+  (function () {
+    try {
+      var moi = localStorage.getItem("suivi-gp-moi") || "";
+      var ag = JSON.parse(localStorage.getItem("suivi-gp-donnees-agenda") || "{}") || {};
+      var eq = Array.isArray(ag.equipe) ? ag.equipe.filter(Boolean) : [];
+      if (moi && eq.length > 1 && eq.indexOf(moi) > 0) location.replace("suivi/" + location.hash);
+    } catch (e) {}
+  })();
+</script>
 <script>/* bandeaux : début */
 // =====================================================================================
 //  Bandeaux du haut et du bas — pour l'application Android / iPhone, où la page s'étend sous
