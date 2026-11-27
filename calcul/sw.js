@@ -1,7 +1,7 @@
 // Service de l'appli Calcul (service worker) : garde une copie des fichiers pour que l'appli
 // s'ouvre sans connexion, et la rend installable. Les feuilles restent dans l'appareil (localStorage).
 // Changer VERSION (calcul-v2, calcul-v3…) à chaque modification : c'est ce qui met à jour les appareils.
-const VERSION = "calcul-v37";
+const VERSION = "calcul-v38";
 const LOCAL = ["./", "./index.html", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-maskable-512.png", "./vendor/jspdf.umd.min.js", "./vendor/mots-fr.txt"];
 
 self.addEventListener("install", (e) => {
